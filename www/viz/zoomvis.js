@@ -33,6 +33,8 @@ var zoomVis = function (opts) {
 	var maxX = 0;
 	var minY = 0;
 	var maxY = 0;
+	var xOffset = .1;
+	var yOffset = .1;
 	
 	var MIN_NODE_SIZE = 30;
 	var NODE_SCALE_FACTOR = 300;
@@ -176,8 +178,8 @@ var zoomVis = function (opts) {
 		// position[0] = x * 1000;
 		// position[1] = y * 1000;
 		
-		position[0] = ((x + Math.abs(minX)) / maxX) * 0.9 * visWidth + 0.1 * visWidth;
-		position[1] = ((y + Math.abs(minY)) / maxY) * 0.9 * visHeight + 0.1 * visHeight;
+		position[0] = ((x + Math.abs(minX)) / maxX) * (1 - xOffset) * visWidth + xOffset * visWidth;
+		position[1] = ((y + Math.abs(minY)) / maxY) * (1 - yOffset) * visHeight + yOffset * visHeight;
 		console.log("position[x,y]: " + position[0] + " " + position[y]);
 		return position;
 	}
