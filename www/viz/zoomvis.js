@@ -36,6 +36,8 @@ var zoomVis = function (opts) {
 	var xOffset = .1;
 	var yOffset = .1;
 	
+	var edgeColor = 'darkgray';
+	
 	var MIN_NODE_SIZE = 30;
 	var NODE_SCALE_FACTOR = 300;
 	var STANDARD_NODE_COLOR = "red";
@@ -125,7 +127,9 @@ var zoomVis = function (opts) {
 				selector: 'edge',
 				css: {
 					'target-arrow-shape': 'triangle',
-					'content': 'data(value)'
+					'target-arrow-color': edgeColor,
+					'content': 'data(value)',
+					'lineColor': edgeColor
 				}
 			}
 		],
@@ -246,7 +250,7 @@ var zoomVis = function (opts) {
 							value: levelJumps[level][i][j].toFixed(3)
 						},
 						css: {
-							'control-point-step-size': 150,
+							'control-point-step-size': 250,//150,
 							'text-valign': 'top',
 							'control-point-weight': 0.5
 						}

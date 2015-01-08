@@ -13,7 +13,7 @@ console.log('Read only: ' + readOnly);
 console.log('================================================\n\n');
 
 // imports
-require('./src/config.js');
+require('./config.js');
 var services = require('./src/services.js');
 var mc = require('./src/init_mc.js');
 var qm = require(qmModulePath + 'qm.node');
