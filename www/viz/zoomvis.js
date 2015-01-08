@@ -34,8 +34,13 @@ var zoomVis = function (opts) {
 	var minY = 0;
 	var maxY = 0;
 	
-	var MIN_NODE_SIZE = 16;
+	var MIN_NODE_SIZE = 30;
+	var NODE_SCALE_FACTOR = 300;
 	var STANDARD_NODE_COLOR = "red";
+	
+	function calculateNodeRadius(size) {
+		return Math.max(2*Math.sqrt(Math.sqrt(size)/Math.PI) * NODE_SCALE_FACTOR,  MIN_NODE_SIZE);
+	}
 	
 	function setupSlider() {
 		$( "#slider_item_div" ).slider({
@@ -166,10 +171,6 @@ var zoomVis = function (opts) {
 		return -1;
 	}
 	
-	function calculateNodeSize(size) {
-		return Math.log(size + 1.2)/*Math.pow(size, 1/4)*/ * 200 + MIN_NODE_SIZE;
-	}
-	
 	function calculatePosition(x, y) {
 		var position = [];
 		// position[0] = x * 1000;
@@ -188,7 +189,7 @@ var zoomVis = function (opts) {
 			var node;
 			var nodeColor = "undefined";
 			var position = calculatePosition(currentNodes[i].x, currentNodes[i].y);		//[x, y]
-			var nodeSize = calculateNodeSize(currentNodes[i].size);
+			var nodeSize = calculateNodeRadius(currentNodes[i].size);
 			
 			if (currentNodes[i].id == levelCurrentStates[level]) {
 				nodeColor = currentStateColor;

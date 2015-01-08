@@ -107,6 +107,28 @@ exports.init = function () {
 		});
 	}
 	
+	{
+		console.log('Registering future states service ...');
+		
+		// multilevel analysis
+		app.get('/drilling/futureStates', function (req, resp) {
+			try {
+				var level = parseFloat(req.query.level);
+				var currState = parseInt(req.query.state);
+				var time = parseFloat(req.query.time);
+				
+				console.log('Fetching future states, currState: ' + currState + ', level: ' + level + ', time: ' + time);
+				
+				resp.send(ctmcNew.futureStates(level, currState, time));
+			} catch (e) {
+				console.log('Failed to query MHWirth multilevel visualization: ' + e);
+				resp.setStatusCode(500);	// internal server error
+			}
+			
+			resp.end();
+		});
+	}
+	
 	// serve static files at www
 	{
 		console.log('Initializing web server ...');
