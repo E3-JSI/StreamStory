@@ -1,0 +1,20 @@
+{
+  "name": "ProaSense",
+  "version": "0.1.0",
+  "description": "ProaSense",
+  "main": "hello-world-server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified! Configure in package.json\" && exit 1"
+  },
+  "repository": "",
+  "keywords": [
+    "node.js",
+    "eclipse",
+    "nodeclipse"
+  ],
+  "author": "",
+  "license": "MIT",
+  "readmeFilename": "README.md",
+  "dependencies": {
+	    "express": "^4.10.6"
+}
