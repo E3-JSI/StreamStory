@@ -5,7 +5,7 @@ global.WWW_DIR = '../www';
 // MARKOV CHAIN
 global.CTMC_STORE_NAME = 'drilling_resampled';
 global.CTMC_DIR_NAME = '/media/lstopar/hdd/project-data/proasense-models/';
-global.CTMC_NRECS = 10000;
+global.CTMC_NRECS = 100000;
 
 global.CTMC_PARAMS = {
 	transitions: {

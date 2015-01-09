@@ -416,6 +416,9 @@ var zoomVis = function (opts) {
 				}
 			});
 		},
+		setCurrentState: function (stateId) {
+			// TODO
+		},
 		slider: sliderChanged
 	}
 	
