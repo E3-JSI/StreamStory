@@ -10,8 +10,11 @@ var qmConfFile = config.qmConfFile;
 global.closeBase = function () {
 	log.info('Closing base ...');
 	
-	if (!readOnly && base != null)
+	if (!readOnly && base != null) {
+		base.gc();
 		base.close();
+	}
+		
 	
 	log.info('Done!');
 };
@@ -20,7 +23,14 @@ try {
 	log.info('Opening base with configuration: %s ...', qmConfFile);
 	
 	// global variables
-	global.base = qm.open(qmConfFile, readOnly);
+	global.base = qm.open(qmConfFile, true/*readOnly*/);
+	
+//	base.store('drilling').clear();
+//	log.info('Store cleared :) !');
+//	closeBase();
+//	log.info('Done!');
+//	return;
+	
 	global.hmc = mc.init();
 	
 	services.init();

@@ -29,7 +29,7 @@ global.qmModulePath = config.qminerPath;
 
 // MARKOV CHAIN
 global.CTMC_STORE_NAME = 'drilling_resampled';
-global.CTMC_DIR_NAME = '/media/lstopar/hdd/project-data/proasense-models/';
+global.CTMC_DIR_NAME = config.modelDir;
 global.CTMC_NRECS = 100000;
 
 global.CTMC_PARAMS = {
