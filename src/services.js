@@ -26,7 +26,7 @@ exports.init = function () {
 				
 				resp.status(204);
 			} catch (e) {
-				log.error('Failed to query MHWirth multilevel visualization: ' + e);
+				log.error(e, 'Failed to query MHWirth multilevel visualization!');
 				resp.status(500);	// internal server error
 			}
 			
@@ -39,9 +39,20 @@ exports.init = function () {
 		
 		var imported = 0;
 		var printInterval = 10000;
+		
 		app.post('/drilling/push', function (req, resp) {
-			try {
-				var batch = JSON.parse(req.body);
+			req.on('error', function (e) {
+				log.error(e, 'Error while receiving data!');
+				resp.status(500);	// internal server error
+				resp.end();
+			});
+			
+			var body = '';
+			req.on('data', function (data) {
+				body += data;
+			})
+			req.on('end', function () {
+				var batch = JSON.parse(body);
 				
 				for (var i = 0; i < batch.length; i++) {
 					var instance = batch[i];
@@ -53,7 +64,7 @@ exports.init = function () {
 					if (++imported % printInterval == 0 && log.debug())
 						log.debug('Imported %d values ...', imported);
 					
-					qm.store(store).add({
+					base.store(store).add({
 						time_ms: timestamp,
 						time: new Date(timestamp).toISOString().split('Z')[0],
 						value: value
@@ -61,12 +72,8 @@ exports.init = function () {
 				}
 				
 				resp.status(204);
-			} catch (e) {
-				log.error(e, 'Failed to add records!');
-				resp.status(500);	// internal server error
-			}
-
-			resp.end();
+				resp.end();
+			});
 		});
 	}
 	
@@ -95,7 +102,8 @@ exports.init = function () {
 			try {
 				var level = parseFloat(req.query.level);
 				
-				log.debug('Fetching transition model for level: ' + level);
+				if (log.debug())
+					log.debug('Fetching transition model for level: %.3f', level);
 				
 				resp.send(ctmcNew.getTransitionModel(level));
 			} catch (e) {
@@ -154,7 +162,7 @@ exports.init = function () {
 	{
 		log.info('Registering state changed callback ...');
 		
-		hmc.blaonStateChanged(function (currStates) {
+		hmc.onStateChanged(function (currStates) {
 			log.info('State changed: ' + currStates);
 		});
 	}
