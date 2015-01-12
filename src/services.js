@@ -1,8 +1,117 @@
 var express = require('express');
 var path = require('path');
+var WebSocket = require('ws');
 
 var app = express();
+
 var server;
+var wss;
+
+var sockets = {};
+
+function initServer() {
+	log.info('Initializing web server ...');
+	
+	var staticDir = path.join(__dirname, WWW_DIR);
+	log.info('Using static directory: %s', staticDir);
+	
+	app.use('/www', express.static(staticDir));
+	
+	server = app.listen(SERVER_PORT);
+	log.info('Server running at http://localhost:%d', SERVER_PORT);
+}
+
+function initWebSockets() {
+	log.info('Creating web socket server ...');
+	
+	var WebSocketServer = WebSocket.Server;
+	wss = new WebSocketServer({
+		server: server,
+		path: '/websocket'
+	});
+
+	function closeClient(id) {
+		if (log.debug())
+			log.debug("Closing client %")
+		sockets[id].client.close();
+	}
+	
+	var socketId = 0;
+	wss.on('connection', function (ws) {
+		var id = socketId++;
+		
+		log.info('New websocket connected id: %d ...', id);
+		
+		ws.on('message', function (msg) {
+			log.debug('Received message from websocket id: %d, msg: %s', id, msg);
+		});
+		
+		ws.on('pong', function () {
+			if (log.trace())
+				log.trace('Received pong %d', id);
+			sockets[id].gotPong = true;
+		});
+		
+		ws.on('error', function (e) {
+			log.error(e, 'Error on web socket %d! Closing ...', id);
+			closeClient(id);
+		});
+		
+		ws.on('close', function (code, msg) {
+			log.debug('Web socket %d closed with code %d, message: %s. Removing from socket list!', id, code, msg);
+			delete sockets[id];
+		});
+		
+		sockets[id] = { client: ws, gotPong: true };
+	});
+	
+	function removeIdle() {
+		for (var id in sockets) {
+			if (!sockets[id].gotPong) {
+				if (log.debug())
+					log.debug('Socket %s idle, removing ...', id)
+				closeClient(id);
+			}
+			sockets[id].gotPong = false;
+		}
+	}
+	
+	// ping clients periodically
+	function ping() {
+		removeIdle();
+		
+		if (log.trace())
+			log.trace('Pinging %d clients ...', Object.keys(sockets).length);
+		
+		for (var id in sockets) {
+			sockets[id].client.ping();
+		}
+		
+		setTimeout(ping, PING_INTERVAL);
+	}
+	ping();
+}
+
+function initHandlers() {
+	log.info('Registering state changed callback ...');
+	
+	hmc.onStateChanged(function (states) {
+		if (log.debug())
+			log.debug('State changed: %s', JSON.stringify(states));
+		
+		var msg = JSON.stringify({
+			type: 'stateChanged',
+			content: states
+		});
+		
+		if (log.debug())
+			log.debug('Distributing message: %s', msg);
+		
+		for (var clientId in sockets) {
+			sockets[clientId].client.send(msg);
+		}
+	});
+}
 
 exports.init = function () {
 	log.info('Registering drilling services ...');
@@ -15,6 +124,7 @@ exports.init = function () {
 			try {
 				log.debug('Exiting qminer and closing server ...');
 				
+				wss.close();
 				closeBase();
 				setTimeout(function () {
 					console.log('Closing server ...');
@@ -41,13 +151,8 @@ exports.init = function () {
 		var printInterval = 10000;
 		
 		app.post('/drilling/push', function (req, resp) {
-			req.on('error', function (e) {
-				log.error(e, 'Error while receiving data!');
-				resp.status(500);	// internal server error
-				resp.end();
-			});
-			
 			var body = '';
+			
 			req.on('data', function (data) {
 				body += data;
 			})
@@ -74,6 +179,12 @@ exports.init = function () {
 				resp.status(204);
 				resp.end();
 			});
+			
+			req.on('error', function (e) {
+				log.error(e, 'Error while receiving data!');
+				resp.status(500);	// internal server error
+				resp.end();
+			});
 		});
 	}
 	
@@ -83,8 +194,8 @@ exports.init = function () {
 		// multilevel analysis
 		app.get('/drilling/multilevel', function (req, resp) {
 			try {
-				console.log('Querying MHWirth multilevel model ...');
-				resp.send(hmc.getModel().toJSON());
+				log.debug('Querying MHWirth multilevel model ...');
+				resp.send(hmc.getVizState());
 			} catch (e) {
 				console.log(e, 'Failed to query MHWirth multilevel visualization!');
 				resp.status(500);	// internal server error
@@ -123,9 +234,13 @@ exports.init = function () {
 			try {
 				var level = parseFloat(req.query.level);
 				var currState = parseInt(req.query.state);
-				var time = parseFloat(req.query.time);
+				var time = req.query.time != null ? parseFloat(req.query.time) : null;
 				
-				log.debug('Fetching future states, currState: ' + currState + ', level: ' + level + ', time: ' + time);
+				if (time == null) {
+					log.debug('Fetching future states currState: %d, height: %.3f', currState, level);
+				} else {
+					log.debug('Fetching future states, currState: ' + currState + ', level: ' + level + ', time: ' + time);
+				}
 				
 				resp.send(hmc.futureStates(level, currState, time));
 			} catch (e) {
@@ -159,24 +274,10 @@ exports.init = function () {
 		});
 	}
 	
-	{
-		log.info('Registering state changed callback ...');
-		
-		hmc.onStateChanged(function (currStates) {
-			log.info('State changed: ' + currStates);
-		});
-	}
-	
 	// serve static files at www
-	{
-		log.info('Initializing web server ...');
-		
-		var staticDir = path.join(__dirname, WWW_DIR);
-		log.info('Using static directory: %s', staticDir);
-		
-		app.use('/www', express.static(staticDir));
-	}
+	initServer();
+	initWebSockets();
+	initHandlers();
 	
-	server = app.listen(SERVER_PORT);
-	log.info('Server running at http://localhost:%d', SERVER_PORT);
+	log.info('Done!');
 };

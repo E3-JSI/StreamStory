@@ -3,6 +3,8 @@ var zoomVis = function (opts) {
 	var visContainer = document.getElementById(opts.visContainer);
 	var currentHeightContainer = document.getElementById(opts.currentHeightContainer);
 	
+	var state = null;
+	
 	var zoomLevel = 0;
 	var minZoomLevel = 0.5;
 	var maxZoomLevel = 60;
@@ -21,7 +23,6 @@ var zoomVis = function (opts) {
 	var levelJumps = [];
 	var levelHeights = [];
 	var levelCurrentStates = [];
-	var levelFutureStates = [];
 	
 	var colors = ['red', 'green'];
 	var nodeColor = 'red';
@@ -41,6 +42,16 @@ var zoomVis = function (opts) {
 	var MIN_NODE_DIAMETER = 30;
 	var NODE_SCALE_FACTOR = 300;
 	var STANDARD_NODE_COLOR = "red";
+	
+	// adding mouse wheel listener
+	if(visContainer.onwheel !== undefined) {
+		visContainer.addEventListener('wheel', onMouseWheel)
+	} else if(visContainer.onmousewheel !== undefined) {
+		visContainer.addEventListener('mousewheel', onMouseWheel)
+	} else {
+		// unsupported browser
+		alert("your browser is unsupported");
+	}
 	
 	function calculateNodeRadius(area) {
 		return Math.max(2*Math.sqrt(Math.sqrt(area)/Math.PI) * NODE_SCALE_FACTOR,  MIN_NODE_DIAMETER);
@@ -62,36 +73,42 @@ var zoomVis = function (opts) {
 	function setZoom(zoom) {
 		zoomLevel = zoom;
 	}
+
+	function clearNodesAndEdges() {
+		clearNodes();
+		clearEdges();
+	}
 	
-	// function getMinAndMaxHeights(heights) {		
-		// var minMax = [];
-		// minMax[0] = heights[0];
-		// minMax[1] = heights[heights.length - 1];
-		// return minMax;
-	// }
+	function clearStructures() {
+		levelHeights = [];
+		levelJumps = [];
+		levelCurrentStates = [];
+		levelNodes = [];
+	}
 	
-	function constructLevels(data) {
+	function constructLevels(data, resetLevel) {
+		clearStructures();
+		
 		for (var i = 0; i < data.length; i++) {
 			levelHeights.push(data[i].height);
 			levelJumps.push(data[i].transitions);
-			levelCurrentStates.push(data[i].currentState);
-			levelFutureStates.push(data[i].futureStates);
+			levelCurrentStates.push({currentState: data[i].currentState, futureStates: data[i].futureStates});
 			levelNodes.push(data[i].states);
-			
 		}
 		
-		console.log(levelHeights);
-		console.log(levelNodes);
+		console.log(JSON.stringify(levelCurrentStates));
 		
-		maxHeight = levelHeights[levelHeights.length - 1];
-		minHeight = levelHeights[0];
+		if (resetLevel) {
+			maxHeight = levelHeights[levelHeights.length - 1];
+			minHeight = levelHeights[0];
+			
+			currentHeight = maxHeight;
+			currentLevel = levelHeights.length - 1;
 		
-		currentHeight = maxHeight;
-		currentLevel = levelHeights.length - 1;
+			minAndMaxCoords();
+		}
 		
-		minAndMaxCoords();
-		
-		draw();
+		redraw();
 	}
 	
 	function minAndMaxCoords() {
@@ -134,7 +151,7 @@ var zoomVis = function (opts) {
 			}
 		],
 		
-		ready: function() { console.log('ready') },
+		ready: function() { console.log('ready'); },
 		motionBlur: false,
 		fit: false,
 		userZoomingEnabled: false,
@@ -169,9 +186,9 @@ var zoomVis = function (opts) {
 	* Returns the probability value if it does, otherwise the function returns -1
 	*/
 	function getFutureStateProb(level, id) {
-		for (var i = 0; i < levelFutureStates[level].length; i++) {
-			if (levelFutureStates[level][i].id == id && levelFutureStates[level][i].prob > 0) {
-				return levelFutureStates[level][i].prob;
+		for (var i = 0; i < levelCurrentStates[level].length; i++) {
+			if (levelCurrentStates[level].futureStates[i].id == id && levelCurrentStates[level].futureStates[i].prob > 0) {
+				return levelCurrentStates[level].futureStates[i].prob;
 			}
 		}
 		return -1;
@@ -189,30 +206,34 @@ var zoomVis = function (opts) {
 	}
 	
 	function insertLevelNodes(level) {
-		var currentNodes = levelNodes[level];
+		var height = levelHeights[level];
+		var levelInfo = levelNodes[level];
+		var currentNodeInfo = levelCurrentStates[level];
+		var currentState = currentNodeInfo.currentState;
+		
 		var nodesArray = [];
-		for (var i = 0; i < currentNodes.length; i++) {
-			var node;
-			var nodeColor = "undefined";
-			var position = calculatePosition(currentNodes[i].x, currentNodes[i].y);		//[x, y]
-			var nodeSize = calculateNodeRadius(currentNodes[i].size);
+		
+		var foundCurrent = false;
+		
+		for (var i = 0; i < levelInfo.length; i++) {
+			var node = levelInfo[i];
+			var dispNode;
+			var position = calculatePosition(levelInfo[i].x, levelInfo[i].y);		//[x, y]
+			var nodeSize = calculateNodeRadius(levelInfo[i].size);
 			
-			if (currentNodes[i].id == levelCurrentStates[level]) {
+			var nodeColor = "undefined";
+			if (node.id == currentState) {
 				nodeColor = currentStateColor;
-			} else {
-				var prob = getFutureStateProb(level, currentNodes[i].id);
-				
-				if (prob > 0) {		// set color
-					//nodeColor = createRGB(prob);
-					nodeColor = createHSL(prob);
-				}
+				foundCurrent = true;
+			} else if (currentNodeInfo.futureStates != null && currentNodeInfo.futureStates.indexOf(node.id) >= 0) {
+				nodeColor = createHSL(getFutureStateProb(level, levelInfo[i].id));
 			}
 			
-			node = [
+			dispNode = [
 				{
 					group: 'nodes',
 					data: {
-						id: '' + String(currentNodes[i].id),
+						id: '' + String(levelInfo[i].id),
 						name: 'test'
 					},
 					position: {
@@ -226,11 +247,15 @@ var zoomVis = function (opts) {
 					},
 					locked: true
 				}
-			]
+			];
 			
-			cy.add(node);
+			cy.add(dispNode);
 			//nodesArray.push(node);
 		}
+		
+		if (!foundCurrent) 
+			console.log('Could not find the current node at level ' + levelHeights[level]);
+		
 		//cy.add(nodesArray);
 		//console.log(cy.nodes(""));
 	}
@@ -280,26 +305,10 @@ var zoomVis = function (opts) {
 		cy.remove(drawnEdges);
 	}
 	
-	function draw(dataJson) {
-		insertLevelNodes(currentLevel);
-		insertLevelJumps(currentLevel);
-	}
-	
 	function redraw(level) {
-		clearNodes();
+		clearNodesAndEdges();
 		insertLevelNodes(currentLevel);
-		clearEdges();
 		insertLevelJumps(currentLevel);
-	}
-	
-	// adding mouse wheel listener
-	if(visContainer.onwheel !== undefined) {
-		visContainer.addEventListener('wheel', onMouseWheel)
-	} else if(visContainer.onmousewheel !== undefined) {
-		visContainer.addEventListener('mousewheel', onMouseWheel)
-	} else {
-		// unsupported browser
-		alert("your browser is unsupported");
 	}
 	
 	function getAppropriateLevel() {
@@ -378,7 +387,6 @@ var zoomVis = function (opts) {
 		console.log("currentLevel: " + currentLevel);
 		
 		currentHeightContainer.innerHTML = currentHeight;				//set height text
-		
 		//slider.slider('value', parseFloat(currentHeight).toFixed(2));
 		//$( "#slider_item_div" ).slider('value', parseFloat(currentHeight).toFixed(2));
 		//slider.value = 0.5;
@@ -399,17 +407,20 @@ var zoomVis = function (opts) {
 		console.log("slider new val: " + val1);
 	}
 	
-	
-	
 	var that = {
 		refresh: function () {
 			$.ajax({
 				url: url,
-				data: { },
+//				data: { },
 				success: function (data) {
+					data.sort(function (a, b) {
+						return a.height - b.height;
+					});
+					state = data;
+					
 					//draw(data);
 					setupSlider();
-					constructLevels(data);
+					constructLevels(state, true);
 				},	
 				dataType: 'json',
 				error: function (jqXHR, jqXHR, status, err) {
@@ -417,8 +428,33 @@ var zoomVis = function (opts) {
 				}
 			});
 		},
-		setCurrentState: function (stateId) {
-			// TODO
+		setCurrentStates: function (states) {
+			if (state == null) return;
+			
+			console.log('new states: ' + JSON.stringify(states));
+			
+			states.sort(function (a, b) {
+				return a.height - b.height;
+			});
+			
+			var currLevelIdx = 0;
+			var currState = states[0].id;
+			for (var i = 1; i < states.length; i++) {
+				var nextHeight = states[i].height;
+				
+				while (currLevelIdx < state.length && state[currLevelIdx].height < nextHeight) {
+					state[currLevelIdx].currentState = currState;
+					state[currLevelIdx].futureStates = null;	// TODO
+					
+					console.log('Height: ' + state[currLevelIdx].height + ', curr: ' + currState);
+					
+					currLevelIdx++;
+				}
+				
+				currState = states[i].id;
+			}
+			
+			constructLevels(state, false);
 		},
 		slider: sliderChanged
 	}

@@ -15,6 +15,30 @@
 	
 	<script type="text/javascript">
 		var viz;
+		var ws;
+	
+		function initWs() {
+			var address = location.host + '/websocket';
+			
+			console.log('Connecting websocket to address: ' + address); 
+			ws = new WebSocket('ws://' + address);
+			
+			ws.onopen = function () {
+       			console.log('Web socket connected!');
+   			};
+   			
+   			ws.onerror = function (e) {
+   				console.log('Web socket error: ' + e);
+   				alert('Web socket closed!');
+   			};
+   			
+   			ws.onmessage = function (msgStr) {
+   				var msg = JSON.parse(msgStr.data);
+   				
+   				if (msg.type == 'stateChanged')
+   					viz.setCurrentStates(msg.content);
+   			};
+		}
 	
 		$(document).ready(function () {
 			viz = zoomVis({
@@ -23,7 +47,9 @@
 				visContainer: 'vis_container',
 				currentHeightContainer: 'current_height_value'
 			});
+			
 			viz.refresh();
+			initWs();
 		});
 	</script>
 	<script type="text/javascript">

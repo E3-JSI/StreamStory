@@ -1,22 +1,10 @@
-// read command line arguments
-var confFile = process.argv[2];
-global.qmModulePath = process.argv[3];
-
-var readOnly = true;
-
-console.log('================================================');
-console.log('Environment: ' + JSON.stringify(process.env));
-console.log('Working directory: ' + process.cwd());
-console.log('QMiner configuration file: ' + confFile);
-console.log('Module path: ' + global.qmModulePath);
-console.log('Read only: ' + readOnly);
-console.log('================================================\n\n');
-
-// imports
-require('./config.js');
+var config = require('./config.js');
 var services = require('./src/services.js');
 var mc = require('./src/init_mc.js');
 var qm = require(qmModulePath + 'qm.node');
+
+var readOnly = config.qmReadOnly;
+var qmConfFile = config.qmConfFile;
 
 // global functions
 global.closeBase = function () {
@@ -29,14 +17,17 @@ global.closeBase = function () {
 };
 
 try {
-	log.info('Opening base with configuration: %s ...', confFile);
+	log.info('Opening base with configuration: %s ...', qmConfFile);
 	
 	// global variables
-	global.base = qm.open(confFile, readOnly);
+	global.base = qm.open(qmConfFile, readOnly);
 	global.hmc = mc.init();
 	
 	services.init();
+	
+	require('./src/replay.js').replay();
 } catch (e) {
 	log.error(e, 'Exception in main!');
 	closeBase();
+	process.exit(1);
 }

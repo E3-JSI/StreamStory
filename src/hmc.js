@@ -48,16 +48,22 @@ var HMC = function (mc, ftrSpace) {
 		update: function (rec) {
 			var ftrVec = ftrSpace.ftrVec(rec);
 			var recTm = rec.time;
+			var timestamp = recTm.getTime();
 			
-			mc.learn(ftrVec, recTm);
+			mc.update(ftrVec, timestamp);
 		},
 		
 		save: function (mcFName, ftrFname) {
-			console.log('Saving Markov chain ...');
+			log.info('Saving Markov chain ...');
 			mc.save(mcFName);
-			console.log('Saving feature space ...');
+			log.info('Saving feature space ...');
 			ftrSpace.save(ftrFname);
-			console.log('Done!');
+			log.info('Done!');
+		},
+		
+		getVizState: function () {
+			log.debug('Fetching visualization ...');
+			return mc.toJSON();
 		},
 		
 		getModel: function () {
@@ -99,7 +105,7 @@ var HMC = function (mc, ftrSpace) {
 };
 
 exports.create = function (recSet, ctmcParams) {
-	console.log('Creating hierarchical Markov chain ...');
+	log.info('Creating hierarchical Markov chain ...');
 	
 	var ftrSpace = createFeatureSpace(recSet.store);
 
@@ -108,14 +114,20 @@ exports.create = function (recSet, ctmcParams) {
 	var result = HMC(mc, ftrSpace);
 	result.init(recSet);
 	
+	log.info('Done!');
+	
 	return result;
 };
 
 exports.load = function (mcFName, ftrFname) {
-	console.log('Loading a HMC model ...');
+	log.info('Loading a HMC model ...');
 	
 	var mc = new analytics.HMC(mcFName);
 	var ftrSpace = new qm.FeatureSpace(base, ftrFname);
 	
-	return HMC(mc, ftrSpace);
+	var result = HMC(mc, ftrSpace); 
+	
+	log.info('Done!');
+	
+	return result;
 };

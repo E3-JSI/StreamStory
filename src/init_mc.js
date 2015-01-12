@@ -6,22 +6,23 @@ const FNAME_FSPACE = CTMC_DIR_NAME + 'ctmc-ftr-' + CTMC_NRECS + '.bin';
 
 exports.init = function () {
 	if (fs.existsSync(FNAME_MC) && fs.existsSync(FNAME_FSPACE)) {
+		log.info('Loading HMC model ...');
 		return hmcLib.load(FNAME_MC, FNAME_FSPACE);
 	} 
 	else {
-		console.log('Initializing Markov chain ...');
+		log.info('Initializing Markov chain ...');
 		
 		var store = base.store(CTMC_STORE_NAME);
 		
 		var recs = store.recs.sample(CTMC_NRECS);
 		recs.sortByField('time', true);
 		
-		console.log('Creating a store out of ' + recs.length + ' records ...');
+		log.info('Creating a store out of %d records ...', recs.length);
 		
 		var result = hmcLib.create(recs, CTMC_PARAMS);
 		result.save(FNAME_MC, FNAME_FSPACE);
 		
-		console.log('Done!');
+		log.info('Done!');
 		
 		return result;
 	}
