@@ -1,0 +1,8 @@
+{
+	"qmConfFile": "qm-lstopar.conf",
+	"qminerPath": "/home/lstopar/workspace/JSI/qminer-port/qminer/build/Debug/",
+	"qmReadOnly": true,
+	"port": 8888,
+	"pingInterval": 10000,
+	"logLevel": "debug"
+}
