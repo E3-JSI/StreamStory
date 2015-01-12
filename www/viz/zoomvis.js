@@ -38,12 +38,12 @@ var zoomVis = function (opts) {
 	
 	var edgeColor = 'darkgray';
 	
-	var MIN_NODE_SIZE = 30;
+	var MIN_NODE_DIAMETER = 30;
 	var NODE_SCALE_FACTOR = 300;
 	var STANDARD_NODE_COLOR = "red";
 	
-	function calculateNodeRadius(size) {
-		return Math.max(2*Math.sqrt(Math.sqrt(size)/Math.PI) * NODE_SCALE_FACTOR,  MIN_NODE_SIZE);
+	function calculateNodeRadius(area) {
+		return Math.max(2*Math.sqrt(Math.sqrt(area)/Math.PI) * NODE_SCALE_FACTOR,  MIN_NODE_DIAMETER);
 	}
 	
 	function setupSlider() {
@@ -184,7 +184,7 @@ var zoomVis = function (opts) {
 		
 		position[0] = ((x + Math.abs(minX)) / maxX) * (1 - xOffset) * visWidth + xOffset * visWidth;
 		position[1] = ((y + Math.abs(minY)) / maxY) * (1 - yOffset) * visHeight + yOffset * visHeight;
-		console.log("position[x,y]: " + position[0] + " " + position[y]);
+		console.log("position[x,y]: " + position[0] + " " + position[1]);
 		return position;
 	}
 	
@@ -237,6 +237,7 @@ var zoomVis = function (opts) {
 	
 	function insertLevelJumps(level) {
 		var currentJumps = [];
+		var edgeId = 0;
 		for (var i = 0; i < levelJumps[level].length; i++) {
 			for (var j = 0; j < levelJumps[level][i].length; j++) {
 				if (levelJumps[level][i][j] > 0) {
@@ -244,7 +245,7 @@ var zoomVis = function (opts) {
 					{
 						group: 'edges',
 						data: {
-							id: '' +  (levelJumps[level][i].length * i + j),		//id: levelJumps[level][i].id,
+							id: '' + (edgeId++),
 							source: levelNodes[level][i].id,
 							target: levelNodes[level][j].id,
 							value: levelJumps[level][i][j].toFixed(3)

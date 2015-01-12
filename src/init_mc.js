@@ -1,5 +1,5 @@
 var fs = require('fs');
-var hmcLib = require('./mc.js');
+var hmcLib = require('./hmc.js');
 
 const FNAME_MC = CTMC_DIR_NAME + 'ctmc-' + CTMC_NRECS + '.bin';
 const FNAME_FSPACE = CTMC_DIR_NAME + 'ctmc-ftr-' + CTMC_NRECS + '.bin';

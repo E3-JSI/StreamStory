@@ -1,3 +1,16 @@
+var bunyan = require('bunyan');
+var logformat = require('bunyan-format');
+
+// LOG
+global.log = bunyan.createLogger({
+	name: 'ProaSense',
+	stream: logformat({ 
+		outputMode: 'short',
+		out: process.stdout
+	}),
+	level: 'debug'
+});
+
 // SERVER
 global.SERVER_PORT = 8888;
 global.WWW_DIR = '../www';

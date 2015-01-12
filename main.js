@@ -20,21 +20,23 @@ var qm = require(qmModulePath + 'qm.node');
 
 // global functions
 global.closeBase = function () {
-	console.log('Closing base ...');
+	log.info('Closing base ...');
 	
 	if (!readOnly && base != null)
 		base.close();
 	
-	console.log('Done!');
+	log.info('Done!');
 };
 
 try {
-	console.log('Opening base with configuration: ' + confFile + ' ...');
-	global.base = qm.open(confFile, readOnly);
+	log.info('Opening base with configuration: %s ...', confFile);
 	
+	// global variables
+	global.base = qm.open(confFile, readOnly);
 	global.hmc = mc.init();
+	
 	services.init();
 } catch (e) {
-	console.log('Exception in main: ' + e);
+	log.error(e, 'Exception in main!');
 	closeBase();
 }

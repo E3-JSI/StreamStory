@@ -5,15 +5,15 @@ var app = express();
 var server;
 
 exports.init = function () {
-	console.log('Registering drilling services ...');
+	log.info('Registering drilling services ...');
 	
 	{
-		console.log('Registering exit service ...');
+		log.info('Registering exit service ...');
 		
 		// multilevel analysis
 		app.get('/exit', function (req, resp) {
 			try {
-				console.log('Exiting qminer and closing server ...');
+				log.debug('Exiting qminer and closing server ...');
 				
 				closeBase();
 				setTimeout(function () {
@@ -26,8 +26,8 @@ exports.init = function () {
 				
 				resp.status(204);
 			} catch (e) {
-				console.log('Failed to query MHWirth multilevel visualization: ' + e);
-				resp.setStatusCode(500);	// internal server error
+				log.error('Failed to query MHWirth multilevel visualization: ' + e);
+				resp.status(500);	// internal server error
 			}
 			
 			resp.end();
@@ -35,7 +35,7 @@ exports.init = function () {
 	}
 	
 	{
-		console.log('Registering push data service ...');
+		log.info('Registering push data service ...');
 		
 		var imported = 0;
 		var printInterval = 10000;
@@ -50,8 +50,8 @@ exports.init = function () {
 					var timestamp = instance.timestamp;
 					var value = instance.value;
 					
-					if (++imported % printInterval == 0)
-						console.log('Imported ' + imported + ' values ...');
+					if (++imported % printInterval == 0 && log.debug())
+						log.debug('Imported %d values ...', imported);
 					
 					qm.store(store).add({
 						time_ms: timestamp,
@@ -62,8 +62,8 @@ exports.init = function () {
 				
 				resp.status(204);
 			} catch (e) {
-				console.log('Failed to add records: ' + e);
-				resp.setStatusCode(500);	// internal server error
+				log.error(e, 'Failed to add records!');
+				resp.status(500);	// internal server error
 			}
 
 			resp.end();
@@ -71,7 +71,7 @@ exports.init = function () {
 	}
 	
 	{
-		console.log('Registering multilevel service at drilling/multilevel ...');
+		log.info('Registering multilevel service at drilling/multilevel ...');
 		
 		// multilevel analysis
 		app.get('/drilling/multilevel', function (req, resp) {
@@ -79,8 +79,8 @@ exports.init = function () {
 				console.log('Querying MHWirth multilevel model ...');
 				resp.send(hmc.getModel().toJSON());
 			} catch (e) {
-				console.log('Failed to query MHWirth multilevel visualization: ' + e);
-				resp.setStatusCode(500);	// internal server error
+				console.log(e, 'Failed to query MHWirth multilevel visualization!');
+				resp.status(500);	// internal server error
 			}
 			
 			resp.end();
@@ -88,19 +88,19 @@ exports.init = function () {
 	}
 	
 	{
-		console.log('Registering transition model service ...');
+		log.info('Registering transition model service ...');
 		
 		// multilevel analysis
 		app.get('/drilling/transitionModel', function (req, resp) {
 			try {
 				var level = parseFloat(req.query.level);
 				
-				console.log('Fetching transition model for level: ' + level);
+				log.debug('Fetching transition model for level: ' + level);
 				
 				resp.send(ctmcNew.getTransitionModel(level));
 			} catch (e) {
-				console.log('Failed to query MHWirth multilevel visualization: ' + e);
-				resp.setStatusCode(500);	// internal server error
+				console.log(e, 'Failed to query MHWirth multilevel visualization!');
+				resp.status(500);	// internal server error
 			}
 			
 			resp.end();
@@ -108,7 +108,7 @@ exports.init = function () {
 	}
 	
 	{
-		console.log('Registering future states service ...');
+		log.info('Registering future states service ...');
 		
 		// multilevel analysis
 		app.get('/drilling/futureStates', function (req, resp) {
@@ -117,28 +117,58 @@ exports.init = function () {
 				var currState = parseInt(req.query.state);
 				var time = parseFloat(req.query.time);
 				
-				console.log('Fetching future states, currState: ' + currState + ', level: ' + level + ', time: ' + time);
+				log.debug('Fetching future states, currState: ' + currState + ', level: ' + level + ', time: ' + time);
 				
-				resp.send(ctmcNew.futureStates(level, currState, time));
+				resp.send(hmc.futureStates(level, currState, time));
 			} catch (e) {
-				console.log('Failed to query MHWirth multilevel visualization: ' + e);
-				resp.setStatusCode(500);	// internal server error
+				log.error(e, 'Failed to query MHWirth multilevel visualization!');
+				resp.status(500);	// internal server error
 			}
 			
 			resp.end();
 		});
 	}
 	
+	{
+		log.info('Registering state details service ...');
+		
+		// multilevel analysis
+		app.get('/drilling/details', function (req, resp) {
+			try {
+				var stateId = parseInt(req.query.state);
+				var level = parseFloat(req.query.level);
+				
+				if (log.debug())
+					log.debug('Fetching details for state: %d', stateId);
+				
+				resp.send(hmc.stateDetails(stateId, level));
+			} catch (e) {
+				log.error(e, 'Failed to query state details!');
+				resp.status(500);	// internal server error
+			}
+			
+			resp.end();
+		});
+	}
+	
+	{
+		log.info('Registering state changed callback ...');
+		
+		hmc.blaonStateChanged(function (currStates) {
+			log.info('State changed: ' + currStates);
+		});
+	}
+	
 	// serve static files at www
 	{
-		console.log('Initializing web server ...');
+		log.info('Initializing web server ...');
 		
 		var staticDir = path.join(__dirname, WWW_DIR);
-		console.log('Using static directory: ' + staticDir);
+		log.info('Using static directory: %s', staticDir);
 		
 		app.use('/www', express.static(staticDir));
 	}
 	
 	server = app.listen(SERVER_PORT);
-	console.log('Server running at http://localhost:' + SERVER_PORT + '/');
+	log.info('Server running at http://localhost:%d', SERVER_PORT);
 };
