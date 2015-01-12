@@ -23,7 +23,7 @@ try {
 	log.info('Opening base with configuration: %s ...', qmConfFile);
 	
 	// global variables
-	global.base = qm.open(qmConfFile, true/*readOnly*/);
+	global.base = qm.open(qmConfFile, readOnly);
 	
 //	base.store('drilling').clear();
 //	log.info('Store cleared :) !');
