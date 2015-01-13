@@ -2,16 +2,15 @@
 <html>
 <head>
 	<meta charset="UTF-8">
-	<title>ProaSense - zoom visualization</title>
-		
-	<!--<script type="text/javascript" src="viz/lib/d3.min.js"></script> -->
+	<title>ProaSense - UI</title>
+	
+	<link rel="stylesheet" href="css/style.css">
+	<link rel="stylesheet" href="lib/jquer-ui.css">	
+	
 	<script type="text/javascript" src="lib/jquery-1.11.1.min.js"></script>
 	<script type="text/javascript" src="lib/jquery-ui.min.js"></script>
 	<script type="text/javascript" src="lib/cytoscape.js"></script>
 	<script type="text/javascript" src="viz/zoomvis.js"></script>
-	<!--<link rel="stylesheet" href="http://code.jquery.com/ui/1.11.2/themes/smoothness/jquery-ui.css"> -->
-	<link rel="stylesheet" href="lib\jquer-ui.css">
-	<!--<script type="text/javascript" src="viz/data/podatki.json></script> -->
 	
 	<script type="text/javascript">
 		var viz;
@@ -37,6 +36,8 @@
    				
    				if (msg.type == 'stateChanged')
    					viz.setCurrentStates(msg.content);
+   				else if (msg.type == 'anomaly')
+   					console.log(msgStr);
    			};
 		}
 	
@@ -52,68 +53,8 @@
 			initWs();
 		});
 	</script>
-	<script type="text/javascript">
-	/*
-	$(function() {
-		$( "#slider_item_div" ).slider({
-			value: 1.0,
-			min: 0,
-			max: 1,
-			step: 0.01,
-			animate:"slow",
-			orientation: "vertical",
-			change: viz.slider						//change: function( event, ui ) {}
-		});
-	});
-	*/
-	</script>
-	
-	
-	
-	<style type="text/css">
-	  	html, body {
-	      height:100%;
-	  	}
-	  	
-	  	#parent_container {
-			height: 800px;
-			width: 100%;
-		}
-		
-		#slider_container {
-			height: 100%;
-			width: 40px;
-		}
-		
-		#vis_container {
-			height: 100%;
-			width: calc(100% - 40px);
-		}
-		
-		#slider_container {
-			float: left;
-			background-color: green;
-		}
-		
-		#vis_container {
-			float: left;
-			background-color: white;
-		}
-		
-		#slider_item_div {
-			float: right;
-			height: 100%;
-			margin-right: 10px;
-		}
-		
-	</style>
 </head>
 <body>
-	<!--
-	<div id="config_div">
-		<button type="button" id="refresh_btn" onclick="viz.refresh();">Refresh</button>
-	</div>
-	-->
 	<div id="parent_container">
 		<div id="slider_container">
 			<div id="slider_item_div"></div>
