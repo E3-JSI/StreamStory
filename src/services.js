@@ -13,7 +13,7 @@ function initServer() {
 	var staticDir = path.join(__dirname, WWW_DIR);
 	log.info('Using static directory: %s', staticDir);
 	
-	app.use('/www', express.static(staticDir));
+	app.use('/ui', express.static(staticDir));
 	
 	server = app.listen(SERVER_PORT);
 	log.info('Server running at http://localhost:%d', SERVER_PORT);

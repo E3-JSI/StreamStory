@@ -24,7 +24,7 @@ global.log = bunyan.createLogger({
 // SERVER
 //================================================================
 global.SERVER_PORT = config.port;
-global.WWW_DIR = '../www';
+global.WWW_DIR = '../ui';
 global.PING_INTERVAL = config.pingInterval;
 
 //================================================================
