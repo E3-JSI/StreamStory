@@ -33,7 +33,7 @@ function createFeatureSpace(store) {
 
 var HMC = function (mc, ftrSpace) {
 	return {
-		init: function (recSet) {
+		fit: function (recSet) {
 			console.log('Updating feature space ...');
 			ftrSpace.updateRecords(recSet);
 			
@@ -41,7 +41,7 @@ var HMC = function (mc, ftrSpace) {
 			var timeV = recSet.getVec('time');
 			
 			console.log('Creating model ...');
-			mc.init(colMat, timeV);
+			mc.fit(colMat, timeV);
 			console.log('Done!');
 		},
 		
@@ -100,6 +100,10 @@ var HMC = function (mc, ftrSpace) {
 		
 		onStateChanged: function (callback) {
 			mc.onStateChanged(callback);
+		},
+		
+		onAnomaly: function (callback) {
+			mc.onAnomaly(callback);
 		}
 	};
 };
@@ -112,7 +116,7 @@ exports.create = function (recSet, ctmcParams) {
 	var mc = new analytics.HMC(ctmcParams);
 	
 	var result = HMC(mc, ftrSpace);
-	result.init(recSet);
+	result.fit(recSet);
 	
 	log.info('Done!');
 	
@@ -125,7 +129,11 @@ exports.load = function (mcFName, ftrFname) {
 	var mc = new analytics.HMC(mcFName);
 	var ftrSpace = new qm.FeatureSpace(base, ftrFname);
 	
-	var result = HMC(mc, ftrSpace); 
+	if (log.debug())
+		log.debug('Setting verbocity to ' + CTMC_VERBOSE);
+	mc.setParams({verbose: CTMC_VERBOSE});
+	
+	var result = HMC(mc, ftrSpace);
 	
 	log.info('Done!');
 	

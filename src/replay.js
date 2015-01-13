@@ -4,8 +4,8 @@ const PUSH_DELAY = 20;
 
 log.info('Reading all records from store: %s', CTMC_STORE_NAME);
 var recs = store.recs;
-log.debug('Sorting %d records ...', recs.length);
-recs.sortByField('time', true);
+//log.debug('Sorting %d records ...', recs.length);
+//recs.sortByField('time', true);
 
 exports.replay = function () {
 	log.info('Replaying records ...');

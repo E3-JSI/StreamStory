@@ -5,9 +5,7 @@ var WebSocket = require('ws');
 var app = express();
 
 var server;
-var wss;
-
-var sockets = {};
+var ws;
 
 function initServer() {
 	log.info('Initializing web server ...');
@@ -21,11 +19,13 @@ function initServer() {
 	log.info('Server running at http://localhost:%d', SERVER_PORT);
 }
 
-function initWebSockets() {
+var WebSocketWrapper = function () {
 	log.info('Creating web socket server ...');
 	
+	var sockets = {};
+	
 	var WebSocketServer = WebSocket.Server;
-	wss = new WebSocketServer({
+	var wss = new WebSocketServer({
 		server: server,
 		path: '/websocket'
 	});
@@ -35,35 +35,6 @@ function initWebSockets() {
 			log.debug("Closing client %")
 		sockets[id].client.close();
 	}
-	
-	var socketId = 0;
-	wss.on('connection', function (ws) {
-		var id = socketId++;
-		
-		log.info('New websocket connected id: %d ...', id);
-		
-		ws.on('message', function (msg) {
-			log.debug('Received message from websocket id: %d, msg: %s', id, msg);
-		});
-		
-		ws.on('pong', function () {
-			if (log.trace())
-				log.trace('Received pong %d', id);
-			sockets[id].gotPong = true;
-		});
-		
-		ws.on('error', function (e) {
-			log.error(e, 'Error on web socket %d! Closing ...', id);
-			closeClient(id);
-		});
-		
-		ws.on('close', function (code, msg) {
-			log.debug('Web socket %d closed with code %d, message: %s. Removing from socket list!', id, code, msg);
-			delete sockets[id];
-		});
-		
-		sockets[id] = { client: ws, gotPong: true };
-	});
 	
 	function removeIdle() {
 		for (var id in sockets) {
@@ -75,6 +46,35 @@ function initWebSockets() {
 			sockets[id].gotPong = false;
 		}
 	}
+	
+	var socketId = 0;
+	wss.on('connection', function (socket) {
+		var id = socketId++;
+		
+		log.info('New websocket connected id: %d ...', id);
+		
+		socket.on('message', function (msg) {
+			log.debug('Received message from websocket id: %d, msg: %s', id, msg);
+		});
+		
+		socket.on('pong', function () {
+			if (log.trace())
+				log.trace('Received pong %d', id);
+			sockets[id].gotPong = true;
+		});
+		
+		socket.on('error', function (e) {
+			log.error(e, 'Error on web socket %d! Closing ...', id);
+			closeClient(id);
+		});
+		
+		socket.on('close', function (code, msg) {
+			log.debug('Web socket %d closed with code %d, message: %s. Removing from socket list!', id, code, msg);
+			delete sockets[id];
+		});
+		
+		sockets[id] = { client: socket, gotPong: true };
+	});
 	
 	// ping clients periodically
 	function ping() {
@@ -90,6 +90,17 @@ function initWebSockets() {
 		setTimeout(ping, PING_INTERVAL);
 	}
 	ping();
+	
+	return {
+		distribute: function (msg) {
+			if (log.debug())
+				log.debug('Distributing message: %s', msg);
+			
+			for (var clientId in sockets) {
+				sockets[clientId].client.send(msg);
+			}
+		}
+	}
 }
 
 function initHandlers() {
@@ -104,12 +115,20 @@ function initHandlers() {
 			content: states
 		});
 		
-		if (log.debug())
-			log.debug('Distributing message: %s', msg);
+		ws.distribute(msg);
 		
-		for (var clientId in sockets) {
-			sockets[clientId].client.send(msg);
-		}
+	});
+	
+	hmc.onAnomaly(function (desc) {
+		if (log.info())
+			log.info('Anomaly detected: %s', desc);
+		
+		var msg = JSON.stringify({
+			type: 'anomaly',
+			content: desc
+		});
+		
+		ws.distribute(msg);
 	});
 }
 
@@ -276,7 +295,7 @@ exports.init = function () {
 	
 	// serve static files at www
 	initServer();
-	initWebSockets();
+	ws = WebSocketWrapper();
 	initHandlers();
 	
 	log.info('Done!');

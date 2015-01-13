@@ -8,8 +8,9 @@ console.log('Reading configuration file: ' + confFile);
 var configStr = fs.readFileSync(confFile);
 var config = JSON.parse(configStr);
 
-// set globals
+//================================================================
 // LOG
+//================================================================
 global.log = bunyan.createLogger({
 	name: 'ProaSense',
 	stream: logformat({ 
@@ -19,18 +20,25 @@ global.log = bunyan.createLogger({
 	level: config.logLevel
 });
 
+//================================================================
 // SERVER
+//================================================================
 global.SERVER_PORT = config.port;
 global.WWW_DIR = '../www';
 global.PING_INTERVAL = config.pingInterval;
 
+//================================================================
 // QMINER
+//================================================================
 global.qmModulePath = config.qminerPath;
 
+//================================================================
 // MARKOV CHAIN
+//================================================================
 global.CTMC_STORE_NAME = 'drilling_resampled';
 global.CTMC_DIR_NAME = config.modelDir;
 global.CTMC_NRECS = 100000;
+global.CTMC_VERBOSE = config.modelVerbose;
 
 global.CTMC_PARAMS = {
 	transitions: {
@@ -43,15 +51,19 @@ global.CTMC_PARAMS = {
 		minClusts: 30,
 		maxClusts: 30,
 		rndseed: 1
-	}
+	},
+	verbose: CTMC_VERBOSE
 };
 
-// print
+//================================================================
+// PRINT
+//================================================================
 log.info('================================================');
 log.info('Working directory: %s', process.cwd());
 log.info('Configuration file: %s', config.qmConfFile);
 log.info('Module path: %s', global.qmModulePath);
 log.info('Read only: ' + config.qmReadOnly);
+log.info('Model verbose: ' + CTMC_VERBOSE);
 log.info('================================================');
 
 log.info('Configured!');

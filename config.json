@@ -2,7 +2,8 @@
 	"qmConfFile": "qm-lstopar.conf",
 	"qminerPath": "/home/lstopar/workspace/JSI/qminer-port/qminer/build/Debug/",
 	"qmReadOnly": true,
-	"modelDir": '/media/lstopar/hdd/project-data/proasense-models/',
+	"modelDir": "/media/lstopar/hdd/project-data/proasense-models/",
+	"modelVerbose": false,
 	"port": 8888,
 	"pingInterval": 10000,
 	"logLevel": "debug"

@@ -6,7 +6,9 @@ var qm = require(qmModulePath + 'qm.node');
 var readOnly = config.qmReadOnly;
 var qmConfFile = config.qmConfFile;
 
-// global functions
+// global functions and variables
+global.base = null;
+
 global.closeBase = function () {
 	log.info('Closing base ...');
 	
@@ -14,7 +16,6 @@ global.closeBase = function () {
 		base.gc();
 		base.close();
 	}
-		
 	
 	log.info('Done!');
 };
@@ -24,13 +25,6 @@ try {
 	
 	// global variables
 	global.base = qm.open(qmConfFile, readOnly);
-	
-//	base.store('drilling').clear();
-//	log.info('Store cleared :) !');
-//	closeBase();
-//	log.info('Done!');
-//	return;
-	
 	global.hmc = mc.init();
 	
 	services.init();
