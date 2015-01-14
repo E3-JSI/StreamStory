@@ -7,32 +7,20 @@ var app = express();
 var server;
 var ws;
 
-function initServer() {
-	log.info('Initializing web server ...');
-	
-	var staticDir = path.join(__dirname, WWW_DIR);
-	log.info('Using static directory: %s', staticDir);
-	
-	app.use('/ui', express.static(staticDir));
-	
-	server = app.listen(SERVER_PORT);
-	log.info('Server running at http://localhost:%d', SERVER_PORT);
-}
-
 var WebSocketWrapper = function () {
 	log.info('Creating web socket server ...');
 	
 	var sockets = {};
+	var socketId = 0;
 	
-	var WebSocketServer = WebSocket.Server;
-	var wss = new WebSocketServer({
+	var wss = new WebSocket.Server({
 		server: server,
 		path: '/websocket'
 	});
 
 	function closeClient(id) {
 		if (log.debug())
-			log.debug("Closing client %")
+			log.debug("Closing client %d", id);
 		sockets[id].client.close();
 	}
 	
@@ -47,11 +35,13 @@ var WebSocketWrapper = function () {
 		}
 	}
 	
-	var socketId = 0;
 	wss.on('connection', function (socket) {
 		var id = socketId++;
 		
-		log.info('New websocket connected id: %d ...', id);
+		if (log.info())
+			log.info('New websocket connected id: %d ...', id);
+		
+		sockets[id] = { client: socket, gotPong: true };
 		
 		socket.on('message', function (msg) {
 			log.debug('Received message from websocket id: %d, msg: %s', id, msg);
@@ -72,35 +62,61 @@ var WebSocketWrapper = function () {
 			log.debug('Web socket %d closed with code %d, message: %s. Removing from socket list!', id, code, msg);
 			delete sockets[id];
 		});
-		
-		sockets[id] = { client: socket, gotPong: true };
 	});
 	
 	// ping clients periodically
 	function ping() {
-		removeIdle();
-		
-		if (log.trace())
-			log.trace('Pinging %d clients ...', Object.keys(sockets).length);
-		
-		for (var id in sockets) {
-			sockets[id].client.ping();
+		try {
+			removeIdle();
+			
+			if (log.trace())
+				log.trace('Pinging %d clients ...', Object.keys(sockets).length);
+			
+			for (var id in sockets) {
+				sockets[id].client.ping();
+			}
+		} catch (e) {
+			log.error(e, 'Failed to ping!');
 		}
-		
 		setTimeout(ping, PING_INTERVAL);
 	}
 	ping();
 	
 	return {
+		/**
+		 * Distributes the message to all the clients.
+		 */
 		distribute: function (msg) {
 			if (log.debug())
 				log.debug('Distributing message: %s', msg);
 			
 			for (var clientId in sockets) {
+				var socket = sockets[clientId].client;
+				
+				if (!socket.readyState == WebSocket.OPEN) {
+					log.warn('Socket is not open ' + socket.readyState + ' closing ...');
+					closeClient(clientId);
+					continue;
+				}
+				
 				sockets[clientId].client.send(msg);
 			}
 		}
 	}
+}
+
+function initServer() {
+	log.info('Initializing web server ...');
+	
+	var staticDir = path.join(__dirname, WWW_DIR);
+	log.info('Using static directory: %s', staticDir);
+	
+	app.use('/ui', express.static(staticDir));
+	
+	server = app.listen(SERVER_PORT);
+	ws = WebSocketWrapper();
+	
+	log.info('Server running at http://localhost:%d', SERVER_PORT);
 }
 
 function initHandlers() {
@@ -116,7 +132,6 @@ function initHandlers() {
 		});
 		
 		ws.distribute(msg);
-		
 	});
 	
 	hmc.onAnomaly(function (desc) {
@@ -258,7 +273,7 @@ exports.init = function () {
 				if (time == null) {
 					log.debug('Fetching future states currState: %d, height: %.3f', currState, level);
 				} else {
-					log.debug('Fetching future states, currState: ' + currState + ', level: ' + level + ', time: ' + time);
+					log.debug('Fetching future states, currState: %d, level: %d, time: %.3f', currState, level, time);
 				}
 				
 				resp.send(hmc.futureStates(level, currState, time));
@@ -295,7 +310,6 @@ exports.init = function () {
 	
 	// serve static files at www
 	initServer();
-	ws = WebSocketWrapper();
 	initHandlers();
 	
 	log.info('Done!');

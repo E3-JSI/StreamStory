@@ -15,6 +15,15 @@
 	<script type="text/javascript">
 		var viz;
 		var ws;
+		var msgs = [];
+	
+		function drawMsgs() {
+			$('#list-msg').html('');
+			
+			$.each(msgs, function (i, msg) {
+				$('#list-msg').append('<li class="li-msg">' + msg + '</li>');
+			});
+		}
 	
 		function initWs() {
 			var address = location.host + '/websocket';
@@ -28,7 +37,7 @@
    			
    			ws.onerror = function (e) {
    				console.log('Web socket error: ' + e);
-   				alert('Web socket closed!');
+   				alert('Web socket error!');
    			};
    			
    			ws.onmessage = function (msgStr) {
@@ -36,8 +45,10 @@
    				
    				if (msg.type == 'stateChanged')
    					viz.setCurrentStates(msg.content);
-   				else if (msg.type == 'anomaly')
-   					console.log(msgStr);
+   				else if (msg.type == 'anomaly') {
+   					msgs.push(msg.content);
+   					drawMsgs();
+  				}
    			};
 		}
 	
@@ -55,11 +66,23 @@
 	</script>
 </head>
 <body>
-	<div id="parent_container">
-		<div id="slider_container">
-			<div id="slider_item_div"></div>
+	<div id="container-center">
+		<div id="container-left">
+			<div id="parent_container" class="container">
+				<div id="slider_container">
+					<div id="slider_item_div"></div>
+				</div>
+				<div id="vis_container"></div>
+			</div>
+			<div id="container-details" class="container"></div>
 		</div>
-		<div id="vis_container"></div>
+		<div id="container-right">
+			<div id="container-msg" class="container">
+				<ul class="list-msg"></ul>
+			</div>
+			<div id="container-config" class="container">
+				<div id="current_height_value"></div>
+			</div>
+		</div>
 	</div>
-	<div id="current_height_value"></div>
 </body>

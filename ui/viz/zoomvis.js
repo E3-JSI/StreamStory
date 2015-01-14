@@ -24,9 +24,8 @@ var zoomVis = function (opts) {
 	var levelHeights = [];
 	var levelCurrentStates = [];
 	
-	var colors = ['red', 'green'];
-	var nodeColor = 'red';
-	var currentStateColor = 'orange';
+	var DEFAULT_NODE_COLOR = 'DodgerBlue';
+	var CURRENT_NODE_COLOR = 'green';
 	
 	var visWidth = visContainer.clientWidth;
 	var visHeight = visContainer.clientHeight;
@@ -221,9 +220,9 @@ var zoomVis = function (opts) {
 			var position = calculatePosition(levelInfo[i].x, levelInfo[i].y);		//[x, y]
 			var nodeSize = calculateNodeRadius(levelInfo[i].size);
 			
-			var nodeColor = "undefined";
+			var nodeColor = DEFAULT_NODE_COLOR;
 			if (node.id == currentState) {
-				nodeColor = currentStateColor;
+				nodeColor = CURRENT_NODE_COLOR;
 				foundCurrent = true;
 			} else if (currentNodeInfo.futureStates != null && currentNodeInfo.futureStates.indexOf(node.id) >= 0) {
 				nodeColor = createHSL(getFutureStateProb(level, levelInfo[i].id));
@@ -430,9 +429,7 @@ var zoomVis = function (opts) {
 		},
 		setCurrentStates: function (states) {
 			if (state == null) return;
-			
-			console.log('new states: ' + JSON.stringify(states));
-			
+						
 			states.sort(function (a, b) {
 				return a.height - b.height;
 			});

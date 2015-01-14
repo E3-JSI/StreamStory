@@ -64,6 +64,7 @@ log.info('Configuration file: %s', config.qmConfFile);
 log.info('Module path: %s', global.qmModulePath);
 log.info('Read only: ' + config.qmReadOnly);
 log.info('Model verbose: ' + CTMC_VERBOSE);
+log.info('Taking model with %d records', CTMC_NRECS);
 log.info('================================================');
 
 log.info('Configured!');
