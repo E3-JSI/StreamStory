@@ -292,7 +292,7 @@ exports.init = function () {
 		// multilevel analysis
 		app.get('/drilling/details', function (req, resp) {
 			try {
-				var stateId = parseInt(req.query.state);
+				var stateId = parseInt(req.query.stateId);
 				var level = parseFloat(req.query.level);
 				
 				if (log.debug())

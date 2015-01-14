@@ -3,12 +3,12 @@ var analytics = require(global.qmModulePath + 'analytics.node');
 
 function createFeatureSpace(store) {
 	try {
-		console.log('Creating feature space ...');
-		console.log('================================================');
+		log.info('Creating feature space ...');
+		log.info('================================================');
 		
 		var fieldConfigV = [];
 		store.fields.forEach(function (field) {
-			console.log('Field:\t\'' + field.name + '\',\ttype: \'' + field.type + '\'');
+			log.info('Field: \'%s\', type: \'%s\'', field.name, field.type);
 			
 			if (field.type == 'float') {
 				fieldConfigV.push({
@@ -20,13 +20,13 @@ function createFeatureSpace(store) {
 			}
 		});
 		
-		console.log('================================================');
+		log.info('================================================');
 		
 		var ftrSpace = new qm.FeatureSpace(base, fieldConfigV);
 		
 		return ftrSpace;
 	} catch (e) {
-		console.log('Failed to create feature space: ' + e);
+		log.error(e, 'Failed to create feature space!');
 		throw e;
 	}
 }
@@ -34,15 +34,15 @@ function createFeatureSpace(store) {
 var HMC = function (mc, ftrSpace) {
 	return {
 		fit: function (recSet) {
-			console.log('Updating feature space ...');
+			log.info('Updating feature space ...');
 			ftrSpace.updateRecords(recSet);
 			
 			var colMat = ftrSpace.ftrColMat(recSet);
 			var timeV = recSet.getVec('time');
 			
-			console.log('Creating model ...');
+			log.info('Creating model ...');
 			mc.fit(colMat, timeV);
-			console.log('Done!');
+			log.info('Done!');
 		},
 		
 		update: function (rec) {

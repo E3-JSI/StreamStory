@@ -85,7 +85,7 @@ var zoomVis = function (opts) {
 		levelNodes = [];
 	}
 	
-	function constructLevels(data, resetLevel) {
+	function constructLevels(data, isInit) {
 		clearStructures();
 		
 		for (var i = 0; i < data.length; i++) {
@@ -97,7 +97,7 @@ var zoomVis = function (opts) {
 		
 		console.log(JSON.stringify(levelCurrentStates));
 		
-		if (resetLevel) {
+		if (isInit) {
 			maxHeight = levelHeights[levelHeights.length - 1];
 			minHeight = levelHeights[0];
 			
@@ -107,7 +107,7 @@ var zoomVis = function (opts) {
 			minAndMaxCoords();
 		}
 		
-		redraw();
+		redraw(isInit);
 	}
 	
 	function minAndMaxCoords() {
@@ -304,10 +304,15 @@ var zoomVis = function (opts) {
 		cy.remove(drawnEdges);
 	}
 	
-	function redraw(level) {
+	function redraw(isInit) {
 		clearNodesAndEdges();
 		insertLevelNodes(currentLevel);
 		insertLevelJumps(currentLevel);
+		
+		if (isInit) {
+			cy.center();
+			addHandlers();
+		}
 	}
 	
 	function getAppropriateLevel() {
@@ -406,11 +411,28 @@ var zoomVis = function (opts) {
 		console.log("slider new val: " + val1);
 	}
 	
+	function fetchStateInfo(stateId) {
+		$.ajax('/drilling/details', {
+			dataType: 'json',
+			data: { stateId: stateId, level: state[currentLevel].height },
+			success: function (data) {
+				var dataStr = JSON.stringify(data);
+				$('#container-details').html(dataStr);
+			}
+		});
+	}
+	
+	function addHandlers() {
+		cy.on('click', 'node', function (event) {
+			var node = event.cyTarget;
+			fetchStateInfo(node.id());
+		});
+	}
+	
 	var that = {
 		refresh: function () {
 			$.ajax({
 				url: url,
-//				data: { },
 				success: function (data) {
 					data.sort(function (a, b) {
 						return a.height - b.height;
