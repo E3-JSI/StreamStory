@@ -34,14 +34,16 @@ html, body {
 }
 
 #container-details {
-	width: 100%;
-	height: 200px;
+	width: calc(100% - 10px);
+	min-height: 200px;
 	margin-top: 20px;
+	padding: 5px;
 }
 
 .container {
 	border: solid;
 	border-width: 1px;
+	overflow-y: auto;
 }
 
 #parent_container {

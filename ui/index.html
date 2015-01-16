@@ -11,57 +11,12 @@
 	<script type="text/javascript" src="lib/jquery-ui.min.js"></script>
 	<script type="text/javascript" src="lib/cytoscape.js"></script>
 	<script type="text/javascript" src="viz/zoomvis.js"></script>
+	<script type="text/javascript" src="js/ui.js"></script>
 	
 	<script type="text/javascript">
-		var viz;
-		var ws;
-		var msgs = [];
-	
-		function drawMsgs() {
-			$('#list-msg').html('');
-			
-			$.each(msgs, function (i, msg) {
-				$('#list-msg').append('<li class="li-msg">' + msg + '</li>');
-			});
-		}
-	
-		function initWs() {
-			var address = location.host + '/websocket';
-			
-			console.log('Connecting websocket to address: ' + address); 
-			ws = new WebSocket('ws://' + address);
-			
-			ws.onopen = function () {
-       			console.log('Web socket connected!');
-   			};
-   			
-   			ws.onerror = function (e) {
-   				console.log('Web socket error: ' + e);
-   				alert('Web socket error!');
-   			};
-   			
-   			ws.onmessage = function (msgStr) {
-   				var msg = JSON.parse(msgStr.data);
-   				
-   				if (msg.type == 'stateChanged')
-   					viz.setCurrentStates(msg.content);
-   				else if (msg.type == 'anomaly') {
-   					msgs.push(msg.content);
-   					drawMsgs();
-  				}
-   			};
-		}
-	
+		var ui;
 		$(document).ready(function () {
-			viz = zoomVis({
-				//url: 'data/podatki.json',
-				url: '/drilling/multilevel',
-				visContainer: 'vis_container',
-				currentHeightContainer: 'current_height_value'
-			});
-			
-			viz.refresh();
-			initWs();
+			ui = UI({url: '/drilling/multilevel'});
 		});
 	</script>
 </head>
@@ -78,10 +33,13 @@
 		</div>
 		<div id="container-right">
 			<div id="container-msg" class="container">
-				<ul class="list-msg"></ul>
+				<div class="wrapper">
+					<ul id="list-msg"></ul>
+				</div>
 			</div>
 			<div id="container-config" class="container">
 				<div id="current_height_value"></div>
+				<input type="button" value="Save as PNG" />
 			</div>
 		</div>
 	</div>
