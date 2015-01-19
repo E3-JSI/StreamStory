@@ -211,22 +211,12 @@ var zoomVis = function (opts) {
 		var currentState = currentNodeInfo.currentState;
 		
 		var nodesArray = [];
-		
-		var foundCurrent = false;
-		
+				
 		for (var i = 0; i < levelInfo.length; i++) {
 			var node = levelInfo[i];
 			var dispNode;
 			var position = calculatePosition(levelInfo[i].x, levelInfo[i].y);		//[x, y]
 			var nodeSize = calculateNodeRadius(levelInfo[i].size);
-			
-			var nodeColor = DEFAULT_NODE_COLOR;
-			if (node.id == currentState) {
-				nodeColor = CURRENT_NODE_COLOR;
-				foundCurrent = true;
-			} else if (currentNodeInfo.futureStates != null && currentNodeInfo.futureStates.indexOf(node.id) >= 0) {
-				nodeColor = createHSL(getFutureStateProb(level, levelInfo[i].id));
-			}
 			
 			dispNode = [
 				{
@@ -240,9 +230,11 @@ var zoomVis = function (opts) {
 						y: position[1]
 					},
 					css: {
-						'background-color': nodeColor,
+						'background-color': DEFAULT_NODE_COLOR,
 						'width': nodeSize,
-						'height': nodeSize
+						'height': nodeSize,
+						'border-width': 5,
+						'border-color': 'black'
 					},
 					locked: true
 				}
@@ -251,9 +243,6 @@ var zoomVis = function (opts) {
 			cy.add(dispNode);
 			//nodesArray.push(node);
 		}
-		
-		if (!foundCurrent) 
-			console.log('Could not find the current node at level ' + levelHeights[level]);
 		
 		//cy.add(nodesArray);
 		//console.log(cy.nodes(""));
@@ -277,7 +266,8 @@ var zoomVis = function (opts) {
 						css: {
 							'control-point-step-size': 250,//150,
 							'text-valign': 'top',
-							'control-point-weight': 0.5
+							'control-point-weight': 0.5,
+							'border-style': 'solid'
 						}
 					}
 					]
@@ -347,16 +337,13 @@ var zoomVis = function (opts) {
 			if (zoomLevel > minZoomLevel + 1) {
 				zoomLevel--;
 			} else zoomLevel = minZoomLevel;
-			//currentHeight--;
 			if (currentHeight < maxHeight) {
 				currentHeight += ZOOM_STEP;
 			} else currentHeight = maxHeight;
 			
 			if (currentLevel < levelHeights.length - 1) {
 				if (currentHeight >= levelHeights[currentLevel + 1]) {
-					currentLevel++;
-					//currentLevel = getAppropriateLevel()
-					redraw();
+					setCurrentLevel(currentLevel++);
 				}
 			}
 			
@@ -370,10 +357,8 @@ var zoomVis = function (opts) {
 			} else currentHeight = minHeight;
 			
 			if (currentLevel > 0) {
-				if (currentHeight <= levelHeights[currentLevel - 1]) {
-					currentLevel--;
-					//currentLevel = getAppropriateLevel()
-					redraw();
+				if (currentHeight < levelHeights[currentLevel]) {
+					setCurrentLevel(currentLevel--);
 				}
 			}
 		}
@@ -390,7 +375,7 @@ var zoomVis = function (opts) {
 		// console.log("maxHeight: " + maxHeight);
 		console.log("currentLevel: " + currentLevel);
 		
-		currentHeightContainer.innerHTML = currentHeight;				//set height text
+		currentHeightContainer.innerHTML = state[currentLevel].height;				//set height text
 		//slider.slider('value', parseFloat(currentHeight).toFixed(2));
 		//$( "#slider_item_div" ).slider('value', parseFloat(currentHeight).toFixed(2));
 		//slider.value = 0.5;
@@ -409,6 +394,12 @@ var zoomVis = function (opts) {
 		$( "#slider_item_div" ).slider( "option", "value", parseFloat(currentHeight).toFixed(2) );
 		var val1 = $( "#slider_item_div" ).slider( "option", "value" );
 		console.log("slider new val: " + val1);
+	}
+	
+	function setCurrentLevel(levelIdx) {
+		redraw();
+		
+		fetchCurrentState(state[levelIdx-1].height);	// TODO WTF??? Why does this work???
 	}
 	
 	function fetchStateInfo(stateId) {
@@ -444,9 +435,7 @@ var zoomVis = function (opts) {
 				for (var i = 0; i < Math.min(3, states.length); i++) {
 					var stateId = states[i].id;
 					var node = cy.nodes('#' + stateId);
-					node.animate({
-						css: { backgroundColor: 'green' }
-					});
+					node.css('backgroundColor', 'cyan');
 				}
 			}
 		});
@@ -460,10 +449,28 @@ var zoomVis = function (opts) {
 				for (var i = 0; i < Math.min(3, states.length); i++) {
 					var stateId = states[i].id;
 					var node = cy.nodes('#' + stateId);
-					node.animate({
-						css: { backgroundColor: 'green' }
-					});
+					node.css('backgroundColor', 'pink');
 				}
+			}
+		});
+	}
+	
+	function setCurrentState(stateId, height) {
+		cy.nodes().css('backgroundColor', DEFAULT_NODE_COLOR);
+		
+		fetchPastStates(stateId, height);
+		fetchFutureStates(stateId, height);
+		
+		var node = cy.nodes('#' + stateId);
+		node.css('backgroundColor', CURRENT_NODE_COLOR);
+	}
+	
+	function fetchCurrentState(height) {
+		$.ajax('/drilling/currentState', {
+			dataType: 'json',
+			data: { level: height },
+			success: function (state) {
+				setCurrentState(state.id, height);
 			}
 		});
 	}
@@ -488,27 +495,14 @@ var zoomVis = function (opts) {
 				}
 			});
 		},
-		setCurrentStates: function (states) {
+		setCurrentStates: function (currentStates) {
 			if (state == null) return;
 						
-			states.sort(function (a, b) {
+			currentStates.sort(function (a, b) {
 				return a.height - b.height;
 			});
 			
-			for (var i = 0; i < state.length; i++) {
-				state[i].currentState = states[i].id;
-				
-				if (state[i].height != states[i].height) {
-					alert('Invalid current states!');
-				}
-			}
-			
-			constructLevels(state, false);
-			
-			var currStateId = state[currentLevel].currentState;
-			var height = state[currentLevel].height;
-			fetchFutureStates(currStateId, height);
-			fetchPastStates(currStateId, height);
+			setCurrentState(currentStates[currentLevel].id, currentStates[currentLevel].height);
 		},
 		slider: sliderChanged
 	}

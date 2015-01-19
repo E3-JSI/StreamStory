@@ -81,10 +81,11 @@ exports.HMC = function (opts) {
 		},
 		
 		/**
-		 * Returns the current states through the hierarchy.
+		 * Returns the current state at the specified height. If the height is not specified it
+		 * returns the current states through the hierarchy.
 		 */
-		currStates: function () {
-			return mc.currStates();
+		currState: function (height) {
+			return mc.currState(height);
 		},
 		
 		/**
@@ -92,6 +93,13 @@ exports.HMC = function (opts) {
 		 */
 		futureStates: function (level, state, time) {
 			return mc.futureStates(level, state, time);
+		},
+		
+		/**
+		 * Returns the most likely future states.
+		 */
+		pastStates: function (level, state, time) {
+			return mc.pastStates(level, state, time);
 		},
 		
 		/**
