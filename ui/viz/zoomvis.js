@@ -436,6 +436,38 @@ var zoomVis = function (opts) {
 		});
 	}
 	
+	function fetchFutureStates(currStateId, height) {
+		$.ajax('/drilling/futureStates', {
+			dataType: 'json',
+			data: { state: currStateId, level: height },
+			success: function (states) {
+				for (var i = 0; i < Math.min(3, states.length); i++) {
+					var stateId = states[i].id;
+					var node = cy.nodes('#' + stateId);
+					node.animate({
+						css: { backgroundColor: 'green' }
+					});
+				}
+			}
+		});
+	}
+	
+	function fetchPastStates(currStateId, height) {
+		$.ajax('/drilling/pastStates', {
+			dataType: 'json',
+			data: { state: currStateId, level: height },
+			success: function (states) {
+				for (var i = 0; i < Math.min(3, states.length); i++) {
+					var stateId = states[i].id;
+					var node = cy.nodes('#' + stateId);
+					node.animate({
+						css: { backgroundColor: 'green' }
+					});
+				}
+			}
+		});
+	}
+	
 	var that = {
 		refresh: function () {
 			$.ajax({
@@ -463,24 +495,20 @@ var zoomVis = function (opts) {
 				return a.height - b.height;
 			});
 			
-			var currLevelIdx = 0;
-			var currState = states[0].id;
-			for (var i = 1; i < states.length; i++) {
-				var nextHeight = states[i].height;
+			for (var i = 0; i < state.length; i++) {
+				state[i].currentState = states[i].id;
 				
-				while (currLevelIdx < state.length && state[currLevelIdx].height < nextHeight) {
-					state[currLevelIdx].currentState = currState;
-					state[currLevelIdx].futureStates = null;	// TODO
-					
-					console.log('Height: ' + state[currLevelIdx].height + ', curr: ' + currState);
-					
-					currLevelIdx++;
+				if (state[i].height != states[i].height) {
+					alert('Invalid current states!');
 				}
-				
-				currState = states[i].id;
 			}
 			
 			constructLevels(state, false);
+			
+			var currStateId = state[currentLevel].currentState;
+			var height = state[currentLevel].height;
+			fetchFutureStates(currStateId, height);
+			fetchPastStates(currStateId, height);
 		},
 		slider: sliderChanged
 	}

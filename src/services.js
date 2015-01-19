@@ -280,15 +280,15 @@ exports.init = function () {
 			try {
 				var level = parseFloat(req.query.level);
 				var currState = parseInt(req.query.state);
-				var time = req.query.time != null ? parseFloat(req.query.time) : null;
 				
-				if (time == null) {
+				if (req.query.time == null) {
 					log.debug('Fetching future states currState: %d, height: %.3f', currState, level);
+					resp.send(hmc.futureStates(level, currState));
 				} else {
+					var time = parseFloat(req.query.time);
 					log.debug('Fetching future states, currState: %d, level: %d, time: %.3f', currState, level, time);
+					resp.send(hmc.futureStates(level, currState, time));
 				}
-				
-				resp.send(hmc.futureStates(level, currState, time));
 			} catch (e) {
 				log.error(e, 'Failed to query MHWirth multilevel visualization!');
 				resp.status(500);	// internal server error
@@ -297,20 +297,35 @@ exports.init = function () {
 			resp.end();
 		});
 		
-		// multilevel analysis
 		app.get('/drilling/pastStates', function (req, resp) {
 			try {
 				var level = parseFloat(req.query.level);
 				var currState = parseInt(req.query.state);
-				var time = req.query.time != null ? parseFloat(req.query.time) : null;
 				
-				if (time == null) {
+				if (req.query.time == null) {
 					log.debug('Fetching future states currState: %d, height: %.3f', currState, level);
+					resp.send(hmc.pastStates(level, currState));
 				} else {
+					var time = parseFloat(req.query.time);
 					log.debug('Fetching future states, currState: %d, level: %d, time: %.3f', currState, level, time);
+					resp.send(hmc.pastStates(level, currState, time));
 				}
+			} catch (e) {
+				log.error(e, 'Failed to query MHWirth multilevel visualization!');
+				resp.status(500);	// internal server error
+			}
+			
+			resp.end();
+		});
+		
+		app.get('/drilling/history', function (req, resp) {
+			try {
+				var level = parseFloat(req.query.level);
 				
-				resp.send(hmc.pastStates(level, currState, time));
+				if (log.debug())
+					log.debug('Fetching history for level %.3f', level);
+				
+				resp.send(hmc.getModel().histStates(level));
 			} catch (e) {
 				log.error(e, 'Failed to query MHWirth multilevel visualization!');
 				resp.status(500);	// internal server error

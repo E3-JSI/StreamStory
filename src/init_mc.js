@@ -8,6 +8,7 @@ exports.init = function () {
 	if (fs.existsSync(FNAME_MC) && fs.existsSync(FNAME_FSPACE)) {
 		log.info('Loading HMC model ...');
 		var result = hmc.HMC({base: base, hmcFile: FNAME_MC, ftrSpaceFile: FNAME_FSPACE});
+//		result.save(FNAME_MC, FNAME_FSPACE);
 		return result;
 	} 
 	else {

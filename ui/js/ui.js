@@ -1,6 +1,5 @@
 var UI = function (opts) {
 	var viz = zoomVis({
-		//url: 'data/podatki.json',
 		url: opts.url,
 		visContainer: 'vis_container',
 		currentHeightContainer: 'current_height_value'
