@@ -336,7 +336,7 @@ var zoomVis = function (opts) {
 //		currentLevel = getAppropriateLevel();
 //		redraw();
 		
-		cy.zoom( {level: Math.abs(currentHeight - maxHeight) * 0.5 + cy.minZoom()});
+		cy.zoom( {level: Math.abs(ui.value - maxHeight) * 0.5 + cy.minZoom()});
 //		currentHeightContainer.innerHTML = currentHeight;				//set height text
 	}
 	
