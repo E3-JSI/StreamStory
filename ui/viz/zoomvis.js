@@ -42,7 +42,7 @@ var zoomVis = function (opts) {
 	var NODE_SCALE_FACTOR = 300;
 	var STANDARD_NODE_COLOR = "red";
 	
-	var transitionLimit = 0;
+	var transitionThreshold = 0;
 	
 	// adding mouse wheel listener
 	if(visContainer.onwheel !== undefined) {
