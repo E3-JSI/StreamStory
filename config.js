@@ -53,6 +53,7 @@ global.CTMC_PARAMS = {
 		rndseed: 1,
 		sample: CLUST_SAMPLE
 	},
+	pastStates: 1,
 	verbose: CTMC_VERBOSE
 };
 
