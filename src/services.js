@@ -279,13 +279,13 @@ exports.init = function () {
 		app.get('/drilling/currentState', function (req, resp) {
 			try {
 				var level = parseFloat(req.query.level);
-				if (log.debug())
-					log.debug('Fetching current state for level ' + level);
+				if (log.info())
+					log.info('Fetching current state for level ' + level);
 				
 				var result = hmc.currState(level);
 				
-				if (log.debug())
-					log.debug("Current state: %s", JSON.stringify(result));
+				if (log.info())
+					log.info("Current state: %s", JSON.stringify(result));
 				
 				resp.send(hmc.currState(level));
 			} catch (e) {
