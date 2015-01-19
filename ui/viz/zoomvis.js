@@ -3,7 +3,8 @@ var zoomVis = function (opts) {
 	var visContainer = document.getElementById(opts.visContainer);
 	var currentHeightContainer = document.getElementById(opts.currentHeightContainer);
 	
-	var state = null;
+	var hierarchy = null;
+	var specialStates = {current: null, future: null, past: null};
 	
 	var zoomLevel = 0;
 	var minZoomLevel = 0.5;
@@ -311,7 +312,7 @@ var zoomVis = function (opts) {
 		}
 		
 		for (var i = 0; i < levelHeights.length; i++) {
-			if (currentHeight >= state[i].height)
+			if (currentHeight >= hierarchy[i].height)
 				return i;
 		}
 	}
@@ -374,7 +375,7 @@ var zoomVis = function (opts) {
 		// console.log("maxHeight: " + maxHeight);
 		console.log("currentLevel: " + currentLevel);
 		
-		currentHeightContainer.innerHTML = state[currentLevel].height;				//set height text
+		currentHeightContainer.innerHTML = hierarchy[currentLevel].height;				//set height text
 		//slider.slider('value', parseFloat(currentHeight).toFixed(2));
 		//$( "#slider_item_div" ).slider('value', parseFloat(currentHeight).toFixed(2));
 		//slider.value = 0.5;
@@ -398,13 +399,13 @@ var zoomVis = function (opts) {
 	function setCurrentLevel(levelIdx) {
 		redraw();
 		
-		fetchCurrentState(state[levelIdx].height);
+		fetchCurrentState(hierarchy[levelIdx].height);
 	}
 	
 	function fetchStateInfo(stateId) {
 		$.ajax('/drilling/details', {
 			dataType: 'json',
-			data: { stateId: stateId, level: state[currentLevel].height },
+			data: { stateId: stateId, level: hierarchy[currentLevel].height },
 			success: function (data) {
 				var str = "STATE ID: " + data.id + '<br />';
 				$.each(data.features, function (idx, val) {
@@ -426,35 +427,54 @@ var zoomVis = function (opts) {
 		});
 	}
 	
+	function drawNode(nodeId) {
+		var futProb = nodeId in specialStates.future ? specialStates.future[nodeId] : 0;
+		var pastProb = nodeId in specialStates.past ? specialStates.past[nodeId] : 0;
+		
+		var defaultColor = 0;
+		var color = 'rgb(' + (defaultColor + Math.ceil(255*pastProb)) + ',0,' + (defaultColor + Math.ceil(255*futProb)) +')';
+	
+		var node = cy.nodes('#' + nodeId);
+		node.css('backgroundColor', color);
+	}
+	
 	function fetchFutureStates(currStateId, height) {
+		specialStates.future = {};
+		
 		$.ajax('/drilling/futureStates', {
 			dataType: 'json',
 			data: { state: currStateId, level: height },
 			success: function (states) {
 				for (var i = 0; i < Math.min(3, states.length); i++) {
 					var stateId = states[i].id;
-					var node = cy.nodes('#' + stateId);
-					node.css('backgroundColor', 'cyan');
+					
+					specialStates.future[stateId] = states[i].prob;
+					drawNode(stateId);
 				}
 			}
 		});
 	}
 	
 	function fetchPastStates(currStateId, height) {
+		specialStates.past = {};
+		
 		$.ajax('/drilling/pastStates', {
 			dataType: 'json',
 			data: { state: currStateId, level: height },
 			success: function (states) {
 				for (var i = 0; i < Math.min(3, states.length); i++) {
 					var stateId = states[i].id;
-					var node = cy.nodes('#' + stateId);
-					node.css('backgroundColor', 'pink');
+					
+					specialStates.past[stateId] = states[i].prob;
+					drawNode(stateId);
 				}
 			}
 		});
 	}
 	
 	function setCurrentState(stateId, height) {
+		specialStates.current = stateId;
+		
 		cy.nodes().css('backgroundColor', DEFAULT_NODE_COLOR);
 		
 		fetchPastStates(stateId, height);
@@ -465,6 +485,8 @@ var zoomVis = function (opts) {
 	}
 	
 	function fetchCurrentState(height) {
+		specialStates.current = null;
+		
 		$.ajax('/drilling/currentState', {
 			dataType: 'json',
 			data: { level: height },
@@ -482,11 +504,11 @@ var zoomVis = function (opts) {
 					data.sort(function (a, b) {
 						return a.height - b.height;
 					});
-					state = data;
+					hierarchy = data;
 					
 					//draw(data);
 					setupSlider();
-					constructLevels(state, true);
+					constructLevels(hierarchy, true);
 				},	
 				dataType: 'json',
 				error: function (jqXHR, jqXHR, status, err) {
@@ -495,7 +517,7 @@ var zoomVis = function (opts) {
 			});
 		},
 		setCurrentStates: function (currentStates) {
-			if (state == null) return;
+			if (hierarchy == null) return;
 						
 			currentStates.sort(function (a, b) {
 				return a.height - b.height;
