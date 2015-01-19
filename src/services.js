@@ -276,6 +276,27 @@ exports.init = function () {
 		log.info('Registering future and states services ...');
 		
 		// multilevel analysis
+		app.get('/drilling/currentState', function (req, resp) {
+			try {
+				var level = parseFloat(req.query.level);
+				if (log.debug())
+					log.debug('Fetching current state for level ' + level);
+				
+				var result = hmc.currState(level);
+				
+				if (log.debug())
+					log.debug("Current state: %s", JSON.stringify(result));
+				
+				resp.send(hmc.currState(level));
+			} catch (e) {
+				log.error(e, 'Failed to query MHWirth multilevel visualization!');
+				resp.status(500);	// internal server error
+			}
+			
+			resp.end();
+		});
+		
+		// multilevel analysis
 		app.get('/drilling/futureStates', function (req, resp) {
 			try {
 				var level = parseFloat(req.query.level);
