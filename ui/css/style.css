@@ -71,3 +71,22 @@ html, body {
 	margin-top: 15px;
 	margin-right: 0px;
 }
+
+#slider_transition_limit_container {
+	height: 40px;
+	width: 80%;
+}
+
+#slider_transition_limit_container {
+	float: left;
+	width: 23px;
+}
+
+#slider_limit_item_div {
+	z-index: 100;
+	float: left;
+	height: 90%;
+	width: 80%;
+	margin-top: 10px;
+	margin-right: 0px;
+}

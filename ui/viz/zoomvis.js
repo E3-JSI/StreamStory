@@ -42,6 +42,8 @@ var zoomVis = function (opts) {
 	var NODE_SCALE_FACTOR = 300;
 	var STANDARD_NODE_COLOR = "red";
 	
+	var transitionLimit = 0;
+	
 	// adding mouse wheel listener
 	if(visContainer.onwheel !== undefined) {
 		visContainer.addEventListener('wheel', onMouseWheel)
@@ -64,6 +66,19 @@ var zoomVis = function (opts) {
 			step: 0.01,
 			animate:"slow",
 			orientation: "vertical",
+			//change: sliderChanged						//change: function( event, ui ) {}
+			slide: sliderChanged
+		});
+	}
+	
+	function setupTransitionLimitSlider() {
+		$( "#slider_item_div" ).slider({
+			value: 0.5,
+			min: 0,
+			max: 1,
+			step: 0.01,
+			animate:"slow",
+			orientation: "hotizontal",
 			//change: sliderChanged						//change: function( event, ui ) {}
 			slide: sliderChanged
 		});
