@@ -431,8 +431,15 @@ var zoomVis = function (opts) {
 			dataType: 'json',
 			data: { stateId: stateId, level: state[currentLevel].height },
 			success: function (data) {
-				var dataStr = JSON.stringify(data);
-				$('#container-details').html(dataStr);
+				var str = "STATE ID: " + data.id + '<br />';
+				$.each(data.features, function (idx, val) {
+					str += val.name + ':\t' + val.value + '<br />';
+				});
+				
+				str += '<br /><br /><br />FUTURE STATES:' + JSON.stringify(data.futureStates);
+				str += '<br /><br /><br />PAST STATES:' + JSON.stringify(data.pastStates);
+				
+				$('#container-details').html(str);
 			}
 		});
 	}

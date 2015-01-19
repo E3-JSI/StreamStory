@@ -1,38 +1,29 @@
 var qm = require(global.qmModulePath + 'qm.node');
 var analytics = require(global.qmModulePath + 'analytics.node');
 
-function createFeatureSpace(store) {
-	try {
-		log.info('Creating feature space ...');
-		log.info('================================================');
-		
-		var fieldConfigV = [];
-		store.fields.forEach(function (field) {
-			log.info('Field: \'%s\', type: \'%s\'', field.name, field.type);
-			
-			if (field.type == 'float') {
-				fieldConfigV.push({
-					type: 'numeric',
-					source: {store: store.name},
-					field: field.name,
-					normalize: true
-				});
-			}
-		});
-		
-		log.info('================================================');
-		
-		var ftrSpace = new qm.FeatureSpace(base, fieldConfigV);
-		
-		return ftrSpace;
-	} catch (e) {
-		log.error(e, 'Failed to create feature space!');
-		throw e;
+exports.HMC = function (opts) {
+	// constructor
+	if (opts == null) throw 'Missing parameters!';
+	if (opts.base == null) throw 'Missing parameter base!';
+	
+	// create model and feature space
+	var mc;
+	var ftrSpace;
+	
+	if (opts.hmcConfig != null && opts.ftrSpaceConfig != null && opts.base != null) {
+		mc = new analytics.HMC(opts.hmcConfig);
+		ftrSpace = new qm.FeatureSpace(opts.base, opts.ftrSpaceConfig);
+	} 
+	else if (opts.hmcFile != null && opts.ftrSpaceFile != null) {
+		mc = new analytics.HMC(opts.hmcFile);
+		ftrSpace = new qm.FeatureSpace(opts.base, opts.ftrSpaceFile);
 	}
-}
-
-var HMC = function (mc, ftrSpace) {
-	return {
+	
+	// public methods
+	var that = {
+		/**
+		 * Creates a new model out of the record set.
+		 */
 		fit: function (recSet) {
 			log.info('Updating feature space ...');
 			ftrSpace.updateRecords(recSet);
@@ -43,7 +34,10 @@ var HMC = function (mc, ftrSpace) {
 			log.info('Creating model ...');
 			mc.fit(colMat, timeV);
 			log.info('Done!');
+			
+			return that;
 		},
+		
 		
 		update: function (rec) {
 			var ftrVec = ftrSpace.ftrVec(rec);
@@ -53,6 +47,9 @@ var HMC = function (mc, ftrSpace) {
 			mc.update(ftrVec, timestamp);
 		},
 		
+		/**
+		 * Saves the feature space and model into the specified files.
+		 */
 		save: function (mcFName, ftrFname) {
 			log.info('Saving Markov chain ...');
 			mc.save(mcFName);
@@ -61,31 +58,50 @@ var HMC = function (mc, ftrSpace) {
 			log.info('Done!');
 		},
 		
+		/**
+		 * Returns the state used in the visualization.
+		 */
 		getVizState: function () {
 			log.debug('Fetching visualization ...');
 			return mc.toJSON();
 		},
 		
+		/**
+		 * Returns the hierarchical Markov chain model.
+		 */
 		getModel: function () {
 			return mc;
 		},
 		
+		/**
+		 * Returns the feature space.
+		 */
 		getFtrSpace: function () {
 			return ftrSpace;
 		},
 		
+		/**
+		 * Returns the current states through the hierarchy.
+		 */
 		currStates: function () {
 			return mc.currStates();
 		},
 		
+		/**
+		 * Returns the most likely future states.
+		 */
 		futureStates: function (level, state, time) {
 			return mc.futureStates(level, state, time);
 		},
 		
-		stateDetails: function (state, level) {
-			var coords = mc.fullCoords(state);
+		/**
+		 * Returns state details as a Javascript object.
+		 */
+		stateDetails: function (stateId, level) {
+			var coords = mc.fullCoords(stateId);
 			var invCoords = ftrSpace.invFtrVec(coords);
-			var futureStates = mc.futureStates(level, state);
+			var futureStates = mc.futureStates(level, stateId);
+			var pastStates = mc.pastStates(level, stateId);
 			
 			var features = [];
 			for (var i = 0; i < invCoords.length; i++) {
@@ -93,49 +109,40 @@ var HMC = function (mc, ftrSpace) {
 			}
 			
 			return {
+				id: stateId,
 				features: features,
-				futureStates: futureStates
+				futureStates: futureStates,
+				pastStates: pastStates
 			};
 		},
 		
+		/**
+		 * Callback when the current state changes.
+		 */
 		onStateChanged: function (callback) {
 			mc.onStateChanged(callback);
 		},
 		
+		/**
+		 * Callback when an anomaly is detected.
+		 */
 		onAnomaly: function (callback) {
 			mc.onAnomaly(callback);
+		},
+		
+		onOutlier: function (callback) {
+			mc.onOutlier(function (ftrV) {
+				var invFtrV = ftrSpace.invFtrVec(ftrV);
+				
+				var features = [];
+				for (var i = 0; i < invFtrV.length; i++) {
+					features.push({name: ftrSpace.getFtr(i), value: invFtrV.at(i)});
+				}
+				
+				callback(features);
+			});
 		}
 	};
-};
-
-exports.create = function (recSet, ctmcParams) {
-	log.info('Creating hierarchical Markov chain ...');
 	
-	var ftrSpace = createFeatureSpace(recSet.store);
-
-	var mc = new analytics.HMC(ctmcParams);
-	
-	var result = HMC(mc, ftrSpace);
-	result.fit(recSet);
-	
-	log.info('Done!');
-	
-	return result;
-};
-
-exports.load = function (mcFName, ftrFname) {
-	log.info('Loading a HMC model ...');
-	
-	var mc = new analytics.HMC(mcFName);
-	var ftrSpace = new qm.FeatureSpace(base, ftrFname);
-	
-	if (log.debug())
-		log.debug('Setting verbocity to ' + CTMC_VERBOSE);
-	mc.setParams({verbose: CTMC_VERBOSE});
-	
-	var result = HMC(mc, ftrSpace);
-	
-	log.info('Done!');
-	
-	return result;
+	return that;
 };
