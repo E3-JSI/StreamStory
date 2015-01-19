@@ -326,19 +326,18 @@ var zoomVis = function (opts) {
 		}
 		
 		for (var i = 0; i < levelHeights.length; i++) {
-			if (levelHeights[i] >= currentHeight) {
+			if (currentHeight >= state[i].height)
 				return i;
-			}
 		}
 	}
 	
 	function sliderChanged(event, ui) {
-		currentHeight = ui.value
-		currentLevel = getAppropriateLevel();
-		redraw();
+//		currentHeight = ui.value
+//		currentLevel = getAppropriateLevel();
+//		redraw();
 		
 		cy.zoom( {level: Math.abs(currentHeight - maxHeight) * 0.5 + cy.minZoom()});
-		currentHeightContainer.innerHTML = currentHeight;				//set height text
+//		currentHeightContainer.innerHTML = currentHeight;				//set height text
 	}
 	
 	function onMouseWheel(event) {
@@ -358,7 +357,7 @@ var zoomVis = function (opts) {
 			
 			if (currentLevel < levelHeights.length - 1) {
 				if (currentHeight >= levelHeights[currentLevel + 1]) {
-					setCurrentLevel(currentLevel++);
+					setCurrentLevel(++currentLevel);
 				}
 			}
 			
@@ -373,7 +372,7 @@ var zoomVis = function (opts) {
 			
 			if (currentLevel > 0) {
 				if (currentHeight < levelHeights[currentLevel]) {
-					setCurrentLevel(currentLevel--);
+					setCurrentLevel(--currentLevel);
 				}
 			}
 		}
@@ -405,16 +404,16 @@ var zoomVis = function (opts) {
 		console.log("slider val: " + val1);
 		console.log(val1);
 		
-		var newVal = val1 + 0.1;
-		$( "#slider_item_div" ).slider( "option", "value", parseFloat(currentHeight).toFixed(2) );
-		var val1 = $( "#slider_item_div" ).slider( "option", "value" );
-		console.log("slider new val: " + val1);
+//		var newVal = val1 + 0.1;
+//		$( "#slider_item_div" ).slider( "option", "value", parseFloat(currentHeight).toFixed(2) );
+//		var val1 = $( "#slider_item_div" ).slider( "option", "value" );
+//		console.log("slider new val: " + val1);
 	}
 	
 	function setCurrentLevel(levelIdx) {
 		redraw();
 		
-		fetchCurrentState(state[levelIdx-1].height);	// TODO WTF??? Why does this work???
+		fetchCurrentState(state[levelIdx].height);
 	}
 	
 	function fetchStateInfo(stateId) {
