@@ -15952,7 +15952,7 @@ var cytoscape;
     context.textAlign = 'center';
     context.textBaseline = 'middle';
     
-    // this.recalculateEdgeLabelProjection( edge );
+    this.recalculateEdgeLabelProjection( edge );		// ! modified - uncommented for better edge label position
     
     var rs = edge._private.rscratch;
     this.drawText(context, edge, rs.labelX, rs.labelY);
