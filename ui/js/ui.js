@@ -8,7 +8,20 @@ var UI = function (opts) {
 	var that = {
 		drawMsg: function (msg) {
 			$('#list-msg').append('<li class="li-msg">' + msg + '</li>');
-		}
+		},
+		fetchHistogram: function (stateId, ftrId, openWindow) {
+			if (openWindow)
+				window.open('/ui/popups/histogram.html?s=' + stateId + '&f=' + ftrId);
+			else {
+				$.ajax('/drilling/histogram', {
+					dataType: 'json',
+					data: { stateId: stateId, feature: ftrId },
+					success: function (hist) {
+						drawHistogram({data: hist, container: 'hist-wrapper'});
+					}
+				});
+			}
+		},
 	};
 	
 	function initWs() {

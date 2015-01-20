@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<title>Histogram</title>
+	
+	<link rel="stylesheet" href="../css/style.css">
+	
+	<script type="text/javascript" src="../js/hist.js"></script>
+	<script type="text/javascript" src="../lib/jquery-1.11.1.min.js"></script>
+	<script type="text/javascript" src="../lib/highcharts.js"></script>
+	<script type="text/javascript" src="../lib/jquery.getUrlParam.js"></script>
+	<script type="application/javascript">
+		$(document).ready(function () {
+			var stateId = $(document).getUrlParam('s');
+			var ftrId = $(document).getUrlParam('f');
+		
+			$.ajax('/drilling/histogram', {
+				dataType: 'json',
+				data: { stateId: stateId, feature: ftrId },
+				success: function (hist) {
+					drawHistogram({data: hist, container: 'div-hist'});
+				}
+			});
+		});
+	</script>
+</head>
+<body>
+	<div id="div-hist" class="container" style="height: 300px;"></div>
+</body>
+</html>

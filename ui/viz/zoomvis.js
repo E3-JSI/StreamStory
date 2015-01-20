@@ -4,7 +4,12 @@ var zoomVis = function (opts) {
 	var currentHeightContainer = document.getElementById(opts.currentHeightContainer);
 	
 	var hierarchy = null;
-	var specialStates = {current: null, future: null, past: null};
+	var specialStates = {
+		selected: null,
+		current: null,
+		future: null,
+		past: null
+	};
 	
 	var zoomLevel = 0;
 	var minZoomLevel = 0.5;
@@ -25,7 +30,7 @@ var zoomVis = function (opts) {
 	var levelHeights = [];
 	var levelCurrentStates = [];
 	
-	var DEFAULT_NODE_COLOR = 'DodgerBlue';
+	var DEFAULT_NODE_COLOR = 'rgb(120,120,120)';//'DodgerBlue';
 	var CURRENT_NODE_COLOR = 'green';
 	
 	var visWidth = visContainer.clientWidth;
@@ -274,7 +279,7 @@ var zoomVis = function (opts) {
 					{
 						group: 'edges',
 						data: {
-							id: '' + (edgeId++),
+							id: i + '-' + j,
 							source: levelNodes[level][i].id,
 							target: levelNodes[level][j].id,
 							value: levelJumps[level][i][j].toFixed(3)
@@ -413,7 +418,6 @@ var zoomVis = function (opts) {
 	
 	function setCurrentLevel(levelIdx) {
 		redraw();
-		
 		fetchCurrentState(hierarchy[levelIdx].height);
 	}
 	
@@ -423,14 +427,17 @@ var zoomVis = function (opts) {
 			data: { stateId: stateId, level: hierarchy[currentLevel].height },
 			success: function (data) {
 				var str = "STATE ID: " + data.id + '<br />';
+				
 				$.each(data.features, function (idx, val) {
-					str += val.name + ':\t' + val.value + '<br />';
+					str += '<div class="clickable" ondblclick="ui.fetchHistogram(' + stateId + ',' + idx + ',true)" onclick="ui.fetchHistogram(' + stateId + ',' + idx + ',false)">' + val.name + ':\t' + val.value + '</div>';
 				});
 				
-				str += '<br /><br /><br />FUTURE STATES:' + JSON.stringify(data.futureStates);
+				$('#container-features').html(str);
+				
+				str = '<br /><br /><br />FUTURE STATES:' + JSON.stringify(data.futureStates);
 				str += '<br /><br /><br />PAST STATES:' + JSON.stringify(data.pastStates);
 				
-				$('#container-details').html(str);
+				$('#container-desc').html(str);
 			}
 		});
 	}
@@ -438,19 +445,35 @@ var zoomVis = function (opts) {
 	function addHandlers() {
 		cy.on('click', 'node', function (event) {
 			var node = event.cyTarget;
-			fetchStateInfo(node.id());
+			var stateId = parseInt(node.id());
+			specialStates.current = stateId;
+			fetchStateInfo(stateId);
+			
+			cy.nodes().css('shape', 'ellipse');
+			
+			drawNode(stateId);
 		});
 	}
 	
 	function drawNode(nodeId) {
-		var futProb = nodeId in specialStates.future ? specialStates.future[nodeId] : 0;
-		var pastProb = nodeId in specialStates.past ? specialStates.past[nodeId] : 0;
-		
-		var defaultColor = 0;
-		var color = 'rgb(' + (defaultColor + Math.ceil(255*pastProb)) + ',0,' + (defaultColor + Math.ceil(255*futProb)) +')';
-	
 		var node = cy.nodes('#' + nodeId);
-		node.css('backgroundColor', color);
+		
+		if (nodeId in specialStates.future) {
+			var prob = specialStates.future[nodeId];
+			
+			var defaultColor = 0;
+			var futureColor = 190;
+			var color = 'hsla(216, ' + (28 + Math.floor((100-28)*prob)) + '%, 55%, 1)';
+//			var color = 'rgb(' + defaultColor + ',' + defaultColor + ',' + (futureColor + Math.ceil((255 - futureColor)*prob)) +')';
+			node.css('backgroundColor', color);
+		}
+		if (nodeId in specialStates.past) {
+			node.css('border-color', 'orange');
+//			node.css('shape', 'octagon');
+		}
+		if (nodeId == specialStates.current) {
+			node.css('shape', 'octagon');
+		}
 	}
 	
 	function fetchFutureStates(currStateId, height) {
@@ -473,14 +496,14 @@ var zoomVis = function (opts) {
 	function fetchPastStates(currStateId, height) {
 		specialStates.past = {};
 		
-		$.ajax('/drilling/pastStates', {
+		$.ajax('/drilling/history', {
 			dataType: 'json',
 			data: { state: currStateId, level: height },
-			success: function (states) {
-				for (var i = 0; i < Math.min(3, states.length); i++) {
-					var stateId = states[i].id;
+			success: function (stateIds) {
+				for (var i = 0; i < stateIds.length; i++) {
+					var stateId = stateIds[i];
 					
-					specialStates.past[stateId] = states[i].prob;
+					specialStates.past[stateId] = true;
 					drawNode(stateId);
 				}
 			}
@@ -490,7 +513,9 @@ var zoomVis = function (opts) {
 	function setCurrentState(stateId, height) {
 		specialStates.current = stateId;
 		
-		cy.nodes().css('backgroundColor', DEFAULT_NODE_COLOR);
+		var nodes = cy.nodes();
+		nodes.css('backgroundColor', DEFAULT_NODE_COLOR);
+		nodes.css('shape', 'ellipse');
 		
 		fetchPastStates(stateId, height);
 		fetchFutureStates(stateId, height);
@@ -538,7 +563,9 @@ var zoomVis = function (opts) {
 				return a.height - b.height;
 			});
 			
-			setCurrentState(currentStates[currentLevel].id, currentStates[currentLevel].height);
+			var currState = currentStates[currentLevel].id;
+			if (currState != specialStates.current)
+				setCurrentState(currState, currentStates[currentLevel].height);
 		},
 		slider: sliderChanged
 	}

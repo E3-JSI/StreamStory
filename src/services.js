@@ -376,6 +376,24 @@ exports.init = function () {
 			
 			resp.end();
 		});
+		
+		// multilevel analysis
+		app.get('/drilling/histogram', function (req, resp) {
+			try {
+				var stateId = parseInt(req.query.stateId);
+				var ftrIdx = parseInt(req.query.feature);
+				
+				if (log.debug())
+					log.debug('Fetching histogram for state %d, feature %d ...', stateId, ftrIdx);
+				
+				resp.send(hmc.histogram(stateId, ftrIdx));
+			} catch (e) {
+				log.error(e, 'Failed to query state details!');
+				resp.status(500);	// internal server error
+			}
+			
+			resp.end();
+		});
 	}
 	
 	// serve static files at www

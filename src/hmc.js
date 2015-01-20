@@ -125,6 +125,19 @@ exports.HMC = function (opts) {
 		},
 		
 		/**
+		 * Returns a histogram for the desired feature in the desired state.
+		 */
+		histogram: function (stateId, ftrIdx) {
+			var hist = mc.histogram(stateId, ftrIdx);
+			
+			for (var i = 0; i < hist.binStartV.length; i++) {
+				hist.binStartV[i] = ftrSpace.invFtr(ftrIdx, hist.binStartV[i]);
+			}
+			
+			return hist;
+		},
+		
+		/**
 		 * Callback when the current state changes.
 		 */
 		onStateChanged: function (callback) {

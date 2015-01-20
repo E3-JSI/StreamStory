@@ -51,7 +51,8 @@ global.CTMC_PARAMS = {
 		minClusts: 30,
 //		maxClusts: 30,
 		rndseed: 1,
-		sample: CLUST_SAMPLE
+		sample: CLUST_SAMPLE,
+		histogramBins: 20
 	},
 	pastStates: 1,
 	verbose: CTMC_VERBOSE

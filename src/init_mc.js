@@ -8,7 +8,19 @@ exports.init = function () {
 	if (fs.existsSync(FNAME_MC) && fs.existsSync(FNAME_FSPACE)) {
 		log.info('Loading HMC model ...');
 		var result = hmc.HMC({base: base, hmcFile: FNAME_MC, ftrSpaceFile: FNAME_FSPACE});
+		
+//		log.info('Rebuilding histograms ...');
+//		var store = base.store(CTMC_STORE_NAME);
+//		var model = result.getModel();
+//		var ftrSpace = result.getFtrSpace();
+//		
+//		var colMat = ftrSpace.ftrColMat(store.recs);
+//		
+//		model.rebuildHistograms(colMat);
+//		log.info('Finished rebuilding! Saving ...');
 //		result.save(FNAME_MC, FNAME_FSPACE);
+//		log.info('Done!');
+		
 		return result;
 	} 
 	else {

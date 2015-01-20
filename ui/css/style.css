@@ -46,6 +46,11 @@ html, body {
 	overflow-y: auto;
 }
 
+.clickable:hover {
+	background-color: 'gray';
+	cursor: pointer;
+}
+
 #parent_container {
 	height: 800px;
 	width: 100%;
