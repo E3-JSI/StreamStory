@@ -65,32 +65,6 @@ var zoomVis = function (opts) {
 		return Math.max(2*Math.sqrt(Math.sqrt(area)/Math.PI) * NODE_SCALE_FACTOR,  MIN_NODE_DIAMETER);
 	}
 	
-	function setupSlider() {
-		$( "#slider_item_div" ).slider({
-			value: 0.7,
-			min: 0,
-			max: 1,
-			step: 0.01,
-			animate:"slow",
-			orientation: "vertical",
-			//change: sliderChanged						//change: function( event, ui ) {}
-			slide: sliderChanged
-		});
-	}
-	
-	function setupTransitionLimitSlider() {
-		$( "#slider_item_div" ).slider({
-			value: 0.5,
-			min: 0,
-			max: 1,
-			step: 0.01,
-			animate:"slow",
-			orientation: "hotizontal",
-			//change: sliderChanged						//change: function( event, ui ) {}
-			slide: sliderChanged
-		});
-	}
-	
 	function setZoom(zoom) {
 		zoomLevel = zoom;
 	}

@@ -53,6 +53,29 @@ var UI = function (opts) {
 		};
 	}
 	
+	$( "#threshold_slider" ).slider({
+		value: 0.0,
+		min: 0,
+		max: 1,
+		step: 0.01,
+		animate:"slow",
+		orientation: "hotizontal",
+		slide: function (event, ui) {
+			viz.setTransitionThreshold(ui.value);
+		}
+	});
+
+	$( "#slider_item_div" ).slider({
+		value: 0.7,
+		min: 0,
+		max: 1,
+		step: 0.01,
+		animate:"slow",
+		orientation: "vertical",
+		//change: sliderChanged						//change: function( event, ui ) {}
+		slide: sliderChanged
+	});
+	
 	viz.refresh();
 	initWs();
 	
