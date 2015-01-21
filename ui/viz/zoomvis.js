@@ -447,7 +447,7 @@ var zoomVis = function (opts) {
 		cy.on('click', 'node', function (event) {
 			var node = event.cyTarget;
 			var stateId = parseInt(node.id());
-			specialStates.current = stateId;
+			specialStates.selected = stateId;
 			fetchStateInfo(stateId);
 			
 			cy.nodes().css('shape', 'ellipse');
@@ -459,6 +459,9 @@ var zoomVis = function (opts) {
 	function drawNode(nodeId) {
 		var node = cy.nodes('#' + nodeId);
 		
+		if (nodeId == specialStates.current) {
+			node.css('backgroundColor', CURRENT_NODE_COLOR);
+		}
 		if (nodeId in specialStates.future) {
 			var prob = specialStates.future[nodeId];
 			
@@ -470,9 +473,8 @@ var zoomVis = function (opts) {
 		}
 		if (nodeId in specialStates.past) {
 			node.css('border-color', 'orange');
-//			node.css('shape', 'octagon');
 		}
-		if (nodeId == specialStates.current) {
+		if (nodeId == specialStates.selected) {
 			node.css('shape', 'octagon');
 		}
 	}
@@ -521,9 +523,7 @@ var zoomVis = function (opts) {
 		
 		fetchPastStates(stateId, height);
 		fetchFutureStates(stateId, height);
-		
-		var node = cy.nodes('#' + stateId);
-		node.css('backgroundColor', CURRENT_NODE_COLOR);
+		drawNode(stateId);
 	}
 	
 	function fetchCurrentState(height) {
