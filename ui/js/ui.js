@@ -54,8 +54,8 @@ var UI = function (opts) {
 	}
 	
 	$( "#threshold_slider" ).slider({
-		value: 0.0,
-		min: 0,
+		value: 1,
+		min: .5,
 		max: 1,
 		step: 0.01,
 		animate:"slow",

@@ -52,6 +52,7 @@ html, body {
 }
 
 #parent_container {
+	position: relative;
 	height: 800px;
 	width: 100%;
 }
@@ -99,7 +100,8 @@ html, body {
 }
 
 #threshold_slider {
-	float: left;
+	position: absolute;
+	bottom: 10px;
 	width: 80%;
 	margin-left: 40px;
 }

@@ -19,8 +19,8 @@ var zoomVis = function (opts) {
 	var specialStates = {
 		selected: null,
 		current: null,
-		future: null,
-		past: null
+		future: {},
+		past: {}
 	};
 	
 	var zoomLevel = 0;
@@ -48,7 +48,7 @@ var zoomVis = function (opts) {
 	var xOffset = .1;
 	var yOffset = .1;
 	
-	var transitionThreshold = 0;
+	var transitionThreshold = 1;
 	
 	//===============================================================
 	// UTILITY FUNCTIONS
@@ -150,31 +150,69 @@ var zoomVis = function (opts) {
 	function insertEdges(level) {
 		var currentJumps = [];
 		var edgeId = 0;
-		for (var i = 0; i < levelJumps[level].length; i++) {
-			for (var j = 0; j < levelJumps[level][i].length; j++) {
-				if (levelJumps[level][i][j] > transitionThreshold) {
-					var edge = [
-					{
-						group: 'edges',
-						data: {
-							id: i + '-' + j,
-							source: levelNodes[level][i].id,
-							target: levelNodes[level][j].id,
-							value: levelJumps[level][i][j].toFixed(3)
-						},
-						css: {
-							'control-point-step-size': 250,//150,
-							'text-valign': 'top',
-							'control-point-weight': 0.5,
-							'border-style': 'solid'
-						}
-					}
-					]
-					//currentJumps.push(edge);
-					cy.add(edge)
-				}
-				
+		for (var i = 0; i < levelJumps[level].length; i++) {			
+			var probs = [];
+			for (var k = 0; k < levelJumps[level][i].length; k++) {
+				probs.push({prob: levelJumps[level][i][k], idx: k});
 			}
+			
+			probs.sort(function (a, b) {
+				return b.prob - a.prob;
+			})
+			
+			var edges = [];
+			var sum = 0;
+			var k = 0;
+			while (k < probs.length && probs[k].prob > 0 && sum < transitionThreshold) {
+				edges.push(probs[k].idx);
+				sum += probs[k].prob;
+				k++;
+			}
+			
+			for (var j = 0; j < edges.length; j++) {
+				var edge = [
+				{
+					group: 'edges',
+					data: {
+						id: i + '-' + edges[j],
+						source: levelNodes[level][i].id,
+						target: levelNodes[level][edges[j]].id,
+						value: levelJumps[level][i][edges[j]].toFixed(3)
+					},
+					css: {
+						'control-point-step-size': 250,//150,
+						'text-valign': 'top',
+						'control-point-weight': 0.5,
+						'border-style': 'solid'
+					}
+				}
+				]
+				//currentJumps.push(edge);
+				cy.add(edge)
+			}
+//			for (var j = 0; j < levelJumps[level][i].length; j++) {
+//				if (levelJumps[level][i][j] > transitionThreshold) {
+//					var edge = [
+//					{
+//						group: 'edges',
+//						data: {
+//							id: i + '-' + j,
+//							source: levelNodes[level][i].id,
+//							target: levelNodes[level][j].id,
+//							value: levelJumps[level][i][j].toFixed(3)
+//						},
+//						css: {
+//							'control-point-step-size': 250,//150,
+//							'text-valign': 'top',
+//							'control-point-weight': 0.5,
+//							'border-style': 'solid'
+//						}
+//					}
+//					]
+//					//currentJumps.push(edge);
+//					cy.add(edge)
+//				}
+//			}
 			
 		}
 		//cy.add(currentJumps)
@@ -187,7 +225,6 @@ var zoomVis = function (opts) {
 		
 		if (isInit) {
 			cy.center();
-			addHandlers();
 		}
 	}
 	
@@ -222,8 +259,13 @@ var zoomVis = function (opts) {
 	}
 	
 	function drawNode(nodeId) {
+		if (nodeId == null) return;
+		
 		var node = cy.nodes('#' + nodeId);
 		
+		if (nodeId == specialStates.selected) {
+			node.css('shape', 'octagon');
+		}
 		if (nodeId == specialStates.current) {
 			node.css('backgroundColor', CURRENT_NODE_COLOR);
 		}
@@ -238,9 +280,15 @@ var zoomVis = function (opts) {
 		if (nodeId in specialStates.past) {
 			node.css('border-color', 'orange');
 		}
-		if (nodeId == specialStates.selected) {
-			node.css('shape', 'octagon');
-		}
+	}
+	
+	function redrawSpecial() {
+		drawNode(specialStates.selected);
+		drawNode(specialStates.current);
+		for (var nodeId in specialStates.future)
+			drawNode(nodeId);
+		for (var nodeId in specialStates.past)
+			drawNode(nodeId);
 	}
 	
 	//===============================================================
@@ -467,8 +515,9 @@ var zoomVis = function (opts) {
 				setCurrentState(currState, currentStates[currentLevel].height);
 		},
 		setTransitionThreshold: function (threshold) {
-			transitionThreshold = threshold;
+			transitionThreshold = Math.max(.5, Math.min(1, threshold));
 			redraw();
+			redrawSpecial();
 		},
 		setZoom: function (value) {
 			cy.zoom({level: Math.abs(value - maxHeight) * 0.5 + cy.minZoom()});
