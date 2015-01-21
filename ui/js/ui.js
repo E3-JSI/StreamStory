@@ -73,7 +73,9 @@ var UI = function (opts) {
 		animate:"slow",
 		orientation: "vertical",
 		//change: sliderChanged						//change: function( event, ui ) {}
-		slide: sliderChanged
+		slide: function (event, ui) {
+			viz.slider(event, ui);
+		}
 	});
 	
 	viz.refresh();

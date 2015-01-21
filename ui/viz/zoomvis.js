@@ -249,7 +249,7 @@ var zoomVis = function (opts) {
 		var edgeId = 0;
 		for (var i = 0; i < levelJumps[level].length; i++) {
 			for (var j = 0; j < levelJumps[level][i].length; j++) {
-				if (levelJumps[level][i][j] > 0) {
+				if (levelJumps[level][i][j] > transitionThreshold) {
 					var edge = [
 					{
 						group: 'edges',
@@ -523,7 +523,7 @@ var zoomVis = function (opts) {
 					hierarchy = data;
 					
 					//draw(data);
-					setupSlider();
+					//setupSlider();
 					constructLevels(hierarchy, true);
 				},	
 				dataType: 'json',
@@ -544,7 +544,8 @@ var zoomVis = function (opts) {
 				setCurrentState(currState, currentStates[currentLevel].height);
 		},
 		setTransitionThreshold: function (threshold) {
-			// TODO
+			transitionThreshold = threshold;
+			redraw();
 		},
 		slider: sliderChanged
 	}
