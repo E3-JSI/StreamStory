@@ -543,6 +543,9 @@ var zoomVis = function (opts) {
 			if (currState != specialStates.current)
 				setCurrentState(currState, currentStates[currentLevel].height);
 		},
+		setTransitionThreshold: function (threshold) {
+			// TODO
+		},
 		slider: sliderChanged
 	}
 	
