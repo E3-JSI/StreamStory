@@ -163,7 +163,7 @@ var zoomVis = function (opts) {
 			var edges = [];
 			var sum = 0;
 			var k = 0;
-			while (k < probs.length && probs[k].prob > 0 && sum < transitionThreshold) {
+			while (k < probs.length && probs[k].prob > 0 && sum <= transitionThreshold) {
 				edges.push(probs[k].idx);
 				sum += probs[k].prob;
 				k++;
@@ -187,35 +187,9 @@ var zoomVis = function (opts) {
 					}
 				}
 				]
-				//currentJumps.push(edge);
 				cy.add(edge)
 			}
-//			for (var j = 0; j < levelJumps[level][i].length; j++) {
-//				if (levelJumps[level][i][j] > transitionThreshold) {
-//					var edge = [
-//					{
-//						group: 'edges',
-//						data: {
-//							id: i + '-' + j,
-//							source: levelNodes[level][i].id,
-//							target: levelNodes[level][j].id,
-//							value: levelJumps[level][i][j].toFixed(3)
-//						},
-//						css: {
-//							'control-point-step-size': 250,//150,
-//							'text-valign': 'top',
-//							'control-point-weight': 0.5,
-//							'border-style': 'solid'
-//						}
-//					}
-//					]
-//					//currentJumps.push(edge);
-//					cy.add(edge)
-//				}
-//			}
-			
 		}
-		//cy.add(currentJumps)
 	}
 	
 	function redraw(isInit) {
