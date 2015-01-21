@@ -91,13 +91,16 @@ var zoomVis = function (opts) {
 		});
 	}
 	
-	function setZoom(zoom) {
-		zoomLevel = zoom;
-	}
+//	function setZoom(zoom) {
+//		zoomLevel = zoom;
+//	}
 
-	function clearNodesAndEdges() {
-		clearNodes();
-		clearEdges();
+	function clear() {
+		var drawnNodes = cy.nodes("");
+		var drawnEdges = cy.edges("");
+		
+		cy.remove(drawnNodes);
+		cy.remove(drawnEdges);
 	}
 	
 	function clearStructures() {
@@ -184,36 +187,36 @@ var zoomVis = function (opts) {
 		// maxZoom: 1e50
 		minZoom: 0.50
 	});
+//	
+//	function createRGB(probability) {
+//		var r = 0;
+//		var g = Math.floor(probability * 255);
+//		var b = 0;
+//		console.log("createRGB -> probability: " + probability);
+//		
+//		return "rgb("+ r + "," + g + "," + b + ")";
+//	}
+//	
+//	function createHSL(probability) {
+//		var h = 120;
+//		var s = "100%";
+//		var l = String( (30 + probability * 50) ) + "%";
+//		
+//		return "hsl(" + h + "," + s + "," + l + ")";
+//	}
 	
-	function createRGB(probability) {
-		var r = 0;
-		var g = Math.floor(probability * 255);
-		var b = 0;
-		console.log("createRGB -> probability: " + probability);
-		
-		return "rgb("+ r + "," + g + "," + b + ")";
-	}
-	
-	function createHSL(probability) {
-		var h = 120;
-		var s = "100%";
-		var l = String( (30 + probability * 50) ) + "%";
-		
-		return "hsl(" + h + "," + s + "," + l + ")";
-	}
-	
-	/**
-	* Checks if the node (based on its id) has a future state probability (higher than 0) on the input level. 
-	* Returns the probability value if it does, otherwise the function returns -1
-	*/
-	function getFutureStateProb(level, id) {
-		for (var i = 0; i < levelCurrentStates[level].length; i++) {
-			if (levelCurrentStates[level].futureStates[i].id == id && levelCurrentStates[level].futureStates[i].prob > 0) {
-				return levelCurrentStates[level].futureStates[i].prob;
-			}
-		}
-		return -1;
-	}
+//	/**
+//	* Checks if the node (based on its id) has a future state probability (higher than 0) on the input level. 
+//	* Returns the probability value if it does, otherwise the function returns -1
+//	*/
+//	function getFutureStateProb(level, id) {
+//		for (var i = 0; i < levelCurrentStates[level].length; i++) {
+//			if (levelCurrentStates[level].futureStates[i].id == id && levelCurrentStates[level].futureStates[i].prob > 0) {
+//				return levelCurrentStates[level].futureStates[i].prob;
+//			}
+//		}
+//		return -1;
+//	}
 	
 	function calculatePosition(x, y) {
 		var position = [];
@@ -303,21 +306,8 @@ var zoomVis = function (opts) {
 		//cy.add(currentJumps)
 	}
 	
-	
-	function clearNodes() {
-		var drawnNodes = cy.nodes("");
-		cy.remove(drawnNodes);
-		
-		//var eles = cy.$(':selected').remove();
-	}
-	
-	function clearEdges() {
-		var drawnEdges = cy.edges("");
-		cy.remove(drawnEdges);
-	}
-	
 	function redraw(isInit) {
-		clearNodesAndEdges();
+		clear();
 		insertLevelNodes(currentLevel);
 		insertLevelJumps(currentLevel);
 		
@@ -327,16 +317,16 @@ var zoomVis = function (opts) {
 		}
 	}
 	
-	function getAppropriateLevel() {
-		if (currentHeight >= maxHeight) {
-			return levelHeights.length - 1;
-		}
-		
-		for (var i = 0; i < levelHeights.length; i++) {
-			if (currentHeight >= hierarchy[i].height)
-				return i;
-		}
-	}
+//	function getAppropriateLevel() {
+//		if (currentHeight >= maxHeight) {
+//			return levelHeights.length - 1;
+//		}
+//		
+//		for (var i = 0; i < levelHeights.length; i++) {
+//			if (currentHeight >= hierarchy[i].height)
+//				return i;
+//		}
+//	}
 	
 	function sliderChanged(event, ui) {
 //		currentHeight = ui.value
