@@ -97,3 +97,9 @@ html, body {
 	margin-top: 10px;
 	margin-right: 0px;
 }
+
+#threshold_slider {
+	float: left;
+	width: 80%;
+	margin-left: 40px;
+}
