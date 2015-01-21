@@ -32,6 +32,7 @@ var zoomVis = function (opts) {
 	
 	var DEFAULT_NODE_COLOR = 'rgb(120,120,120)';//'DodgerBlue';
 	var CURRENT_NODE_COLOR = 'green';
+	var DEFAULT_BORDER_COLOR = 'black';
 	
 	var visWidth = visContainer.clientWidth;
 	var visHeight = visContainer.clientHeight;
@@ -255,7 +256,7 @@ var zoomVis = function (opts) {
 						'width': nodeSize,
 						'height': nodeSize,
 						'border-width': 5,
-						'border-color': 'black'
+						'border-color': DEFAULT_BORDER_COLOR
 					},
 					locked: true
 				}
@@ -516,6 +517,7 @@ var zoomVis = function (opts) {
 		var nodes = cy.nodes();
 		nodes.css('backgroundColor', DEFAULT_NODE_COLOR);
 		nodes.css('shape', 'ellipse');
+		nodes.css('border-color', DEFAULT_BORDER_COLOR);
 		
 		fetchPastStates(stateId, height);
 		fetchFutureStates(stateId, height);
