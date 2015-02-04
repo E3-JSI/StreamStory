@@ -22,7 +22,9 @@ var WebSocketWrapper = function () {
 		path: WS_PATH
 	});
 	
-	function delSocket() {
+	function delSocket(id) {
+		if (id == null) return;
+		
 		try {
 			if (id in sockets)
 				delete sockets[id];
@@ -35,14 +37,14 @@ var WebSocketWrapper = function () {
 		var socket = sockets[id].client;
 		
 		if (socket.readyState == WebSocket.CLOSING || socket.readyState == WebSocket.CLOSED)
-			delSocket();
+			delSocket(id);
 			return;
 		
 		if (log.debug())
 			log.debug("Closing client %d", id);
 		
 		sockets[id].client.close();
-		delSocket();
+		delSocket(id);
 	}
 	
 	function removeIdle() {
@@ -81,7 +83,7 @@ var WebSocketWrapper = function () {
 		
 		socket.on('close', function (code, msg) {
 			log.debug('Web socket %d closed with code %d, message: %s. Removing from socket list!', id, code, msg);
-			delSocket();
+			delSocket(id);
 		});
 	});
 	
