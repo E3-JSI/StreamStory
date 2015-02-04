@@ -297,7 +297,7 @@ var zoomVis = function (opts) {
 	
 	function clearCurrentState() {
 		cy.nodes('#' + specialStates.current).css('border-color', DEFAULT_BORDER_COLOR);
-		if (specialStates.probsMode != null) {
+		if (specialStates.probsMode == null) {
 			for (var nodeId in specialStates.future) {
 				cy.nodes('#' + nodeId).css('backgroundColor', DEFAULT_NODE_COLOR);
 			}
