@@ -18,7 +18,7 @@
 	<script type="text/javascript">
 		var ui;
 		$(document).ready(function () {
-			ui = UI({url: '/drilling/multilevel'});
+			ui = UI();
 		});
 	</script>
 </head>
@@ -31,6 +31,18 @@
 				</div>
 				<div id="vis_container"></div>
 				<div id="threshold_slider"></div>
+			</div>
+			<div id="container-options" class="container">
+				<div id="toggler" class="clickable"></div>
+				<div id="options" style="display: none;">
+					<input type="checkbox" id="chk-show-fut" />Show future
+					<div id="div-future-opts">
+						<input type="number" id="rng-time-probs" value="0" />
+						<input type="number" id="txt-fut-range" value="1" />
+						<!-- input type="range" id="rng-time-probs" /-->
+						<div id="div-fut-time"></div>
+					</div>
+				</div>
 			</div>
 			<div id="container-details" class="container">
 				<div id="container-hist" style="height: 200px; overflow-x: auto;">

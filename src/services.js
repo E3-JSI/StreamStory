@@ -2,6 +2,10 @@ var express = require('express');
 var path = require('path');
 var WebSocket = require('ws');
 
+var UI_PATH = '/';
+var API_PATH = '/api';
+var WS_PATH = '/ws';
+
 var app = express();
 
 var server;
@@ -15,13 +19,30 @@ var WebSocketWrapper = function () {
 	
 	var wss = new WebSocket.Server({
 		server: server,
-		path: '/websocket'
+		path: WS_PATH
 	});
+	
+	function delSocket() {
+		try {
+			if (id in sockets)
+				delete sockets[id];
+		} catch (e) {
+			log.error(e, 'Failed to delete socket %d!', id);
+		}
+	}
 
 	function closeClient(id) {
+		var socket = sockets[id].client;
+		
+		if (socket.readyState == WebSocket.CLOSING || socket.readyState == WebSocket.CLOSED)
+			delSocket();
+			return;
+		
 		if (log.debug())
 			log.debug("Closing client %d", id);
+		
 		sockets[id].client.close();
+		delSocket();
 	}
 	
 	function removeIdle() {
@@ -60,9 +81,13 @@ var WebSocketWrapper = function () {
 		
 		socket.on('close', function (code, msg) {
 			log.debug('Web socket %d closed with code %d, message: %s. Removing from socket list!', id, code, msg);
-			delete sockets[id];
+			delSocket();
 		});
 	});
+	
+	function isOpen(socketId) {
+		return socketId in sockets && sockets[socketId].client.readyState == WebSocket.OPEN;
+	}
 	
 	// ping clients periodically
 	function ping() {
@@ -73,6 +98,11 @@ var WebSocketWrapper = function () {
 				log.trace('Pinging %d clients ...', Object.keys(sockets).length);
 			
 			for (var id in sockets) {
+				if (!isOpen(id)) {
+					log.warn('Socket is not open %d, closing ...', id);
+					closeClient(id);
+					continue;
+				}
 				sockets[id].client.ping();
 			}
 		} catch (e) {
@@ -90,16 +120,18 @@ var WebSocketWrapper = function () {
 			if (log.debug())
 				log.debug('Distributing message: %s', msg);
 			
-			for (var clientId in sockets) {
-				var socket = sockets[clientId].client;
-				
-				if (!socket.readyState == WebSocket.OPEN) {
-					log.warn('Socket is not open ' + socket.readyState + ' closing ...');
-					closeClient(clientId);
-					continue;
+			for (var id in sockets) {
+				try {
+					if (!isOpen(id)) {
+						log.warn('Socket is not open %d, closing ...', id);
+						closeClient(id);
+						continue;
+					}
+										
+					sockets[id].client.send(msg);
+				} catch (e) {
+					log.error(e, 'Exception while distributig message. Web socket ID: %d', id);
 				}
-				
-				sockets[clientId].client.send(msg);
 			}
 		}
 	}
@@ -109,14 +141,18 @@ function initServer() {
 	log.info('Initializing web server ...');
 	
 	var staticDir = path.join(__dirname, WWW_DIR);
-	log.info('Using static directory: %s', staticDir);
 	
-	app.use('/ui', express.static(staticDir));
+	app.use(UI_PATH, express.static(staticDir));
 	
 	server = app.listen(SERVER_PORT);
 	ws = WebSocketWrapper();
 	
+	log.info('================================================');
 	log.info('Server running at http://localhost:%d', SERVER_PORT);
+	log.info('Serving UI at: %s', UI_PATH);
+	log.info('Serving API at: %s', API_PATH);
+	log.info('Web socket listening at: %s', WS_PATH);
+	log.info('================================================');
 }
 
 function initHandlers() {
@@ -166,7 +202,7 @@ exports.init = function () {
 		log.info('Registering exit service ...');
 		
 		// multilevel analysis
-		app.get('/exit', function (req, resp) {
+		app.get(API_PATH + '/exit', function (req, resp) {
 			try {
 				log.debug('Exiting qminer and closing server ...');
 				
@@ -196,7 +232,7 @@ exports.init = function () {
 		var imported = 0;
 		var printInterval = 10000;
 		
-		app.post('/drilling/push', function (req, resp) {
+		app.post(API_PATH + '/push', function (req, resp) {
 			var body = '';
 			
 			req.on('data', function (data) {
@@ -238,7 +274,7 @@ exports.init = function () {
 		log.info('Registering multilevel service at drilling/multilevel ...');
 		
 		// multilevel analysis
-		app.get('/drilling/multilevel', function (req, resp) {
+		app.get(API_PATH + '/multilevel', function (req, resp) {
 			try {
 				log.debug('Querying MHWirth multilevel model ...');
 				resp.send(hmc.getVizState());
@@ -255,14 +291,14 @@ exports.init = function () {
 		log.info('Registering transition model service ...');
 		
 		// multilevel analysis
-		app.get('/drilling/transitionModel', function (req, resp) {
+		app.get(API_PATH + '/transitionModel', function (req, resp) {
 			try {
 				var level = parseFloat(req.query.level);
 				
 				if (log.debug())
 					log.debug('Fetching transition model for level: %.3f', level);
 				
-				resp.send(ctmcNew.getTransitionModel(level));
+				resp.send(hmc.getModel().getTransitionModel(level));
 			} catch (e) {
 				log.error(e, 'Failed to query MHWirth multilevel visualization!');
 				resp.status(500);	// internal server error
@@ -276,7 +312,7 @@ exports.init = function () {
 		log.info('Registering future and states services ...');
 		
 		// multilevel analysis
-		app.get('/drilling/currentState', function (req, resp) {
+		app.get(API_PATH + '/currentState', function (req, resp) {
 			try {
 				var level = parseFloat(req.query.level);
 				if (log.info())
@@ -297,17 +333,17 @@ exports.init = function () {
 		});
 		
 		// multilevel analysis
-		app.get('/drilling/futureStates', function (req, resp) {
+		app.get(API_PATH + '/futureStates', function (req, resp) {
 			try {
 				var level = parseFloat(req.query.level);
 				var currState = parseInt(req.query.state);
 				
 				if (req.query.time == null) {
-					log.debug('Fetching future states currState: %d, height: %.3f', currState, level);
+					log.debug('Fetching future states currState: %d, height: %d', currState, level);
 					resp.send(hmc.futureStates(level, currState));
 				} else {
 					var time = parseFloat(req.query.time);
-					log.debug('Fetching future states, currState: %d, level: %d, time: %.3f', currState, level, time);
+					log.debug('Fetching future states, currState: %d, level: %d, time: %d', currState, level, time);
 					resp.send(hmc.futureStates(level, currState, time));
 				}
 			} catch (e) {
@@ -318,17 +354,17 @@ exports.init = function () {
 			resp.end();
 		});
 		
-		app.get('/drilling/pastStates', function (req, resp) {
+		app.get(API_PATH + '/pastStates', function (req, resp) {
 			try {
 				var level = parseFloat(req.query.level);
 				var currState = parseInt(req.query.state);
 				
 				if (req.query.time == null) {
-					log.debug('Fetching future states currState: %d, height: %.3f', currState, level);
+					log.debug('Fetching past states currState: %d, height: %d', currState, level);
 					resp.send(hmc.pastStates(level, currState));
 				} else {
 					var time = parseFloat(req.query.time);
-					log.debug('Fetching future states, currState: %d, level: %d, time: %.3f', currState, level, time);
+					log.debug('Fetching past states, currState: %d, level: %d, time: %d', currState, level, time);
 					resp.send(hmc.pastStates(level, currState, time));
 				}
 			} catch (e) {
@@ -339,12 +375,29 @@ exports.init = function () {
 			resp.end();
 		});
 		
-		app.get('/drilling/history', function (req, resp) {
+		app.get(API_PATH + '/timeDist', function (req, resp) {
+			try {
+				var state = parseInt(req.query.state);
+				var startTm = parseFloat(req.query.start);
+				var endTm = parseFloat(req.query.end);
+				var deltaTm = parseFloat(req.query.deltaTm);
+				var height = parseFloat(req.query.level);
+				
+				resp.send(hmc.getModel().probsOverTime(height, state, startTm, endTm, deltaTm));
+			} catch (e) {
+				log.error(e, 'Failed to query MHWirth multilevel visualization!');
+				resp.status(500);	// internal server error
+			}
+			
+			resp.end();
+		});
+		
+		app.get(API_PATH + '/history', function (req, resp) {
 			try {
 				var level = parseFloat(req.query.level);
 				
 				if (log.debug())
-					log.debug('Fetching history for level %.3f', level);
+					log.debug('Fetching history for level %d', level);
 				
 				resp.send(hmc.getModel().histStates(level));
 			} catch (e) {
@@ -360,7 +413,7 @@ exports.init = function () {
 		log.info('Registering state details service ...');
 		
 		// multilevel analysis
-		app.get('/drilling/details', function (req, resp) {
+		app.get(API_PATH + '/details', function (req, resp) {
 			try {
 				var stateId = parseInt(req.query.stateId);
 				var level = parseFloat(req.query.level);
@@ -378,7 +431,7 @@ exports.init = function () {
 		});
 		
 		// multilevel analysis
-		app.get('/drilling/histogram', function (req, resp) {
+		app.get(API_PATH + '/histogram', function (req, resp) {
 			try {
 				var stateId = parseInt(req.query.stateId);
 				var ftrIdx = parseInt(req.query.feature);
