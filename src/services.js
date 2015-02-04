@@ -141,10 +141,8 @@ var WebSocketWrapper = function () {
 
 function initServer() {
 	log.info('Initializing web server ...');
-	
-	var staticDir = path.join(__dirname, WWW_DIR);
-	
-	app.use(UI_PATH, express.static(staticDir));
+
+	app.use(UI_PATH, express.static(path.join(__dirname, WWW_DIR)));
 	
 	server = app.listen(SERVER_PORT);
 	ws = WebSocketWrapper();
