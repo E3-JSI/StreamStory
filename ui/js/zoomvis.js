@@ -265,6 +265,12 @@ var zoomVis = function (opts) {
 			drawNode(nodeId);
 	}
 	
+	function emphasizeEdges(nodeId) {
+		console.log("Edges to emphasize: ");
+		//console.log(cy.edges("[source='nodeId']"));
+		
+	}
+	
 	//===============================================================
 	// FETCH/SET STATES
 	//===============================================================
@@ -451,6 +457,8 @@ var zoomVis = function (opts) {
 		cy.nodes().css('shape', 'ellipse');
 		
 		drawNode(stateId);
+		
+		emphasizeEdges(node.id);
 	});
 	
 	//===============================================================
