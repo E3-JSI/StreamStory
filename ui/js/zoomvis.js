@@ -7,11 +7,10 @@ var zoomVis = function (opts) {
 	
 	// size
 	var MIN_NODE_DIAMETER = 30;
-	var NODE_SCALE_FACTOR = 300;
+	var NODE_SCALE_FACTOR = 200;
 	
 	var ZOOM_STEP = 0.01;
 	
-	var url = opts.url;
 	var visContainer = document.getElementById(opts.visContainer);
 	var currentHeightContainer = document.getElementById(opts.currentHeightContainer);
 	
@@ -20,14 +19,20 @@ var zoomVis = function (opts) {
 		selected: null,
 		current: null,
 		future: {},
-		past: {}
+		past: {},
+		probsMode: null
 	};
+	
+	var uiConfig = {
+		maxNodeSize: 0,
+		levelMaxNodeSize: []
+	}
+	
+	var maxNodeSize = 0;
 	
 	var zoomLevel = 0;
 	var minZoomLevel = 0.5;
 	var maxZoomLevel = 60;
-	
-	
 	
 	var minHeight = 0;
 	var maxHeight = 0;
@@ -54,8 +59,16 @@ var zoomVis = function (opts) {
 	// UTILITY FUNCTIONS
 	//===============================================================
 	
+	function scaleNode(size) {
+		return Math.sqrt(size / uiConfig.levelMaxNodeSize[currentLevel]);//.maxNodeSize);
+	}
+	
+	function sizeFromProb(prob) {
+		return Math.sqrt(prob);
+	}
+	
 	function calculateNodeRadius(area) {
-		return Math.max(2*Math.sqrt(Math.sqrt(area)/Math.PI) * NODE_SCALE_FACTOR,  MIN_NODE_DIAMETER);
+		return Math.max(2*Math.sqrt(scaleNode(area)/Math.PI) * NODE_SCALE_FACTOR,  MIN_NODE_DIAMETER);
 	}
 	
 	function minAndMaxCoords() {
@@ -97,6 +110,9 @@ var zoomVis = function (opts) {
 	}
 	
 	function clearStructures() {
+		uiConfig.maxNodeSize = 0;
+		uiConfig.levelMaxNodeSize = [];
+		
 		levelHeights = [];
 		levelJumps = [];
 		levelCurrentStates = [];
@@ -206,10 +222,22 @@ var zoomVis = function (opts) {
 		clearStructures();
 		
 		for (var i = 0; i < data.length; i++) {
+			var states = data[i].states;
+			
 			levelHeights.push(data[i].height);
 			levelJumps.push(data[i].transitions);
 			levelCurrentStates.push({currentState: data[i].currentState, futureStates: data[i].futureStates});
-			levelNodes.push(data[i].states);
+			levelNodes.push(states);
+			
+			uiConfig.levelMaxNodeSize.push(0);
+			
+			for (var j = 0; j < states.length; j++) {
+				var size = states[j].size;
+				if (size > uiConfig.maxNodeSize)
+					uiConfig.maxNodeSize = states[j].size;
+				if (size > uiConfig.levelMaxNodeSize[i])
+					uiConfig.levelMaxNodeSize[i] = size;
+			}
 		}
 		
 		console.log(JSON.stringify(levelCurrentStates));
@@ -228,6 +256,7 @@ var zoomVis = function (opts) {
 	}
 	
 	function setCurrentLevel(levelIdx) {
+		specialStates.probsMode = null;
 		redraw();
 		fetchCurrentState(hierarchy[levelIdx].height);
 	}
@@ -241,19 +270,45 @@ var zoomVis = function (opts) {
 			node.css('shape', 'octagon');
 		}
 		if (nodeId == specialStates.current) {
-			node.css('backgroundColor', CURRENT_NODE_COLOR);
-		}
-		if (nodeId in specialStates.future) {
-			var prob = specialStates.future[nodeId];
-			
-			var defaultColor = 0;
-			var futureColor = 190;
-			var color = 'hsla(216, ' + (28 + Math.floor((100-28)*prob)) + '%, 55%, 1)';
-			node.css('backgroundColor', color);
+			node.css('border-color', CURRENT_NODE_COLOR);
 		}
 		if (nodeId in specialStates.past) {
-			node.css('border-color', 'orange');
+			node.css('border-color', 'brown');
 		}
+		
+		if (specialStates.probsMode != null) {
+			var config = specialStates.probsMode;
+			var probs = config.probs;
+//			var maxProb = config.maxProb;
+			
+			var baseColor = 360;//nodeId in specialStates.future ? 307 : ;
+			
+			var prob = sizeFromProb(probs[nodeId]);
+			var color = 'hsla(' + baseColor + ',' + Math.floor(100*prob) + '%, 55%, 1)';
+			node.css('backgroundColor', color);
+		} else if (nodeId in specialStates.future) {
+			var baseColor = 216;//nodeId in specialStates.probs ? 307 : ;
+			
+			var prob = sizeFromProb(specialStates.future[nodeId]);
+			var color = 'hsla(' + baseColor + ',' + (15 + Math.floor((100-15)*prob)) + '%, 55%, 1)';
+			node.css('backgroundColor', color);
+		}
+	}
+	
+	function clearCurrentState() {
+		cy.nodes('#' + specialStates.current).css('border-color', DEFAULT_BORDER_COLOR);
+		if (specialStates.probsMode == null) {
+			for (var nodeId in specialStates.future) {
+				cy.nodes('#' + nodeId).css('backgroundColor', DEFAULT_NODE_COLOR);
+			}
+		}
+		for (nodeId in specialStates.past) {
+			cy.nodes('#' + nodeId).css('border-color', DEFAULT_BORDER_COLOR);
+		}
+		
+		specialStates.current = null;
+		specialStates.future = {};
+		specialStates.past = {};
 	}
 	
 	function redrawSpecial() {
@@ -263,6 +318,10 @@ var zoomVis = function (opts) {
 			drawNode(nodeId);
 		for (var nodeId in specialStates.past)
 			drawNode(nodeId);
+		if (specialStates.probsMode != null) {
+			for (var nodeId in specialStates.probsMode.probs)
+				drawNode(nodeId);
+		}
 	}
 	
 	function emphasizeEdges(nodeId) {
@@ -272,11 +331,24 @@ var zoomVis = function (opts) {
 	}
 	
 	//===============================================================
-	// FETCH/SET STATES
+	// SET STATES
+	//===============================================================
+	
+	function setCurrentState(stateId, height) {
+		clearCurrentState();
+		specialStates.current = stateId;
+		
+		fetchPastStates(stateId, height);
+		fetchFutureStates(stateId, height);
+		drawNode(stateId);
+	}
+	
+	//===============================================================
+	// FETCH METHODS
 	//===============================================================
 	
 	function fetchStateInfo(stateId) {
-		$.ajax('/drilling/details', {
+		$.ajax('api/details', {
 			dataType: 'json',
 			data: { stateId: stateId, level: hierarchy[currentLevel].height },
 			success: function (data) {
@@ -299,7 +371,7 @@ var zoomVis = function (opts) {
 	function fetchFutureStates(currStateId, height) {
 		specialStates.future = {};
 		
-		$.ajax('/drilling/futureStates', {
+		$.ajax('api/futureStates', {
 			dataType: 'json',
 			data: { state: currStateId, level: height },
 			success: function (states) {
@@ -316,7 +388,7 @@ var zoomVis = function (opts) {
 	function fetchPastStates(currStateId, height) {
 		specialStates.past = {};
 		
-		$.ajax('/drilling/history', {
+		$.ajax('api/history', {
 			dataType: 'json',
 			data: { state: currStateId, level: height },
 			success: function (stateIds) {
@@ -330,27 +402,32 @@ var zoomVis = function (opts) {
 		});
 	}
 	
-	function setCurrentState(stateId, height) {
-		specialStates.current = stateId;
-		
-		var nodes = cy.nodes();
-		nodes.css('backgroundColor', DEFAULT_NODE_COLOR);
-		nodes.css('shape', 'ellipse');
-		nodes.css('border-color', DEFAULT_BORDER_COLOR);
-		
-		fetchPastStates(stateId, height);
-		fetchFutureStates(stateId, height);
-		drawNode(stateId);
-	}
-	
 	function fetchCurrentState(height) {
 		specialStates.current = null;
 		
-		$.ajax('/drilling/currentState', {
+		$.ajax('api/currentState', {
 			dataType: 'json',
 			data: { level: height },
 			success: function (state) {
 				setCurrentState(state.id, height);
+			}
+		});
+	}
+	
+	function fetchUI() {
+		$.ajax({
+			url: 'api/multilevel',
+			success: function (data) {
+				data.sort(function (a, b) {
+					return a.height - b.height;
+				});
+				hierarchy = data;
+				constructLevels(hierarchy, true);
+				fetchCurrentState(currentHeight);
+			},	
+			dataType: 'json',
+			error: function (jqXHR, jqXHR, status, err) {
+				alert("failed to receive object: " + status + ", " + err);
 			}
 		});
 	}
@@ -466,25 +543,8 @@ var zoomVis = function (opts) {
 	//===============================================================
 	
 	var that = {
-		refresh: function () {
-			$.ajax({
-				url: url,
-				success: function (data) {
-					data.sort(function (a, b) {
-						return a.height - b.height;
-					});
-					hierarchy = data;
-					
-					//draw(data);
-					//setupSlider();
-					constructLevels(hierarchy, true);
-				},	
-				dataType: 'json',
-				error: function (jqXHR, jqXHR, status, err) {
-					alert("failed to receive object: " + status + ", " + err);
-				}
-			});
-		},
+		refresh: fetchUI,
+		
 		setCurrentStates: function (currentStates) {
 			if (hierarchy == null) return;
 						
@@ -496,13 +556,44 @@ var zoomVis = function (opts) {
 			if (currState != specialStates.current)
 				setCurrentState(currState, currentStates[currentLevel].height);
 		},
+		
 		setTransitionThreshold: function (threshold) {
 			transitionThreshold = Math.max(.5, Math.min(1, threshold));
 			redraw();
 			redrawSpecial();
 		},
+		
+		setProbDist: function (dist) {
+			var config = {maxProb: 0, probs: {}};
+			
+			for (var i = 0; i < dist.length; i++) {
+				var stateId = dist[i].stateId;
+				var prob = dist[i].prob;
+				
+				if (prob > config.maxProb) config.maxProb = prob;
+				
+				config.probs[stateId] = prob;
+			}
+			
+			specialStates.probsMode = config;
+			
+			redrawSpecial();
+		},
+		
 		setZoom: function (value) {
 			cy.zoom({level: Math.abs(value - maxHeight) * 0.5 + cy.minZoom()});
+		},
+		
+		getCurrentHeight: function () {
+			return currentHeight;
+		},
+		
+		getCurrentState: function () {
+			return specialStates.current;
+		},
+		
+		getSelectedState: function () {
+			return specialStates.selected;
 		}
 	}
 	
