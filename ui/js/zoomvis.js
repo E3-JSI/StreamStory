@@ -324,10 +324,14 @@ var zoomVis = function (opts) {
 		}
 	}
 	
-	function emphasizeEdges(nodeId) {
-		console.log("Edges to emphasize: ");
+	function emphasizeEdges(node) {
+		console.log("Emphasizing neighbour edges.");
 		//console.log(cy.edges("[source='nodeId']"));
 		
+		/*node.neighborhood('edge').css({
+			'width': 6, 
+			'line-color': 'black'
+		});*/
 	}
 	
 	//===============================================================
@@ -535,7 +539,7 @@ var zoomVis = function (opts) {
 		
 		drawNode(stateId);
 		
-		emphasizeEdges(node.id);
+		emphasizeEdges(node);
 	});
 	
 	//===============================================================
