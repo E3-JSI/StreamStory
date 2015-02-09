@@ -1,4 +1,5 @@
 var express = require('express');
+var bodyParser = require("body-parser");
 var path = require('path');
 var WebSocket = require('ws');
 
@@ -144,64 +145,8 @@ var WebSocketWrapper = function () {
 	}
 }
 
-function initServer() {
-	log.info('Initializing web server ...');
-
-	app.use(UI_PATH, express.static(path.join(__dirname, WWW_DIR)));
-	
-	server = app.listen(SERVER_PORT);
-	ws = WebSocketWrapper();
-	
-	log.info('================================================');
-	log.info('Server running at http://localhost:%d', SERVER_PORT);
-	log.info('Serving UI at: %s', UI_PATH);
-	log.info('Serving API at: %s', API_PATH);
-	log.info('Web socket listening at: %s', WS_PATH);
-	log.info('================================================');
-}
-
-function initHandlers() {
-	log.info('Registering state changed callback ...');
-	
-	hmc.onStateChanged(function (states) {
-		if (log.debug())
-			log.debug('State changed: %s', JSON.stringify(states));
-		
-		var msg = JSON.stringify({
-			type: 'stateChanged',
-			content: states
-		});
-		
-		ws.distribute(msg);
-	});
-	
-	hmc.onAnomaly(function (desc) {
-		if (log.info())
-			log.info('Anomaly detected: %s', desc);
-		
-		var msg = JSON.stringify({
-			type: 'anomaly',
-			content: desc
-		});
-		
-		ws.distribute(msg);
-	});
-	
-	hmc.onOutlier(function (ftrV) {
-		if (log.info())
-			log.info('Outlier detected!');
-		
-		var msg = JSON.stringify({
-			type: 'outlier',
-			content: ftrV
-		})
-		
-		ws.distribute(msg);
-	});
-}
-
-exports.init = function () {
-	log.info('Registering drilling services ...');
+function initRestApi() {
+	log.info('Registering REST services ...');
 	
 	{
 		log.info('Registering exit service ...');
@@ -223,7 +168,22 @@ exports.init = function () {
 				
 				resp.status(204);
 			} catch (e) {
-				log.error(e, 'Failed to query MHWirth multilevel visualization!');
+				log.error(e, 'Failed to exit!');
+				resp.status(500);	// internal server error
+			}
+			
+			resp.end();
+		});
+		
+		log.info('Registering save service ...');
+		
+		// multilevel analysis
+		app.get(API_PATH + '/save', function (req, resp) {
+			try {
+				hmc.save(FNAME_MC, FNAME_FSPACE);
+				resp.status(204);
+			} catch (e) {
+				log.error(e, 'Failed to save visualization model!');
 				resp.status(500);	// internal server error
 			}
 			
@@ -238,40 +198,62 @@ exports.init = function () {
 		var printInterval = 10000;
 		
 		app.post(API_PATH + '/push', function (req, resp) {
-			var body = '';
+			var batch = req.body;
 			
-			req.on('data', function (data) {
-				body += data;
-			})
-			req.on('end', function () {
-				var batch = JSON.parse(body);
+			for (var i = 0; i < batch.length; i++) {
+				var instance = batch[i];
 				
-				for (var i = 0; i < batch.length; i++) {
-					var instance = batch[i];
-					
-					var store = instance.store;
-					var timestamp = instance.timestamp;
-					var value = instance.value;
-					
-					if (++imported % printInterval == 0 && log.debug())
-						log.debug('Imported %d values ...', imported);
-					
-					base.store(store).add({
-						time_ms: timestamp,
-						time: new Date(timestamp).toISOString().split('Z')[0],
-						value: value
-					});
-				}
+				var store = instance.store;
+				var timestamp = instance.timestamp;
+				var value = instance.value;
 				
-				resp.status(204);
-				resp.end();
-			});
+				if (++imported % printInterval == 0 && log.debug())
+					log.debug('Imported %d values ...', imported);
+				
+				base.store(store).add({
+					time_ms: timestamp,
+					time: new Date(timestamp).toISOString().split('Z')[0],
+					value: value
+				});
+			}
 			
-			req.on('error', function (e) {
-				log.error(e, 'Error while receiving data!');
-				resp.status(500);	// internal server error
-				resp.end();
-			});
+			resp.status(204);
+			resp.end();
+			
+//			var body = '';
+//			
+//			req.on('data', function (data) {
+//				body += data;
+//			})
+//			req.on('end', function () {
+//				var batch = JSON.parse(body);
+//				
+//				for (var i = 0; i < batch.length; i++) {
+//					var instance = batch[i];
+//					
+//					var store = instance.store;
+//					var timestamp = instance.timestamp;
+//					var value = instance.value;
+//					
+//					if (++imported % printInterval == 0 && log.debug())
+//						log.debug('Imported %d values ...', imported);
+//					
+//					base.store(store).add({
+//						time_ms: timestamp,
+//						time: new Date(timestamp).toISOString().split('Z')[0],
+//						value: value
+//					});
+//				}
+//				
+//				resp.status(204);
+//				resp.end();
+//			});
+//			
+//			req.on('error', function (e) {
+//				log.error(e, 'Error while receiving data!');
+//				resp.status(500);	// internal server error
+//				resp.end();
+//			});
 		});
 	}
 	
@@ -417,7 +399,7 @@ exports.init = function () {
 	{
 		log.info('Registering state details service ...');
 		
-		// multilevel analysis
+		// state details
 		app.get(API_PATH + '/details', function (req, resp) {
 			try {
 				var stateId = parseInt(req.query.stateId);
@@ -452,7 +434,95 @@ exports.init = function () {
 			
 			resp.end();
 		});
+		
+		app.post(API_PATH + '/stateName', function (req, resp) {
+			var stateId, stateNm;
+			
+			try {
+				stateId = parseInt(req.body.id);
+				stateNm = req.body.name;
+				
+				if (log.info()) 
+					log.info('Setting name of state %d to %s ...', stateId, stateNm);
+				
+				hmc.getModel().setStateName(stateId, stateNm);
+				resp.status(204);	// no content
+			} catch (e) {
+				log.error(e, 'Failed to set name of state %d to %s', stateId, stateNm);
+				resp.status(500);	// internal server error
+			}
+			
+			resp.end();
+		});
 	}
+}
+
+function initServer() {
+	log.info('Initializing web server ...');
+
+	// automatically parse body on the API path
+	app.use(API_PATH + '/', bodyParser.urlencoded({ extended: false }));
+	app.use(API_PATH + '/', bodyParser.json());
+		
+	initRestApi();
+	
+	// serve static directories on the UI path
+	app.use(UI_PATH, express.static(path.join(__dirname, WWW_DIR)));
+	
+	// start server
+	server = app.listen(SERVER_PORT);
+	ws = WebSocketWrapper();
+	
+	log.info('================================================');
+	log.info('Server running at http://localhost:%d', SERVER_PORT);
+	log.info('Serving UI at: %s', UI_PATH);
+	log.info('Serving API at: %s', API_PATH);
+	log.info('Web socket listening at: %s', WS_PATH);
+	log.info('================================================');
+}
+
+function initHandlers() {
+	log.info('Registering state changed callback ...');
+	
+	hmc.onStateChanged(function (states) {
+		if (log.debug())
+			log.debug('State changed: %s', JSON.stringify(states));
+		
+		var msg = JSON.stringify({
+			type: 'stateChanged',
+			content: states
+		});
+		
+		ws.distribute(msg);
+	});
+	
+	hmc.onAnomaly(function (desc) {
+		if (log.info())
+			log.info('Anomaly detected: %s', desc);
+		
+		var msg = JSON.stringify({
+			type: 'anomaly',
+			content: desc
+		});
+		
+		ws.distribute(msg);
+	});
+	
+	hmc.onOutlier(function (ftrV) {
+		if (log.info())
+			log.info('Outlier detected!');
+		
+		var msg = JSON.stringify({
+			type: 'outlier',
+			content: ftrV
+		})
+		
+		ws.distribute(msg);
+	});
+}
+
+exports.init = function () {
+	log.info('Initializing server ...');
 	
 	// serve static files at www
 	initServer();
