@@ -520,7 +520,7 @@ var zoomVis = function (opts) {
 		cy.nodes().css('shape', 'ellipse');
 		drawNode(stateId);
 		
-		// notify the handlers
+		// notify the handler
 		callbacks.stateSelected(stateId, height);
 	});
 	
