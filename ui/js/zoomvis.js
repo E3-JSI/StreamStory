@@ -328,10 +328,17 @@ var zoomVis = function (opts) {
 		console.log("Emphasizing neighbour edges.");
 		//console.log(cy.edges("[source='nodeId']"));
 		
-		/*node.neighborhood('edge').css({
+		cy.edges().css({
+			'width': 1,
+			'line-color': 'darkgray',
+			'target-arrow-color': 'darkgray'
+		});
+		
+		node.neighborhood("edge[source =" + node.id() + "]").css({
 			'width': 6, 
-			'line-color': 'black'
-		});*/
+			'line-color': 'darkgray',
+			'target-arrow-color': 'darkgray',
+		});
 	}
 	
 	//===============================================================
@@ -538,8 +545,20 @@ var zoomVis = function (opts) {
 		cy.nodes().css('shape', 'ellipse');
 		
 		drawNode(stateId);
-		
 		emphasizeEdges(node);
+	});
+	
+	cy.on('mouseover', 'node', function (event) {
+		//console.log("mouseover event");
+		
+		var x = event.cyPosition.x;
+		var y = event.cyPosition.y;
+		console.log("mouseover position: " + x + ", " + y);
+		
+		$( ".selector" ).tooltip({
+			track: true,
+			content: "Test"
+		});
 	});
 	
 	//===============================================================
