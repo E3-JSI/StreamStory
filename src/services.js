@@ -24,11 +24,16 @@ var WebSocketWrapper = function () {
 	});
 	
 	function delSocket(id) {
-		if (id == null) return;
+		if (id == null) {
+			log.warn('Tried to delete socket with null ID! Ignoring ...');
+			return;
+		}
 		
 		try {
 			if (id in sockets)
 				delete sockets[id];
+			else
+				log.warn('Tried to delete a socket that is not cached %d!', id);
 		} catch (e) {
 			log.error(e, 'Failed to delete socket %d!', id);
 		}
