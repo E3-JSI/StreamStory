@@ -141,12 +141,15 @@ var zoomVis = function (opts) {
 			var position = calculatePosition(levelInfo[i].x, levelInfo[i].y);		//[x, y]
 			var nodeSize = calculateNodeRadius(levelInfo[i].size);
 			
+			console.log('ID: ' + levelInfo[i].id + ', name: ' + levelInfo[i].name);
+			
 			nodesArray.push({
 				group: 'nodes',
 				data: {
 					id: '' + levelInfo[i].id,
-					value: levelInfo[i].name != null ? levelInfo[i].name : levelInfo[i].id,
-					name: levelInfo[i].name != null ? levelInfo[i].name : levelInfo[i].id
+//					value: levelInfo[i].name != null ? levelInfo[i].name : levelInfo[i].id,
+					label: levelInfo[i].name != null ? levelInfo[i].name : (levelInfo[i].id + '')
+//					name: levelInfo[i].name != null ? levelInfo[i].name : (levelInfo[i].id + '')
 				},
 				position: {
 					x: position[0],
@@ -157,7 +160,8 @@ var zoomVis = function (opts) {
 					'width': nodeSize,
 					'height': nodeSize,
 					'border-width': 5,
-					'border-color': DEFAULT_BORDER_COLOR
+					'border-color': DEFAULT_BORDER_COLOR,
+					'label': levelInfo[i].name != null ? levelInfo[i].name : levelInfo[i].id
 				},
 				selected: false,
 				selctable: true,
@@ -476,7 +480,7 @@ var zoomVis = function (opts) {
 				selector: 'node',
 				css: {
 					'background-color': DEFAULT_NODE_COLOR,
-					'content': 'data(id)',
+					'content': 'data(label)',
 					'text-valign': 'center'
 				},
 			},
