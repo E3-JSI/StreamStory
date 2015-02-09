@@ -548,11 +548,11 @@ var zoomVis = function (opts) {
 		var x = event.cyPosition.x;
 		var y = event.cyPosition.y;
 		console.log("mouseover position: " + x + ", " + y);
-		
+		/*
 		$( ".selector" ).tooltip({
 			track: true,
 			content: "Test"
-		});
+		});*/
 	});
 	
 	//===============================================================
