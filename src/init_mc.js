@@ -1,8 +1,8 @@
 var fs = require('fs');
 var hmc = require('./hmc.js');
 
-const FNAME_MC = CTMC_DIR_NAME + 'ctmc-' + CLUST_SAMPLE + '.bin';
-const FNAME_FSPACE = CTMC_DIR_NAME + 'ctmc-ftr-' + CLUST_SAMPLE + '.bin';
+global.FNAME_MC = CTMC_DIR_NAME + 'ctmc-' + CLUST_SAMPLE + '.bin';
+global.FNAME_FSPACE = CTMC_DIR_NAME + 'ctmc-ftr-' + CLUST_SAMPLE + '.bin';
 
 exports.init = function () {
 	if (fs.existsSync(FNAME_MC) && fs.existsSync(FNAME_FSPACE)) {

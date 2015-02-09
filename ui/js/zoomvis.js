@@ -28,6 +28,10 @@ var zoomVis = function (opts) {
 		levelMaxNodeSize: []
 	}
 	
+	var callbacks = {
+		stateSelected: function (stateId) {}
+	}
+	
 	var maxNodeSize = 0;
 	
 	var zoomLevel = 0;
@@ -137,34 +141,36 @@ var zoomVis = function (opts) {
 			var position = calculatePosition(levelInfo[i].x, levelInfo[i].y);		//[x, y]
 			var nodeSize = calculateNodeRadius(levelInfo[i].size);
 			
-			dispNode = [
-				{
-					group: 'nodes',
-					data: {
-						id: '' + String(levelInfo[i].id),
-						name: 'test'
-					},
-					position: {
-						x: position[0],
-						y: position[1]
-					},
-					css: {
-						'background-color': DEFAULT_NODE_COLOR,
-						'width': nodeSize,
-						'height': nodeSize,
-						'border-width': 5,
-						'border-color': DEFAULT_BORDER_COLOR
-					},
-					locked: true
-				}
-			];
-			
-			cy.add(dispNode);
+			nodesArray.push({
+				group: 'nodes',
+				data: {
+					id: '' + levelInfo[i].id,
+					value: levelInfo[i].name != null ? levelInfo[i].name : levelInfo[i].id,
+					name: levelInfo[i].name != null ? levelInfo[i].name : levelInfo[i].id
+				},
+				position: {
+					x: position[0],
+					y: position[1]
+				},
+				css: {
+					'background-color': DEFAULT_NODE_COLOR,
+					'width': nodeSize,
+					'height': nodeSize,
+					'border-width': 5,
+					'border-color': DEFAULT_BORDER_COLOR
+				},
+				selected: false,
+				selctable: true,
+				locked: true
+			});
 		}
+		
+		cy.add(nodesArray);
 	}
 	
 	function insertEdges(level) {
-		var currentJumps = [];
+		var edgeArray = [];
+		
 		var edgeId = 0;
 		for (var i = 0; i < levelJumps[level].length; i++) {			
 			var probs = [];
@@ -186,8 +192,7 @@ var zoomVis = function (opts) {
 			}
 			
 			for (var j = 0; j < edges.length; j++) {
-				var edge = [
-				{
+				edgeArray.push({
 					group: 'edges',
 					data: {
 						id: i + '-' + edges[j],
@@ -201,11 +206,11 @@ var zoomVis = function (opts) {
 						'control-point-weight': 0.5,
 						'border-style': 'solid'
 					}
-				}
-				]
-				cy.add(edge)
+				});
 			}
 		}
+		
+		cy.add(edgeArray)
 	}
 	
 	function redraw(isInit) {
@@ -331,6 +336,7 @@ var zoomVis = function (opts) {
 	function setCurrentState(stateId, height) {
 		clearCurrentState();
 		specialStates.current = stateId;
+		cy.nodes('#' + stateId).select();	// TODO does this work???
 		
 		fetchPastStates(stateId, height);
 		fetchFutureStates(stateId, height);
@@ -340,27 +346,6 @@ var zoomVis = function (opts) {
 	//===============================================================
 	// FETCH METHODS
 	//===============================================================
-	
-	function fetchStateInfo(stateId) {
-		$.ajax('api/details', {
-			dataType: 'json',
-			data: { stateId: stateId, level: hierarchy[currentLevel].height },
-			success: function (data) {
-				var str = "STATE ID: " + data.id + '<br />';
-				
-				$.each(data.features, function (idx, val) {
-					str += '<div class="clickable" ondblclick="ui.fetchHistogram(' + stateId + ',' + idx + ',true)" onclick="ui.fetchHistogram(' + stateId + ',' + idx + ',false)">' + val.name + ':\t' + val.value + '</div>';
-				});
-				
-				$('#container-features').html(str);
-				
-				str = '<br /><br /><br />FUTURE STATES:' + JSON.stringify(data.futureStates);
-				str += '<br /><br /><br />PAST STATES:' + JSON.stringify(data.pastStates);
-				
-				$('#container-desc').html(str);
-			}
-		});
-	}
 	
 	function fetchFutureStates(currStateId, height) {
 		specialStates.future = {};
@@ -522,12 +507,17 @@ var zoomVis = function (opts) {
 	cy.on('click', 'node', function (event) {
 		var node = event.cyTarget;
 		var stateId = parseInt(node.id());
+		var height = hierarchy[currentLevel].height;
+		
+		// set selected state
 		specialStates.selected = stateId;
-		fetchStateInfo(stateId);
 		
+		// redraw
 		cy.nodes().css('shape', 'ellipse');
-		
 		drawNode(stateId);
+		
+		// notify the handlers
+		callbacks.stateSelected(stateId, height);
 	});
 	
 	//===============================================================
@@ -586,6 +576,11 @@ var zoomVis = function (opts) {
 		
 		getSelectedState: function () {
 			return specialStates.selected;
+		},
+		
+		// callbacks
+		onStateSelected: function (callback) {
+			callbacks.stateSelected = callback;
 		}
 	}
 	

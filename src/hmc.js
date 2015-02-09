@@ -110,6 +110,7 @@ exports.HMC = function (opts) {
 			var invCoords = ftrSpace.invFtrVec(coords);
 			var futureStates = mc.futureStates(level, stateId);
 			var pastStates = mc.pastStates(level, stateId);
+			var stateNm = mc.getStateName(stateId);
 			
 			var features = [];
 			for (var i = 0; i < invCoords.length; i++) {
@@ -118,6 +119,7 @@ exports.HMC = function (opts) {
 			
 			return {
 				id: stateId,
+				name: stateNm.length > 0 ? stateNm : null,
 				features: features,
 				futureStates: futureStates,
 				pastStates: pastStates
