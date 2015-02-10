@@ -1,6 +1,7 @@
 var config = require('./config.js');
 var services = require('./src/services.js');
 var mc = require('./src/init_mc.js');
+var pipeline = require('./src/pipeline.js');
 var qm = require(qmModulePath + 'qm.node');
 
 var readOnly = config.qmReadOnly;
@@ -23,13 +24,15 @@ global.closeBase = function () {
 try {
 	log.info('Opening base with configuration: %s ...', qmConfFile);
 	
-	// global variables
+	// initialize
 	global.base = qm.open(qmConfFile, readOnly);
+	
+	pipeline.init();
 	global.hmc = mc.init();
 	
 	services.init();
 	
-	require('./src/replay.js').replay();
+	require('./src/replay.js').replayHmc();
 } catch (e) {
 	log.error(e, 'Exception in main!');
 	closeBase();

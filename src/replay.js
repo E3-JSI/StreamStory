@@ -7,7 +7,7 @@ var recs = store.recs;
 //log.debug('Sorting %d records ...', recs.length);
 //recs.sortByField('time', true);
 
-exports.replay = function () {
+exports.replayHmc = function () {
 	log.info('Replaying records ...');
 	
 	var currIdx = 0;
@@ -24,4 +24,8 @@ exports.replay = function () {
 	}
 	
 	pushRecord();
+}
+
+exports.replayStream = function () {
+	
 }

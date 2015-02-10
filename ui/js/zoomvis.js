@@ -5,6 +5,8 @@ var zoomVis = function (opts) {
 	var CURRENT_NODE_COLOR = 'green';
 	var DEFAULT_BORDER_COLOR = 'black';
 	
+	var DEFAULT_BORDER_WIDTH = 5;
+	
 	// size
 	var MIN_NODE_DIAMETER = 30;
 	var NODE_SCALE_FACTOR = 200;
@@ -159,7 +161,7 @@ var zoomVis = function (opts) {
 					'background-color': DEFAULT_NODE_COLOR,
 					'width': nodeSize,
 					'height': nodeSize,
-					'border-width': 5,
+					'border-width': DEFAULT_BORDER_WIDTH,
 					'border-color': DEFAULT_BORDER_COLOR,
 					'label': levelInfo[i].name != null ? levelInfo[i].name : levelInfo[i].id
 				},
@@ -276,7 +278,8 @@ var zoomVis = function (opts) {
 		var node = cy.nodes('#' + nodeId);
 		
 		if (nodeId == specialStates.selected) {
-			node.css('shape', 'octagon');
+//			node.css('shape', 'octagon');
+			node.css('border-width', '10');
 		}
 		if (nodeId == specialStates.current) {
 			node.css('border-color', CURRENT_NODE_COLOR);
@@ -535,6 +538,7 @@ var zoomVis = function (opts) {
 		
 		// redraw
 		cy.nodes().css('shape', 'ellipse');
+		cy.nodes().css('border-width', DEFAULT_BORDER_WIDTH);
 		drawNode(stateId);
 		
 		// notify the handler
