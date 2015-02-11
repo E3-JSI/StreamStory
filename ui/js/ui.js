@@ -102,6 +102,14 @@ var UI;
 			$('#options').toggle();
 		});
 		
+		$('#vis_toggler').click(function () {
+			$('#vis_options').toggle("blind");
+			
+//			var pos = $('#vis_toggler').offset();
+//			console.log(pos);
+		});
+		
+		
 		$('#chk-show-fut').change(function () {
 			var checked = this.checked;
 			var time = parseFloat($('#txt-fut-range').val());
@@ -204,6 +212,11 @@ var UI;
 			rq.fail(function () {
 				alert('Failed to save!');
 			});
+		});
+		
+		$('#btn-png').click(function () {
+			var png = viz.getPNG();
+			console.log("PNG: " + png);
 		});
 		
 		viz.refresh();

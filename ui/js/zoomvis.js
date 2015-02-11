@@ -613,6 +613,10 @@ var zoomVis = function (opts) {
 			return specialStates.selected;
 		},
 		
+		getPNG: function () {
+			return cy.png( {full: true, scale: 1} );
+		},
+		
 		// callbacks
 		onStateSelected: function (callback) {
 			callbacks.stateSelected = callback;

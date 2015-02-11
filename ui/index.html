@@ -30,17 +30,19 @@
 					<div id="slider_item_div"></div>
 				</div>
 				<div id="vis_container"></div>
+				<div id="vis_toggler" class="clickable" title="click for options"></div>
+				
 				<div id="threshold_slider"></div>
 			</div>
 			<div id="container-options" class="container">
 				<div id="toggler" class="clickable"></div>
 				<div id="options" style="display: none;">
-					<input type="checkbox" id="chk-show-fut" />Show future
-					<div id="div-future-opts">
-						<input type="number" id="rng-time-probs" value="0" />
-						<input type="number" id="txt-fut-range" value="1" />
+					<input type="checkbox" id="chk-show-fut2" />Show future
+					<div id="div-future-opts2">
+						<input type="number" id="rng-time-probs2" value="0" />
+						<input type="number" id="txt-fut-range2" value="1" />
 						<!-- input type="range" id="rng-time-probs" /-->
-						<div id="div-fut-time"></div>
+						<div id="div-fut-time2"></div>
 					</div>
 				</div>
 			</div>
@@ -60,9 +62,18 @@
 			</div>
 			<div id="container-config" class="container">
 				<div id="current_height_value"></div>
-				<input type="button" value="Save as PNG" /> <br />
+				<input id="btn-png" type="button" value="Save as PNG" /> <br />
 				<input id="btn-save" type="button" value="Save Model" />
 			</div>
+		</div>
+	</div>
+	<div id="vis_options" style="display: none;" class >
+		<input type="checkbox" id="chk-show-fut" />Show future
+		<div id="div-future-opts">
+			<input type="number" id="rng-time-probs" value="0" />
+			<input type="number" id="txt-fut-range" value="1" />
+			<!-- input type="range" id="rng-time-probs" /-->
+			<div id="div-fut-time"></div>
 		</div>
 	</div>
 </body>
