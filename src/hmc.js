@@ -1,5 +1,4 @@
-var qm = require(global.qmModulePath + 'qm.node');
-var analytics = require(global.qmModulePath + 'analytics.node');
+var analytics = qm.analytics;
 
 exports.HMC = function (opts) {
 	// constructor
@@ -102,6 +101,17 @@ exports.HMC = function (opts) {
 			return mc.pastStates(level, state, time);
 		},
 		
+		getFtrNames: function () {
+			var names = [];
+			
+			var dims = ftrSpace.dims;
+			for (var i = 0; i < dims.length; i++) {
+				names.push(ftrSpace.getFtr(i));
+			}
+			
+			return names;
+		},
+		
 		/**
 		 * Returns state details as a Javascript object.
 		 */
@@ -112,9 +122,10 @@ exports.HMC = function (opts) {
 			var pastStates = mc.pastStates(level, stateId);
 			var stateNm = mc.getStateName(stateId);
 			
+			var ftrNames = that.getFtrNames();
 			var features = [];
 			for (var i = 0; i < invCoords.length; i++) {
-				features.push({name: ftrSpace.getFtr(i), value: invCoords.at(i)});
+				features.push({name: ftrNames[i], value: invCoords.at(i)});
 			}
 			
 			return {
@@ -164,6 +175,20 @@ exports.HMC = function (opts) {
 				
 				callback(features);
 			});
+		},
+		
+		getFtrDist: function (height, ftrIdx) {
+			var stateIds = mc.stateIds(height);
+			
+			var result = [];
+			for (var i = 0; i < stateIds.length; i++) {
+				var stateId = stateIds[i];
+				var coords = ftrSpace.invFtrVec(mc.fullCoords(stateId));
+				
+				result.push({ state: stateId, value: coords[ftrIdx] });
+			}
+			
+			return result;
 		}
 	};
 	

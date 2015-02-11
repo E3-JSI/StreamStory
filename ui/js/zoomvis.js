@@ -1,9 +1,17 @@
 var zoomVis = function (opts) {
+	
+	var MODE_NORMAL = 'normal';
+	var MODE_PROBS = 'probs';
+	var MODE_TARGET_FTR = 'ftr';
+	
 	// colors
 	var EDGE_COLOR = 'darkgray';
 	var DEFAULT_NODE_COLOR = 'rgb(120,120,120)';//'DodgerBlue';
+	var VIZ_NODE_COLOR = 360;
 	var CURRENT_NODE_COLOR = 'green';
 	var DEFAULT_BORDER_COLOR = 'black';
+	
+	var DEFAULT_BORDER_WIDTH = 5;
 	
 	// size
 	var MIN_NODE_DIAMETER = 30;
@@ -15,12 +23,12 @@ var zoomVis = function (opts) {
 	var currentHeightContainer = document.getElementById(opts.currentHeightContainer);
 	
 	var hierarchy = null;
-	var specialStates = {
+	var modeConfig = {
 		selected: null,
 		current: null,
 		future: {},
 		past: {},
-		probsMode: null
+		mode: { type: MODE_NORMAL, config: {} },
 	};
 	
 	var uiConfig = {
@@ -159,7 +167,7 @@ var zoomVis = function (opts) {
 					'background-color': DEFAULT_NODE_COLOR,
 					'width': nodeSize,
 					'height': nodeSize,
-					'border-width': 5,
+					'border-width': DEFAULT_BORDER_WIDTH,
 					'border-color': DEFAULT_BORDER_COLOR,
 					'label': levelInfo[i].name != null ? levelInfo[i].name : levelInfo[i].id
 				},
@@ -265,7 +273,10 @@ var zoomVis = function (opts) {
 	}
 	
 	function setCurrentLevel(levelIdx) {
-		specialStates.probsMode = null;
+		if (modeConfig.mode.type == MODE_TARGET_FTR) {
+			fetchTargetFtr(modeConfig.mode.config.targetFtr);
+		}
+		
 		redraw();
 		fetchCurrentState(hierarchy[levelIdx].height);
 	}
@@ -275,60 +286,80 @@ var zoomVis = function (opts) {
 		
 		var node = cy.nodes('#' + nodeId);
 		
-		if (nodeId == specialStates.selected) {
-			node.css('shape', 'octagon');
+		if (nodeId == modeConfig.selected) {
+			node.css('border-width', '10');
 		}
-		if (nodeId == specialStates.current) {
+		if (nodeId == modeConfig.current) {
 			node.css('border-color', CURRENT_NODE_COLOR);
 		}
-		if (nodeId in specialStates.past) {
+		if (nodeId in modeConfig.past) {
 			node.css('border-color', 'brown');
 		}
 		
-		if (specialStates.probsMode != null) {
-			var config = specialStates.probsMode;
+		if (modeConfig.mode.type == MODE_PROBS) {
+			var config = modeConfig.mode.config;
 			var probs = config.probs;
-//			var maxProb = config.maxProb;
-			
-			var baseColor = 360;//nodeId in specialStates.future ? 307 : ;
-			
-			var prob = sizeFromProb(probs[nodeId]);
-			var color = 'hsla(' + baseColor + ',' + Math.floor(100*prob) + '%, 55%, 1)';
+			var color = 'hsla(' + VIZ_NODE_COLOR + ',' + Math.floor(100*sizeFromProb(probs[nodeId])) + '%, 55%, 1)';
 			node.css('backgroundColor', color);
-		} else if (nodeId in specialStates.future) {
+		} 
+		else if (modeConfig.mode.type == MODE_TARGET_FTR) {
+			var config = modeConfig.mode.config;
+			var val = (config.ftrVals[nodeId] - config.minVal) / (config.maxVal - config.minVal);
+			var color = 'hsla(' + VIZ_NODE_COLOR + ',' + Math.floor(100*sizeFromProb(val)) + '%, 55%, 1)';
+			node.css('backgroundColor', color);
+		} 
+		else if (nodeId in modeConfig.future) {
 			var baseColor = 216;//nodeId in specialStates.probs ? 307 : ;
 			
-			var prob = sizeFromProb(specialStates.future[nodeId]);
+			var prob = sizeFromProb(modeConfig.future[nodeId]);
 			var color = 'hsla(' + baseColor + ',' + (15 + Math.floor((100-15)*prob)) + '%, 55%, 1)';
 			node.css('backgroundColor', color);
 		}
 	}
 	
-	function clearCurrentState() {
-		cy.nodes('#' + specialStates.current).css('border-color', DEFAULT_BORDER_COLOR);
-		if (specialStates.probsMode == null) {
-			for (var nodeId in specialStates.future) {
-				cy.nodes('#' + nodeId).css('backgroundColor', DEFAULT_NODE_COLOR);
-			}
-		}
-		for (nodeId in specialStates.past) {
-			cy.nodes('#' + nodeId).css('border-color', DEFAULT_BORDER_COLOR);
-		}
+	function clearStyles() {
+		var nodes = cy.nodes();
 		
-		specialStates.current = null;
-		specialStates.future = {};
-		specialStates.past = {};
+		nodes.css('border-color', DEFAULT_BORDER_COLOR);
+		nodes.css('backgroundColor', DEFAULT_NODE_COLOR);
+		nodes.css('border-color', DEFAULT_BORDER_COLOR);
+	}
+	
+	function drawNodes() {
+		clearStyles();
+		
+		var levelInfo = levelNodes[currentLevel];
+		for (var i = 0; i < levelInfo.length; i++) {
+			drawNode(levelInfo[i].id);
+		}
+	}
+	
+	function clearCurrentState() {
+		clearStyles();
+//		cy.nodes('#' + modeConfig.current).css('border-color', DEFAULT_BORDER_COLOR);
+//		if (modeConfig.mode.type == MODE_NORMAL) {
+//			for (var nodeId in modeConfig.future) {
+//				cy.nodes('#' + nodeId).css('backgroundColor', DEFAULT_NODE_COLOR);
+//			}
+//		}
+//		for (nodeId in modeConfig.past) {
+//			cy.nodes('#' + nodeId).css('border-color', DEFAULT_BORDER_COLOR);
+//		}
+		
+		modeConfig.current = null;
+		modeConfig.future = {};
+		modeConfig.past = {};
 	}
 	
 	function redrawSpecial() {
-		drawNode(specialStates.selected);
-		drawNode(specialStates.current);
-		for (var nodeId in specialStates.future)
+		drawNode(modeConfig.selected);
+		drawNode(modeConfig.current);
+		for (var nodeId in modeConfig.future)
 			drawNode(nodeId);
-		for (var nodeId in specialStates.past)
+		for (var nodeId in modeConfig.past)
 			drawNode(nodeId);
-		if (specialStates.probsMode != null) {
-			for (var nodeId in specialStates.probsMode.probs)
+		if (modeConfig.mode.type == MODE_PROBS) {
+			for (var nodeId in modeConfig.mode.config.probs)
 				drawNode(nodeId);
 		}
 	}
@@ -356,12 +387,15 @@ var zoomVis = function (opts) {
 	
 	function setCurrentState(stateId, height) {
 		clearCurrentState();
-		specialStates.current = stateId;
+		modeConfig.current = stateId;
 		cy.nodes('#' + stateId).select();	// TODO does this work???
 		
+		if (modeConfig.mode.type == MODE_NORMAL)
+			fetchFutureStates(stateId, height);
 		fetchPastStates(stateId, height);
-		fetchFutureStates(stateId, height);
-		drawNode(stateId);
+		
+		drawNodes();
+//		drawNode(stateId);
 	}
 	
 	//===============================================================
@@ -369,7 +403,7 @@ var zoomVis = function (opts) {
 	//===============================================================
 	
 	function fetchFutureStates(currStateId, height) {
-		specialStates.future = {};
+		modeConfig.future = {};
 		
 		$.ajax('api/futureStates', {
 			dataType: 'json',
@@ -378,7 +412,7 @@ var zoomVis = function (opts) {
 				for (var i = 0; i < Math.min(3, states.length); i++) {
 					var stateId = states[i].id;
 					
-					specialStates.future[stateId] = states[i].prob;
+					modeConfig.future[stateId] = states[i].prob;
 					drawNode(stateId);
 				}
 			}
@@ -386,7 +420,7 @@ var zoomVis = function (opts) {
 	}
 	
 	function fetchPastStates(currStateId, height) {
-		specialStates.past = {};
+		modeConfig.past = {};
 		
 		$.ajax('api/history', {
 			dataType: 'json',
@@ -395,7 +429,7 @@ var zoomVis = function (opts) {
 				for (var i = 0; i < stateIds.length; i++) {
 					var stateId = stateIds[i];
 					
-					specialStates.past[stateId] = true;
+					modeConfig.past[stateId] = true;
 					drawNode(stateId);
 				}
 			}
@@ -403,7 +437,7 @@ var zoomVis = function (opts) {
 	}
 	
 	function fetchCurrentState(height) {
-		specialStates.current = null;
+		modeConfig.current = null;
 		
 		$.ajax('api/currentState', {
 			dataType: 'json',
@@ -428,6 +462,39 @@ var zoomVis = function (opts) {
 			dataType: 'json',
 			error: function (jqXHR, jqXHR, status, err) {
 				alert("failed to receive object: " + status + ", " + err);
+			}
+		});
+	}
+	
+	function fetchTargetFtr(ftrIdx) {
+		$.ajax('api/targetFeature', {
+			dataType: 'json',
+			data: { height: that.getCurrentHeight(), ftr: ftrIdx },
+			success: function (data) {
+				var stateVals = {};
+				
+				var maxVal = Number.NEGATIVE_INFINITY;
+				var minVal = Number.POSITIVE_INFINITY;
+				
+				for (var i = 0; i < data.length; i++) {
+					var state = data[i].state;
+					var value = data[i].value;
+					
+					if (value > maxVal) maxVal = value;
+					if (value < minVal) minVal = value;
+					
+					stateVals[state] = value;
+				}
+				
+				modeConfig.mode.type = MODE_TARGET_FTR;
+				modeConfig.mode.config = { 
+					targetFtr: ftrIdx,
+					ftrVals: stateVals,
+					maxVal: maxVal,
+					minVal: minVal
+				};
+				
+				drawNodes();
 			}
 		});
 	}
@@ -531,10 +598,11 @@ var zoomVis = function (opts) {
 		var height = hierarchy[currentLevel].height;
 		
 		// set selected state
-		specialStates.selected = stateId;
+		modeConfig.selected = stateId;
 		
 		// redraw
 		cy.nodes().css('shape', 'ellipse');
+		cy.nodes().css('border-width', DEFAULT_BORDER_WIDTH);
 		drawNode(stateId);
 		
 		// notify the handler
@@ -570,7 +638,7 @@ var zoomVis = function (opts) {
 			});
 			
 			var currState = currentStates[currentLevel].id;
-			if (currState != specialStates.current)
+			if (currState != modeConfig.current)
 				setCurrentState(currState, currentStates[currentLevel].height);
 		},
 		
@@ -592,9 +660,19 @@ var zoomVis = function (opts) {
 				config.probs[stateId] = prob;
 			}
 			
-			specialStates.probsMode = config;
+			modeConfig.mode.type = MODE_PROBS;
+			modeConfig.mode.config = config;
 			
 			redrawSpecial();
+		},
+		
+		setTargetFtr: function (ftrIdx) {
+			if (ftrIdx == null) {	// reset to normal mode
+				modeConfig.mode = MODE_NORMAL;
+				modeConfig.mode.config = {}
+			} else {
+				fetchTargetFtr(ftrIdx);
+			}
 		},
 		
 		setZoom: function (value) {
@@ -606,11 +684,11 @@ var zoomVis = function (opts) {
 		},
 		
 		getCurrentState: function () {
-			return specialStates.current;
+			return modeConfig.current;
 		},
 		
 		getSelectedState: function () {
-			return specialStates.selected;
+			return modeConfig.selected;
 		},
 		
 		getPNG: function () {
