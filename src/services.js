@@ -219,41 +219,6 @@ function initRestApi() {
 			
 			resp.status(204);
 			resp.end();
-			
-//			var body = '';
-//			
-//			req.on('data', function (data) {
-//				body += data;
-//			})
-//			req.on('end', function () {
-//				var batch = JSON.parse(body);
-//				
-//				for (var i = 0; i < batch.length; i++) {
-//					var instance = batch[i];
-//					
-//					var store = instance.store;
-//					var timestamp = instance.timestamp;
-//					var value = instance.value;
-//					
-//					if (++imported % printInterval == 0 && log.debug())
-//						log.debug('Imported %d values ...', imported);
-//					
-//					base.store(store).add({
-//						time_ms: timestamp,
-//						time: new Date(timestamp).toISOString().split('Z')[0],
-//						value: value
-//					});
-//				}
-//				
-//				resp.status(204);
-//				resp.end();
-//			});
-//			
-//			req.on('error', function (e) {
-//				log.error(e, 'Error while receiving data!');
-//				resp.status(500);	// internal server error
-//				resp.end();
-//			});
 		});
 	}
 	
@@ -265,6 +230,22 @@ function initRestApi() {
 			try {
 				log.debug('Querying MHWirth multilevel model ...');
 				resp.send(hmc.getVizState());
+			} catch (e) {
+				log.error(e, 'Failed to query MHWirth multilevel visualization!');
+				resp.status(500);	// internal server error
+			}
+			
+			resp.end();
+		});
+		
+		// multilevel analysis
+		app.get(API_PATH + '/features', function (req, resp) {
+			try {
+				log.debug('Fetching all the features ...');
+				
+				var ftrNames = hmc.getFtrNames();
+				
+				resp.send(ftrNames);
 			} catch (e) {
 				log.error(e, 'Failed to query MHWirth multilevel visualization!');
 				resp.status(500);	// internal server error

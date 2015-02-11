@@ -17,6 +17,31 @@ var UI;
 		return result;
 	}
 	
+	function populateFtrs() {
+		$.ajax('api/features', {
+			dataType: 'json',
+			success: function (ftrs) {
+				var htmlList = $('#ul-ftrs');
+				
+				$.each(ftrs, function (idx, name) {
+					var li = $('<li />').appendTo(htmlList);
+					li.html('<input type="checkbox" value="' + name + '" />' + name + '<br />');
+				});
+				
+				$('#ul-ftrs input[type=checkbox]').change(function (event) {
+					var checked = $(this).prop('checked');
+					
+					if (checked) {
+						$('#ul-ftrs input[type=checkbox]').removeAttr('checked');
+						$(event.target).attr('checked', 'checked');
+					}
+					
+					alert('clicked, ischecked: ' + checked);
+				});
+			}
+		});
+	}
+	
 	// public stuff
 	var UI = function (opts) {
 		var viz = zoomVis({
@@ -208,6 +233,7 @@ var UI;
 		
 		viz.refresh();
 		initWs();
+		populateFtrs();
 		
 		return that;
 	}
