@@ -106,6 +106,9 @@ function initTriggers() {
 			
 			if (log.trace())
 				log.trace('%s: %s', QM_IN_STORE, JSON.stringify(val));
+			
+			// TODO compute the friction coeff here
+			val.friction_coeff = 0;
 		}
 	});
 	
