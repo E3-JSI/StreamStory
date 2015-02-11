@@ -3,7 +3,7 @@
 		"confFile": "qm-lstopar.conf",
 		"schemaFile": "proasense.def",
 		"path": "/home/lstopar/workspace/JSI/qminer-port/qminer/",
-		"createDb": true,
+		"createDb": false,
 		"readOnly": true
 	},
 	"models": {
@@ -17,5 +17,5 @@
 	"log": {
 		"level": "debug"
 	},
-	"replay": false
+	"replay": true
 }

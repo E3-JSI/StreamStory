@@ -7,6 +7,7 @@ var zoomVis = function (opts) {
 	// colors
 	var EDGE_COLOR = 'darkgray';
 	var DEFAULT_NODE_COLOR = 'rgb(120,120,120)';//'DodgerBlue';
+	var VIZ_NODE_COLOR = 360;
 	var CURRENT_NODE_COLOR = 'green';
 	var DEFAULT_BORDER_COLOR = 'black';
 	
@@ -272,8 +273,8 @@ var zoomVis = function (opts) {
 	}
 	
 	function setCurrentLevel(levelIdx) {
-		if (modeConfig.mode.type != MODE_NORMAL) {
-			// TODO fetch new colors
+		if (modeConfig.mode.type == MODE_TARGET_FTR) {
+			fetchTargetFtr(modeConfig.mode.config.targetFtr);
 		}
 		
 		redraw();
@@ -286,7 +287,6 @@ var zoomVis = function (opts) {
 		var node = cy.nodes('#' + nodeId);
 		
 		if (nodeId == modeConfig.selected) {
-//			node.css('shape', 'octagon');
 			node.css('border-width', '10');
 		}
 		if (nodeId == modeConfig.current) {
@@ -299,13 +299,16 @@ var zoomVis = function (opts) {
 		if (modeConfig.mode.type == MODE_PROBS) {
 			var config = modeConfig.mode.config;
 			var probs = config.probs;
-			
-			var baseColor = 360;//nodeId in specialStates.future ? 307 : ;
-			
-			var prob = sizeFromProb(probs[nodeId]);
-			var color = 'hsla(' + baseColor + ',' + Math.floor(100*prob) + '%, 55%, 1)';
+			var color = 'hsla(' + VIZ_NODE_COLOR + ',' + Math.floor(100*sizeFromProb(probs[nodeId])) + '%, 55%, 1)';
 			node.css('backgroundColor', color);
-		} else if (nodeId in modeConfig.future) {
+		} 
+		else if (modeConfig.mode.type == MODE_TARGET_FTR) {
+			var config = modeConfig.mode.config;
+			var val = (config.ftrVals[nodeId] - config.minVal) / (config.maxVal - config.minVal);
+			var color = 'hsla(' + VIZ_NODE_COLOR + ',' + Math.floor(100*sizeFromProb(val)) + '%, 55%, 1)';
+			node.css('backgroundColor', color);
+		} 
+		else if (nodeId in modeConfig.future) {
 			var baseColor = 216;//nodeId in specialStates.probs ? 307 : ;
 			
 			var prob = sizeFromProb(modeConfig.future[nodeId]);
@@ -314,16 +317,34 @@ var zoomVis = function (opts) {
 		}
 	}
 	
+	function clearStyles() {
+		var nodes = cy.nodes();
+		
+		nodes.css('border-color', DEFAULT_BORDER_COLOR);
+		nodes.css('backgroundColor', DEFAULT_NODE_COLOR);
+		nodes.css('border-color', DEFAULT_BORDER_COLOR);
+	}
+	
+	function drawNodes() {
+		clearStyles();
+		
+		var levelInfo = levelNodes[currentLevel];
+		for (var i = 0; i < levelInfo.length; i++) {
+			drawNode(levelInfo[i].id);
+		}
+	}
+	
 	function clearCurrentState() {
-		cy.nodes('#' + modeConfig.current).css('border-color', DEFAULT_BORDER_COLOR);
-		if (modeConfig.mode.type == MODE_NORMAL) {
-			for (var nodeId in modeConfig.future) {
-				cy.nodes('#' + nodeId).css('backgroundColor', DEFAULT_NODE_COLOR);
-			}
-		}
-		for (nodeId in modeConfig.past) {
-			cy.nodes('#' + nodeId).css('border-color', DEFAULT_BORDER_COLOR);
-		}
+		clearStyles();
+//		cy.nodes('#' + modeConfig.current).css('border-color', DEFAULT_BORDER_COLOR);
+//		if (modeConfig.mode.type == MODE_NORMAL) {
+//			for (var nodeId in modeConfig.future) {
+//				cy.nodes('#' + nodeId).css('backgroundColor', DEFAULT_NODE_COLOR);
+//			}
+//		}
+//		for (nodeId in modeConfig.past) {
+//			cy.nodes('#' + nodeId).css('border-color', DEFAULT_BORDER_COLOR);
+//		}
 		
 		modeConfig.current = null;
 		modeConfig.future = {};
@@ -369,9 +390,12 @@ var zoomVis = function (opts) {
 		modeConfig.current = stateId;
 		cy.nodes('#' + stateId).select();	// TODO does this work???
 		
+		if (modeConfig.mode.type == MODE_NORMAL)
+			fetchFutureStates(stateId, height);
 		fetchPastStates(stateId, height);
-		fetchFutureStates(stateId, height);
-		drawNode(stateId);
+		
+		drawNodes();
+//		drawNode(stateId);
 	}
 	
 	//===============================================================
@@ -438,6 +462,39 @@ var zoomVis = function (opts) {
 			dataType: 'json',
 			error: function (jqXHR, jqXHR, status, err) {
 				alert("failed to receive object: " + status + ", " + err);
+			}
+		});
+	}
+	
+	function fetchTargetFtr(ftrIdx) {
+		$.ajax('api/targetFeature', {
+			dataType: 'json',
+			data: { height: that.getCurrentHeight(), ftr: ftrIdx },
+			success: function (data) {
+				var stateVals = {};
+				
+				var maxVal = Number.NEGATIVE_INFINITY;
+				var minVal = Number.POSITIVE_INFINITY;
+				
+				for (var i = 0; i < data.length; i++) {
+					var state = data[i].state;
+					var value = data[i].value;
+					
+					if (value > maxVal) maxVal = value;
+					if (value < minVal) minVal = value;
+					
+					stateVals[state] = value;
+				}
+				
+				modeConfig.mode.type = MODE_TARGET_FTR;
+				modeConfig.mode.config = { 
+					targetFtr: ftrIdx,
+					ftrVals: stateVals,
+					maxVal: maxVal,
+					minVal: minVal
+				};
+				
+				drawNodes();
 			}
 		});
 	}
@@ -610,16 +667,12 @@ var zoomVis = function (opts) {
 		},
 		
 		setTargetFtr: function (ftrIdx) {
-			// TODO
-			
-			$.ajax('api/targetFeature', {
-				dataType: 'json',
-				data: { height: viz.getCurrentHeight(), ftr: ftrIdx },
-				success: function (data) {
-					// TODO
-					alert(JSON.stringify(data));
-				}
-			});
+			if (ftrIdx == null) {	// reset to normal mode
+				modeConfig.mode = MODE_NORMAL;
+				modeConfig.mode.config = {}
+			} else {
+				fetchTargetFtr(ftrIdx);
+			}
 		},
 		
 		setZoom: function (value) {

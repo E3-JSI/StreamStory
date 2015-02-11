@@ -95,6 +95,8 @@ var UI;
 							
 							var ftrIdx = el.val();
 							viz.setTargetFtr(ftrIdx);
+						} else {
+							viz.setTargetFtr(null);
 						}
 					});
 				}
