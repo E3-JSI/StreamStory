@@ -1,4 +1,9 @@
 var zoomVis = function (opts) {
+	
+	var MODE_NORMAL = 'normal';
+	var MODE_PROBS = 'probs';
+	var MODE_TARGET_FTR = 'ftr';
+	
 	// colors
 	var EDGE_COLOR = 'darkgray';
 	var DEFAULT_NODE_COLOR = 'rgb(120,120,120)';//'DodgerBlue';
@@ -17,12 +22,12 @@ var zoomVis = function (opts) {
 	var currentHeightContainer = document.getElementById(opts.currentHeightContainer);
 	
 	var hierarchy = null;
-	var specialStates = {
+	var modeConfig = {
 		selected: null,
 		current: null,
 		future: {},
 		past: {},
-		probsMode: null
+		mode: { type: MODE_NORMAL, config: {} },
 	};
 	
 	var uiConfig = {
@@ -267,7 +272,10 @@ var zoomVis = function (opts) {
 	}
 	
 	function setCurrentLevel(levelIdx) {
-		specialStates.probsMode = null;
+		if (modeConfig.mode.type != MODE_NORMAL) {
+			// TODO fetch new colors
+		}
+		
 		redraw();
 		fetchCurrentState(hierarchy[levelIdx].height);
 	}
@@ -277,61 +285,60 @@ var zoomVis = function (opts) {
 		
 		var node = cy.nodes('#' + nodeId);
 		
-		if (nodeId == specialStates.selected) {
+		if (nodeId == modeConfig.selected) {
 //			node.css('shape', 'octagon');
 			node.css('border-width', '10');
 		}
-		if (nodeId == specialStates.current) {
+		if (nodeId == modeConfig.current) {
 			node.css('border-color', CURRENT_NODE_COLOR);
 		}
-		if (nodeId in specialStates.past) {
+		if (nodeId in modeConfig.past) {
 			node.css('border-color', 'brown');
 		}
 		
-		if (specialStates.probsMode != null) {
-			var config = specialStates.probsMode;
+		if (modeConfig.mode.type == MODE_PROBS) {
+			var config = modeConfig.mode.config;
 			var probs = config.probs;
-//			var maxProb = config.maxProb;
 			
 			var baseColor = 360;//nodeId in specialStates.future ? 307 : ;
 			
 			var prob = sizeFromProb(probs[nodeId]);
 			var color = 'hsla(' + baseColor + ',' + Math.floor(100*prob) + '%, 55%, 1)';
 			node.css('backgroundColor', color);
-		} else if (nodeId in specialStates.future) {
+		} else if (nodeId in modeConfig.future) {
 			var baseColor = 216;//nodeId in specialStates.probs ? 307 : ;
 			
-			var prob = sizeFromProb(specialStates.future[nodeId]);
+			var prob = sizeFromProb(modeConfig.future[nodeId]);
 			var color = 'hsla(' + baseColor + ',' + (15 + Math.floor((100-15)*prob)) + '%, 55%, 1)';
 			node.css('backgroundColor', color);
 		}
 	}
 	
 	function clearCurrentState() {
-		cy.nodes('#' + specialStates.current).css('border-color', DEFAULT_BORDER_COLOR);
-		if (specialStates.probsMode == null) {
-			for (var nodeId in specialStates.future) {
+		cy.nodes('#' + modeConfig.current).css('border-color', DEFAULT_BORDER_COLOR);
+		if (modeConfig.mode.type == MODE_NORMAL) {
+			for (var nodeId in modeConfig.future) {
 				cy.nodes('#' + nodeId).css('backgroundColor', DEFAULT_NODE_COLOR);
 			}
 		}
-		for (nodeId in specialStates.past) {
+		for (nodeId in modeConfig.past) {
 			cy.nodes('#' + nodeId).css('border-color', DEFAULT_BORDER_COLOR);
 		}
 		
-		specialStates.current = null;
-		specialStates.future = {};
-		specialStates.past = {};
+		modeConfig.current = null;
+		modeConfig.future = {};
+		modeConfig.past = {};
 	}
 	
 	function redrawSpecial() {
-		drawNode(specialStates.selected);
-		drawNode(specialStates.current);
-		for (var nodeId in specialStates.future)
+		drawNode(modeConfig.selected);
+		drawNode(modeConfig.current);
+		for (var nodeId in modeConfig.future)
 			drawNode(nodeId);
-		for (var nodeId in specialStates.past)
+		for (var nodeId in modeConfig.past)
 			drawNode(nodeId);
-		if (specialStates.probsMode != null) {
-			for (var nodeId in specialStates.probsMode.probs)
+		if (modeConfig.mode.type == MODE_PROBS) {
+			for (var nodeId in modeConfig.mode.config.probs)
 				drawNode(nodeId);
 		}
 	}
@@ -359,7 +366,7 @@ var zoomVis = function (opts) {
 	
 	function setCurrentState(stateId, height) {
 		clearCurrentState();
-		specialStates.current = stateId;
+		modeConfig.current = stateId;
 		cy.nodes('#' + stateId).select();	// TODO does this work???
 		
 		fetchPastStates(stateId, height);
@@ -372,7 +379,7 @@ var zoomVis = function (opts) {
 	//===============================================================
 	
 	function fetchFutureStates(currStateId, height) {
-		specialStates.future = {};
+		modeConfig.future = {};
 		
 		$.ajax('api/futureStates', {
 			dataType: 'json',
@@ -381,7 +388,7 @@ var zoomVis = function (opts) {
 				for (var i = 0; i < Math.min(3, states.length); i++) {
 					var stateId = states[i].id;
 					
-					specialStates.future[stateId] = states[i].prob;
+					modeConfig.future[stateId] = states[i].prob;
 					drawNode(stateId);
 				}
 			}
@@ -389,7 +396,7 @@ var zoomVis = function (opts) {
 	}
 	
 	function fetchPastStates(currStateId, height) {
-		specialStates.past = {};
+		modeConfig.past = {};
 		
 		$.ajax('api/history', {
 			dataType: 'json',
@@ -398,7 +405,7 @@ var zoomVis = function (opts) {
 				for (var i = 0; i < stateIds.length; i++) {
 					var stateId = stateIds[i];
 					
-					specialStates.past[stateId] = true;
+					modeConfig.past[stateId] = true;
 					drawNode(stateId);
 				}
 			}
@@ -406,7 +413,7 @@ var zoomVis = function (opts) {
 	}
 	
 	function fetchCurrentState(height) {
-		specialStates.current = null;
+		modeConfig.current = null;
 		
 		$.ajax('api/currentState', {
 			dataType: 'json',
@@ -534,7 +541,7 @@ var zoomVis = function (opts) {
 		var height = hierarchy[currentLevel].height;
 		
 		// set selected state
-		specialStates.selected = stateId;
+		modeConfig.selected = stateId;
 		
 		// redraw
 		cy.nodes().css('shape', 'ellipse');
@@ -574,7 +581,7 @@ var zoomVis = function (opts) {
 			});
 			
 			var currState = currentStates[currentLevel].id;
-			if (currState != specialStates.current)
+			if (currState != modeConfig.current)
 				setCurrentState(currState, currentStates[currentLevel].height);
 		},
 		
@@ -596,9 +603,23 @@ var zoomVis = function (opts) {
 				config.probs[stateId] = prob;
 			}
 			
-			specialStates.probsMode = config;
+			modeConfig.mode.type = MODE_PROBS;
+			modeConfig.mode.config = config;
 			
 			redrawSpecial();
+		},
+		
+		setTargetFtr: function (ftrIdx) {
+			// TODO
+			
+			$.ajax('api/targetFeature', {
+				dataType: 'json',
+				data: { height: viz.getCurrentHeight(), ftr: ftrIdx },
+				success: function (data) {
+					// TODO
+					alert(JSON.stringify(data));
+				}
+			});
 		},
 		
 		setZoom: function (value) {
@@ -610,11 +631,11 @@ var zoomVis = function (opts) {
 		},
 		
 		getCurrentState: function () {
-			return specialStates.current;
+			return modeConfig.current;
 		},
 		
 		getSelectedState: function () {
-			return specialStates.selected;
+			return modeConfig.selected;
 		},
 		
 		// callbacks

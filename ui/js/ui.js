@@ -17,31 +17,6 @@ var UI;
 		return result;
 	}
 	
-	function populateFtrs() {
-		$.ajax('api/features', {
-			dataType: 'json',
-			success: function (ftrs) {
-				var htmlList = $('#ul-ftrs');
-				
-				$.each(ftrs, function (idx, name) {
-					var li = $('<li />').appendTo(htmlList);
-					li.html('<input type="checkbox" value="' + name + '" />' + name + '<br />');
-				});
-				
-				$('#ul-ftrs input[type=checkbox]').change(function (event) {
-					var checked = $(this).prop('checked');
-					
-					if (checked) {
-						$('#ul-ftrs input[type=checkbox]').removeAttr('checked');
-						$(event.target).attr('checked', 'checked');
-					}
-					
-					alert('clicked, ischecked: ' + checked);
-				});
-			}
-		});
-	}
-	
 	// public stuff
 	var UI = function (opts) {
 		var viz = zoomVis({
@@ -96,6 +71,34 @@ var UI;
 					drawMsg('Outlier: ' + JSON.stringify(msg.content));
 				}
 			};
+		}
+		
+		function populateFtrs() {
+			$.ajax('api/features', {
+				dataType: 'json',
+				success: function (ftrs) {
+					var htmlList = $('#ul-ftrs');
+					
+					$.each(ftrs, function (idx, name) {
+						var li = $('<li />').appendTo(htmlList);
+						li.html('<input type="checkbox" value="' + idx + '" />' + name + '<br />');
+					});
+					
+					$('#ul-ftrs input[type=checkbox]').change(function (event) {
+						var el = $(event.target);
+						var checked = el.prop('checked');
+						
+						if (checked) {
+							// uncheck the other elements
+							$('#ul-ftrs input[type=checkbox]').removeAttr('checked');
+							el.prop('checked', true);
+							
+							var ftrIdx = el.val();
+							viz.setTargetFtr(ftrIdx);
+						}
+					});
+				}
+			});
 		}
 		
 		$("#threshold_slider").slider({

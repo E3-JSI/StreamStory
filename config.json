@@ -3,9 +3,8 @@
 		"confFile": "qm-lstopar.conf",
 		"schemaFile": "proasense.def",
 		"path": "/home/lstopar/workspace/JSI/qminer-port/qminer/",
-		"createDb": false,
-		"readOnly": true,
-		"modelDir": "/media/lstopar/hdd/project-data/proasense-models/"
+		"createDb": true,
+		"readOnly": true
 	},
 	"models": {
 		"dir": "/media/lstopar/hdd/project-data/proasense-models/",

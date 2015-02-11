@@ -416,6 +416,24 @@ function initRestApi() {
 			resp.end();
 		});
 		
+		// multilevel analysis
+		app.get(API_PATH + '/targetFeature', function (req, resp) {
+			try {
+				var height = parseFloat(req.query.height);
+				var ftrIdx = parseInt(req.query.ftr);
+				
+				if (log.debug())
+					log.debug('Fetching distribution for feature "%d" for height %d ...', height, ftrIdx);
+				
+				resp.send(hmc.getFtrDist(height, ftrIdx));
+			} catch (e) {
+				log.error(e, 'Failed to query state details!');
+				resp.status(500);	// internal server error
+			}
+			
+			resp.end();
+		});
+		
 		app.post(API_PATH + '/stateName', function (req, resp) {
 			var stateId, stateNm;
 			

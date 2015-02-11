@@ -175,6 +175,20 @@ exports.HMC = function (opts) {
 				
 				callback(features);
 			});
+		},
+		
+		getFtrDist: function (height, ftrIdx) {
+			var stateIds = mc.stateIds(height);
+			
+			var result = [];
+			for (var i = 0; i < stateIds.length; i++) {
+				var stateId = stateIds[i];
+				var coords = ftrSpace.invFtrVec(mc.fullCoords(stateId));
+				
+				result.push({ state: stateId, value: coords[ftrIdx] });
+			}
+			
+			return result;
 		}
 	};
 	

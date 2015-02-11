@@ -146,7 +146,9 @@
 			{"name": "ram_pos_measured", "type": "float"},
 			{"name": "ram_pos_setpoint", "type": "float"},
 			{"name": "ram_vel_measured", "type": "float"},
-			{"name": "ram_vel_setpoint", "type": "float"}
+			{"name": "ram_vel_setpoint", "type": "float"},
+			// computed fields
+			{"name": "friction_coeff", "type": "float", "null": true}
 		]
 	},
 	
@@ -169,7 +171,8 @@
 			{"name": "ram_pos_measured", "type": "float"},
 			{"name": "ram_pos_setpoint", "type": "float"},
 			{"name": "ram_vel_measured", "type": "float"},
-			{"name": "ram_vel_setpoint", "type": "float"}
+			{"name": "ram_vel_setpoint", "type": "float"},
+			{"name": "friction_coeff", "type": "float", "null": true}
 		]
 	}
 	
