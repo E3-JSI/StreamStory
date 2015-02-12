@@ -27,7 +27,7 @@ try {
 		log.info('Opening base with configuration: %s ...', QM_CONF_FILE);
 		global.base = qm.open(QM_CONF_FILE, QM_READ_ONLY);
 	}
-	
+		
 	global.hmc = mc.init();
 
 	pipeline.init();
