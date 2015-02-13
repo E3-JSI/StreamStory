@@ -1,5 +1,5 @@
 var fs = require('fs');
-var hmc = require('./hmc.js');
+var analytics = qm.analytics;
 
 global.FNAME_MC = CTMC_DIR_NAME + 'ctmc-' + CLUST_SAMPLE + '.bin';
 global.FNAME_FSPACE = CTMC_DIR_NAME + 'ctmc-ftr-' + CLUST_SAMPLE + '.bin';
@@ -32,7 +32,7 @@ function genFtrSpaceParams() {
 exports.init = function () {
 	if (fs.existsSync(FNAME_MC) && fs.existsSync(FNAME_FSPACE)) {
 		log.info('Loading HMC model ...');
-		var result = hmc.HMC({base: base, hmcFile: FNAME_MC, ftrSpaceFile: FNAME_FSPACE});
+		var result = analytics.HierarchMarkov({base: base, hmcFile: FNAME_MC, ftrSpaceFile: FNAME_FSPACE});
 		
 //		log.info('Rebuilding histograms ...');
 //		var store = base.store(CTMC_STORE_NAME);
@@ -56,7 +56,7 @@ exports.init = function () {
 		
 		log.info('Creating a store out of %d records ...', recs.length);
 	
-		var result = hmc.HMC({
+		var result = analytics.HierarchMarkov({
 			base: base,
 			hmcConfig: CTMC_PARAMS,
 			ftrSpaceConfig: genFtrSpaceParams()

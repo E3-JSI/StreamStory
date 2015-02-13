@@ -8,7 +8,7 @@ var zoomVis = function (opts) {
 	var EDGE_COLOR = 'darkgray';
 	var DEFAULT_NODE_COLOR = 'rgb(120,120,120)';//'DodgerBlue';
 	var VIZ_NODE_COLOR = 360;
-	var CURRENT_NODE_COLOR = 'green';
+	var CURRENT_NODE_COLOR = 'red';
 	var DEFAULT_BORDER_COLOR = 'black';
 	
 	var DEFAULT_BORDER_WIDTH = 5;

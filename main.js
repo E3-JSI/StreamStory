@@ -27,6 +27,12 @@ try {
 		log.info('Opening base with configuration: %s ...', QM_CONF_FILE);
 		global.base = qm.open(QM_CONF_FILE, QM_READ_ONLY);
 	}
+//	
+//	base.store('drilling_resampled').sample(20000).saveCSV({fname: 'drilling_resampled.csv', headers: true}, function (e) {
+//		if (e != null) log.error(e, 'Failed to write CSV file!');
+//		else log.info('Finished!');
+//		process.exit(0);
+//	});
 		
 	global.hmc = mc.init();
 
