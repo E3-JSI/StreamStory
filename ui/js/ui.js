@@ -246,7 +246,8 @@ var UI;
 		
 		$('#btn-png').click(function () {
 			var png = viz.getPNG();
-			console.log("PNG: " + png);
+			//console.log("PNG: " + png);
+			window.open(png, '_newtab');
 		});
 		
 		viz.refresh();

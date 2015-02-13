@@ -120,13 +120,14 @@ html, body {
 	background-image: url("../img/settings_wheel.png");
 	background-repeat: no-repeat;
 	background-position: center;
-	width: 32px;
-	height: 32px;
+	background-size: 100% 100%;
+	width: 24px;
+	height: 24px;
 }
 
 #vis_options {
 	position: absolute;
-	left: 40%;
+	left: 52%;
 	top: 75px;
 	width: 30%;
 	z-index: 102;
@@ -135,4 +136,8 @@ html, body {
 	border-radius: 5px;
 	background-color: #ffffff;
 	padding: 5px;
+}
+
+.options-button {
+	margin-bottom: 3px;
 }
