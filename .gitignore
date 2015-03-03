@@ -3,3 +3,6 @@
 .project
 .jshintrc 
 .tern-project
+
+# config directory
+config

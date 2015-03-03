@@ -35,22 +35,7 @@ function initStreamAggregates() {
 	var mergerFields = [];
 	var resamplerFields = [];
 	
-	var flds = QM_FIELDS;/*[
-	    {name: 'hook_load', interpolator: 'previous'},
-	    {name: 'oil_temp_gearbox', interpolator: 'linear'},
-	    {name: 'oil_temp_swivel', interpolator: 'linear'},
-	    {name: 'pressure_gearbox', interpolator: 'linear'},
-	    {name: 'rpm', interpolator: 'linear'},
-	    {name: 'temp_ambient', interpolator: 'previous'},
-	    {name: 'torque', interpolator: 'linear'},
-	    {name: 'wob', interpolator: 'linear'},
-	    {name: 'mru_pos', interpolator: 'linear'},
-	    {name: 'mru_vel', interpolator: 'linear'},
-	    {name: 'ram_pos_measured', interpolator: 'linear'},
-	    {name: 'ram_pos_setpoint', interpolator: 'linear'},
-	    {name: 'ram_vel_measured', interpolator: 'linear'},
-	    {name: 'ram_vel_setpoint', interpolator: 'linear'}
-	];*/
+	var flds = QM_FIELDS;
 	
 	for (var i = 0; i < flds.length; i++) {
 		var field = flds[i];
@@ -82,7 +67,7 @@ function initStreamAggregates() {
 	base.store(QM_IN_STORE).addStreamAggr({
 		type: 'resampler',
 		name: 'drilling_resampler',
-		outStore: QM_RESAMPLED_STORE,
+		outStore: CTMC_STORE_NAME,
 		createStore: false,
 		timestamp: 'time',
 		interval: 1000,
@@ -92,7 +77,7 @@ function initStreamAggregates() {
 
 function initTriggers() {
 	var inStore = base.store(QM_IN_STORE);
-	var resampledStore = base.store(QM_RESAMPLED_STORE);
+	var resampledStore = base.store(CTMC_STORE_NAME);
 
 	// add processing triggers
 	log.info('Initilizing triggers ...');
@@ -117,7 +102,7 @@ function initTriggers() {
 			var len = resampledStore.length;
 			
 			if (len % 10000 == 0 && log.debug()) 
-				log.debug('Store %s has %d records ...', QM_RESAMPLED_STORE, len);
+				log.debug('Store %s has %d records ...', CTMC_STORE_NAME, len);
 			
 			if (log.trace())
 				log.trace('%s: %s', QM_IN_STORE, JSON.stringify(val));
