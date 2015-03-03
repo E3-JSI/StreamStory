@@ -1,0 +1,22 @@
+{
+	"qminer": {
+		"confFile": "config/qm-fish.conf",
+		"schemaFile": "config/fish.def",
+		"path": "/home/lstopar/workspace/JSI/qminer-port/qminer/",
+		"createDb": true,
+		"readOnly": false,
+		"createPipeline": false
+	},
+	"models": {
+		"dir": "/media/lstopar/hdd/project-data/fish-models/",
+		"verbose": true
+	},
+	"server": {
+		"port": 8889,
+		"pingInterval": 10000
+	},
+	"log": {
+		"level": "trace"
+	},
+	"replay": false
+}
