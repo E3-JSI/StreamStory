@@ -9,7 +9,7 @@ var recs = store.recs;
 //log.debug('Sorting %d records ...', recs.length);
 //recs.sortByField('time', true);
 
-exports.replayHmc = function () {
+exports.replayHmc = function (hmc) {
 	log.info('Replaying records ...');
 	
 	var currIdx = 0;

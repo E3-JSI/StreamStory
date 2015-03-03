@@ -12,6 +12,8 @@ var app = express();
 var server;
 var ws;
 
+var hmc;
+
 var WebSocketWrapper = function () {
 	log.info('Creating web socket server ...');
 	
@@ -520,8 +522,10 @@ function initHandlers() {
 	});
 }
 
-exports.init = function () {
+exports.init = function (hmc1) {
 	log.info('Initializing server ...');
+	
+	hmc = hmc1;
 	
 	// serve static files at www
 	initServer();

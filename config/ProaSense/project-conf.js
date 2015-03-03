@@ -3,7 +3,7 @@ exports.hmcTimeField = 'time';
 exports.hmcParams = {
 	transitions: {
 		type: 'continuous',
-		timeUnit: 'hour'
+		timeUnit: 'minute'
 	},
 	clustering: {
 		type: 'dpmeans',
@@ -29,19 +29,19 @@ exports.createDb = function (qm, callback) {
 
 exports.getFieldConfig = function () {
 	return [
-        {name: 'hook_load', type: 'numeric', interpolator: 'previous'},
-        {name: 'oil_temp_gearbox', type: 'numeric', interpolator: 'linear'},
-        {name: 'oil_temp_swivel', type: 'numeric', interpolator: 'linear'},
-        {name: 'pressure_gearbox', type: 'numeric', interpolator: 'linear'},
-        {name: 'rpm', type: 'numeric', interpolator: 'linear'},
-        {name: 'temp_ambient', type: 'numeric', interpolator: 'previous'},
-        {name: 'torque', type: 'numeric', interpolator: 'linear'},
-        {name: 'wob', type: 'numeric', interpolator: 'linear'},
-        {name: 'mru_pos', type: 'numeric', interpolator: 'linear'},
-        {name: 'mru_vel', type: 'numeric', interpolator: 'linear'},
-        {name: 'ram_pos_measured', type: 'numeric', interpolator: 'linear'},
-        {name: 'ram_pos_setpoint', type: 'numeric', interpolator: 'linear'},
-        {name: 'ram_vel_measured', type: 'numeric', interpolator: 'linear'},
-        {name: 'ram_vel_setpoint', type: 'numeric', interpolator: 'linear'}
+        {name: 'hook_load', type: 'numeric', interpolator: 'previous', inModel: true},
+        {name: 'oil_temp_gearbox', type: 'numeric', interpolator: 'linear', inModel: false},
+        {name: 'oil_temp_swivel', type: 'numeric', interpolator: 'linear', inModel: false},
+        {name: 'pressure_gearbox', type: 'numeric', interpolator: 'linear', inModel: true},
+        {name: 'rpm', type: 'numeric', interpolator: 'linear', inModel: true},
+        {name: 'temp_ambient', type: 'numeric', interpolator: 'previous', inModel: false},
+        {name: 'torque', type: 'numeric', interpolator: 'linear', inModel: true},
+        {name: 'wob', type: 'numeric', interpolator: 'linear', inModel: true},
+        {name: 'mru_pos', type: 'numeric', interpolator: 'linear', inModel: true},
+        {name: 'mru_vel', type: 'numeric', interpolator: 'linear', inModel: false},
+        {name: 'ram_pos_measured', type: 'numeric', interpolator: 'linear', inModel: false},
+        {name: 'ram_pos_setpoint', type: 'numeric', interpolator: 'linear', inModel: true},
+        {name: 'ram_vel_measured', type: 'numeric', interpolator: 'linear', inModel: false},
+        {name: 'ram_vel_setpoint', type: 'numeric', interpolator: 'linear', inModel: true}
     ];
 };
