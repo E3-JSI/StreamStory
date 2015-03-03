@@ -154,10 +154,8 @@ var zoomVis = function (opts) {
 			nodesArray.push({
 				group: 'nodes',
 				data: {
-					id: '' + levelInfo[i].id,
-//					value: levelInfo[i].name != null ? levelInfo[i].name : levelInfo[i].id,
-					label: levelInfo[i].name != null ? levelInfo[i].name : (levelInfo[i].id + '')
-//					name: levelInfo[i].name != null ? levelInfo[i].name : (levelInfo[i].id + '')
+					id: '' + node.id,
+					label: (node.name != null ? node.name : (node.id + '')) + '\ntime: ' + node.holdingTime.toPrecision(2)
 				},
 				position: {
 					x: position[0],

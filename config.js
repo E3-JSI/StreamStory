@@ -57,7 +57,7 @@ global.CTMC_VERBOSE = config.models.verbose;
 global.CTMC_PARAMS = {
 	transitions: {
 		type: 'continuous',
-		timeUnit: 'hour'
+		timeUnit: 'second'
 	},
 	clustering: {
 		type: 'dpmeans',
