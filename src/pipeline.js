@@ -129,19 +129,6 @@ function initTriggers() {
 		
 		const STORE_SIZE = 20000;//200000;	
 		
-		function saveStore() {
-			log.info('Saving store ...');
-			base.store(QM_IN_STORE).recs.saveCSV({fname: 'sample.csv'}, function (e) {
-				if (e == null) {
-					log.error(e, 'Failed to write CSV file!');
-				}
-				
-				log.info('Done!');
-				closeBase();
-				process.exit(0);
-			});
-		}
-		
 		function addToBuff(val) {
 			buff.unshift(val);
 			while (buff.length > buffSize) buff.pop();
