@@ -46,12 +46,12 @@ function initServices(opts) {
 
 try {
 	if (QM_CREATE_DB) {
-		config.createDb(function (e, result) {
+		config.createDb(function (e, base) {
 			if (e != null) {
 				log.error(e, 'Failed to create base object, exiting application ...');
 				exit();
 			}
-			initServices(result);
+			initServices({base: base});
 		});
 	} else {	
 		// load qminer DB

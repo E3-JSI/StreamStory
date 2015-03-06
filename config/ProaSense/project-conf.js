@@ -21,7 +21,8 @@ exports.createDb = function (qm, callback) {
 	try {
 		// create a new qminer DB
 		log.info('Creating QMiner database using configuration %s ...', QM_CONF_FILE);
-		global.base = qm.create(QM_CONF_FILE, QM_SCHEMA_FILE, true);
+		var base = qm.create(QM_CONF_FILE, QM_SCHEMA_FILE, true);
+		callback(null, base);
 	} catch (e) {
 		callback(e);
 	}
