@@ -8,6 +8,8 @@ var zoomVis = function (opts) {
 	var EDGE_COLOR = 'darkgray';
 	var DEFAULT_NODE_COLOR = 'rgb(120,120,120)';//'DodgerBlue';
 	var VIZ_NODE_COLOR = 360;
+	var VIZ_NODE_FTR_NEG_COLOR = 360;
+	var VIZ_NODE_FTR_POS_COLOR = 117;
 	var CURRENT_NODE_COLOR = 'red';
 	var DEFAULT_BORDER_COLOR = 'black';
 	
@@ -302,8 +304,19 @@ var zoomVis = function (opts) {
 		} 
 		else if (modeConfig.mode.type == MODE_TARGET_FTR) {
 			var config = modeConfig.mode.config;
-			var val = (config.ftrVals[nodeId] - config.minVal) / (config.maxVal - config.minVal);
-			var color = 'hsla(' + VIZ_NODE_COLOR + ',' + Math.floor(100*sizeFromProb(val)) + '%, 55%, 1)';
+			var ftrVal = config.ftrVals[nodeId];
+			
+			var color;
+			if (ftrVal > 0) {
+				var val = ftrVal / config.maxVal;
+				color = 'hsla(' + VIZ_NODE_FTR_POS_COLOR + ',' + Math.floor(100*sizeFromProb(val)) + '%, 55%, 1)';
+			} else {
+				var val = ftrVal / config.minVal;
+				color = 'hsla(' + VIZ_NODE_FTR_NEG_COLOR + ',' + Math.floor(100*sizeFromProb(val)) + '%, 55%, 1)';
+			}
+			
+//			var val = (config.ftrVals[nodeId] - config.minVal) / (config.maxVal - config.minVal);
+			
 			node.css('backgroundColor', color);
 		} 
 		else if (nodeId in modeConfig.future) {

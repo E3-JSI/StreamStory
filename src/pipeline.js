@@ -95,10 +95,7 @@ function initTriggers() {
 		
 		var buffSize = 1;
 		var buff = [];
-		
-		var s = '';
-		var fs = require('fs');
-		
+				
 		const Q = 600000; //gearbox
 		const L = 8.634e-08;
 		const a = 0.418;
@@ -133,9 +130,7 @@ function initTriggers() {
 					
 					if (log.trace())
 						log.trace('%s: %s', QM_IN_STORE, JSON.stringify(val));
-					
-					
-					
+
 					var prevVal = buff.length > 0 ? buff[0] : null;
 					
 					if (prevVal == null) {
@@ -157,61 +152,37 @@ function initTriggers() {
 					
 					
 					if (val.rpm > 100) {
-						j = j + 1;
-						coefficients[coefficients.length] = val.friction_coeff;
+						j++;
+						coefficients.push(val.friction_coeff);
 						if (j = 1) {
 							start = val.time;
 						}
 						else {
 							stop = val.time;
-							if (((stop - start) > 2000000) && (start > 0)) {
-								for(var x = 0; x < coefficients.length; x ++)
-								{
-									sum = sum + coefficients[x];  
+							if (start > 0 && stop - start > 2000000) {
+								for (var x = 0; x < coefficients.length; x ++) {
+									sum += coefficients[x];  
 								}
 								var avg = sum / coefficients.length;
 								
 								for(var y = 0; y < coefficients.length; y++) {
-									var part_std_dev = (coefficients[y] - avg)*(coefficients[y] - avg);
-									sum_std_dev = sum_std_dev + part_std_dev;
+									sum_std_dev += (coefficients[y] - avg)*(coefficients[y] - avg);
 								}
 								var std_dev = Math.sqrt(sum_std_dev / coefficients.lenght);
 								
-								qm.store("friction").add({start: start, end: stop, samples: j, friction_coeff: avg, std_dev: std_dev});
-								
-								j = 0;
-								start = 0;
-								stop = 0;
-								sum = 0;
-								sum_std_dev = 0;
-								coefficients.lenght = 0;
-																
+								coeffStore.add({start: start, end: stop, samples: j, friction_coeff: avg, std_dev: std_dev});							
 							}
-							else {
-								j = 0;
-								start = 0;
-								stop = 0;
-								sum = 0;
-								sum_std_dev = 0;
-								coefficients.lenght = 0;
-							}
+
+							j = 0;
+							start = 0;
+							stop = 0;
+							sum = 0;
+							sum_std_dev = 0;
+							coefficients = [];
 						}
 					}
 						
-					
-					addToBuff(val);
-					
-					if (len == STORE_SIZE) {
-						saveStore();
-					}
-
-					s += val.time.getTime()+','+val.hook_load+','+val.oil_temp_gearbox+','+val.oil_temp_swivel+','+val.pressure_gearbox+','+val.rpm+','+val.temp_ambient+','+val.torque+','+val.friction_coeff+'\n';
-					
-					fs.writeFile('koeficienti.txt', s, function (err) {
-						  if (err) throw err;
-						  console.log('It\'s saved!');
-						});
-					
+					addToBuff(val);					
 				} catch (e) {
 					log.error(e, 'Exception while computing the friction coefficient!');
 				}
