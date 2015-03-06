@@ -1,8 +1,8 @@
 var fs = require('fs');
-var hmc = require('./hmc.js');
+var analytics = qm.analytics;
 
-global.FNAME_MC = CTMC_DIR_NAME + 'ctmc-' + CLUST_SAMPLE + '.bin';
-global.FNAME_FSPACE = CTMC_DIR_NAME + 'ctmc-ftr-' + CLUST_SAMPLE + '.bin';
+global.FNAME_MC = CTMC_DIR_NAME + 'ctmc-1.bin';
+global.FNAME_FSPACE = CTMC_DIR_NAME + 'ctmc-ftr-1.bin';
 
 function genFtrSpaceParams() {
 	log.info('Generating feature space parameters ...');
@@ -11,11 +11,13 @@ function genFtrSpaceParams() {
 	for (var i = 0; i < QM_FIELDS.length; i++) {
 		var field = QM_FIELDS[i];
 		
+		if (!field.inModel) continue;
+		
 		var ftrSpaceField = {
 			type: field.type,
-			source: {store: QM_RESAMPLED_STORE},
+			source: {store: CTMC_STORE_NAME},
 			field: field.name,
-			normalize: true
+			normalize: field.type == 'numeric'
 		};
 		
 		if (log.info())
@@ -29,10 +31,12 @@ function genFtrSpaceParams() {
 	return ftrSpaceParams;
 }
 
-exports.init = function () {
+exports.init = function (opts) {
+	if (opts == null) opts = {};
+	
 	if (fs.existsSync(FNAME_MC) && fs.existsSync(FNAME_FSPACE)) {
 		log.info('Loading HMC model ...');
-		var result = hmc.HMC({base: base, hmcFile: FNAME_MC, ftrSpaceFile: FNAME_FSPACE});
+		var result = analytics.HierarchMarkov({base: base, hmcFile: FNAME_MC, ftrSpaceFile: FNAME_FSPACE});
 		
 //		log.info('Rebuilding histograms ...');
 //		var store = base.store(CTMC_STORE_NAME);
@@ -50,17 +54,21 @@ exports.init = function () {
 	} 
 	else {
 		log.info('Initializing Markov chain ...');
-		
+	
 		var store = base.store(CTMC_STORE_NAME);
 		var recs = store.recs;
+//		var recs = store.recs.trunc(500000);	// TODO remove
 		
-		log.info('Creating a store out of %d records ...', recs.length);
+		log.info('Creating a model out of %d records ...', recs.length);
 	
-		var result = hmc.HMC({
+		var result = analytics.HierarchMarkov({
 			base: base,
 			hmcConfig: CTMC_PARAMS,
 			ftrSpaceConfig: genFtrSpaceParams()
-		}).fit(recs);
+		});
+		
+		var opts = {recSet: recs, timeField: CTMC_TIME_FIELD_ID, batchEndV: opts.endsBatchV};
+		result.fit(opts);
 		
 		result.save(FNAME_MC, FNAME_FSPACE);
 		

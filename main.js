@@ -17,24 +17,48 @@ global.closeBase = function () {
 	log.info('Done!');
 };
 
+function exit() {
+	closeBase();
+	process.exit(1);
+}
+
+function initServices(opts) {
+	global.base = opts.base;
+	
+	try {
+		global.QM_FIELDS = config.getFieldConfig(base);
+		
+		var hmc = mc.init({
+			endsBatchV: opts.endsBatchV
+		});
+	
+		if (QM_CREATE_PIPELINE) pipeline.init();
+		
+		services.init(hmc);
+		
+		if (REPLAY_DATA)
+			require('./src/replay.js').replayHmc(hmc);
+	} catch (e) {
+		log.error(e, 'Failed to create services!');
+		exit();
+	}
+}
+
 try {
-	if (QM_CREATE_DB) {	
-		// create a new qminer DB
-		log.info('Creating QMiner database using configuration %s ...', QM_CONF_FILE);
-		global.base = qm.create(QM_CONF_FILE, QM_SCHEMA_FILE, true);
+	if (QM_CREATE_DB) {
+		config.createDb(function (e, result) {
+			if (e != null) {
+				log.error(e, 'Failed to create base object, exiting application ...');
+				exit();
+			}
+			initServices(result);
+		});
 	} else {	
 		// load qminer DB
 		log.info('Opening base with configuration: %s ...', QM_CONF_FILE);
-		global.base = qm.open(QM_CONF_FILE, QM_READ_ONLY);
+		var base = qm.open(QM_CONF_FILE, QM_READ_ONLY);
+		initServices({base: base});
 	}
-	
-	global.hmc = mc.init();
-
-	pipeline.init();
-	services.init();
-	
-	if (REPLAY_DATA)
-		require('./src/replay.js').replayHmc();
 } catch (e) {
 	log.error(e, 'Exception in main!');
 	closeBase();

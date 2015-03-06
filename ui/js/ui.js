@@ -95,6 +95,8 @@ var UI;
 							
 							var ftrIdx = el.val();
 							viz.setTargetFtr(ftrIdx);
+						} else {
+							viz.setTargetFtr(null);
 						}
 					});
 				}
@@ -129,6 +131,14 @@ var UI;
 		$('#container-options #toggler').click(function () {
 			$('#options').toggle();
 		});
+		
+		$('#vis_toggler').click(function () {
+			$('#vis_options').toggle("blind");
+			
+//			var pos = $('#vis_toggler').offset();
+//			console.log(pos);
+		});
+		
 		
 		$('#chk-show-fut').change(function () {
 			var checked = this.checked;
@@ -197,8 +207,23 @@ var UI;
 					var str = "STATE ID: " + data.id + '<br />';
 					str += '<label for="txt-name">Name</label><input type="text" id="txt-name" />';
 					
+					var ftrWgts = data.featureWeights;
+					// find max and min weigts
+					var maxWgt = Number.NEGATIVE_INFINITY;
+					var minWgt = Number.POSITIVE_INFINITY;
+					
+					for (var i = 0; i < ftrWgts.length; i++) {
+						if (ftrWgts[i] > maxWgt) maxWgt = ftrWgts[i];
+						if (ftrWgts[i] < minWgt) minWgt = ftrWgts[i];
+					}
+					
 					$.each(data.features, function (idx, val) {
-						str += '<div class="clickable" ondblclick="ui.fetchHistogram(' + stateId + ',' + idx + ',true)" onclick="ui.fetchHistogram(' + stateId + ',' + idx + ',false)">' + val.name + ':\t' + val.value + '</div>';
+						var color;
+						if (ftrWgts[idx] > 0)
+							color = 'rgb(0,' + Math.floor(255*ftrWgts[idx] / maxWgt) + ',0)';
+						else
+							color = 'rgb(' + Math.floor(255*ftrWgts[idx] / minWgt) + ',0,0)';
+						str += '<div class="clickable" ondblclick="ui.fetchHistogram(' + stateId + ',' + idx + ',true)" onclick="ui.fetchHistogram(' + stateId + ',' + idx + ',false)" style="color: ' + color + ';">' + val.name + ':\t' + val.value + '</div>';
 					});
 					
 					$('#container-features').html(str);
@@ -232,6 +257,12 @@ var UI;
 			rq.fail(function () {
 				alert('Failed to save!');
 			});
+		});
+		
+		$('#btn-png').click(function () {
+			var png = viz.getPNG();
+			//console.log("PNG: " + png);
+			window.open(png, '_newtab');
 		});
 		
 		viz.refresh();
