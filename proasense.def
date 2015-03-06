@@ -174,8 +174,18 @@
 			{"name": "ram_vel_setpoint", "type": "float"},
 			{"name": "friction_coeff", "type": "float", "null": true}
 		]
-	}
+	},
 	
+	{
+		"name" : "friction",
+		"fields" : [
+			{"name": "start", "type": "datetime"},
+			{"name": "end", "type": "datetime"},
+			{"name": "samples", "type": "float"},
+			{"name": "friction_coeff", "type": "float", "null": true},
+			{"name": "std_dev", "type": "float"}
+		]
+	}
 	
 	
 	//==========================================================================
