@@ -83,7 +83,34 @@ function initTriggers() {
 	// add processing triggers
 	log.info('Initilizing triggers ...');
 	
+	// print progress
+	inStore.addTrigger({
+		onAdd: function (val) {
+			var len = inStore.length;
+			
+			if (len % 10000 == 0 && log.debug()) 
+				log.debug('Store %s has %d records ...', QM_IN_STORE, len);
+			
+			if (log.trace())
+				log.trace('%s: %s', QM_IN_STORE, JSON.stringify(val));
+		}
+	});
 	
+	resampledStore.addTrigger({
+		onAdd: function (val) {
+			var len = resampledStore.length;
+			
+			if (len % 10000 == 0 && log.debug()) 
+				log.debug('Store %s has %d records ...', CTMC_STORE_NAME, len);
+			
+			if (log.trace())
+				log.trace('%s: %s', QM_IN_STORE, JSON.stringify(val));
+			
+			
+		}
+	});
+	
+	// friction coefficient
 	{
 		var coeffStore = base.store('friction');
 		
@@ -123,14 +150,6 @@ function initTriggers() {
 		inStore.addTrigger({
 			onAdd: function (val) {
 				try {
-					var len = inStore.length;
-					
-					if (len % 10000 == 0 && log.debug()) 
-						log.debug('Store %s has %d records ...', QM_IN_STORE, len);
-					
-					if (log.trace())
-						log.trace('%s: %s', QM_IN_STORE, JSON.stringify(val));
-
 					var prevVal = buff.length > 0 ? buff[0] : null;
 					
 					if (prevVal == null) {
@@ -150,7 +169,6 @@ function initTriggers() {
 					
 					val.friction_coeff = ((diff_oil_temp_swivel/diff_time + (avg_oil_temp_swivel - avg_temp_ambient - a)*L)*Q) / P;
 					
-					
 					if (val.rpm > 100) {
 						j++;
 						coefficients.push(val.friction_coeff);
@@ -165,6 +183,7 @@ function initTriggers() {
 								}
 								var avg = sum / coefficients.length;
 								
+								var sum_std_dev = 0;
 								for(var y = 0; y < coefficients.length; y++) {
 									sum_std_dev += (coefficients[y] - avg)*(coefficients[y] - avg);
 								}
@@ -177,7 +196,6 @@ function initTriggers() {
 							start = 0;
 							stop = 0;
 							sum = 0;
-							sum_std_dev = 0;
 							coefficients = [];
 						}
 					}
@@ -189,20 +207,6 @@ function initTriggers() {
 			}
 		});
 	}
-	
-	resampledStore.addTrigger({
-		onAdd: function (val) {
-			var len = resampledStore.length;
-			
-			if (len % 10000 == 0 && log.debug()) 
-				log.debug('Store %s has %d records ...', CTMC_STORE_NAME, len);
-			
-			if (log.trace())
-				log.trace('%s: %s', QM_IN_STORE, JSON.stringify(val));
-			
-			
-		}
-	});
 	
 	log.info('Triggers initialized!');
 }
