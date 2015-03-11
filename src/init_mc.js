@@ -34,6 +34,8 @@ function genFtrSpaceParams() {
 exports.init = function (opts) {
 	if (opts == null) opts = {};
 	
+	var base = opts.base;
+	
 	if (fs.existsSync(FNAME_MC) && fs.existsSync(FNAME_FSPACE)) {
 		log.info('Loading HMC model ...');
 		var result = analytics.HierarchMarkov({base: base, hmcFile: FNAME_MC, ftrSpaceFile: FNAME_FSPACE});
