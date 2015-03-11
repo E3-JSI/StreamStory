@@ -2,39 +2,25 @@ var config = require('./config.js');
 var services = require('./src/services.js');
 var mc = require('./src/init_mc.js');
 var pipeline = require('./src/pipeline.js');
+var utils = require('./src/utils.js');
 
 // global functions and variables
-global.base = null;
-
-global.closeBase = function () {
-	log.info('Closing base ...');
-	
-	if (!QM_READ_ONLY && base != null) {
-		base.gc();
-		base.close();
-	}
-	
-	log.info('Done!');
-};
-
-function exit() {
-	closeBase();
-	process.exit(1);
-}
+var base = null;
 
 function initServices(opts) {
-	global.base = opts.base;
+	base = opts.base;
 	
 	try {
 		global.QM_FIELDS = config.getFieldConfig(base);
 		
 		var hmc = mc.init({
+			base: base,
 			endsBatchV: opts.endsBatchV
 		});
 	
-		if (QM_CREATE_PIPELINE) pipeline.init();
+		if (QM_CREATE_PIPELINE) pipeline.init(base);
 		
-		services.init(hmc);
+		services.init(hmc, base);
 		
 		if (REPLAY_DATA)
 			require('./src/replay.js').replayHmc(hmc);
@@ -61,6 +47,5 @@ try {
 	}
 } catch (e) {
 	log.error(e, 'Exception in main!');
-	closeBase();
-	process.exit(1);
+	utils.exit(base);
 }

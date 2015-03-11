@@ -2,6 +2,7 @@ var express = require('express');
 var bodyParser = require("body-parser");
 var path = require('path');
 var WebSocket = require('ws');
+var utils = require('./utils.js');
 
 var UI_PATH = '/';
 var API_PATH = '/api';
@@ -13,6 +14,7 @@ var server;
 var ws;
 
 var hmc;
+var base;
 
 var WebSocketWrapper = function () {
 	log.info('Creating web socket server ...');
@@ -143,6 +145,10 @@ var WebSocketWrapper = function () {
 					log.error(e, 'Exception while distributig message. Web socket ID: %d', id);
 				}
 			}
+		},
+		
+		close: function () {
+			wss.close();
 		}
 	}
 }
@@ -156,18 +162,8 @@ function initRestApi() {
 		// multilevel analysis
 		app.get(API_PATH + '/exit', function (req, resp) {
 			try {
-				log.debug('Exiting qminer and closing server ...');
-				
-				wss.close();
-				closeBase();
-				setTimeout(function () {
-					log.info('Closing server ...');
-		            server.close(function () {	// TODO doesn't work 
-		            	log.info('Server closed!');
-		            	process.exit();
-		            });
-		        }, 1000);
-				
+				log.info(API_PATH + '/exit called. Exiting qminer and closing server ...');
+				utils.exit(base);
 				resp.status(204);
 			} catch (e) {
 				log.error(e, 'Failed to exit!');
@@ -522,10 +518,11 @@ function initHandlers() {
 	});
 }
 
-exports.init = function (hmc1) {
+exports.init = function (hmc1, base1) {
 	log.info('Initializing server ...');
 	
 	hmc = hmc1;
+	base = base1;
 	
 	// serve static files at www
 	initServer();

@@ -1,5 +1,7 @@
 const QM_IN_STORE = 'drilling';
 
+var base;
+
 function initGC() {
 	// add triggers for garbagge collection
 	log.info('Initilizing garbagge collection ...');
@@ -114,12 +116,6 @@ function initTriggers() {
 	{
 		var coeffStore = base.store('friction');
 		
-		var j = 0;
-		var coefficients = [];
-		var start = 0;
-		var stop = 0;
-		var sum = 0;
-		
 		var buffSize = 1;
 		var buff = [];
 				
@@ -134,6 +130,7 @@ function initTriggers() {
 			while (buff.length > buffSize) buff.pop();
 		}
 		
+		// compute the friction coefficient
 		inStore.addTrigger({
 			onAdd: function (val) {
 				try {
@@ -156,38 +153,54 @@ function initTriggers() {
 					
 					val.friction_coeff = ((diff_oil_temp_swivel/diff_time + (avg_oil_temp_swivel - avg_temp_ambient - a)*L)*Q) / P;
 					
-					if (val.rpm > 100) {
-						j++;
-						coefficients.push(val.friction_coeff);
-						if (j = 1) {
-							start = val.time;
-						}
-						else {
-							stop = val.time;
-							if (start > 0 && stop - start > 2000000) {
-								for (var x = 0; x < coefficients.length; x ++) {
-									sum += coefficients[x];  
-								}
-								var avg = sum / coefficients.length;
-								
-								var sum_std_dev = 0;
-								for(var y = 0; y < coefficients.length; y++) {
-									sum_std_dev += (coefficients[y] - avg)*(coefficients[y] - avg);
-								}
-								var std_dev = Math.sqrt(sum_std_dev / coefficients.lenght);
-								
-								coeffStore.add({start: start, end: stop, samples: j, friction_coeff: avg, std_dev: std_dev});							
-							}
-
-							j = 0;
-							start = 0;
-							stop = 0;
-							sum = 0;
-							coefficients = [];
-						}
-					}
-						
 					addToBuff(val);					
+				} catch (e) {
+					log.error(e, 'Exception while computing the friction coefficient!');
+				}
+			}
+		});
+		
+		var drillingSamples = 0;
+		var isDrilling = false;
+		var coefficients = [];
+		var start = 0;
+		var stop = 0;
+		var sum = 0;
+		
+		inStore.addTrigger({
+			onAdd: function (val) {
+				try {
+					if (val.rpm > 100) {
+						if (!isDrilling) {
+							start = val.time;
+							isDrilling = true;
+						}
+						drillingSamples++;
+						coefficients.push(val.friction_coeff);
+					}
+					else {
+						stop = val.time;
+						if (start > 0 && stop - start > 2000000) {
+							for (var x = 0; x < coefficients.length; x ++) {
+								sum += coefficients[x];  
+							}
+							var avg = sum / coefficients.length;
+							
+							var sum_std_dev = 0;
+							for(var y = 0; y < coefficients.length; y++) {
+								sum_std_dev += (coefficients[y] - avg)*(coefficients[y] - avg);
+							}
+							var std_dev = Math.sqrt(sum_std_dev / coefficients.lenght);
+							
+							coeffStore.add({start: start, end: stop, samples: drillingSamples, friction_coeff: avg, std_dev: std_dev});							
+						}
+
+						drillingSamples = 0;
+						start = 0;
+						stop = 0;
+						sum = 0;
+						coefficients = [];
+					}				
 				} catch (e) {
 					log.error(e, 'Exception while computing the friction coefficient!');
 				}
@@ -198,7 +211,9 @@ function initTriggers() {
 	log.info('Triggers initialized!');
 }
 
-exports.init = function () {
+exports.init = function (base1) {
+	base = base1;
+	
 	initStreamAggregates();
 	initGC();
 	initTriggers();
