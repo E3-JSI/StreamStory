@@ -162,6 +162,7 @@ function initTriggers() {
 						if (j = 1) {
 							start = val.time;
 						}
+						}
 						else {
 							stop = val.time;
 							if (start > 0 && stop - start > 2000000) {
@@ -185,7 +186,7 @@ function initTriggers() {
 							sum = 0;
 							coefficients = [];
 						}
-					}
+					
 						
 					addToBuff(val);					
 				} catch (e) {
