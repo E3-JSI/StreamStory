@@ -7,7 +7,7 @@
 			{"name": "time", "type": "datetime"},
 			{"name": "value", "type": "float"}
 		],
-		"window": 10
+		"window": 10000
 	},
 	{
 		"name" : "oil_temp_gearbox",
@@ -16,7 +16,7 @@
 			{"name": "time", "type": "datetime"},
 			{"name": "value", "type": "float"}
 		],
-		"window": 10
+		"window": 10000
 	},
 	{
 		"name" : "oil_temp_swivel",
@@ -25,7 +25,7 @@
 			{"name": "time", "type": "datetime"},
 			{"name": "value", "type": "float"}
 		],
-		"window": 10
+		"window": 10000
 	},
 	{
 		"name" : "pressure_gearbox",
@@ -34,7 +34,7 @@
 			{"name": "time", "type": "datetime"},
 			{"name": "value", "type": "float"}
 		],
-		"window": 10
+		"window": 10000
 	},
 	{
 		"name" : "rpm",
@@ -43,7 +43,7 @@
 			{"name": "time", "type": "datetime"},
 			{"name": "value", "type": "float"}
 		],
-		"window": 10
+		"window": 10000
 	},
 	{
 		"name" : "temp_ambient",
@@ -52,7 +52,7 @@
 			{"name": "time", "type": "datetime"},
 			{"name": "value", "type": "float"}
 		],
-		"window": 10
+		"window": 10000
 	},
 	{
 		"name" : "torque",
@@ -61,7 +61,7 @@
 			{"name": "time", "type": "datetime"},
 			{"name": "value", "type": "float"}
 		],
-		"window": 10
+		"window": 10000
 	},
 	{
 		"name" : "wob",
@@ -70,7 +70,7 @@
 			{"name": "time", "type": "datetime"},
 			{"name": "value", "type": "float"}
 		],
-		"window": 10
+		"window": 10000
 	},
 	{
 		"name" : "mru_pos",
@@ -79,7 +79,7 @@
 			{"name": "time", "type": "datetime"},
 			{"name": "value", "type": "float"}
 		],
-		"window": 10
+		"window": 10000
 	},
 	{
 		"name" : "mru_vel",
@@ -88,7 +88,7 @@
 			{"name": "time", "type": "datetime"},
 			{"name": "value", "type": "float"}
 		],
-		"window": 10
+		"window": 10000
 	},
 	{
 		"name" : "ram_pos_measured",
@@ -97,7 +97,7 @@
 			{"name": "time", "type": "datetime"},
 			{"name": "value", "type": "float"}
 		],
-		"window": 10
+		"window": 10000
 	},
 	{
 		"name" : "ram_pos_setpoint",
@@ -106,7 +106,7 @@
 			{"name": "time", "type": "datetime"},
 			{"name": "value", "type": "float"}
 		],
-		"window": 10
+		"window": 10000
 	},
 	{
 		"name" : "ram_vel_measured",
@@ -115,7 +115,7 @@
 			{"name": "time", "type": "datetime"},
 			{"name": "value", "type": "float"}
 		],
-		"window": 10
+		"window": 10000
 	},
 	{
 		"name" : "ram_vel_setpoint",
@@ -124,7 +124,7 @@
 			{"name": "time", "type": "datetime"},
 			{"name": "value", "type": "float"}
 		],
-		"window": 10
+		"window": 10000
 	},
 	
 	{
@@ -172,7 +172,7 @@
 			{"name": "ram_pos_setpoint", "type": "float"},
 			{"name": "ram_vel_measured", "type": "float"},
 			{"name": "ram_vel_setpoint", "type": "float"},
-			{"name": "friction_coeff", "type": "float", "null": true}
+			{"name": "friction_coeff", "type": "float"}
 		]
 	},
 	
@@ -186,171 +186,4 @@
 			{"name": "std_dev", "type": "float"}
 		]
 	}
-	
-	
-	//==========================================================================
-	
-	/*
-
-	// GEARBOX
-	{
-		"name" : "hook_load",
-		"fields" : [
-			{"name": "time_ms", "type": "uint64"},
-			{"name": "time", "type": "datetime"},
-			{"name": "value", "type": "float"}
-		],
-		"window": 10
-	},
-	{
-		"name" : "oil_temp_gearbox",
-		"fields" : [
-			{"name": "time_ms", "type": "uint64"},
-			{"name": "time", "type": "datetime"},
-			{"name": "value", "type": "float"}
-		],
-		"window": 10
-	},
-	{
-		"name" : "oil_temp_swivel",
-		"fields" : [
-			{"name": "time_ms", "type": "uint64"},
-			{"name": "time", "type": "datetime"},
-			{"name": "value", "type": "float"}
-		],
-		"window": 10
-	},
-	{
-		"name" : "pressure_gearbox",
-		"fields" : [
-			{"name": "time_ms", "type": "uint64"},
-			{"name": "time", "type": "datetime"},
-			{"name": "value", "type": "float"}
-		],
-		"window": 10
-	},
-	{
-		"name" : "rpm",
-		"fields" : [
-			{"name": "time_ms", "type": "uint64"},
-			{"name": "time", "type": "datetime"},
-			{"name": "value", "type": "float"}
-		],
-		"window": 10
-	},
-	{
-		"name" : "temp_ambient",
-		"fields" : [
-			{"name": "time_ms", "type": "uint64"},
-			{"name": "time", "type": "datetime"},
-			{"name": "value", "type": "float"}
-		],
-		"window": 10
-	},
-	{
-		"name" : "torque",
-		"fields" : [
-			{"name": "time_ms", "type": "uint64"},
-			{"name": "time", "type": "datetime"},
-			{"name": "value", "type": "float"}
-		],
-		"window": 10
-	},
-	{
-		"name" : "wob",
-		"fields" : [
-			{"name": "time_ms", "type": "uint64"},
-			{"name": "time", "type": "datetime"},
-			{"name": "value", "type": "float"}
-		],
-		"window": 10
-	},
-	{
-		"name" : "gearbox",
-		"fields" : [
-			{"name": "time", "type": "datetime"},
-			{"name": "hook_load", "type": "float"},
-			{"name": "oil_temp_gearbox", "type": "float"},
-			{"name": "oil_temp_swivel", "type": "float"},
-			{"name": "pressure_gearbox", "type": "float"},
-			{"name": "rpm", "type": "float"},
-			{"name": "temp_ambient", "type": "float"},
-			{"name": "torque", "type": "float"},
-			{"name": "wob", "type": "float"}
-		]
-	},
-	
-	{
-		"name" : "gearboxRes",
-		"fields" : [
-			{"name": "time", "type": "datetime"},
-			{"name": "hook_load", "type": "float"},
-			{"name": "oil_temp_gearbox", "type": "float"},
-			{"name": "oil_temp_swivel", "type": "float"},
-			{"name": "pressure_gearbox", "type": "float"},
-			{"name": "rpm", "type": "float"},
-			{"name": "temp_ambient", "type": "float"},
-			{"name": "torque", "type": "float"},
-			{"name": "wob", "type": "float"}
-		]
-	},
-	
-	// SETPOINT
-	{
-		"name" : "setpoint_raw",
-		"fields" : [
-			{"name": "time_ms", "type": "uint64"},
-			{"name": "time", "type": "datetime"},
-			{"name": "hook_load", "type": "float"},
-			{"name": "mru_pos", "type": "float"},
-			{"name": "mru_vel", "type": "float"},
-			{"name": "ram_pos_measured", "type": "float"},
-			{"name": "ram_pos_setpoint", "type": "float"},
-			{"name": "ram_vel_measured", "type": "float"},
-			{"name": "ram_vel_setpoint", "type": "float"}
-		],
-		"window": 10
-	},
-	{
-		"name" : "setpoint",
-		"fields" : [
-			{"name": "time_ms", "type": "uint64"},
-			{"name": "time", "type": "datetime"},
-			{"name": "hook_load", "type": "float"},
-			{"name": "mru_pos", "type": "float"},
-			{"name": "mru_vel", "type": "float"},
-			{"name": "ram_pos_measured", "type": "float"},
-			{"name": "ram_pos_setpoint", "type": "float"},
-			{"name": "ram_vel_measured", "type": "float"},
-			{"name": "ram_vel_setpoint", "type": "float"},
-			{"name": "ram_acc_measured", "type": "float"},
-			{"name": "ram_acc_setpoint", "type": "float"},
-			{"name": "pos_m_ema", "type": "float", "null": true},
-			{"name": "pos_s_ema", "type": "float", "null": true},
-			{"name": "vel_m_ema", "type": "float", "null": true},
-			{"name": "vel_s_ema", "type": "float", "null": true},
-			{"name": "delay", "type": "bool", "null": true},
-			{"name": "overshoot", "type": "bool", "null": true}
-		],
-		"window": 10
-	},
-	{
-		"name" : "overshoots",
-		"fields" : [],
-		"joins": [
-			{
-				"name": "start",
-				"type": "field",
-				"store": "setpoint"
-			},
-			{
-				"name": "end",
-				"type": "field",
-				"store": "setpoint"
-			}
-		],
-		"window": 10
-	}
-	
-	*/
 ]

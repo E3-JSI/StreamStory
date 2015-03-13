@@ -421,7 +421,7 @@ function initRestApi() {
 				var ftrIdx = parseInt(req.query.ftr);
 				
 				if (log.debug())
-					log.debug('Fetching distribution for feature "%d" for height %d ...', height, ftrIdx);
+					log.debug('Fetching distribution for feature "%d" for height %d ...', ftrIdx, height);
 				
 				resp.send(hmc.getFtrDist(height, ftrIdx));
 			} catch (e) {

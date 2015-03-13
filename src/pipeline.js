@@ -42,14 +42,16 @@ function initStreamAggregates() {
 	
 	for (var i = 0; i < flds.length; i++) {
 		var field = flds[i];
-		
-		mergerFields.push({
-			source: field.name,
-			inField: 'value',
-			outField: field.name,
-			interpolation: field.interpolator,
-			timestamp: 'time'
-		});
+				
+		if (field.isRaw) {
+			mergerFields.push({
+				source: field.name,
+				inField: 'value',
+				outField: field.name,
+				interpolation: field.interpolator,
+				timestamp: 'time'
+			});
+		}
 		
 		resamplerFields.push({
 			name: field.name,
@@ -108,22 +110,28 @@ function initTriggers() {
 			if (log.trace())
 				log.trace('%s: %s', QM_IN_STORE, JSON.stringify(val));
 			
-			
+//			if (log.debug())	// TODO remove
+//	        	log.debug('Coefficient: %d', val.friction_coeff);
+//			
+//			if (resampledStore.length == 5000) {	// TODO remove
+//				log.info('saving store ...');
+//				resampledStore.recs.saveCSV({fname: 'store_trig.csv'}, function (e) {
+//					if (e != null)
+//						log.error(e, 'Failed to save store!');
+//					log.info('Done!');
+//				});
+//			}
 		}
 	});
 	
-	// friction coefficient
+	// compute the friction coefficient
 	{
-		var coeffStore = base.store('friction');
-		
 		var buffSize = 1;
 		var buff = [];
 				
 		const Q = 600000; //gearbox
 		const L = 8.634e-08;
 		const a = 0.418;
-		
-		const STORE_SIZE = 20000;//200000;	
 		
 		function addToBuff(val) {
 			buff.unshift(val);
@@ -151,14 +159,21 @@ function initTriggers() {
 			        var avg_temp_ambient = (val.temp_ambient + prevVal.temp_ambient) / 2;
 			        var P = 2 * Math.PI * avg_torque * avg_rpm;
 					
-					val.friction_coeff = ((diff_oil_temp_swivel/diff_time + (avg_oil_temp_swivel - avg_temp_ambient - a)*L)*Q) / P;
-					
+			        var coeff = ((diff_oil_temp_swivel/diff_time + (avg_oil_temp_swivel - avg_temp_ambient - a)*L)*Q) / P;
+			        
+					val.friction_coeff = coeff;
 					addToBuff(val);					
 				} catch (e) {
 					log.error(e, 'Exception while computing the friction coefficient!');
 				}
 			}
 		});
+	}
+	
+	// get the friction coefficient on a specific interval and 
+	// write them to a special store
+	{
+		var coeffStore = base.store('friction');
 		
 		var drillingSamples = 0;
 		var isDrilling = false;
@@ -187,12 +202,18 @@ function initTriggers() {
 							var avg = sum / coefficients.length;
 							
 							var sum_std_dev = 0;
-							for(var y = 0; y < coefficients.length; y++) {
+							for (var y = 0; y < coefficients.length; y++) {
 								sum_std_dev += (coefficients[y] - avg)*(coefficients[y] - avg);
 							}
 							var std_dev = Math.sqrt(sum_std_dev / coefficients.lenght);
 							
-							coeffStore.add({start: start, end: stop, samples: drillingSamples, friction_coeff: avg, std_dev: std_dev});							
+							coeffStore.add({
+								start: start,
+								end: stop,
+								samples: drillingSamples,
+								friction_coeff: avg,
+								std_dev: std_dev
+							});							
 						}
 
 						drillingSamples = 0;
@@ -214,7 +235,7 @@ function initTriggers() {
 exports.init = function (base1) {
 	base = base1;
 	
+	initTriggers();
 	initStreamAggregates();
 	initGC();
-	initTriggers();
 };

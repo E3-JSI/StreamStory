@@ -59,6 +59,14 @@ exports.init = function (opts) {
 	
 		var store = base.store(CTMC_STORE_NAME);
 		var recs = store.recs;
+		
+		log.info('saving store ...');
+		recs.saveCSV({fname: 'store1.csv'}, function (e) {
+			if (e != null)
+				log.error(e, 'Failed to save store!');
+			log.info('Done!');
+			process.exit(0);
+		});
 //		var recs = store.recs.trunc(500000);	// TODO remove
 		
 		log.info('Creating a model out of %d records ...', recs.length);
