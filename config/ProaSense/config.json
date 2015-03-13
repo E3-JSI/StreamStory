@@ -3,8 +3,8 @@
 		"confFile": "config/ProaSense/qm-lstopar.conf",
 		"schemaFile": "config/ProaSense/proasense.def",
 		"path": "/home/lstopar/workspace/JSI/qminer-port/qminer/",
-		"createDb": true,
-		"readOnly": false,
+		"createDb": false,
+		"readOnly": true,
 		"createPipeline": true
 	},
 	"config": {
