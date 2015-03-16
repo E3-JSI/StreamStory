@@ -102,6 +102,7 @@ function initTriggers() {
 	
 	resampledStore.addTrigger({
 		onAdd: function (val) {
+			try {
 			var len = resampledStore.length;
 			
 			if (len % 10000 == 0 && log.debug()) 
@@ -109,6 +110,15 @@ function initTriggers() {
 			
 			if (log.trace())
 				log.trace('%s: %s', QM_IN_STORE, JSON.stringify(val));
+			
+			if (isNaN(val.friction_coeff)) {
+				log.fatal('Resampled store: the friction coefficient is NaN! Store size: %d, friction store size: %d', resampledStore.length, inStore.length);
+				process.exit(2);
+			}
+			
+			if (len == 186998) {
+				log.info('Reached critical point!');	// TODO remove this
+			}
 			
 //			if (log.debug())	// TODO remove
 //	        	log.debug('Coefficient: %d', val.friction_coeff);
@@ -121,6 +131,9 @@ function initTriggers() {
 //					log.info('Done!');
 //				});
 //			}
+			} catch (e) {
+				log.error(e, 'Exception while printing statistics of the resampled store!');
+			}
 		}
 	});
 	
@@ -158,8 +171,22 @@ function initTriggers() {
 			        var avg_torque = (val.torque + prevVal.torque) * 1000 / 2;
 			        var avg_temp_ambient = (val.temp_ambient + prevVal.temp_ambient) / 2;
 			        var P = 2 * Math.PI * avg_torque * avg_rpm;
-					
+			        
 			        var coeff = ((diff_oil_temp_swivel/diff_time + (avg_oil_temp_swivel - avg_temp_ambient - a)*L)*Q) / P;
+			        
+			        // fixes because the coefficient can be infinity and
+			        // we'll get NaNs later on
+			        // TODO is this OK?
+			        coeff = Math.max(0, Math.min(1, coeff));
+			        			        
+			        if (!isFinite(coeff)) {
+			        	log.fatal('Friction store: the friction coefficient is infinite! Store size: %d', resampledStore.length);
+			        	process.exit(2);
+			        }
+			        if (isNaN(coeff)) {
+			        	log.fatal('Friction store: the friction coefficient is NaN! Store size: %d', resampledStore.length);
+						process.exit(2);
+			        }
 			        
 					val.friction_coeff = coeff;
 					addToBuff(val);					

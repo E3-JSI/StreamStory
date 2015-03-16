@@ -205,8 +205,8 @@ function initRestApi() {
 				var timestamp = instance.timestamp;
 				var value = instance.value;
 				
-				if (++imported % printInterval == 0 && log.debug())
-					log.debug('Imported %d values ...', imported);
+				if (++imported % printInterval == 0 && log.trace())
+					log.trace('Imported %d values ...', imported);
 				
 				base.store(store).add({
 					time_ms: timestamp,
