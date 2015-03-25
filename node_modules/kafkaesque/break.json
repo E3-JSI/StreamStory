@@ -1,0 +1,250 @@
+{
+  "airports": {
+    "ABZ": {
+      "iataCode": "ABZ",
+      "name": "Aberdeen Airport",
+      "routes": [
+        "BOS",
+        "ORD"
+      ],
+      "country": {
+        "code": "UK",
+        "name": "United Kingdom",
+        "currency": "GBP"
+      }
+    },
+    "BCN": {
+      "iataCode": "BCN",
+      "name": "Barcelona",
+      "routes": [
+        "BOS",
+        "ORD",
+        "ORD",
+        "DUB",
+        "JFK",
+        "YYZ"
+      ],
+      "country": {
+        "code": "ES",
+        "name": "Spain",
+        "currency": "EUR"
+      }
+    },
+    "DUB": {
+      "iataCode": "DUB",
+      "name": "Dublin",
+      "routes": [
+        "ABZ",
+        "AUH",
+        "AGA",
+        "ATL",
+        "AUS",
+        "BCN",
+        "BER",
+        "CWL",
+        "ORD",
+        "CFU",
+        "DFW",
+        "DUS",
+        "EDI",
+        "HAM",
+        "HAJ",
+        "KIR",
+        "LAX",
+        "LAS",
+        "LIS",
+        "LGW",
+        "LHR",
+        "CDG",
+        "SIN",
+        "ARN",
+        "SYD",
+        "ZRH"
+      ],
+      "country": {
+        "code": "IE",
+        "name": "Ireland",
+        "currency": "EUR"
+      }
+    },
+    "ABU": {
+      "iataCode": "AUH",
+      "name": "Abu Dhabi International Airport",
+      "routes": [
+        "DUB"
+      ],
+      "country": {
+        "code": "AE",
+        "name": "United Arab Emirates",
+        "currency": "AED"
+      }
+    },
+    "AUS": {
+      "iataCode": "AUS",
+      "name": "Austin–Bergstrom International Airport",
+      "routes": [
+        "SNN",
+        "DUB"
+      ],
+      "country": {
+        "code": "US",
+        "name": "United States of America",
+        "currency": "USD"
+      }
+    },
+    "CWL": {
+      "iataCode": "CWL",
+      "name": "Cardiff Airport",
+      "routes": [
+        "DUB",
+        "SFO",
+        "YYZ"
+      ],
+      "country": {
+        "code": "UK",
+        "name": "United Kingdom",
+        "currency": "GBP"
+      }
+    },
+    "AGA": {
+      "iataCode": "AGA",
+      "name": "Agadir–Al Massira Airport",
+      "routes": [
+        "DUB"
+      ],
+      "country": {
+        "code": "MR",
+        "name": "Morocco",
+        "currency": "MAD"
+      }
+    },
+    "EDI": {
+      "iataCode": "EDI",
+      "name": "Edinburgh Airport",
+      "routes": [
+        "BOS",
+        "ORD",
+        "DUB",
+        "JFK"
+      ],
+      "country": {
+        "code": "UK",
+        "name": "Edinburgh",
+        "currency": "GBP"
+      }
+    },
+    "ORD": {
+      "iataCode": "ORD",
+      "name": "O'Hare International Airport",
+      "routes": [
+        "ABZ",
+        "AMS",
+        "BCN",
+        "BER",
+        "DUB",
+        "EDI",
+        "FRA",
+        "GLA"
+      ],
+      "country": {
+        "code": "US",
+        "name": "United States of America",
+        "currency": "USD"
+      }
+    },
+    "HAJ": {
+      "iataCode": "HAJ",
+      "name": "Hannover Airport",
+      "routes": [
+        "DUB"
+      ],
+      "country": {
+        "code": "DE",
+        "name": "Germany",
+        "currency": "EUR"
+      }
+    },
+    "LAX": {
+      "iataCode": "LAX",
+      "name": "Los Angeles",
+      "routes": [
+        "DUB",
+        "SNN"
+      ],
+      "country": {
+        "code": "US",
+        "name": "United States of America",
+        "currency": "USD"
+      }
+    },
+    "LIS": {
+      "iataCode": "LIS",
+      "name": "Lisbon",
+      "routes": [
+        "ORK",
+        "DUB"
+      ],
+      "country": {
+        "code": "PT",
+        "name": "Portugal",
+        "currency": "EUR"
+      }
+    },
+    "LHR": {
+      "iataCode": "LHR",
+      "name": "London Heathrow",
+      "routes": [
+        "BHD",
+        "BOS",
+        "ORD",
+        "ORK",
+        "DUB",
+        "JFK",
+        "SFO"
+      ],
+      "country": {
+        "code": "UK",
+        "name": "United Kingdom",
+        "currency": "GBP"
+      }
+    },
+    "CDG": {
+      "iataCode": "CDG",
+      "name": "Charles de Gaulle Airport",
+      "routes": [
+        "BOS",
+        "ORD",
+        "ORK",
+        "DUB",
+        "JFK",
+        "SFO"
+      ],
+      "country": {
+        "code": "FR",
+        "name": "France",
+        "currency": "EUR"
+      }
+    },
+    "SFO": {
+      "iataCode": "SFO",
+      "name": "San Francisco International Airport",
+      "routes": [
+        "ABZ",
+        "AMS",
+        "BHX",
+        "BRS",
+        "BRU",
+        "CWL",
+        "DUB",
+        "EDI",
+        "LHR",
+        "CDG"
+      ],
+      "country": {
+        "code": "US",
+        "name": "United States of America",
+        "currency": "USD"
+      }
+    }
+  }
+}

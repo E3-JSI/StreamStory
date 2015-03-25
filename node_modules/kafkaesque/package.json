@@ -1,0 +1,82 @@
+{
+  "name": "kafkaesque",
+  "description": "A node client for kafka, supporting upwards of v0.8 of the Kafka protocol, including commit/offset/fetch API. Does not require zookeeper integration",
+  "keywords": [
+    "apache",
+    "kafka",
+    "client",
+    "0.8",
+    "0.9"
+  ],
+  "version": "0.1.1",
+  "license": "MIT",
+  "author": {
+    "name": "Peter Elger",
+    "url": "http://www.nearform.com/"
+  },
+  "contributors": [
+    {
+      "name": "Peter Elger",
+      "email": "elger.peter@gmail.com",
+      "url": "http://peterelger.com/"
+    },
+    {
+      "name": "Richard Rodger",
+      "email": "richard@ricebridge.com",
+      "url": "http://richardrodger.com/"
+    }
+  ],
+  "engines": {
+    "node": "*"
+  },
+  "dependencies": {
+    "underscore": "~1.4.2",
+    "buffer-builder": "~0.1.0",
+    "buffer-crc32": "~0.2.1",
+    "uuid": "~1.4.1",
+    "hexy": "~0.2.5"
+  },
+  "main": "lib/kafkaesque",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pelger/Kafkaesque.git"
+  },
+  "devDependencies": {
+    "grunt": "~0.4.1",
+    "grunt-contrib-jshint": "~0.6.0",
+    "load-grunt-tasks": "~0.1.0",
+    "chai": "~1.8.1",
+    "matchdep": "~0.3.0",
+    "mocha": "~1.13.0",
+    "grunt-mocha-test": "~0.7.0",
+    "grunt-mocha-cov": "0.0.7"
+  },
+  "bugs": {
+    "url": "https://github.com/pelger/Kafkaesque/issues"
+  },
+  "homepage": "https://github.com/pelger/Kafkaesque",
+  "_id": "kafkaesque@0.1.1",
+  "dist": {
+    "shasum": "13e034b0faf5252551c5714ea6bb331c82419496",
+    "tarball": "http://registry.npmjs.org/kafkaesque/-/kafkaesque-0.1.1.tgz"
+  },
+  "_from": "kafkaesque@*",
+  "_npmVersion": "1.3.14",
+  "_npmUser": {
+    "name": "pelger",
+    "email": "elger.peter@gmail.com"
+  },
+  "maintainers": [
+    {
+      "name": "pelger",
+      "email": "peter.elger@betapond.com"
+    },
+    {
+      "name": "darsee",
+      "email": "darsee@gmail.com"
+    }
+  ],
+  "directories": {},
+  "_shasum": "13e034b0faf5252551c5714ea6bb331c82419496",
+  "_resolved": "https://registry.npmjs.org/kafkaesque/-/kafkaesque-0.1.1.tgz"
+}

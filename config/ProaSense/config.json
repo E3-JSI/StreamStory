@@ -11,7 +11,7 @@
 		"jsFile": "/home/lstopar/workspace/JSI/projects/ProaSense/code/node/config/ProaSense/project-conf.js"
 	},
 	"models": {
-		"dir": "/media/lstopar/hdd/project-data/proasense-models/"
+		"dir": "/media/lstopar/HDD/project-data/proasense-models/"
 	},
 	"server": {
 		"port": 8888,
