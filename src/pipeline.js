@@ -1,4 +1,6 @@
-const QM_IN_STORE = 'drilling';
+var broker = require('./broker.js');
+
+var QM_IN_STORE = 'drilling';
 
 var base;
 
@@ -30,6 +32,7 @@ function initGC() {
 			});
 		}
 	}
+	
 	log.info('GC initialized!');
 }
 
@@ -212,6 +215,10 @@ function initTriggers() {
 		inStore.addTrigger({
 			onAdd: function (val) {
 				try {
+					if (Math.random() < 1e-3) {
+						broker.sendPrediction();
+					}
+					
 					if (val.rpm > 100) {
 						if (!isDrilling) {
 							start = val.time;
