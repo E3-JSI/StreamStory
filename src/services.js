@@ -520,6 +520,8 @@ function initHandlers() {
 }
 
 function initBroker() {
+	broker.init();
+	
 	var imported = 0;
 	var printInterval = 10000;
 	

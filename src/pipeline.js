@@ -1,4 +1,4 @@
-var broker = require('./broker.js');
+//var broker = require('./broker.js');
 
 var QM_IN_STORE = 'drilling';
 
