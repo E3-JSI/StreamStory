@@ -3,6 +3,7 @@ var bodyParser = require("body-parser");
 var path = require('path');
 var WebSocket = require('ws');
 var utils = require('./utils.js');
+var broker = require('./broker.js');
 
 var UI_PATH = '/';
 var API_PATH = '/api';
@@ -15,6 +16,14 @@ var ws;
 
 var hmc;
 var base;
+
+function addRawMeasurement(val) {
+	base.store(val.store).add({
+		time_ms: val.timestamp,
+		time: new Date(val.timestamp).toISOString().split('Z')[0],
+		value: val.value
+	});
+}
 
 var WebSocketWrapper = function () {
 	log.info('Creating web socket server ...');
@@ -196,23 +205,15 @@ function initRestApi() {
 		var printInterval = 10000;
 		
 		app.post(API_PATH + '/push', function (req, resp) {
-			var batch = req.body;
-			
+			var batch = utils.convertRawExternal(req.body);
+						
 			for (var i = 0; i < batch.length; i++) {
 				var instance = batch[i];
-				
-				var store = instance.store;
-				var timestamp = instance.timestamp;
-				var value = instance.value;
 				
 				if (++imported % printInterval == 0 && log.trace())
 					log.trace('Imported %d values ...', imported);
 				
-				base.store(store).add({
-					time_ms: timestamp,
-					time: new Date(timestamp).toISOString().split('Z')[0],
-					value: value
-				});
+				addRawMeasurement(instance);
 			}
 			
 			resp.status(204);
@@ -538,6 +539,36 @@ function initHandlers() {
 	});
 }
 
+function initBroker() {
+	broker.init();
+	
+	var imported = 0;
+	var printInterval = 10000;
+	
+	broker.onMessage(function (msg) {
+//		log.info('Received kafka message: %s', JSON.stringify(msg));
+		
+		if (msg.type == 'raw') {
+			var store = utils.getStoreId(msg.sensorId);
+			var timestamp = msg.timestamp;
+			var value = msg.value;
+			
+			if (++imported % printInterval == 0 && log.trace())
+				log.trace('Imported %d values ...', imported);
+			
+			addRawMeasurement({
+				store: store,
+				timestamp: timestamp,
+				value: value
+			});
+		} else if (msg.type == 'cep') {
+			log.info('received CEP message: %s', JSON.stringify(msg));
+		} else {
+			log.warn('Invalid message type: %s', msg.type);
+		}
+	});
+}
+
 exports.init = function (hmc1, base1) {
 	log.info('Initializing server ...');
 	
@@ -547,6 +578,7 @@ exports.init = function (hmc1, base1) {
 	// serve static files at www
 	initServer();
 	initHandlers();
+	initBroker();
 	
 	log.info('Done!');
 };
