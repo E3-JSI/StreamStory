@@ -2,16 +2,16 @@
 	"qminer": {
 		"confFile": "config/ProaSense/qm-lstopar.conf",
 		"schemaFile": "config/ProaSense/proasense.def",
-		"path": "/home/lstopar/workspace/JSI/qminer-port/qminer/",
-		"createDb": false,
-		"readOnly": true,
+		"path": "../qminer/",
+		"createDb": true,
+		"readOnly": false,
 		"createPipeline": true
 	},
 	"config": {
-		"jsFile": "/home/lstopar/workspace/JSI/projects/ProaSense/code/node/config/ProaSense/project-conf.js"
+		"jsFile": "./config/ProaSense/project-conf.js"
 	},
 	"models": {
-		"dir": "/media/lstopar/HDD/project-data/proasense-models/"
+		"dir": "/media/lstopar/hdd/project-data/proasense-models/"
 	},
 	"server": {
 		"port": 8888,

@@ -523,24 +523,16 @@ function initBroker() {
 	broker.init();
 	
 	var imported = 0;
-	var printInterval = 10000;
+	var printInterval = 100;
 	
 	broker.onMessage(function (msg) {
 //		log.info('Received kafka message: %s', JSON.stringify(msg));
 		
 		if (msg.type == 'raw') {
-			var store = utils.getStoreId(msg.sensorId);
-			var timestamp = msg.timestamp;
-			var value = msg.value;
-			
 			if (++imported % printInterval == 0 && log.trace())
 				log.trace('Imported %d values ...', imported);
 			
-			addRawMeasurement({
-				store: store,
-				timestamp: timestamp,
-				value: value
-			});
+			addRawMeasurement(msg.payload);
 		} else if (msg.type == 'cep') {
 			log.info('received CEP message: %s', JSON.stringify(msg));
 		} else {
