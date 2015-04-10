@@ -1,20 +1,32 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">	<!-- latest IE rendering mode -->
+	<meta name="viewport" content="width=device-width, initial-scale=1">	<!-- mobile devices -->
 	<title>ProaSense - Story Teller</title>
 	
 	<link rel="stylesheet" href="css/style.css">
 	<link rel="stylesheet" href="lib/jquer-ui.css">	
+	<link rel="stylesheet" href="lib/bootstrap/css/bootstrap.min.css">
+	<link rel="stylesheet" href="lib/bootstrap/css/bootstrap-theme.min.css">
 	
 	<script type="text/javascript" src="lib/jquery-1.11.1.min.js"></script>
 	<script type="text/javascript" src="lib/jquery-ui.min.js"></script>
+	<script src="lib/bootstrap/js/bootstrap.min.js"></script>
 	<script type="text/javascript" src="lib/cytoscape.js"></script>
 	<script type="text/javascript" src="lib/highcharts.js"></script>
 	<script type="text/javascript" src="js/zoomvis.js"></script>
 	<script type="text/javascript" src="js/hist.js"></script>
 	<script type="text/javascript" src="js/ui.js"></script>
 	
+	<style>
+		.dl-horizontal dt {
+		    white-space: normal;
+		    width: 200px;
+		    text-align: left;
+		}
+	</style>
 	<script type="text/javascript">
 		var ui;
 		$(document).ready(function () {
@@ -23,52 +35,145 @@
 	</script>
 </head>
 <body>
-	<div id="container-center">
-		<div id="container-left">
-			<div id="parent_container" class="container">
-				<div id="slider_container">
-					<div id="slider_item_div"></div>
+	<nav class="navbar navbar-default">
+		<div class="container-fluid">
+			<div class="navbar-header">
+		      	<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+		        	<span class="sr-only">Toggle navigation</span>
+		        	<span class="icon-bar"></span>
+		        	<span class="icon-bar"></span>
+		        	<span class="icon-bar"></span>
+		      	</button>
+		      	<a class="navbar-brand" href="#">ProaSense - JSI</a>
+		    </div>
+		</div>
+	</nav>
+	<div id="container-center" style="margin: 0 auto; width: 70%;">
+		<div class="container-fluid row">
+			<div id="container-left" class="col-md-9 col-xs-9">
+				<div id="parent_container" class="panel panel-default">
+					<div class="panel-heading clearfix">
+						<h4 class="panel-title pull-left">Visualization</h4>
+						<button id="vis-toggler" class="btn btn-default btn-xs pull-right" style="padding: 0px 5px;" aria-label="Left Align">
+						  	<span class="glyphicon glyphicon-align-justify" aria-hidden="true"></span>
+						</button>
+						
+						<div id="content-options" class="popover fade bottom in">
+							<div class="arrow"></div>
+							<div id="vis_options" class="container-fluid">
+								<div style="padding-top: 12px; padding-bottom: 12px;">
+									<div class="row">
+										<div id="div-ftrs" class="col-md-12">
+											<div>
+												<h4>Show attribute</h4>
+												<ul id="ul-ftrs-obs"></ul>
+											</div>
+											<div>
+												<h4>Adjust control</h4>
+												<div id="div-ftrs-control"></div>
+											</div>
+										</div>
+									</div>
+									<div class="row">
+										<div  class="col-md-12">
+											<h4>View future</h4>
+											<input type="checkbox" id="chk-show-fut" />Show future
+											<div id="div-future-opts">
+												<input type="number" id="rng-time-probs" value="0" />
+												<input type="number" id="txt-fut-range" value="1" />
+												<div id="div-fut-time"></div>
+											</div>
+										</div>
+									</div>
+									<div class="row">
+										<div id="container-buttons" class="col-md-12" style="padding-top: 12px;">
+											<input type="button" id="btn-png" value="Save as PNG" class="btn btn-default btn-block" />
+											<input type="button" id="btn-save" value="Save Model" class="btn btn-primary btn-block" />
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+						<script type="application/javascript">
+							$('#vis-toggler').click(function () {
+								$('#content-options').slideToggle();
+							});
+						</script>
+						
+					</div>
+					<div class="panel-body nopadding" style="height: 757px;">
+						<div id="slider_container">
+							<div id="slider_item_div"></div>
+						</div>
+						<div id="vis_container" class="nopadding"></div>						
+						<div id="threshold_slider"></div>
+					</div>
 				</div>
-				<div id="vis_container"></div>
-				<div id="vis_toggler" class="clickable" title="click for options"></div>
-				
-				<div id="threshold_slider"></div>
-			</div>
-			<div id="container-details" class="container">
-				<div id="container-hist" style="height: 200px; overflow-x: auto;">
-					<div id="hist-wrapper" style="width: 200%; height: 100%;"></div>
+				<div id="container-details" class="panel panel-default"">
+					<div class="panel-heading">State Details</div>
+					<div class="panel-body nopadding" style="height: 800px;">
+						<div class="panel panel-default">
+							<div class="panel-heading">Basic info</div>
+							<div class="panel-body">
+								<p>Name: <span id="state-name"></span></p>
+								<p>Id: <span id="state-id"></span></p>
+							</div>
+						</div>
+						<div class="panel panel-default">
+							<div class="panel-heading">Attributes</div>
+							<div class="panel-body">
+								<div id="container-obs" class="col-md-6">
+									<h4>Observations:</h4>
+									<dl id="ul-obser" class="dl-horizontal"></dl>
+								</div>
+								<div id="container-contr" class="col-md-6">
+									<h4>Controls:</h4>
+									<dl id="ul-controls" class="dl-horizontal"></dl>
+								</div>
+							</div>
+						</div>
+						<div class="panel panel-default">
+							<div class="panel-heading">Statistics</div>
+							<div class="panel-body">
+								<div id="container-future">
+									<h4>Future States:</h4>
+									<div id="div-future"></div>
+								</div>
+								<div id="container-past">
+									<h4>Past States:</h4>
+									<div id="div-past"></div>
+								</div>	
+							</div>
+						</div>
+						<div class="panel panel-default">
+							<div class="panel-heading">Attribute Distribution</div>
+							<div class="panel-body">
+								<div id="container-hist" style="height: 200px; overflow-x: auto;">
+									<div id="hist-wrapper" style="width: 200%; height: 100%;"></div>
+								</div>
+							</div>
+						</div>
+					</div>
 				</div>
-				<div id="container-features"></div>
-				<div id="container-desc"></div>
 			</div>
-		</div>
-		<div id="container-right">
-			<div id="container-msg" class="container">
-				<div class="wrapper">
-					<ul id="list-msg"></ul>
+			<div id="container-right" class="col-md-3 col-xs-3">
+				<div class="panel panel-default">
+					<div class="panel-heading">Messages</div>
+					<div class="panel-body">
+						<div id="div-messages">
+							<ul id="list-msg"></ul>
+						</div>
+					</div>
+				</div>
+				<div class="panel panel-default">
+					<div class="panel-heading">Configuration</div>
+					<div class="panel-body">
+						<div id="div-config">
+							<div id="current_height_value"></div>
+						</div>
+					</div>
 				</div>
 			</div>
-			<div id="container-config" class="container">
-				<div id="current_height_value"></div>
-				<!-- <input id="btn-png" type="button" value="Save as PNG" /> <br />
-				<input id="btn-save" type="button" value="Save Model" /> -->
-			</div>
-		</div>
-	</div>
-	<div id="vis_options" style="display: none;" class >
-		<input type="checkbox" id="chk-show-fut" />Show future
-		<div id="div-future-opts">
-			<input type="number" id="rng-time-probs" value="0" />
-			<input type="number" id="txt-fut-range" value="1" />
-			<!-- input type="range" id="rng-time-probs" /-->
-			<div id="div-fut-time"></div>
-		</div>
-		<div id="div-ftrs">
-			<ul id="ul-ftrs"></ul>
-		</div>
-		<div id="container-buttons">
-			<input id="btn-png" type="button" value="Save as PNG" class="options-button" /> <br />
-			<input id="btn-save" type="button" value="Save Model" />
 		</div>
 	</div>
 </body>

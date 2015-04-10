@@ -169,7 +169,8 @@ var zoomVis = function (opts) {
 					'height': nodeSize,
 					'border-width': DEFAULT_BORDER_WIDTH,
 					'border-color': DEFAULT_BORDER_COLOR,
-					'label': levelInfo[i].name != null ? levelInfo[i].name : levelInfo[i].id
+					'label': levelInfo[i].name != null ? levelInfo[i].name : levelInfo[i].id,
+					'z-index': 1							
 				},
 				selected: false,
 				selctable: true,
@@ -204,19 +205,23 @@ var zoomVis = function (opts) {
 			}
 			
 			for (var j = 0; j < edges.length; j++) {
+				var val = levelJumps[level][i][edges[j]];
+				
 				edgeArray.push({
 					group: 'edges',
 					data: {
 						id: i + '-' + edges[j],
 						source: levelNodes[level][i].id,
 						target: levelNodes[level][edges[j]].id,
-						value: levelJumps[level][i][edges[j]].toFixed(3)
+						value: val.toFixed(3)
 					},
 					css: {
 						'control-point-step-size': 250,//150,
 						'text-valign': 'top',
 						'control-point-weight': 0.5,
-						'border-style': 'solid'
+						'border-style': 'solid',
+						'width': Math.max(1, (val*10).toFixed()),
+						'z-index': 100
 					}
 				});
 			}
@@ -314,9 +319,7 @@ var zoomVis = function (opts) {
 				var val = ftrVal / config.minVal;
 				color = 'hsla(' + VIZ_NODE_FTR_NEG_COLOR + ',' + Math.floor(100*sizeFromProb(val)) + '%, 55%, 1)';
 			}
-			
-//			var val = (config.ftrVals[nodeId] - config.minVal) / (config.maxVal - config.minVal);
-			
+						
 			node.css('backgroundColor', color);
 		} 
 		else if (nodeId in modeConfig.future) {
@@ -347,15 +350,6 @@ var zoomVis = function (opts) {
 	
 	function clearCurrentState() {
 		clearStyles();
-//		cy.nodes('#' + modeConfig.current).css('border-color', DEFAULT_BORDER_COLOR);
-//		if (modeConfig.mode.type == MODE_NORMAL) {
-//			for (var nodeId in modeConfig.future) {
-//				cy.nodes('#' + nodeId).css('backgroundColor', DEFAULT_NODE_COLOR);
-//			}
-//		}
-//		for (nodeId in modeConfig.past) {
-//			cy.nodes('#' + nodeId).css('border-color', DEFAULT_BORDER_COLOR);
-//		}
 		
 		modeConfig.current = null;
 		modeConfig.future = {};
@@ -380,15 +374,13 @@ var zoomVis = function (opts) {
 		//console.log(cy.edges("[source='nodeId']"));
 		
 		cy.edges().css({
-			'width': 1,
 			'line-color': 'darkgray',
 			'target-arrow-color': 'darkgray'
 		});
 		
 		node.neighborhood("edge[source =" + node.id() + "]").css({
-			'width': 6, 
-			'line-color': 'darkgray',
-			'target-arrow-color': 'darkgray',
+			'line-color': 'green',
+			'target-arrow-color': 'green',
 		});
 	}
 	
@@ -459,16 +451,20 @@ var zoomVis = function (opts) {
 		});
 	}
 	
+	function setUI(data, isInit) {
+		data.sort(function (a, b) {
+			return a.height - b.height;
+		});
+		hierarchy = data;
+		constructLevels(hierarchy, isInit);
+		fetchCurrentState(currentHeight);
+	}
+	
 	function fetchUI() {
 		$.ajax({
 			url: 'api/multilevel',
 			success: function (data) {
-				data.sort(function (a, b) {
-					return a.height - b.height;
-				});
-				hierarchy = data;
-				constructLevels(hierarchy, true);
-				fetchCurrentState(currentHeight);
+				setUI(data, true);
 			},	
 			dataType: 'json',
 			error: function (jqXHR, jqXHR, status, err) {
@@ -521,7 +517,6 @@ var zoomVis = function (opts) {
 		}
 		
 		if (event.deltaY > 0) {		// scroll out
-		
 			if (zoomLevel > minZoomLevel + 1) {
 				zoomLevel--;
 			} else zoomLevel = minZoomLevel;
@@ -598,7 +593,7 @@ var zoomVis = function (opts) {
 		userPanningEnabled: true,
 		boxSelectionEnabled: false,
 		wheelSensitivity: 0.01,
-		// minZoom: 1e-50,
+		minZoom: 1e-15,
 		// maxZoom: 1e50
 		minZoom: 0.50
 	});
@@ -640,6 +635,14 @@ var zoomVis = function (opts) {
 	
 	var that = {
 		refresh: fetchUI,
+		
+		/*
+		 * Sets a new model which is visualized. Zoom and other properties are not
+		 * refreshed!
+		 */
+		setModel: function (data) {
+			setUI(data, false);
+		},
 		
 		setCurrentStates: function (currentStates) {
 			if (hierarchy == null) return;
@@ -687,7 +690,10 @@ var zoomVis = function (opts) {
 		},
 		
 		setZoom: function (value) {
-			cy.zoom({level: Math.abs(value - maxHeight) * 0.5 + cy.minZoom()});
+			// TODO
+			console.log('Zoom min: ' + cy.minZoom() + ', max: ' + cy.maxZoom() + ', value: ' + value);
+//			cy.zoom({level: Math.abs(value - maxHeight) * 0.5 + cy.minZoom()});
+			cy.zoom({level: cy.minZoom() + value});
 		},
 		
 		getCurrentHeight: function () {

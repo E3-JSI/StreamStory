@@ -1,7 +1,7 @@
-const storeName = 'fish';
-const hmcStoreName = 'fish_hmc';
+var storeName = 'fish';
+var hmcStoreName = 'fish_hmc';
 
-const DATE_IDXS = {
+var DATE_IDXS = {
 	January: 0,
 	February: 1,
 	March: 2,
@@ -37,8 +37,8 @@ exports.hmcParams = {
 	},
 	clustering: {
 		type: 'dpmeans',
-		lambda: 1.1,
-		minClusts: 30,
+		lambda: .7,
+		minClusts: 5,
 		rndseed: 1,
 		sample: 1,
 		histogramBins: 20
@@ -97,7 +97,34 @@ exports.createDb = function (qm, callback) {
 				Origin_Year: true,
 				Origin_Month: true,
 				Batch: true,
-				Unit: true
+				Unit: true,
+				Model_End_Av_Wt: true,
+				Av_Wt_Deviation_: true,
+				Sampling_No: true,
+				Mortality_No: true,
+				SFR_Period_: true,
+				FCR_AF: true,
+				FCR_Period: true,
+				SFR_Period__AF: true,
+				SGR_Period_: true,
+				// some fields which are mostly 0
+				Harvest_Biomass: true,
+				Given_Biomass: true,
+				Taken_Biomass: true,
+				Feeding_Rate_Kg__Hour: true,
+				Fastings_No: true,
+				Transfer__No: true,
+				Harvest_No: true,
+				// fields which we replace with other fields
+				Opening_Fish_No: true,
+				Opening_Biomass: true,
+				Closing_Fish_No: true,
+				Closing_Biomass: true,
+				Start_Av_Wt: true,
+				End_AvWt: true,
+				Av_Wt_AF: true,
+				Biomass_Produced: true,
+				Biomass_Produced_AF: true
 			};
 			ignoreFields[fromField] = true;
 			ignoreFields[toField] = true;
@@ -119,6 +146,26 @@ exports.createDb = function (qm, callback) {
 					});
 				}
 			}
+			
+			storeDef.fields.push({
+				name: 'avg_opening_mass',
+				type: 'float'
+			});
+			
+			storeDef.fields.push({
+				name: 'avg_closing_mass',
+				type: 'float'
+			});
+			
+			storeDef.fields.push({
+				name: 'produced_mass',
+				type: 'float'
+			});
+			
+			storeDef.fields.push({
+				name: 'mortality',
+				type: 'float'
+			});
 			
 			base.createStore(storeDef);
 			
@@ -193,11 +240,16 @@ exports.createDb = function (qm, callback) {
 						cpy[field] = rec[field];
 				}
 				
+				cpy.avg_opening_mass = rec.Opening_Biomass / rec.Opening_Fish_No;
+				cpy.avg_closing_mass = rec.Closing_Biomass / rec.Closing_Fish_No;
+				cpy.produced_mass = rec.Closing_Biomass / rec.Opening_Biomass - 1;
+				cpy.mortality = (rec.Opening_Fish_No - rec.Closing_Fish_No) / rec.Opening_Fish_No;
+				
 				cpy.time = new Date(getRecTime(rec)).toISOString().split('Z')[0];
 				outStore.add(cpy);
 				
-				if (log.debug())
-					log.debug('Ends batch: ' + endsBatchV[i - ignoreCount] + ', (%s,%s)', rec.Unit, rec.Batch);
+				if (log.trace())
+					log.trace('Ends batch: ' + endsBatchV[i - ignoreCount] + ', (%s,%s,%s,%s)', rec.Unit, rec.Batch, rec.From, rec.To);
 			});
 			
 			callback(null, {base: base, endsBatchV: endsBatchV});
@@ -208,18 +260,37 @@ exports.createDb = function (qm, callback) {
 }
 
 exports.getFieldConfig = function (base) {
-	var result = [];
+	var obsFields = [];
+	var contrFields = [];
+	
+	var controlFlds = {
+		Food_Price: true,
+		Max_Food_Qty: true,
+		Period_Food_Qty: true
+	}
 	
 	var fields = base.store(hmcStoreName).fields;
 	fields.forEach(function (field, idx) {
 		if (field.name == CTMC_TIME_FIELD_ID) return;
 		
-		result.push({
+		var fieldConfig = {
 			name: field.name,
 			type: field.type == 'float' ? 'numeric' : 'categorical',
-			interpolator: field.type == 'float' ? 'linear' : 'previous'
-		})
+			interpolator: field.type == 'float' ? 'linear' : 'previous',
+			inModel: true
+		};
+		
+		if (log.debug())
+			log.debug('Field: %s', field.name);
+		
+		if (!controlFlds[field.name]) {
+			obsFields.push(fieldConfig);
+		}
+		else {
+			contrFields.push(fieldConfig);
+		}
+		
 	});
 	
-	return result;
+	return { obsFields: obsFields, contrFields: contrFields };
 }

@@ -178,7 +178,7 @@ function initRestApi() {
 		// multilevel analysis
 		app.get(API_PATH + '/save', function (req, resp) {
 			try {
-				hmc.save(FNAME_MC, FNAME_FSPACE);
+				hmc.save(FNAME_MC);
 				resp.status(204);
 			} catch (e) {
 				log.error(e, 'Failed to save visualization model!');
@@ -446,6 +446,26 @@ function initRestApi() {
 				resp.status(204);	// no content
 			} catch (e) {
 				log.error(e, 'Failed to set name of state %d to %s', stateId, stateNm);
+				resp.status(500);	// internal server error
+			}
+			
+			resp.end();
+		});
+		
+		app.post(API_PATH + '/setControl', function (req, resp) {
+			var ftrIdx, factor;
+			
+			try {
+				ftrIdx = parseInt(req.body.ftrIdx);
+				factor = parseFloat(req.body.factor);
+				
+				if (log.info()) 
+					log.info('Changing control %d by factor %d ...', ftrIdx, factor);
+				
+				hmc.setControl(ftrIdx, factor);
+				resp.send(hmc.getVizState());
+			} catch (e) {
+				log.error(e, 'Failed to control %d by factor %d', ftrIdx, factor);
 				resp.status(500);	// internal server error
 			}
 			
