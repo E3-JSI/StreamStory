@@ -74,23 +74,57 @@ var UI;
 		}
 		
 		function populateFtrs() {
+			function changeControlVal(ftrIdx, val) {
+				$.ajax('api/setControl', {
+					dataType: 'json',
+					data: {ftrIdx: ftrIdx, factor: val},
+					method: 'POST',
+					success: function (data) {
+						viz.setModel(data);
+					},
+					error: function (jqXHR, status) {
+						alert(status);
+					}
+				});
+			}
+			
 			$.ajax('api/features', {
 				dataType: 'json',
 				success: function (ftrs) {
-					var htmlList = $('#ul-ftrs');
+					var observList = $('#ul-ftrs-obs');
+					var controlDiv = $('#div-ftrs-control');
 					
-					$.each(ftrs, function (idx, name) {
-						var li = $('<li />').appendTo(htmlList);
+					$.each(ftrs.observation, function (idx, name) {
+						var li = $('<li />').appendTo(observList);
 						li.html('<input type="checkbox" value="' + idx + '" />' + name + '<br />');
 					});
 					
-					$('#ul-ftrs input[type=checkbox]').change(function (event) {
+					$.each(ftrs.control, function (idx, name) {
+						var div = $('<div />').appendTo(controlDiv);
+						var label = $('<label />').appendTo(div);
+						var input = $('<input />').appendTo(div);
+						
+						div.addClass('form-group');
+						
+						input.attr('type', 'range');
+						input.attr('min', 0);
+						input.attr('max', 2);
+						input.attr('step', .1);
+						input.val(1);
+						input.addClass('form-control');
+						input.attr('id', 'control-' + (idx + ftrs.observation.length));
+						
+						label.attr('for', 'control-' + (idx + ftrs.observation.length));
+						label.html(name);
+					});
+					
+					observList.find('input[type=checkbox]').change(function (event) {
 						var el = $(event.target);
 						var checked = el.prop('checked');
 						
 						if (checked) {
 							// uncheck the other elements
-							$('#ul-ftrs input[type=checkbox]').removeAttr('checked');
+							observList.find('input[type=checkbox]').removeAttr('checked');
 							el.prop('checked', true);
 							
 							var ftrIdx = el.val();
@@ -99,6 +133,17 @@ var UI;
 							viz.setTargetFtr(null);
 						}
 					});
+					
+					controlDiv.find('input[type=range]').change(function (event) {
+						var el = $(event.target);
+						var val = el.val();
+						var ftrIdx = el.attr('id').split('-').pop();
+						
+						changeControlVal(ftrIdx, val);
+					});
+				},
+				error: function (jqXHR, status) {
+					alert(status);
 				}
 			});
 		}
@@ -127,18 +172,6 @@ var UI;
 				viz.setZoom(ui.value);
 			}
 		});
-		
-		$('#container-options #toggler').click(function () {
-			$('#options').toggle();
-		});
-		
-		$('#vis_toggler').click(function () {
-			$('#vis_options').toggle("blind");
-			
-//			var pos = $('#vis_toggler').offset();
-//			console.log(pos);
-		});
-		
 		
 		$('#chk-show-fut').change(function () {
 			var checked = this.checked;
@@ -203,10 +236,7 @@ var UI;
 			$.ajax('api/details', {
 				dataType: 'json',
 				data: { stateId: stateId, level: height },
-				success: function (data) {
-					var str = "STATE ID: " + data.id + '<br />';
-					str += '<label for="txt-name">Name</label><input type="text" id="txt-name" />';
-					
+				success: function (data) {					
 					var ftrWgts = data.featureWeights;
 					// find max and min weigts
 					var maxWgt = Number.NEGATIVE_INFINITY;
@@ -217,19 +247,50 @@ var UI;
 						if (ftrWgts[i] < minWgt) minWgt = ftrWgts[i];
 					}
 					
-					$.each(data.features, function (idx, val) {
+					$('#state-id').html(data.id);
+					
+					var obsList = $('#ul-obser');
+					var contrList = $('#ul-controls');
+					
+					obsList.html('');
+					contrList.html('');
+					
+					$.each(data.features.observations, function (idx, val) {
 						var color;
 						if (ftrWgts[idx] > 0)
 							color = 'rgb(0,' + Math.floor(255*ftrWgts[idx] / maxWgt) + ',0)';
 						else
 							color = 'rgb(' + Math.floor(255*ftrWgts[idx] / minWgt) + ',0,0)';
-						str += '<div class="clickable" ondblclick="ui.fetchHistogram(' + stateId + ',' + idx + ',true)" onclick="ui.fetchHistogram(' + stateId + ',' + idx + ',false)" style="color: ' + color + ';">' + val.name + ':\t' + val.value + '</div>';
+					
+						var dt = $('<dt />').appendTo(obsList);
+						var dd = $('<dd />').appendTo(obsList);
+						dd.css('color', color);
+						dt.click(function () {
+							ui.fetchHistogram(stateId, idx, false);
+						});
+						dt.dblclick(function () {
+							ui.fetchHistogram(stateId, idx, true);
+						});
+						dt.html(val.name);
+						dd.html(val.value.toPrecision(3));
 					});
 					
-					$('#container-features').html(str);
+					$.each(data.features.controls, function (idx, val) {
+						var dt = $('<dt />').appendTo(contrList);
+						var dd = $('<dd />').appendTo(contrList);
+						
+						dt.click(function () {
+							ui.fetchHistogram(stateId, idx, false);
+						});
+						dt.dblclick(function () {
+							ui.fetchHistogram(stateId, idx, true);
+						});
+						dt.html(val.name);
+						dd.html(val.value.toPrecision(3));
+					});
 					
-					str = '<br /><br /><br />FUTURE STATES:' + JSON.stringify(data.futureStates);
-					str += '<br /><br /><br />PAST STATES:' + JSON.stringify(data.pastStates);
+					$('#div-future').html(JSON.stringify(data.futureStates));
+					$('#div-past').html(JSON.stringify(data.pastStates));
 					
 					$('#container-desc').html(str);
 					

@@ -11,14 +11,16 @@ function initServices(opts) {
 	base = opts.base;
 	
 	try {
-		global.QM_FIELDS = config.getFieldConfig(base);
+		var fieldConfig = config.getFieldConfig(base);
 		
 		var hmc = mc.init({
 			base: base,
-			endsBatchV: opts.endsBatchV
+			endsBatchV: opts.endsBatchV,
+			fieldConfig: fieldConfig
 		});
 	
-		if (QM_CREATE_PIPELINE) pipeline.init(base);
+		if (QM_CREATE_PIPELINE) 
+			pipeline.init({ base: base, fieldConfig: fieldConfig });
 		
 		services.init(hmc, base);
 		
@@ -26,18 +28,18 @@ function initServices(opts) {
 			require('./src/replay.js').replayHmc(hmc);
 	} catch (e) {
 		log.error(e, 'Failed to create services!');
-		exit();
+		utils.exit(base);
 	}
 }
 
 try {
 	if (QM_CREATE_DB) {
-		config.createDb(function (e, base) {
+		config.createDb(function (e, result) {
 			if (e != null) {
 				log.error(e, 'Failed to create base object, exiting application ...');
 				exit();
 			}
-			initServices({base: base});
+			initServices({base: result.base, endsBatchV: result.endsBatchV});
 		});
 	} else {	
 		// load qminer DB

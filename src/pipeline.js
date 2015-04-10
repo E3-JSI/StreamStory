@@ -266,10 +266,10 @@ function initTriggers() {
 	log.info('Triggers initialized!');
 }
 
-exports.init = function (base1) {
-	base = base1;
+exports.init = function (opts) {
+	base = opts.base;
 	
 	initTriggers();
-	initStreamAggregates();
+	initStreamAggregates(opts.fieldConfig);
 	initGC();
 };
