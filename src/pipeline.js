@@ -1,4 +1,5 @@
 //var broker = require('./broker.js');
+var config = require('../config.js');
 
 var QM_IN_STORE = 'drilling';
 
@@ -41,7 +42,9 @@ function initStreamAggregates() {
 	var mergerFields = [];
 	var resamplerFields = [];
 	
-	var flds = QM_FIELDS;
+	var fldConfig = config.getFieldConfig();
+	var flds = fldConfig.obsFields;
+	flds = flds.concat(fldConfig.contrFields);
 	
 	for (var i = 0; i < flds.length; i++) {
 		var field = flds[i];

@@ -74,8 +74,8 @@
 }
 
 #threshold_slider {
-	position: absolute;
-	bottom: 10px;
-	width: 80%;
-	margin-left: 40px;
+	position: relative;
+  	bottom: 20px;
+  	left: 170px;
+  	width: 80%;
 }

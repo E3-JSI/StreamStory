@@ -99,7 +99,6 @@
 								$('#content-options').slideToggle();
 							});
 						</script>
-						
 					</div>
 					<div class="panel-body nopadding" style="height: 757px;">
 						<div id="slider_container">
@@ -109,49 +108,41 @@
 						<div id="threshold_slider"></div>
 					</div>
 				</div>
-				<div id="container-details" class="panel panel-default"">
+				<div id="container-details" class="panel panel-default">
 					<div class="panel-heading">State Details</div>
-					<div class="panel-body nopadding" style="height: 800px;">
-						<div class="panel panel-default">
-							<div class="panel-heading">Basic info</div>
-							<div class="panel-body">
-								<p>Name: <span id="state-name"></span></p>
-								<p>Id: <span id="state-id"></span></p>
+					<div class="panel-body nopadding" style="min-height: 400px;">
+						<div id="div-ftrs" class="col-md-12">
+							<h3>Basic info</h3>
+							<p>Name: <span id="state-name"></span></p>
+							<p>Id: <span id="state-id"></span></p>
+						</div>
+						<div id="div-ftrs" class="col-md-12">
+							<div id="div-thumbnail" style="display: none;">
+								<div class="col-md-4 thumb-col">
+									<div class="thumbnail">
+										<div class="container-hist" style="height: 200px;"></div>
+								      	<div class="caption">
+								        	<h4 class="attr-name">Thumbnail label</h4>
+								        	<p class="attr-val"></p>
+								      	</div>
+								    </div>
+							    </div>
+						    </div>
+							<h3>Attributes</h3>
+							<div class="row">
+								<div id="div-attrs" class="col-md-12"></div>
 							</div>
 						</div>
-						<div class="panel panel-default">
-							<div class="panel-heading">Attributes</div>
-							<div class="panel-body">
-								<div id="container-obs" class="col-md-6">
-									<h4>Observations:</h4>
-									<dl id="ul-obser" class="dl-horizontal"></dl>
-								</div>
-								<div id="container-contr" class="col-md-6">
-									<h4>Controls:</h4>
-									<dl id="ul-controls" class="dl-horizontal"></dl>
-								</div>
+						<div id="div-ftrs" class="col-md-12">
+							<h3>Statistics</h3>
+							<div id="container-future">
+								<h4>Future States:</h4>
+								<div id="div-future"></div>
 							</div>
-						</div>
-						<div class="panel panel-default">
-							<div class="panel-heading">Statistics</div>
-							<div class="panel-body">
-								<div id="container-future">
-									<h4>Future States:</h4>
-									<div id="div-future"></div>
-								</div>
-								<div id="container-past">
-									<h4>Past States:</h4>
-									<div id="div-past"></div>
-								</div>	
-							</div>
-						</div>
-						<div class="panel panel-default">
-							<div class="panel-heading">Attribute Distribution</div>
-							<div class="panel-body">
-								<div id="container-hist" style="height: 200px; overflow-x: auto;">
-									<div id="hist-wrapper" style="width: 200%; height: 100%;"></div>
-								</div>
-							</div>
+							<div id="container-past">
+								<h4>Past States:</h4>
+								<div id="div-past"></div>
+							</div>	
 						</div>
 					</div>
 				</div>

@@ -29,7 +29,7 @@ var UI;
 		}
 			
 		var that = {
-			fetchHistogram: function (stateId, ftrId, openWindow) {
+			fetchHistogram: function (stateId, ftrId, openWindow, insertDiv) {
 				if (openWindow)
 					window.open('popups/histogram.html?s=' + stateId + '&f=' + ftrId);
 				else {
@@ -37,7 +37,7 @@ var UI;
 						dataType: 'json',
 						data: { stateId: stateId, feature: ftrId },
 						success: function (hist) {
-							drawHistogram({data: hist, container: 'hist-wrapper'});
+							drawHistogram({data: hist, container: insertDiv != null ? insertDiv : 'hist-wrapper'});
 						}
 					});
 				}
@@ -249,6 +249,36 @@ var UI;
 					
 					$('#state-id').html(data.id);
 					
+					$.each(data.features.observations, function (idx, val) {
+						var color;
+						if (ftrWgts[idx] > 0)
+							color = 'rgb(0,' + Math.floor(255*ftrWgts[idx] / maxWgt) + ',0)';
+						else
+							color = 'rgb(' + Math.floor(255*ftrWgts[idx] / minWgt) + ',0,0)';
+					
+						var thumbnail = $('#div-thumbnail').find('.thumb-col').clone();
+						thumbnail.find('.attr-name').html(val.name);
+						thumbnail.find('.attr-val').html(val.value.toPrecision(3));
+						thumbnail.find('.attr-val').css('color', color);
+						thumbnail.find('.container-hist').attr('id', 'container-hist-' + idx);
+						$('#div-attrs').append(thumbnail);
+						
+						ui.fetchHistogram(stateId, idx, false, 'container-hist-' + idx);
+						
+//						
+//						var dt = $('<dt />').appendTo(obsList);
+//						var dd = $('<dd />').appendTo(obsList);
+//						dd.css('color', color);
+//						dt.click(function () {
+//							ui.fetchHistogram(stateId, idx, false);
+//						});
+//						dt.dblclick(function () {
+//							ui.fetchHistogram(stateId, idx, true);
+//						});
+//						dt.html(val.name);
+//						dd.html(val.value.toPrecision(3));
+					});
+					
 					var obsList = $('#ul-obser');
 					var contrList = $('#ul-controls');
 					
@@ -292,7 +322,7 @@ var UI;
 					$('#div-future').html(JSON.stringify(data.futureStates));
 					$('#div-past').html(JSON.stringify(data.pastStates));
 					
-					$('#container-desc').html(str);
+//					$('#container-desc').html(str);
 					
 					if (data.name != null) {
 						$('#txt-name').val(data.name);

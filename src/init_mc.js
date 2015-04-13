@@ -41,7 +41,7 @@ exports.init = function (opts) {
 	
 	if (fs.existsSync(FNAME_MC)) {
 		log.info('Loading HMC model ...');
-		var result = analytics.HierarchMarkov({base: base, hmcFile: FNAME_MC});		
+		var result = analytics.HierarchMarkov({base: base, hmcFile: FNAME_MC});	
 		return result;
 	} 
 	else {
@@ -50,7 +50,7 @@ exports.init = function (opts) {
 		var store = base.store(CTMC_STORE_NAME);
 		var recs = store.recs;
 		
-//		var recs = store.recs.trunc(500000);	// TODO remove
+		var recs = store.recs.trunc(500000);	// TODO remove
 		
 		log.info('Creating a model out of %d records ...', recs.length);
 	
@@ -62,6 +62,7 @@ exports.init = function (opts) {
 			obsFields: ftrSpaceParams.obsFields,
 			contrFields: ftrSpaceParams.contrFields
 		});
+		
 		
 		var opts = {recSet: recs, timeField: CTMC_TIME_FIELD_ID, batchEndV: opts.endsBatchV};
 		result.fit(opts);

@@ -570,7 +570,7 @@ exports.init = function (hmc1, base1) {
 	// serve static files at www
 	initServer();
 	initHandlers();
-	initBroker();
+//	initBroker();
 	
 	log.info('Done!');
 };
