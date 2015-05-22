@@ -19,8 +19,6 @@ var zoomVis = function (opts) {
 	var MIN_NODE_DIAMETER = 30;
 	var NODE_SCALE_FACTOR = 200;
 	
-	var ZOOM_STEP = 0.01;
-	
 	var visContainer = document.getElementById(opts.visContainer);
 	var currentHeightContainer = document.getElementById(opts.currentHeightContainer);
 	
@@ -39,14 +37,23 @@ var zoomVis = function (opts) {
 	}
 	
 	var callbacks = {
-		stateSelected: function (stateId) {}
+		stateSelected: function (stateId) {},
+		zoomChanged: function (zoom) {}
 	}
 	
 	var maxNodeSize = 0;
 	
-	var zoomLevel = 0;
-	var minZoomLevel = 0.5;
-	var maxZoomLevel = 60;
+//	var zoomLevel = 0;
+//	var minZoomLevel = 1;
+//	var maxZoomLevel = 60;
+//	var zoomStep = 1;
+	
+	var minCyZoom = .3;
+	var maxCyZoom = 1.3;
+	
+	var ZOOM_STEPS = 100;
+	var heightStep;// = 0.01;
+	var zoomFactor;
 	
 	var minHeight = 0;
 	var maxHeight = 0;
@@ -103,12 +110,37 @@ var zoomVis = function (opts) {
 	}
 	
 	function calculatePosition(x, y) {
-		var position = [];
+		return [
+		    visWidth * (xOffset + (1 - xOffset) * (minX + x) / (maxX - minX)),
+		    visHeight * (yOffset + (1 - yOffset) * (minY + y) / (maxY - minY))
+		];
+	}
+	
+	function calcCyPan(newZoom) {
+		if (newZoom < minCyZoom) newZoom = minCyZoom;
+		if (newZoom > maxCyZoom) newZoom = maxCyZoom;
 		
-		position[0] = ((x + Math.abs(minX)) / maxX) * (1 - xOffset) * visWidth + xOffset * visWidth;
-		position[1] = ((y + Math.abs(minY)) / maxY) * (1 - yOffset) * visHeight + yOffset * visHeight;
-		console.log("position[x,y]: " + position[0] + " " + position[1]);
-		return position;
+		var width = cy.width();
+		var height = cy.height();
+		var pan = cy.pan();
+		var zoom = cy.zoom();
+		
+		var centerX = (width - 2*pan.x) / zoom;
+		var centerY = (height - 2*pan.y) / zoom;
+		
+		return {
+			x: (width - newZoom*centerX) / 2,
+			y: (height - newZoom*centerY) / 2
+		}
+	}
+	
+	function setZoom(newZoom, fireEvent) {
+		if (fireEvent == null) fireEvent = true;
+		
+		cy.viewport({zoom: newZoom, pan: calcCyPan(newZoom)});
+		if (fireEvent) {
+			callbacks.zoomChanged(newZoom);
+		}
 	}
 	
 	//===============================================================
@@ -151,7 +183,7 @@ var zoomVis = function (opts) {
 			var position = calculatePosition(levelInfo[i].x, levelInfo[i].y);		//[x, y]
 			var nodeSize = calculateNodeRadius(levelInfo[i].size);
 			
-			console.log('ID: ' + levelInfo[i].id + ', name: ' + levelInfo[i].name);
+			console.log('ID: ' + levelInfo[i].id + ', name: ' + levelInfo[i].name + ', pos: ' + JSON.stringify(position));
 			
 			var style = {
 				'background-color': DEFAULT_NODE_COLOR,
@@ -276,6 +308,9 @@ var zoomVis = function (opts) {
 			maxHeight = levelHeights[levelHeights.length - 1];
 			minHeight = levelHeights[0];
 			
+			heightStep = (maxHeight - minHeight) / ZOOM_STEPS;
+			setZoom(minCyZoom);
+			
 			currentHeight = maxHeight;
 			currentLevel = levelHeights.length - 1;
 		
@@ -319,12 +354,15 @@ var zoomVis = function (opts) {
 			var config = modeConfig.mode.config;
 			var ftrVal = config.ftrVals[nodeId];
 			
+			var ftrRange = config.maxVal - config.minVal;
+			var middleVal = config.minVal + ftrRange/2;
+			
 			var color;
-			if (ftrVal > 0) {
-				var val = ftrVal / config.maxVal;
+			if (ftrVal >= middleVal) {
+				var val = 2*(ftrVal - middleVal) / ftrRange;
 				color = 'hsla(' + VIZ_NODE_FTR_POS_COLOR + ',' + Math.floor(100*sizeFromProb(val)) + '%, 55%, 1)';
 			} else {
-				var val = ftrVal / config.minVal;
+				var val = 2*(middleVal - ftrVal) / ftrRange;
 				color = 'hsla(' + VIZ_NODE_FTR_NEG_COLOR + ',' + Math.floor(100*sizeFromProb(val)) + '%, 55%, 1)';
 			}
 						
@@ -406,7 +444,6 @@ var zoomVis = function (opts) {
 		fetchPastStates(stateId, height);
 		
 		drawNodes();
-//		drawNode(stateId);
 	}
 	
 	//===============================================================
@@ -525,12 +562,7 @@ var zoomVis = function (opts) {
 		}
 		
 		if (event.deltaY > 0) {		// scroll out
-			if (zoomLevel > minZoomLevel + 1) {
-				zoomLevel--;
-			} else zoomLevel = minZoomLevel;
-			if (currentHeight < maxHeight) {
-				currentHeight += ZOOM_STEP;
-			} else currentHeight = maxHeight;
+			currentHeight = Math.min(maxHeight, currentHeight + heightStep);
 			
 			if (currentLevel < levelHeights.length - 1) {
 				if (currentHeight >= levelHeights[currentLevel + 1]) {
@@ -539,13 +571,7 @@ var zoomVis = function (opts) {
 			}
 			
 		} else {					// scroll in
-			if (zoomLevel < maxZoomLevel) {
-				zoomLevel++;
-			}
-			//currentHeight++;
-			if (currentHeight > minHeight) {
-				currentHeight -= ZOOM_STEP;
-			} else currentHeight = minHeight;
+			currentHeight = Math.max(minHeight, currentHeight - heightStep);
 			
 			if (currentLevel > 0) {
 				if (currentHeight < levelHeights[currentLevel]) {
@@ -553,9 +579,12 @@ var zoomVis = function (opts) {
 				}
 			}
 		}
+				
+		var zoom = cy.zoom();
+		var factor = 1.01;
+		var newZoom = zoom * (event.deltaY > 0 ? 1 / factor : factor);
 		
-		cy.zoom( {level: Math.abs(currentHeight - maxHeight) * 0.5 + cy.minZoom(), renderedPosition: { x: event.clientX, y: event.clientY } });
-		console.log(zoomLevel);
+		setZoom(newZoom);
 		
 		// TODO remove this
 		currentHeightContainer.innerHTML = hierarchy[currentLevel].height;	// set height text
@@ -598,13 +627,17 @@ var zoomVis = function (opts) {
 		motionBlur: false,
 		fit: false,
 		userZoomingEnabled: false,
-		panningEnabled: true,
-		userPanningEnabled: true,
 		boxSelectionEnabled: false,
 		wheelSensitivity: 0.01,
-		minZoom: 1e-15,
+		
+		// moving the viewport
+		panningEnabled: true,
+		userPanningEnabled: true,
+		
+//		minZoom: 1e-15,
 		// maxZoom: 1e50
-		minZoom: 0.50
+		minZoom: minCyZoom,
+		maxZoom: maxCyZoom
 	});
 	
 	cy.on('click', 'node', function (event) {
@@ -630,7 +663,7 @@ var zoomVis = function (opts) {
 		
 		var x = event.cyPosition.x;
 		var y = event.cyPosition.y;
-		console.log("mouseover position: " + x + ", " + y);
+		console.log("mouseover position: " + x + ", " + y + ', pan: ' + JSON.stringify(cy.pan()));
 		/*
 		$( ".selector" ).tooltip({
 			track: true,
@@ -699,10 +732,19 @@ var zoomVis = function (opts) {
 		},
 		
 		setZoom: function (value) {
-			// TODO
-			console.log('Zoom min: ' + cy.minZoom() + ', max: ' + cy.maxZoom() + ', value: ' + value);
-//			cy.zoom({level: Math.abs(value - maxHeight) * 0.5 + cy.minZoom()});
-			cy.zoom({level: cy.minZoom() + value});
+			setZoom(value, false);
+		},
+		
+		getZoom: function () {
+			return cy.zoom();
+		},
+		
+		getMinZoom: function () {
+			return minCyZoom;
+		},
+		
+		getMaxZoom: function () {
+			return maxCyZoom;
 		},
 		
 		getCurrentHeight: function () {
@@ -724,6 +766,10 @@ var zoomVis = function (opts) {
 		// callbacks
 		onStateSelected: function (callback) {
 			callbacks.stateSelected = callback;
+		},
+		
+		onZoomChanged: function (callback) {
+			callbacks.zoomChanged = callback;
 		}
 	}
 	

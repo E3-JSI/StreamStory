@@ -268,9 +268,9 @@ var UI;
 		});
 	
 		$("#slider_item_div").slider({
-			value: 0.7,
-			min: 0,
-			max: 1,
+			value: viz.getZoom(),
+			min: viz.getMinZoom(),
+			max: viz.getMaxZoom(),
 			step: 0.01,
 			animate:"slow",
 			orientation: "vertical",
@@ -278,6 +278,10 @@ var UI;
 			slide: function (event, ui) {
 				viz.setZoom(ui.value);
 			}
+		});
+		
+		viz.onZoomChanged(function (zoom) {
+			$("#slider_item_div").slider('value', zoom);
 		});
 		
 		$('#chk-show-fut').change(function () {

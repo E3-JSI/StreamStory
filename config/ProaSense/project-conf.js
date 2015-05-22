@@ -8,7 +8,7 @@ exports.hmcParams = {
 	},
 	clustering: {
 		type: 'dpmeans',
-		lambda: 0.7,
+		lambda: 0.6,
 		minClusts: 10,
 		rndseed: 1,
 		sample: 1,
@@ -34,7 +34,6 @@ exports.getFieldConfig = function () {
 		{name: 'hook_load', type: 'numeric', interpolator: 'previous', inModel: false, isRaw: true},
 		{name: 'hoist_press_A', type: 'numeric', interpolator: 'linear', inModel: false, isRaw: true},
 		{name: 'hoist_press_B', type: 'numeric', interpolator: 'linear', inModel: false, isRaw: true},
-		{name: 'ibop', type: 'numeric', interpolator: 'previous', inModel: true, isRaw: true},
 		{name: 'oil_temp_gearbox', type: 'numeric', interpolator: 'linear', inModel: true, isRaw: true},
 		{name: 'oil_temp_swivel', type: 'numeric', interpolator: 'linear', inModel: true, isRaw: true},
 		{name: 'pressure_gearbox', type: 'numeric', interpolator: 'linear', inModel: true, isRaw: true},
@@ -50,7 +49,8 @@ exports.getFieldConfig = function () {
 	];
 	var contrFields = [
 	    {name: 'rpm', type: 'numeric', interpolator: 'previous', inModel: true, isRaw: true},
-	    {name: 'torque', type: 'numeric', interpolator: 'linear', inModel: true, isRaw: true}
+	    {name: 'torque', type: 'numeric', interpolator: 'linear', inModel: true, isRaw: true},
+	    {name: 'ibop', type: 'numeric', interpolator: 'previous', inModel: true, isRaw: true}
 	];
 	
 	return { obsFields: obsFields, contrFields: contrFields }

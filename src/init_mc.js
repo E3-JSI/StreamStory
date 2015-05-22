@@ -50,7 +50,7 @@ exports.init = function (opts) {
 		var store = base.store(config.STREAM_STORY_STORE);
 		var recs = store.recs;
 		
-		var recs = store.recs.trunc(500000);	// TODO remove
+//		var recs = store.recs.trunc(10000);	// TODO remove
 		
 		log.info('Creating a model out of %d records ...', recs.length);
 	
