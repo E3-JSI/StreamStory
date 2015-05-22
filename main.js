@@ -25,7 +25,7 @@ function initServices(opts) {
 		services.init(hmc, base);
 		
 		if (REPLAY_DATA)
-			require('./src/replay.js').replayHmc(hmc);
+			require('./src/replay.js').replayHmc(hmc, base);
 	} catch (e) {
 		log.error(e, 'Failed to create services!');
 		utils.exit(base);
@@ -37,7 +37,7 @@ try {
 		config.createDb(function (e, result) {
 			if (e != null) {
 				log.error(e, 'Failed to create base object, exiting application ...');
-				exit();
+				utils.exit();
 			}
 			initServices({base: result.base, endsBatchV: result.endsBatchV});
 		});

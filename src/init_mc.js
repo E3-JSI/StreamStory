@@ -1,18 +1,18 @@
 var fs = require('fs');
+var config = require('../config.js');
 var analytics = qm.analytics;
 
-global.FNAME_MC = CTMC_DIR_NAME + 'ctmc-1.bin';
 
 function getFieldConfig(fldDescV) {
 	log.info('Creating feature space params ...');
 	
-	var config = [];
+	var fldConfig = [];
 	fldDescV.forEach(function (field) {
 		if (!field.inModel) return;
 		
 		var ftrSpaceField = {
 			type: field.type,
-			source: {store: CTMC_STORE_NAME},
+			source: {store: config.STREAM_STORY_STORE},
 			field: field.name,
 			normalize: field.type == 'numeric'
 		};
@@ -20,10 +20,10 @@ function getFieldConfig(fldDescV) {
 		if (log.info())
 			log.info('Feature space field: %s', JSON.stringify(ftrSpaceField));
 		
-		config.push(ftrSpaceField);
+		fldConfig.push(ftrSpaceField);
 	});
 	
-	return config;
+	return fldConfig;
 }
 
 function genFtrSpaceParams(fieldConfig) {
@@ -39,15 +39,15 @@ exports.init = function (opts) {
 	
 	var base = opts.base;
 	
-	if (fs.existsSync(FNAME_MC)) {
-		log.info('Loading HMC model ...');
-		var result = analytics.HierarchMarkov({base: base, hmcFile: FNAME_MC});	
+	if (fs.existsSync(config.STREAM_STORY_FNAME)) {
+		log.info('Loading StreamStory ...');
+		var result = analytics.HierarchMarkov({base: base, hmcFile: config.STREAM_STORY_FNAME});	
 		return result;
 	} 
 	else {
-		log.info('Initializing Markov chain ...');
+		log.info('Initializing StreamStory ...');
 	
-		var store = base.store(CTMC_STORE_NAME);
+		var store = base.store(config.STREAM_STORY_STORE);
 		var recs = store.recs;
 		
 		var recs = store.recs.trunc(500000);	// TODO remove
@@ -63,11 +63,15 @@ exports.init = function (opts) {
 			contrFields: ftrSpaceParams.contrFields
 		});
 		
+		if (recs.length == 0) {
+			log.warn('Tried to initialize StreamStory with 0 records!');
+			return result;
+		}
 		
 		var opts = {recSet: recs, timeField: CTMC_TIME_FIELD_ID, batchEndV: opts.endsBatchV};
 		result.fit(opts);
 		
-		result.save(FNAME_MC);
+		result.save(config.STREAM_STORY_FNAME);
 		
 		log.info('Done!');
 		

@@ -10,7 +10,7 @@ var zoomVis = function (opts) {
 	var VIZ_NODE_COLOR = 360;
 	var VIZ_NODE_FTR_NEG_COLOR = 360;
 	var VIZ_NODE_FTR_POS_COLOR = 117;
-	var CURRENT_NODE_COLOR = 'red';
+	var CURRENT_NODE_COLOR = 'green';
 	var DEFAULT_BORDER_COLOR = 'black';
 	
 	var DEFAULT_BORDER_WIDTH = 5;
@@ -116,8 +116,8 @@ var zoomVis = function (opts) {
 	//===============================================================
 	
 	function clear() {
-		var drawnNodes = cy.nodes("");
-		var drawnEdges = cy.edges("");
+		var drawnNodes = cy.nodes('');
+		var drawnEdges = cy.edges('');
 		
 		cy.remove(drawnNodes);
 		cy.remove(drawnEdges);
@@ -153,6 +153,22 @@ var zoomVis = function (opts) {
 			
 			console.log('ID: ' + levelInfo[i].id + ', name: ' + levelInfo[i].name);
 			
+			var style = {
+				'background-color': DEFAULT_NODE_COLOR,
+				'width': nodeSize,
+				'height': nodeSize,
+				'border-width': DEFAULT_BORDER_WIDTH,
+				'border-color': DEFAULT_BORDER_COLOR,
+				'label': levelInfo[i].name != null ? levelInfo[i].name : levelInfo[i].id,
+				'z-index': 1							
+			}
+			
+			if (node.isTarget) {
+				style['background-image'] = 'img/target.png';
+				style['background-image-opacity'] = .2;
+				style['background-fit'] = 'cover';
+			}
+			
 			nodesArray.push({
 				group: 'nodes',
 				data: {
@@ -163,15 +179,7 @@ var zoomVis = function (opts) {
 					x: position[0],
 					y: position[1]
 				},
-				css: {
-					'background-color': DEFAULT_NODE_COLOR,
-					'width': nodeSize,
-					'height': nodeSize,
-					'border-width': DEFAULT_BORDER_WIDTH,
-					'border-color': DEFAULT_BORDER_COLOR,
-					'label': levelInfo[i].name != null ? levelInfo[i].name : levelInfo[i].id,
-					'z-index': 1							
-				},
+				css: style,
 				selected: false,
 				selctable: true,
 				locked: true
@@ -298,7 +306,7 @@ var zoomVis = function (opts) {
 			node.css('border-color', CURRENT_NODE_COLOR);
 		}
 		if (nodeId in modeConfig.past) {
-			node.css('border-color', 'brown');
+			node.css('border-color', 'red');
 		}
 		
 		if (modeConfig.mode.type == MODE_PROBS) {
@@ -549,13 +557,14 @@ var zoomVis = function (opts) {
 		cy.zoom( {level: Math.abs(currentHeight - maxHeight) * 0.5 + cy.minZoom(), renderedPosition: { x: event.clientX, y: event.clientY } });
 		console.log(zoomLevel);
 		
-		currentHeightContainer.innerHTML = hierarchy[currentLevel].height;				//set height text
+		// TODO remove this
+		currentHeightContainer.innerHTML = hierarchy[currentLevel].height;	// set height text
 	}
 	
 	// adding mouse wheel listener
-	if(visContainer.onwheel !== undefined) {
+	if (visContainer.onwheel !== undefined) {
 		visContainer.addEventListener('wheel', onMouseWheel)
-	} else if(visContainer.onmousewheel !== undefined) {
+	} else if (visContainer.onmousewheel !== undefined) {
 		visContainer.addEventListener('mousewheel', onMouseWheel)
 	} else {
 		// unsupported browser

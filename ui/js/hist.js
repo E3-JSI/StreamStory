@@ -4,6 +4,9 @@ function drawHistogram(opts) {
 	var min = data.binStartV[0];
 	var max = data.binStartV[data.binStartV.length-1];
 	
+	var pointInterval = (max - min) / data.binStartV.length;
+	var start = min - pointInterval / 2;
+	
 	var chart = new Highcharts.Chart({
 	    chart: {
 	        renderTo: opts.container,
@@ -33,7 +36,9 @@ function drawHistogram(opts) {
 	        }
 	    },
 	    series: [{
-	        data: data.probs
+	        data: data.probs,
+	        pointStart: start,
+	        pointInterval: pointInterval
 	    }]
 	});
 }

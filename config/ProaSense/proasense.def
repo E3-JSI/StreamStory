@@ -1,7 +1,34 @@
 [
 	// MHWirth
 	{
+		"name" : "hoist_press_A",
+		"fields" : [
+			{"name": "time_ms", "type": "uint64"},
+			{"name": "time", "type": "datetime"},
+			{"name": "value", "type": "float"}
+		],
+		"window": 10000
+	},
+	{
+		"name" : "hoist_press_B",
+		"fields" : [
+			{"name": "time_ms", "type": "uint64"},
+			{"name": "time", "type": "datetime"},
+			{"name": "value", "type": "float"}
+		],
+		"window": 10000
+	},
+	{
 		"name" : "hook_load",
+		"fields" : [
+			{"name": "time_ms", "type": "uint64"},
+			{"name": "time", "type": "datetime"},
+			{"name": "value", "type": "float"}
+		],
+		"window": 10000
+	},
+	{
+		"name" : "ibop",
 		"fields" : [
 			{"name": "time_ms", "type": "uint64"},
 			{"name": "time", "type": "datetime"},
@@ -128,10 +155,42 @@
 	},
 	
 	{
-		"name" : "drilling",
+		"name" : "enriched",
 		"fields" : [
 			{"name": "time", "type": "datetime"},
 			{"name": "hook_load", "type": "float"},
+			{"name": "hoist_press_A", "type": "float"},
+			{"name": "hoist_press_B", "type": "float"},
+			{"name": "ibop", "type": "float"},
+			// friction
+			{"name": "oil_temp_gearbox", "type": "float"},
+			{"name": "oil_temp_swivel", "type": "float"},
+			{"name": "pressure_gearbox", "type": "float"},
+			{"name": "rpm", "type": "float"},
+			{"name": "temp_ambient", "type": "float"},
+			{"name": "torque", "type": "float"},
+			{"name": "wob", "type": "float"},
+			// setpoint
+			{"name": "mru_pos", "type": "float"},
+			{"name": "mru_vel", "type": "float"},
+			{"name": "ram_pos_measured", "type": "float"},
+			{"name": "ram_pos_setpoint", "type": "float"},
+			{"name": "ram_vel_measured", "type": "float"},
+			{"name": "ram_vel_setpoint", "type": "float"},
+			// computed fields
+			{"name": "friction_coeff", "type": "float", "null": true}
+		],
+		"window": 10000
+	},
+	
+	{
+		"name" : "oa_in",
+		"fields" : [
+			{"name": "time", "type": "datetime"},
+			{"name": "hook_load", "type": "float"},
+			{"name": "hoist_press_A", "type": "float"},
+			{"name": "hoist_press_B", "type": "float"},
+			{"name": "ibop", "type": "float"},
 			// friction
 			{"name": "oil_temp_gearbox", "type": "float"},
 			{"name": "oil_temp_swivel", "type": "float"},
@@ -157,6 +216,9 @@
 		"fields" : [
 			{"name": "time", "type": "datetime"},
 			{"name": "hook_load", "type": "float"},
+			{"name": "hoist_press_A", "type": "float"},
+			{"name": "hoist_press_B", "type": "float"},
+			{"name": "ibop", "type": "float"},
 			// friction
 			{"name": "oil_temp_gearbox", "type": "float"},
 			{"name": "oil_temp_swivel", "type": "float"},

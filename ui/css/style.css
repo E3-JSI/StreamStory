@@ -1,12 +1,9 @@
-/*#vis_toggler {
-	position: absolute;
-	margin-right: 0px;
-	right: 20px;
-	top: 50px;
-}*/
-
 .nopadding {
    padding: 0 !important;
+}
+
+#vis-wrapper {
+	height: calc(100% - 40px);
 }
 
 #vis_container {
@@ -25,11 +22,12 @@
 }
 
 #parent_container {
-	height: 800px;
+	height: 600px;
 }
 
 #div-messages {
-	min-height: 400px;
+	height: 400px;
+	overflow: auto;
 }
 
 #div-config {
@@ -76,6 +74,30 @@
 #threshold_slider {
 	position: relative;
   	bottom: 20px;
-  	left: 170px;
+  	left: 18%;
   	width: 80%;
+}
+
+.popover-centered {
+	width: 600px !important;
+	max-width: none !important;
+	height: 370px !important;
+	position: absolute !important;
+	top: 50% !important;
+	left: 50% !important;
+	margin-top: -300px !important;
+	margin-left: -185px !important;
+}
+
+.btn-close {
+	cursor: pointer !important;
+	position: absolute !important;
+	right: 5px !important;
+	top: 5px !important;
+	z-index: 10 !important;
+}
+
+.clickable:HOVER {
+	cursor: pointer;
+	background-color: lightgray;
 }

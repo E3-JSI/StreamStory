@@ -1,7 +1,7 @@
 //var broker = require('./broker.js');
 var config = require('../config.js');
-
-var QM_IN_STORE = 'drilling';
+var utils = require('./utils.js')
+var broker = require('./broker.js');
 
 var base;
 
@@ -69,74 +69,144 @@ function initStreamAggregates() {
 	var merger = new qm.StreamAggr(base, {
 		type: 'stmerger',
 		name: 'drilling_merger',
-		outStore: QM_IN_STORE,
+		outStore: config.ENRICHER_OUT_STORE,
 		createStore: false,
 		timestamp: 'time',
 		fields: mergerFields
 	});
 	
-	base.store(QM_IN_STORE).addStreamAggr({
+	base.store(config.OA_IN_STORE).addStreamAggr({
 		type: 'resampler',
 		name: 'drilling_resampler',
-		outStore: CTMC_STORE_NAME,
+		outStore: config.STREAM_STORY_STORE,
 		createStore: false,
 		timestamp: 'time',
-		interval: 1000,
+		interval: 1000*20,	// 20 secs
 		fields: resamplerFields
 	});
 }
 
 function initTriggers() {
-	var inStore = base.store(QM_IN_STORE);
-	var resampledStore = base.store(CTMC_STORE_NAME);
+	var enricherOutStore = base.store(config.ENRICHER_OUT_STORE);
+	var oaInStore = base.store(config.OA_IN_STORE);
+	var streamStoryStore = base.store(config.STREAM_STORY_STORE);
 
 	// add processing triggers
 	log.info('Initilizing triggers ...');
 	
 	// print progress
-	inStore.addTrigger({
+	{
+//		var fname = '/media/lstopar/hdd/data/Aker/new_data/joined/drilling-2015.csv';
+//		var outFields = [
+//		    'hoist_press_A',
+//		    'hoist_press_B',
+//		    'hook_load',
+//		    'ibop',
+//		    'oil_temp_gearbox',
+//		    'oil_temp_swivel',
+//		    'pressure_gearbox',
+//		    'rpm',
+//		    'temp_ambient',
+//		    'torque',
+//		    'wob',
+//		    'mru_pos',
+//		    'mru_vel',
+//		    'ram_pos_measured',
+//		    'ram_pos_setpoint',
+//		    'ram_vel_measured',
+//		    'ram_vel_setpoint'
+//		]
+//		
+//		
+//		var fout = new qm.fs.FOut(fname, false);
+//		
+//		var line = 'time,';
+//		for (var i = 0; i < outFields.length; i++) {
+//			line += outFields[i];
+//			if (i < outFields.length-1)
+//				line += ',';
+//		}
+//		fout.writeLine(line);
+//		fout.flush();
+//		fout.close();
+		
+		enricherOutStore.addTrigger({
+			onAdd: function (val) {
+				var len = enricherOutStore.length;
+				
+				if (len % 10000 == 0 && log.debug()) 
+					log.debug('Store %s has %d records ...', enricherOutStore.name, len);
+				
+				if (log.trace())
+					log.trace('%s: %s', enricherOutStore.name, JSON.stringify(val));
+				
+//				fout = new qm.fs.FOut(fname, true);
+//				line = '' + val.time.getTime() + ',';
+//				for (var i = 0; i < outFields.length; i++) {
+//					line += val[outFields[i]];
+//					if (i < outFields.length-1)
+//						line += ',';
+//				}
+//				
+//				fout.writeLine(line);
+//				fout.flush();
+//				fout.close();
+				
+				var outVal = val.toJSON(false, false, false);
+				
+				if (config.useBroker) {
+					outVal.time = val.time.getTime();
+					broker.send(broker.ENRICHED_DATA_PRODUCER_TOPIC, JSON.stringify(outVal));
+				} else {
+					outVal.time = utils.dateToQmDate(val.time);
+					oaInStore.add(outVal);
+				}
+			}
+		});
+	}
+	
+	oaInStore.addTrigger({
 		onAdd: function (val) {
-			var len = inStore.length;
+			var len = oaInStore.length;
 			
 			if (len % 10000 == 0 && log.debug()) 
-				log.debug('Store %s has %d records ...', QM_IN_STORE, len);
-			
+				log.debug('Store %s has %d records ...', oaInStore.name, len);
 			if (log.trace())
-				log.trace('%s: %s', QM_IN_STORE, JSON.stringify(val));
+				log.trace('%s: %s', oaInStore.name, JSON.stringify(val));
 		}
 	});
 	
-	resampledStore.addTrigger({
+	streamStoryStore.addTrigger({
 		onAdd: function (val) {
 			try {
-			var len = resampledStore.length;
-			
-			if (len % 10000 == 0 && log.debug()) 
-				log.debug('Store %s has %d records ...', CTMC_STORE_NAME, len);
-			
-			if (log.trace())
-				log.trace('%s: %s', QM_IN_STORE, JSON.stringify(val));
-			
-			if (isNaN(val.friction_coeff)) {
-				log.fatal('Resampled store: the friction coefficient is NaN! Store size: %d, friction store size: %d', resampledStore.length, inStore.length);
-				process.exit(2);
-			}
-			
-			if (len == 186998) {
-				log.info('Reached critical point!');	// TODO remove this
-			}
-			
-//			if (log.debug())	// TODO remove
-//	        	log.debug('Coefficient: %d', val.friction_coeff);
-//			
-//			if (resampledStore.length == 5000) {	// TODO remove
-//				log.info('saving store ...');
-//				resampledStore.recs.saveCSV({fname: 'store_trig.csv'}, function (e) {
-//					if (e != null)
-//						log.error(e, 'Failed to save store!');
-//					log.info('Done!');
-//				});
-//			}
+				var len = streamStoryStore.length;
+				
+				if (len % 10000 == 0 && log.debug()) 
+					log.debug('Store %s has %d records ...', streamStoryStore.name, len);
+				
+				if (log.trace())
+					log.trace('%s: %s', streamStoryStore.name, JSON.stringify(val));
+				
+				if (isNaN(val.friction_coeff)) {
+					log.fatal('Resampled store: the friction coefficient is NaN! Store size: %d, friction store size: %d', streamStoryStore.length, inStore.length);
+					process.exit(2);
+				}
+				
+				if (len == 186998) {
+					log.info('Reached critical point!');	// TODO remove this
+				}
+				
+	//			if (log.debug())	// TODO remove
+	//	        	log.debug('Coefficient: %d', val.friction_coeff);
+	//			
+	//			if (resampledStore.length == 5000) {	// TODO remove
+	//				log.info('saving store ...');
+	//				resampledStore.recs.saveCSV({fname: 'store_trig.csv'}, function (e) {
+	//					if (e != null)
+	//						log.error(e, 'Failed to save store!');
+	//					log.info('Done!');
+	//				});
+	//			}
 			} catch (e) {
 				log.error(e, 'Exception while printing statistics of the resampled store!');
 			}
@@ -158,7 +228,7 @@ function initTriggers() {
 		}
 		
 		// compute the friction coefficient
-		inStore.addTrigger({
+		oaInStore.addTrigger({
 			onAdd: function (val) {
 				try {
 					var prevVal = buff.length > 0 ? buff[0] : null;
@@ -186,11 +256,11 @@ function initTriggers() {
 			        coeff = Math.max(0, Math.min(1, coeff));
 			        			        
 			        if (!isFinite(coeff)) {
-			        	log.fatal('Friction store: the friction coefficient is infinite! Store size: %d', resampledStore.length);
+			        	log.fatal('Friction store: the friction coefficient is infinite! Store size: %d', streamStoryStore.length);
 			        	process.exit(2);
 			        }
 			        if (isNaN(coeff)) {
-			        	log.fatal('Friction store: the friction coefficient is NaN! Store size: %d', resampledStore.length);
+			        	log.fatal('Friction store: the friction coefficient is NaN! Store size: %d', streamStoryStore.length);
 						process.exit(2);
 			        }
 			        
@@ -215,13 +285,9 @@ function initTriggers() {
 		var stop = 0;
 		var sum = 0;
 		
-		inStore.addTrigger({
+		oaInStore.addTrigger({
 			onAdd: function (val) {
 				try {
-					if (Math.random() < 1e-3) {
-						broker.sendPrediction();
-					}
-					
 					if (val.rpm > 100) {
 						if (!isDrilling) {
 							start = val.time;

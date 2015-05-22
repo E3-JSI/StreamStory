@@ -47,14 +47,29 @@ global.qm = require(QM_MODULE_PATH);
 global.REPLAY_DATA = config.replay;
 
 //================================================================
-// MARKOV CHAIN
+// STREAM STORY
 //================================================================
-global.CTMC_STORE_NAME = projectConfig.hmcStoreName;
-global.CTMC_DIR_NAME = config.models.dir;
+exports.STREAM_STORY_STORE = projectConfig.hmcStoreName;
+exports.STREAM_STORY_FNAME = config.models.SSFName;
+
+//global.CTMC_DIR_NAME = config.models.dir;
 global.CTMC_TIME_FIELD_ID = projectConfig.hmcTimeField;
 global.CTMC_SEQUENCE_CATEGORY = projectConfig.hmcSequenceCategory;
 
 global.CTMC_PARAMS = projectConfig.hmcParams;
+
+//================================================================
+// INTEGRATION
+//================================================================
+
+exports.useBroker = config.integration == 'broker';
+
+//================================================================
+// STORES
+//================================================================
+
+exports.ENRICHER_OUT_STORE = 'enriched';
+exports.OA_IN_STORE = 'oa_in';
 
 //================================================================
 // PRINT

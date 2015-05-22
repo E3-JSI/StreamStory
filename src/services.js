@@ -4,6 +4,7 @@ var path = require('path');
 var WebSocket = require('ws');
 var utils = require('./utils.js');
 var broker = require('./broker.js');
+var config = require('../config.js');
 
 var UI_PATH = '/';
 var API_PATH = '/api';
@@ -20,9 +21,14 @@ var base;
 function addRawMeasurement(val) {
 	base.store(val.store).add({
 		time_ms: val.timestamp,
-		time: new Date(val.timestamp).toISOString().split('Z')[0],
+		time: utils.dateToQmDate(new Date(val.timestamp)),
 		value: val.value
 	});
+}
+
+function addCepAnnotated(val) {
+	val.time = new Date(val.time).toISOString().split('Z')[0];
+	base.store(config.OA_IN_STORE).add(val);
 }
 
 var WebSocketWrapper = function () {
@@ -187,7 +193,7 @@ function initRestApi() {
 		// multilevel analysis
 		app.get(API_PATH + '/save', function (req, resp) {
 			try {
-				hmc.save(FNAME_MC);
+				hmc.save(config.STREAM_STORY_FNAME);
 				resp.status(204);
 			} catch (e) {
 				log.error(e, 'Failed to save visualization model!');
@@ -205,7 +211,7 @@ function initRestApi() {
 		var printInterval = 10000;
 		
 		app.post(API_PATH + '/push', function (req, resp) {
-			var batch = utils.convertRawExternal(req.body);
+			var batch = req.body;
 						
 			for (var i = 0; i < batch.length; i++) {
 				var instance = batch[i];
@@ -213,10 +219,50 @@ function initRestApi() {
 				if (++imported % printInterval == 0 && log.trace())
 					log.trace('Imported %d values ...', imported);
 				
-				addRawMeasurement(instance);
+				addRawMeasurement({
+					store: utils.getStoreId(instance.sensorId),
+					timestamp: instance.timestamp,
+					value: instance.value
+				});
 			}
 			
 			resp.status(204);
+			resp.end();
+		});
+	}
+	
+	{
+		log.info('Registering set parameter service ...');
+		
+		app.post(API_PATH + '/param', function (req, resp) {
+			try {
+				var paramName = req.body.paramName;
+				var paramVal = parseFloat(req.body.paramVal);
+				
+				var paramObj = {};
+				paramObj[paramName] = paramVal;
+				
+				hmc.getModel().setParams(paramObj);
+				resp.status(204);	// no content
+			} catch (e) {
+				log.error(e, 'Failed to query MHWirth multilevel visualization!');
+				resp.status(500);	// internal server error
+			}
+			
+			resp.end();
+		});
+		
+		app.get(API_PATH + '/param', function (req, resp) {
+			try {
+				var param = req.query.paramName;
+				
+				var val = hmc.getModel().getParam(param);
+				resp.send({ parameter: param, value: val });
+			} catch (e) {
+				log.error(e, 'Failed to query MHWirth multilevel visualization!');
+				resp.status(500);	// internal server error
+			}
+			
 			resp.end();
 		});
 	}
@@ -383,12 +429,12 @@ function initRestApi() {
 		app.get(API_PATH + '/details', function (req, resp) {
 			try {
 				var stateId = parseInt(req.query.stateId);
-				var level = parseFloat(req.query.level);
+				var height = parseFloat(req.query.level);
 				
 				if (log.debug())
 					log.debug('Fetching details for state: %d', stateId);
 				
-				resp.send(hmc.stateDetails(stateId, level));
+				resp.send(hmc.stateDetails(stateId, height));
 			} catch (e) {
 				log.error(e, 'Failed to query state details!');
 				resp.status(500);	// internal server error
@@ -447,6 +493,28 @@ function initRestApi() {
 				resp.status(204);	// no content
 			} catch (e) {
 				log.error(e, 'Failed to set name of state %d to %s', stateId, stateNm);
+				resp.status(500);	// internal server error
+			}
+			
+			resp.end();
+		});
+		
+		app.post(API_PATH + '/setTarget', function (req, resp) {
+			var stateId, isTarget, height;
+			
+			try {
+				stateId = parseInt(req.body.id);
+				height = parseFloat(req.body.height);
+				isTarget = JSON.parse(req.body.isTarget);
+				
+				if (log.info()) 
+					log.info('Setting target state: %d, isTarget: ' + isTarget, stateId);
+				
+				
+				hmc.getModel().setTarget(stateId, height, isTarget);
+				resp.status(204);	// no content
+			} catch (e) {
+				log.error(e, 'Failed to set target state %d!', stateId);
 				resp.status(500);	// internal server error
 			}
 			
@@ -537,6 +605,22 @@ function initHandlers() {
 		
 		ws.distribute(msg);
 	});
+	
+	hmc.onPrediction(function (currState, targetState, prob, probV, timeV) {
+		var msg = JSON.stringify({
+			type: 'statePrediction',
+			content: {
+				currState: currState,
+				targetState: targetState,
+				probability: prob,
+				pdf: {
+					probV: probV,
+					timeV: timeV
+				}
+			}
+		});
+		ws.distribute(msg);
+	});
 }
 
 function initBroker() {
@@ -545,16 +629,17 @@ function initBroker() {
 	var imported = 0;
 	var printInterval = 100;
 	
-	broker.onMessage(function (msg) {
-//		log.info('Received kafka message: %s', JSON.stringify(msg));
-		
+	broker.onMessage(function (msg) {		
 		if (msg.type == 'raw') {
 			if (++imported % printInterval == 0 && log.trace())
 				log.trace('Imported %d values ...', imported);
 			
 			addRawMeasurement(msg.payload);
 		} else if (msg.type == 'cep') {
-			log.info('received CEP message: %s', JSON.stringify(msg));
+			if (log.trace())
+				log.trace('received CEP message: %s', JSON.stringify(msg));
+			
+			addCepAnnotated(msg.payload);
 		} else {
 			log.warn('Invalid message type: %s', msg.type);
 		}
@@ -570,7 +655,7 @@ exports.init = function (hmc1, base1) {
 	// serve static files at www
 	initServer();
 	initHandlers();
-//	initBroker();
+	initBroker();
 	
 	log.info('Done!');
 };

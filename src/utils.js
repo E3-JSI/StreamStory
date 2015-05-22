@@ -26,7 +26,8 @@ for (var key in sensorToStoreIdMap) {
 }
 
 function getStoreId(sensorId) {
-	return sensorToStoreIdMap[sensorId];
+	return sensorId;	// TODO this is just for testing
+//	return sensorToStoreIdMap[sensorId];	for the deployment
 }
 
 function getSensorId(storeId) {
@@ -81,5 +82,9 @@ module.exports = {
 	closeBase: closeBase,
 	exit: exit,
 
-	getStoreId: getStoreId
+	getStoreId: getStoreId,
+	
+	dateToQmDate: function (date) {
+		return date.toISOString().split('Z')[0];
+	}
 }

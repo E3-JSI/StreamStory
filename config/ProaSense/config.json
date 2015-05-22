@@ -11,7 +11,7 @@
 		"jsFile": "./config/ProaSense/project-conf.js"
 	},
 	"models": {
-		"dir": "/media/lstopar/hdd/project-data/proasense-models/"
+		"SSFName": "/media/lstopar/hdd/project-data/proasense-models/StreamStory.bin"
 	},
 	"server": {
 		"port": 8888,
@@ -20,5 +20,6 @@
 	"log": {
 		"level": "debug"
 	},
+	"integration": "http",
 	"replay": false
 }
