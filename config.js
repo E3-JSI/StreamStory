@@ -64,6 +64,7 @@ log.info('Working directory: %s', process.cwd());
 log.info('Configuration file: %s', QM_CONF_FILE);
 log.info('Module path: %s', QM_MODULE_PATH);
 log.info('Read only: ' + QM_READ_ONLY);
+log.info('Model directory: %s', CTMC_DIR_NAME);
 log.info('================================================');
 
 log.info('Configured!');
