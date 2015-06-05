@@ -3,20 +3,21 @@ var utils = require('./utils.js');
 var config = require('../config.js');
 
 
-var BROKER_URL = '127.0.0.1';
+//var BROKER_URL = '';
 var ZOOKEPER_PORT = 2181;
-var PRODUCER_PORT = 9092;
-//var BROKER_URL = '89.216.116.44';
+var PRODUCER_PORT = 8090;
+var BROKER_URL = '89.216.116.44';
+//var BROKER_URL = 'kalmar39.fzi.de';
 //var CONSUMER_PORT = 2181;
 //var PRODUCER_PORT = 9092;
 
 var topics = {
-	// input topics
-	RAW_DATA_CONSUMER_TOPIC: 'si.ijs.request.internal.raw',
-	CEP_DATA_CONSUMER_TOPIC: 'si.ijs.request.internal.cep',
+	// input topics 
+	RAW_DATA_CONSUMER_TOPIC: 'si.ijs.internal.raw',
+	CEP_DATA_CONSUMER_TOPIC: 'si.ijs.internal.cep',
 	// output topics
-	ENRICHED_DATA_PRODUCER_TOPIC: 'si.ijs.response.internal.enriched',
-	PREDICTION_PRODUCER_TOPIC: 'si.ijs.response.internal.predictions'
+	ENRICHED_DATA_PRODUCER_TOPIC: 'si.ijs.internal.enriched',
+	PREDICTION_PRODUCER_TOPIC: 'si.ijs.internal.oa_output'
 };
 
 // comsumer port: 2181
@@ -53,30 +54,30 @@ function initConsumer() {
 	{
 		var nReceivedRaw = 0;
 		var nReceivedCep = 0;
+		var PRINT_INTERVAL = 10000;
 		
 		consumer.on('message', function (msg) {
-			var topic = msg.topic;
-			var payload = JSON.parse(msg.value);
-			
-			if (msgCallback != null) {
-				if (topic == topics.RAW_DATA_CONSUMER_TOPIC) {
-					if (nReceivedRaw++ % 100000 == 0 && log.debug())
-						log.debug('Received %d raw data messages ...', nReceivedRaw);
-					
-					var value = {
-						timestamp: payload.timestamp,
-						store: utils.getStoreId(payload.sensorId),
-						value: payload.value
+			try {
+				var topic = msg.topic;
+				var payload = JSON.parse(msg.value);
+				
+				if (msgCallback != null) {
+					if (topic == topics.RAW_DATA_CONSUMER_TOPIC) {
+						if (nReceivedRaw++ % PRINT_INTERVAL == 0 && log.debug())
+							log.debug('Received %d raw data messages ...', nReceivedRaw);
+						
+						msgCallback({type: 'raw', payload: payload})
+					} else if (topic == topics.CEP_DATA_CONSUMER_TOPIC) {
+						if (nReceivedCep++ % 100 == 0 && log.debug())
+							log.debug('Received %d CEP messages %s ...', nReceivedCep, JSON.stringify(payload));
+						
+						msgCallback({type: 'cep', payload: payload});
+					} else {
+						log.warn('Invalid topic: %s', topic);
 					}
-					msgCallback({type: 'raw', payload: value})
-				} else if (topic == topics.CEP_DATA_CONSUMER_TOPIC) {
-					if (nReceivedCep++ % 10000 == 0 && log.debug())
-						log.debug('Received %d CEP messages ...', nReceivedCep);
-					
-					msgCallback({type: 'cep', payload: payload});
-				} else {
-					log.warn('Invalid topic: %s', topic);
 				}
+			} catch (e) {
+				log.error(e, 'Exception while reveiving message!');
 			}
 		});
 	}
@@ -119,11 +120,13 @@ exports.init = function () {
 	initClient();
 }
 
+var nsent = 0;
+
 exports.send = function (topic, msg) {
 	if (!config.useBroker) return;
 	
-	if (log.trace())
-		log.trace('Sending message: %s', msg);
+	if (nsent++ % 1000 == 0 && log.debug())
+		log.debug('Sent %d messages: %s',nsent, JSON.stringify(msg));
 	
 	producer.send([{ topic: topic, messages: [msg] }], function (e, data) {
 		if (e != null) {

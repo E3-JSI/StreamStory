@@ -1,9 +1,10 @@
 var http = require('http');
 var config = require('../config.js');
+var fields = require('../fields.js');
 
-const PUSH_DELAY = 1000;
+const PUSH_DELAY = 100;
 
-log.info('Reading all records from store: %s', config.STREAM_STORY_STORE);
+log.info('Reading all records from store: %s', fields.STREAM_STORY_STORE);
 
 //log.debug('Sorting %d records ...', recs.length);
 //recs.sortByField('time', true);
@@ -11,8 +12,8 @@ log.info('Reading all records from store: %s', config.STREAM_STORY_STORE);
 exports.replayHmc = function (hmc, base) {
 	log.info('Replaying records ...');
 	
-	var store = base.store(config.STREAM_STORY_STORE);
-	var recs = store.recs;
+	var store = base.store(fields.STREAM_STORY_STORE);
+	var recs = store.allRecords;
 	
 	var currIdx = 0;
 	

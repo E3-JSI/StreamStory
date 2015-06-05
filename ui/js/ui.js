@@ -349,7 +349,7 @@ var UI;
 				data: { stateId: stateId, level: height },
 				success: function (data) {
 					// clear the panel
-					$('#state-name').html('');
+					$('#txt-name').val('');
 					$('#state-id').html('');
 					$('#chk-target').removeAttr('checked');
 					$('#div-attrs').html('');
@@ -359,7 +359,7 @@ var UI;
 					
 					// populate
 					// basic info
-					if (data.name != null) $('#state-name').html(data.name);
+					if (data.name != null) $('#txt-name').val(data.name);
 					$('#state-id').html(data.id);
 					if (data.isTarget != null && data.isTarget)
 						$('#chk-target').attr('checked', 'checked');

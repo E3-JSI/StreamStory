@@ -1,9 +1,39 @@
 //var broker = require('./broker.js');
 var config = require('../config.js');
+var fields = require('../fields.js');
 var utils = require('./utils.js')
 var broker = require('./broker.js');
+var math = require('mathjs');
 
 var base;
+var hmc;
+
+function initStreamAggregates() {
+	// create fields
+	var flds = fields.getStreamAggrFields();
+	var mergerFields = [];
+	var resamplerFields = [];
+	
+	// create stream aggregates
+	var merger = new qm.StreamAggr(base, {
+		type: 'stmerger',
+		name: 'drilling_merger',
+		outStore: fields.ENRICHED_STORE,
+		createStore: false,
+		timestamp: 'time',
+		fields: flds.merger
+	});
+	
+	base.store(fields.OA_IN_STORE).addStreamAggr({
+		type: 'resampler',
+		name: 'drilling_resampler',
+		outStore: fields.STREAM_STORY_STORE,
+		createStore: false,
+		timestamp: 'time',
+		interval: 1000*20,	// 20 secs
+		fields: flds.resampler
+	});
+}
 
 function initGC() {
 	// add triggers for garbagge collection
@@ -27,7 +57,7 @@ function initGC() {
 					if (len >= 100000) {
 						if (log.debug())
 							log.debug('Starting garbagge collector ...');
-						base.gc();
+						base.garbageCollect();
 					}
 				}
 			});
@@ -37,59 +67,120 @@ function initGC() {
 	log.info('GC initialized!');
 }
 
-function initStreamAggregates() {
-	// create fields
-	var mergerFields = [];
-	var resamplerFields = [];
+function calcFriction() {
+	var oaInStore = base.store(fields.OA_IN_STORE);
 	
-	var fldConfig = config.getFieldConfig();
-	var flds = fldConfig.obsFields;
-	flds = flds.concat(fldConfig.contrFields);
+	// compute the friction coefficient
+	var buffSize = 1;
+	var buff = [];
+			
+	const Q = 600000; //gearbox
+//	const L = 8.634e-08;
+//	const a = 0.418;
 	
-	for (var i = 0; i < flds.length; i++) {
-		var field = flds[i];
-				
-		if (field.isRaw) {
-			mergerFields.push({
-				source: field.name,
-				inField: 'value',
-				outField: field.name,
-				interpolation: field.interpolator,
-				timestamp: 'time'
-			});
-		}
-		
-		resamplerFields.push({
-			name: field.name,
-			interpolator: field.interpolator
-		});
+	// variables needed to calculate the friction
+	var energyGain = 0;
+	var energyLostSwivel = 0;
+	var energyLostGearbox = 0;
+	var tempGainSwivel = 0;
+	var tempGainGearbox = 0;
+	var coeffSwivel = 0;
+	var coeffGearbox = 0;
+	
+	var swivelCoeffs = [];
+	var gearboxCoeffs = [];
+	
+	function shouldCalcFric() {
+		log.warn('Implement shouldCalcFric!');
+		return false;
 	}
 	
-	// create stream aggregates
-	var merger = new qm.StreamAggr(base, {
-		type: 'stmerger',
-		name: 'drilling_merger',
-		outStore: config.ENRICHER_OUT_STORE,
-		createStore: false,
-		timestamp: 'time',
-		fields: mergerFields
-	});
+	function shouldStopCalc() {
+		log.warn('Implement shouldStopCalc!');
+		return false;
+	}
 	
-	base.store(config.OA_IN_STORE).addStreamAggr({
-		type: 'resampler',
-		name: 'drilling_resampler',
-		outStore: config.STREAM_STORY_STORE,
-		createStore: false,
-		timestamp: 'time',
-		interval: 1000*20,	// 20 secs
-		fields: resamplerFields
+	function resetVars() {
+		log.warn('Implement resetVars!');
+	}
+	
+	function checkFinite(c1, c2) {
+		return !isNaN(c1) && isNaN(c2) && isFinite(c1) && isFinite(c2);
+	}
+	
+	function addToBuff(val) {
+		buff.unshift(val);
+		while (buff.length > buffSize) buff.pop();
+	}
+	
+	// compute the friction coefficient
+	oaInStore.addTrigger({
+		onAdd: function (val) {
+			val.coeff_swivel = coeffSwivel;
+			val.coeff_gearbox = coeffGearbox;
+			return;	// TODO
+			
+			try {
+				// start / stop calculation
+				if (!shouldCalcFric()) return;
+				
+				var prevVal = buff.length > 0 ? buff[0] : null;
+				addToBuff(val);
+				
+				if (prevVal == null) return;
+				
+				// variables
+				var time = val.time.getTime() / 1000.0;
+				var prevTime = prevVal.time.getTime() / 1000.0;
+				
+				var rpm = val.rpm / 60.0;
+				var torque = val.torque * 1000;
+				
+				var tempSwivel = val.oil_temp_swivel;
+				var tempGearbox = val.oil_temp_gearbox;
+				var tempAmbient = val.temp_ambient;
+				
+				// calculation
+				var dt = time - prevVal;
+				var deltaSwivelT = tempSwivel - tempAmbient;
+				var deltaGearboxT = tempGearbox - tempAmbient;
+				
+				var inputPower = 2*Math.PI*torque*rpm;
+				
+				energyLostSwivel += getSwivelEnergyLoss(tempSwivel, deltaSwivelT, dt);
+				energyLostGearbox += getGearboxEnergyLoss(tempGearbox, deltaGearboxT, dt);
+				
+				energyGain += inputPower * dt;
+				
+				tempGainSwivel += deltaSwivelT;
+				tempGainGearbox += deltaGearboxT;
+				
+				coeffSwivel = (tempGainSwivel*Q + energyLostSwivel) / energyGain;
+				coeffGearbox = (tempGainGearbox*Q + energyLostGearbox) / energyGain;
+				
+				if (!checkFinite(coeffSwivel, coeffGearbox)) {
+		        	log.fatal('One of the coefficients is infinite: (swivel:' + coeffSwivel + ', gearbox: ' + coeffGearbox + ')!');
+					utils.exit(3);
+		        }
+				
+				val.coeff_swivel = coeffSwivel;
+				val.coeff_gearbox = coeffGearbox;
+				
+				if (shouldStopCalc()) {
+					resetVars();
+					return;
+				}
+			} catch (e) {
+				log.error(e, 'Exception while computing the friction coefficient!');
+			}
+		}
 	});
 }
 
 function initTriggers() {
-	var enricherOutStore = base.store(config.ENRICHER_OUT_STORE);
-	var oaInStore = base.store(config.OA_IN_STORE);
-	var streamStoryStore = base.store(config.STREAM_STORY_STORE);
+	var enricherOutStore = base.store(fields.ENRICHED_STORE);
+	var oaInStore = base.store(fields.OA_IN_STORE);
+	var streamStoryStore = base.store(fields.STREAM_STORY_STORE);
 
 	// add processing triggers
 	log.info('Initilizing triggers ...');
@@ -155,11 +246,12 @@ function initTriggers() {
 				var outVal = val.toJSON(false, false, false);
 				
 				if (config.useBroker) {
+//					log.info('Sending: %s', JSON.stringify(outVal));
 					outVal.time = val.time.getTime();
 					broker.send(broker.ENRICHED_DATA_PRODUCER_TOPIC, JSON.stringify(outVal));
 				} else {
 					outVal.time = utils.dateToQmDate(val.time);
-					oaInStore.add(outVal);
+					oaInStore.push(outVal);
 				}
 			}
 		});
@@ -176,169 +268,112 @@ function initTriggers() {
 		}
 	});
 	
-	streamStoryStore.addTrigger({
-		onAdd: function (val) {
-			try {
-				var len = streamStoryStore.length;
-				
-				if (len % 10000 == 0 && log.debug()) 
-					log.debug('Store %s has %d records ...', streamStoryStore.name, len);
-				
-				if (log.trace())
-					log.trace('%s: %s', streamStoryStore.name, JSON.stringify(val));
-				
-				if (isNaN(val.friction_coeff)) {
-					log.fatal('Resampled store: the friction coefficient is NaN! Store size: %d, friction store size: %d', streamStoryStore.length, inStore.length);
-					process.exit(2);
-				}
-				
-				if (len == 186998) {
-					log.info('Reached critical point!');	// TODO remove this
-				}
-				
-	//			if (log.debug())	// TODO remove
-	//	        	log.debug('Coefficient: %d', val.friction_coeff);
-	//			
-	//			if (resampledStore.length == 5000) {	// TODO remove
-	//				log.info('saving store ...');
-	//				resampledStore.recs.saveCSV({fname: 'store_trig.csv'}, function (e) {
-	//					if (e != null)
-	//						log.error(e, 'Failed to save store!');
-	//					log.info('Done!');
-	//				});
-	//			}
-			} catch (e) {
-				log.error(e, 'Exception while printing statistics of the resampled store!');
-			}
-		}
-	});
-	
-	// compute the friction coefficient
-	{
-		var buffSize = 1;
-		var buff = [];
-				
-		const Q = 600000; //gearbox
-		const L = 8.634e-08;
-		const a = 0.418;
+	{	// StreamStory
+		var nProcessed = 0;
 		
-		function addToBuff(val) {
-			buff.unshift(val);
-			while (buff.length > buffSize) buff.pop();
-		}
-		
-		// compute the friction coefficient
-		oaInStore.addTrigger({
+		streamStoryStore.addTrigger({
 			onAdd: function (val) {
+				nProcessed++;
 				try {
-					var prevVal = buff.length > 0 ? buff[0] : null;
+					var len = streamStoryStore.length;
 					
-					if (prevVal == null) {
-						val.friction_coeff = 0;
-						addToBuff(val);
-						return;
+					if (len % 10000 == 0 && log.debug()) 
+						log.debug('Store %s has %d records ...', streamStoryStore.name, len);
+					
+					if (log.trace())
+						log.trace('%s: %s', streamStoryStore.name, JSON.stringify(val));
+					
+					if (isNaN(val.coeff_swivel) || isNaN(val.coeff_gearbox)) {
+						log.fatal('Resampled store: the friction coefficient is NaN! Store size: %d, friction store size: %d', streamStoryStore.length, oaInStore.length);
+						process.exit(2);
 					}
 					
-					//friction coefficient	
-					var diff_time = val.time.getTime() - prevVal.time.getTime();
-			        var diff_oil_temp_swivel = val.oil_temp_swivel - prevVal.oil_temp_swivel;
-			        var avg_oil_temp_swivel = (val.oil_temp_swivel + prevVal.oil_temp_swivel) / 2; 
-			        var avg_rpm = (val.rpm + prevVal.rpm) / (2 * 60000);
-			        var avg_torque = (val.torque + prevVal.torque) * 1000 / 2;
-			        var avg_temp_ambient = (val.temp_ambient + prevVal.temp_ambient) / 2;
-			        var P = 2 * Math.PI * avg_torque * avg_rpm;
-			        
-			        var coeff = ((diff_oil_temp_swivel/diff_time + (avg_oil_temp_swivel - avg_temp_ambient - a)*L)*Q) / P;
-			        
-			        // fixes because the coefficient can be infinity and
-			        // we'll get NaNs later on
-			        // TODO is this OK?
-			        coeff = Math.max(0, Math.min(1, coeff));
-			        			        
-			        if (!isFinite(coeff)) {
-			        	log.fatal('Friction store: the friction coefficient is infinite! Store size: %d', streamStoryStore.length);
-			        	process.exit(2);
-			        }
-			        if (isNaN(coeff)) {
-			        	log.fatal('Friction store: the friction coefficient is NaN! Store size: %d', streamStoryStore.length);
-						process.exit(2);
-			        }
-			        
-					val.friction_coeff = coeff;
-					addToBuff(val);					
+					if (hmc != null) {
+						if (log.debug() && nProcessed % 1000 == 0)
+							log.debug('StreamStory processed %d values ...', nProcessed);
+						hmc.update(val);
+					}
+					
+					//==========================================================
+					// TODO remove
+					broker.send(broker.PREDICTION_PRODUCER_TOPIC, {type: 'anomaly', content: 'Hello world'});
+					//==========================================================
 				} catch (e) {
-					log.error(e, 'Exception while computing the friction coefficient!');
+					log.error(e, 'Exception while printing statistics of the resampled store!');
 				}
 			}
 		});
 	}
+	
+	calcFriction();
 	
 	// get the friction coefficient on a specific interval and 
 	// write them to a special store
-	{
-		var coeffStore = base.store('friction');
-		
-		var drillingSamples = 0;
-		var isDrilling = false;
-		var coefficients = [];
-		var start = 0;
-		var stop = 0;
-		var sum = 0;
-		
-		oaInStore.addTrigger({
-			onAdd: function (val) {
-				try {
-					if (val.rpm > 100) {
-						if (!isDrilling) {
-							start = val.time;
-							isDrilling = true;
-						}
-						drillingSamples++;
-						coefficients.push(val.friction_coeff);
-					}
-					else {
-						stop = val.time;
-						if (start > 0 && stop - start > 2000000) {
-							for (var x = 0; x < coefficients.length; x ++) {
-								sum += coefficients[x];  
-							}
-							var avg = sum / coefficients.length;
-							
-							var sum_std_dev = 0;
-							for (var y = 0; y < coefficients.length; y++) {
-								sum_std_dev += (coefficients[y] - avg)*(coefficients[y] - avg);
-							}
-							var std_dev = Math.sqrt(sum_std_dev / coefficients.lenght);
-							
-							coeffStore.add({
-								start: start,
-								end: stop,
-								samples: drillingSamples,
-								friction_coeff: avg,
-								std_dev: std_dev
-							});							
-						}
-
-						drillingSamples = 0;
-						start = 0;
-						stop = 0;
-						sum = 0;
-						coefficients = [];
-					}				
-				} catch (e) {
-					log.error(e, 'Exception while computing the friction coefficient!');
-				}
-			}
-		});
-	}
+//	{
+//		var coeffStore = base.store('friction');
+//		
+//		var drillingSamples = 0;
+//		var isDrilling = false;
+//		var coefficients = [];
+//		var start = 0;
+//		var stop = 0;
+//		var sum = 0;
+//		
+//		oaInStore.addTrigger({
+//			onAdd: function (val) {
+//				try {
+//					if (val.rpm > 100) {
+//						if (!isDrilling) {
+//							start = val.time;
+//							isDrilling = true;
+//						}
+//						drillingSamples++;
+//						coefficients.push(val.friction_coeff);
+//					}
+//					else {
+//						stop = val.time;
+//						if (start > 0 && stop - start > 2000000) {
+//							for (var x = 0; x < coefficients.length; x ++) {
+//								sum += coefficients[x];  
+//							}
+//							var avg = sum / coefficients.length;
+//							
+//							var sum_std_dev = 0;
+//							for (var y = 0; y < coefficients.length; y++) {
+//								sum_std_dev += (coefficients[y] - avg)*(coefficients[y] - avg);
+//							}
+//							var std_dev = Math.sqrt(sum_std_dev / coefficients.lenght);
+//							
+//							coeffStore.push({
+//								start: start,
+//								end: stop,
+//								samples: drillingSamples,
+//								friction_coeff: avg,
+//								std_dev: std_dev
+//							});							
+//						}
+//
+//						drillingSamples = 0;
+//						start = 0;
+//						stop = 0;
+//						sum = 0;
+//						coefficients = [];
+//					}				
+//				} catch (e) {
+//					log.error(e, 'Exception while computing the friction coefficient!');
+//				}
+//			}
+//		});
+//	}
 	
 	log.info('Triggers initialized!');
 }
 
 exports.init = function (opts) {
 	base = opts.base;
+	hmc = opts.hmc;
 	
 	initTriggers();
-	initStreamAggregates(opts.fieldConfig);
+	initStreamAggregates();
 	initGC();
 };

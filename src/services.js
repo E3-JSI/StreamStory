@@ -5,6 +5,7 @@ var WebSocket = require('ws');
 var utils = require('./utils.js');
 var broker = require('./broker.js');
 var config = require('../config.js');
+var fields = require('../fields.js');
 
 var UI_PATH = '/';
 var API_PATH = '/api';
@@ -18,17 +19,60 @@ var ws;
 var hmc;
 var base;
 
+var counts = {};
+var totalCounts = 0;
+
+var lastCepTime = 0;
+var lastRawTime = 0;
+
 function addRawMeasurement(val) {
-	base.store(val.store).add({
-		time_ms: val.timestamp,
-		time: utils.dateToQmDate(new Date(val.timestamp)),
-		value: val.value
-	});
+//	try {
+		var storeNm = utils.storeFromTag(val.variable_type);
+		
+		if (!(storeNm in counts))
+			counts[storeNm] = 0;
+		counts[storeNm]++;
+		if (totalCounts++ % 10000 == 0)
+			log.debug('Counts: %s', JSON.stringify(counts));
+		
+		if (val.variable_timestamp < lastRawTime)
+			throw 'Invalid time!';
+		
+		var insertVal = {
+			time_ms: val.variable_timestamp,
+			time: utils.dateToQmDate(new Date(val.variable_timestamp)),
+			value: val.value
+		};
+	
+		base.store(storeNm).push(insertVal);
+		lastRawTime = val.variable_timestamp;
+//	} catch (e) {
+//		log.error(e, 'Failed to insert raw measurement into store %s: %s, %s!', storeNm, JSON.stringify(val), JSON.stringify(insertVal));
+//	}
 }
 
 function addCepAnnotated(val) {
-	val.time = new Date(val.time).toISOString().split('Z')[0];
-	base.store(config.OA_IN_STORE).add(val);
+//	var internal = {};
+//	
+	val.time = utils.dateToQmDate(new Date(val.time));
+//	for (var key in val) {
+//		if (key == 'time') continue;
+//		internal[utils.storeFromTag(key)] = val[key];
+//	}
+	
+//	if (log.debug()) 
+//		log.debug('Storing CEP message: %s', JSON.stringify(val));
+	if (isNaN(val.time)) {
+		log.warn('CEP sent NaN time %s', JSON.stringify(val));
+	}
+	else if (val.time <= lastCepTime) {
+		log.warn('CEP sent invalid time %d', val.time);
+		return;
+	}
+	
+	base.store(fields.OA_IN_STORE).push(val);
+	
+	lastCepTime = val.time;
 }
 
 var WebSocketWrapper = function () {
@@ -135,7 +179,7 @@ var WebSocketWrapper = function () {
 		} catch (e) {
 			log.error(e, 'Failed to ping!');
 		}
-		setTimeout(ping, PING_INTERVAL);
+		setTimeout(ping, config.PING_INTERVAL);
 	}
 	ping();
 	
@@ -219,11 +263,7 @@ function initRestApi() {
 				if (++imported % printInterval == 0 && log.trace())
 					log.trace('Imported %d values ...', imported);
 				
-				addRawMeasurement({
-					store: utils.getStoreId(instance.sensorId),
-					timestamp: instance.timestamp,
-					value: instance.value
-				});
+				addRawMeasurement(instance);
 			}
 			
 			resp.status(204);
@@ -553,14 +593,14 @@ function initServer() {
 	initRestApi();
 	
 	// serve static directories on the UI path
-	app.use(UI_PATH, express.static(path.join(__dirname, WWW_DIR)));
+	app.use(UI_PATH, express.static(path.join(__dirname, config.WWW_DIR)));
 	
 	// start server
-	server = app.listen(SERVER_PORT);
+	server = app.listen(config.SERVER_PORT);
 	ws = WebSocketWrapper();
 	
 	log.info('================================================');
-	log.info('Server running at http://localhost:%d', SERVER_PORT);
+	log.info('Server running at http://localhost:%d', config.SERVER_PORT);
 	log.info('Serving UI at: %s', UI_PATH);
 	log.info('Serving API at: %s', API_PATH);
 	log.info('Web socket listening at: %s', WS_PATH);
@@ -569,6 +609,8 @@ function initServer() {
 
 function initHandlers() {
 	log.info('Registering state changed callback ...');
+	
+	if (hmc == null) return;
 	
 	hmc.onStateChanged(function (states) {
 		if (log.debug())
@@ -619,6 +661,7 @@ function initHandlers() {
 				}
 			}
 		});
+		broker.send(broker.PREDICTION_PRODUCER_TOPIC, msg);
 		ws.distribute(msg);
 	});
 }

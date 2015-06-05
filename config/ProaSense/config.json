@@ -1,14 +1,9 @@
 {
 	"qminer": {
-		"confFile": "config/ProaSense/qm-lstopar.conf",
-		"schemaFile": "config/ProaSense/proasense.def",
+		"dbPath": "/media/lstopar/hdd/project-data/proasense-db/",
 		"path": "../qminer/",
-		"createDb": false,
-		"readOnly": true,
+		"mode": "createClean",
 		"createPipeline": true
-	},
-	"config": {
-		"jsFile": "./config/ProaSense/project-conf.js"
 	},
 	"models": {
 		"SSFName": "/media/lstopar/hdd/project-data/proasense-models/StreamStory.bin"

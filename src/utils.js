@@ -19,7 +19,28 @@ var sensorToStoreIdMap = {
 	'MHWirth.Rig.MRUVelocity': 'mru_vel'
 };
 
+var tagToStoreIdMap = {
+	1000693: 'rpm',
+	1000700: 'torque',
+	1002311: 'hook_load',
+	1000695: 'oil_temp_gearbox',
+	1000692: 'pressure_gearbox',
+	1000696: 'oil_temp_swivel',
+	1002123: 'wob',
+	1033619: 'temp_ambient',
+	1002113: 'ram_pos_setpoint',
+	1002115: 'ram_pos_measured',
+	1002114: 'ram_vel_setpoint',
+	1002116: 'ram_vel_measured',
+	1002127: 'mru_pos',
+	1002128: 'mru_vel',
+	1012923: 'ibop',
+	1001378: 'hoist_press_A',
+	1001379: 'hoist_press_B'
+};
+
 var storeToSensorIdMap = {};
+var storeToTagMap = {};
 
 for (var key in sensorToStoreIdMap) {
 	storeToSensorIdMap[sensorToStoreIdMap[key]] = key;
@@ -61,7 +82,7 @@ function closeBase(base) {
 	
 	if (base != null) {
 		log.info('Closing ...');
-		base.gc();
+		base.garbageCollect()
 		base.close();
 	}
 	
@@ -83,6 +104,14 @@ module.exports = {
 	exit: exit,
 
 	getStoreId: getStoreId,
+	
+	storeFromTag: function (tag) {
+		return tagToStoreIdMap[tag];
+	},
+	
+	tagFromStore: function (store) {
+		return storeToTagMap[store];
+	},
 	
 	dateToQmDate: function (date) {
 		return date.toISOString().split('Z')[0];
