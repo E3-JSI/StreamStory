@@ -20,6 +20,8 @@
     "bunyan": "^1.2.3",
     "bunyan-format": "^0.1.1",
     "express": "^4.10.6",
+    "kafka-node": "^0.2.24",
+    "snappy": "^3.0.8",
     "ws": "^0.6.5"
   }
 }

@@ -1,14 +1,14 @@
 {
 	"qminer": {
-		"confFile": "config/qm-fish.conf",
-		"schemaFile": "config/fish.def",
-		"path": "/home/lstopar/workspace/JSI/qminer-port/qminer/",
+		"confFile": "config/fish/qm-fish.conf",
+		"schemaFile": "config/fish/fish.def",
+		"path": "/home/lstopar/workspace/JSI/projects/ProaSense/code/cpp/qminer/",
 		"createDb": true,
 		"readOnly": false,
 		"createPipeline": false
 	},
 	"config": {
-		"jsFile": "/home/lstopar/workspace/JSI/projects/ProaSense/code/node/config/fish/project-conf.js"
+		"jsFile": "./config/fish/project-conf.js"
 	},
 	"models": {
 		"dir": "/media/lstopar/hdd/project-data/fish-models/",
@@ -19,7 +19,7 @@
 		"pingInterval": 10000
 	},
 	"log": {
-		"level": "trace"
+		"level": "debug"
 	},
 	"replay": false
 }

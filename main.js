@@ -1,50 +1,69 @@
+var fs = require('fs');
 var config = require('./config.js');
 var services = require('./src/services.js');
-var mc = require('./src/init_mc.js');
 var pipeline = require('./src/pipeline.js');
 var utils = require('./src/utils.js');
+var fields = require('./fields.js');
+var analytics = qm.analytics;
 
-// global functions and variables
-var base = null;
-
-function initServices(opts) {
-	base = opts.base;
-	
-	try {
-		global.QM_FIELDS = config.getFieldConfig(base);
+function initStreamStory(base) {
+	if (fs.existsSync(config.STREAM_STORY_FNAME)) {
+		log.info('Loading StreamStory ...');
+		var result = analytics.HierarchMarkov({base: base, hmcFile: config.STREAM_STORY_FNAME});	
+		return result;
+	} 
+	else {
+		log.info('Initializing StreamStory ...');
+		log.info('Reading store %s', fields.STREAM_STORY_STORE);
 		
-		var hmc = mc.init({
+		var store = base.store(fields.STREAM_STORY_STORE);
+		var recs = store.allRecords;
+		
+		if (recs.length == 0) {
+			log.warn('Tried to initialize StreamStory with 0 records!');
+			return null;
+		}
+		
+//		var recs = store.recs.trunc(10000);	// TODO remove
+		
+		log.info('Creating a model out of %d records ...', recs.length);
+	
+		var ftrSpaceParams = fields.getStreamStoryFtrSpaceFields();
+		
+		var result = analytics.HierarchMarkov({
 			base: base,
-			endsBatchV: opts.endsBatchV
+			hmcConfig: config.STREAM_STORY_PARAMS,
+			obsFields: ftrSpaceParams.obsFields,
+			contrFields: ftrSpaceParams.contrFields
 		});
-	
-		if (QM_CREATE_PIPELINE) pipeline.init(base);
 		
-		services.init(hmc, base);
+		var opts = {recSet: recs, timeField: fields.SS_TIME_FIELD, batchEndV: opts.endsBatchV};
+		result.fit(opts);
 		
-		if (REPLAY_DATA)
-			require('./src/replay.js').replayHmc(hmc);
-	} catch (e) {
-		log.error(e, 'Failed to create services!');
-		exit();
+		result.save(config.STREAM_STORY_FNAME);
+		
+		log.info('Done!');
+		
+		return result;
 	}
 }
 
 try {
-	if (QM_CREATE_DB) {
-		config.createDb(function (e, base) {
-			if (e != null) {
-				log.error(e, 'Failed to create base object, exiting application ...');
-				exit();
-			}
-			initServices({base: base});
-		});
-	} else {	
-		// load qminer DB
-		log.info('Opening base with configuration: %s ...', QM_CONF_FILE);
-		var base = qm.open(QM_CONF_FILE, QM_READ_ONLY);
-		initServices({base: base});
-	}
+	var base = new qm.Base({
+		dbPath: config.QM_DATABASE_PATH,
+		schema: fields.getQmSchema(),
+		mode: config.QM_DATABASE_MODE
+	});
+	
+	var hmc = initStreamStory(base);
+
+	if (config.QM_CREATE_PIPELINE) 
+		pipeline.init({ base: base, hmc: hmc });
+	
+	services.init(hmc, base);
+	
+	if (config.REPLAY_DATA)
+		require('./src/replay.js').replayHmc(hmc, base);
 } catch (e) {
 	log.error(e, 'Exception in main!');
 	utils.exit(base);

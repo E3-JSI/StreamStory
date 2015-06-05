@@ -1,19 +1,32 @@
 function drawHistogram(opts) {
 	var data = opts.data;
 	
-	var categories = [];
-	for (var i = 0; i < data.binStartV.length; i++) {
-		categories.push('<= ' + data.binStartV[i].toFixed(1));
-	}
-	categories.push('> ' + data.binStartV[data.binStartV.length - 1].toFixed(1));
+	var min = data.binStartV[0];
+	var max = data.binStartV[data.binStartV.length-1];
+	
+	var pointInterval = (max - min) / data.binStartV.length;
+	var start = min - pointInterval / 2;
 	
 	var chart = new Highcharts.Chart({
 	    chart: {
 	        renderTo: opts.container,
 	        type: 'column'
 	    },
+	    title: {
+        	floating: true,
+        	text: ''
+        },
+        legend: {
+        	enabled: false
+        },
 	    xAxis: {
-	        categories: categories
+	    	min: min,
+	    	max: max
+	    },
+	    yAxis: {
+	    	title: {
+	    		enabled: false
+	    	}
 	    },
 	    plotOptions: {
 	        column: {
@@ -23,7 +36,9 @@ function drawHistogram(opts) {
 	        }
 	    },
 	    series: [{
-	        data: data.probs
+	        data: data.probs,
+	        pointStart: start,
+	        pointInterval: pointInterval
 	    }]
 	});
 }

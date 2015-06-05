@@ -1,69 +1,42 @@
-html, body {
-	height:100%;
+.nopadding {
+   padding: 0 !important;
 }
 
-#container-center {
-	margin-left: auto;
-	margin-right: auto;
-	width: 70%;
-	height: 100%;
-}
-
-#container-left {
-	float: left;
-	width: calc(100% - 400px);
-}
-
-#container-right {
-	float: right;
-	width: 378px;
-	padding: 0px;
-	padding-left: 20px;
-}
-
-#container-msg {
-	width: 100%;
-	height: 300px;
-}
-
-#container-config {
-	width: 100%;
-	height: calc(800px + 20px + 200px - 20px - 300px);
-}
-
-#container-details {
-	width: calc(100% - 10px);
-	min-height: 200px;
-	padding: 5px;
-}
-
-.container {
-	border: solid;
-	border-width: 1px;
-	border-radius: 5px;
-	overflow-y: auto;
-	margin-top: 20px;
-}
-
-.clickable:hover {
-	background-color: 'gray' !important;
-	cursor: pointer;
-}
-
-#parent_container {
-	position: relative;
-	height: 800px;
-	width: 100%;
-}
-
-#slider_container {
-	height: 100%;
-	width: 40px;
+#vis-wrapper {
+	height: calc(100% - 40px);
 }
 
 #vis_container {
 	height: 100%;
 	width: 100%;
+}
+
+#content-options {
+	top: 32px !important;
+	right: -95px !important;
+	left: auto !important;
+}
+
+#container-details {
+	min-height: 200px;
+}
+
+#parent_container {
+	height: 600px;
+}
+
+#div-messages {
+	height: 400px;
+	overflow: auto;
+}
+
+#div-config {
+	min-height: 600px;
+}
+
+#slider_container {
+	height: 100%;
+	width: 40px;
 }
 
 #slider_container {
@@ -99,45 +72,32 @@ html, body {
 }
 
 #threshold_slider {
-	position: absolute;
-	bottom: 10px;
-	width: 80%;
-	margin-left: 40px;
+	position: relative;
+  	bottom: 20px;
+  	left: 18%;
+  	width: 80%;
 }
 
-#toggler {
-	background-image: url("../img/expand.png");
-	background-repeat: no-repeat;
-	background-position: center;
-	height: 20px;
+.popover-centered {
+	width: 600px !important;
+	max-width: none !important;
+	height: 370px !important;
+	position: absolute !important;
+	top: 50% !important;
+	left: 50% !important;
+	margin-top: -300px !important;
+	margin-left: -185px !important;
 }
 
-#vis_toggler {
-	position: absolute;
-	margin-right: 0px;
-	right: 10px;
-	top: 10px;
-	background-image: url("../img/settings_wheel.png");
-	background-repeat: no-repeat;
-	background-position: center;
-	background-size: 100% 100%;
-	width: 24px;
-	height: 24px;
+.btn-close {
+	cursor: pointer !important;
+	position: absolute !important;
+	right: 5px !important;
+	top: 5px !important;
+	z-index: 10 !important;
 }
 
-#vis_options {
-	position: absolute;
-	left: 52%;
-	top: 75px;
-	width: 30%;
-	z-index: 102;
-	border: solid;
-	border-width: 1px;
-	border-radius: 5px;
-	background-color: #ffffff;
-	padding: 5px;
-}
-
-.options-button {
-	margin-bottom: 3px;
+.clickable:HOVER {
+	cursor: pointer;
+	background-color: lightgray;
 }

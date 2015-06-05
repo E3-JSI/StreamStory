@@ -3,6 +3,9 @@ var bodyParser = require("body-parser");
 var path = require('path');
 var WebSocket = require('ws');
 var utils = require('./utils.js');
+var broker = require('./broker.js');
+var config = require('../config.js');
+var fields = require('../fields.js');
 
 var UI_PATH = '/';
 var API_PATH = '/api';
@@ -15,6 +18,62 @@ var ws;
 
 var hmc;
 var base;
+
+var counts = {};
+var totalCounts = 0;
+
+var lastCepTime = 0;
+var lastRawTime = 0;
+
+function addRawMeasurement(val) {
+//	try {
+		var storeNm = utils.storeFromTag(val.variable_type);
+		
+		if (!(storeNm in counts))
+			counts[storeNm] = 0;
+		counts[storeNm]++;
+		if (totalCounts++ % 10000 == 0)
+			log.debug('Counts: %s', JSON.stringify(counts));
+		
+		if (val.variable_timestamp < lastRawTime)
+			throw 'Invalid time!';
+		
+		var insertVal = {
+			time_ms: val.variable_timestamp,
+			time: utils.dateToQmDate(new Date(val.variable_timestamp)),
+			value: val.value
+		};
+	
+		base.store(storeNm).push(insertVal);
+		lastRawTime = val.variable_timestamp;
+//	} catch (e) {
+//		log.error(e, 'Failed to insert raw measurement into store %s: %s, %s!', storeNm, JSON.stringify(val), JSON.stringify(insertVal));
+//	}
+}
+
+function addCepAnnotated(val) {
+//	var internal = {};
+//	
+	val.time = utils.dateToQmDate(new Date(val.time));
+//	for (var key in val) {
+//		if (key == 'time') continue;
+//		internal[utils.storeFromTag(key)] = val[key];
+//	}
+	
+//	if (log.debug()) 
+//		log.debug('Storing CEP message: %s', JSON.stringify(val));
+	if (isNaN(val.time)) {
+		log.warn('CEP sent NaN time %s', JSON.stringify(val));
+	}
+	else if (val.time <= lastCepTime) {
+		log.warn('CEP sent invalid time %d', val.time);
+		return;
+	}
+	
+	base.store(fields.OA_IN_STORE).push(val);
+	
+	lastCepTime = val.time;
+}
 
 var WebSocketWrapper = function () {
 	log.info('Creating web socket server ...');
@@ -120,7 +179,7 @@ var WebSocketWrapper = function () {
 		} catch (e) {
 			log.error(e, 'Failed to ping!');
 		}
-		setTimeout(ping, PING_INTERVAL);
+		setTimeout(ping, config.PING_INTERVAL);
 	}
 	ping();
 	
@@ -178,7 +237,7 @@ function initRestApi() {
 		// multilevel analysis
 		app.get(API_PATH + '/save', function (req, resp) {
 			try {
-				hmc.save(FNAME_MC, FNAME_FSPACE);
+				hmc.save(config.STREAM_STORY_FNAME);
 				resp.status(204);
 			} catch (e) {
 				log.error(e, 'Failed to save visualization model!');
@@ -197,25 +256,53 @@ function initRestApi() {
 		
 		app.post(API_PATH + '/push', function (req, resp) {
 			var batch = req.body;
-			
+						
 			for (var i = 0; i < batch.length; i++) {
 				var instance = batch[i];
-				
-				var store = instance.store;
-				var timestamp = instance.timestamp;
-				var value = instance.value;
 				
 				if (++imported % printInterval == 0 && log.trace())
 					log.trace('Imported %d values ...', imported);
 				
-				base.store(store).add({
-					time_ms: timestamp,
-					time: new Date(timestamp).toISOString().split('Z')[0],
-					value: value
-				});
+				addRawMeasurement(instance);
 			}
 			
 			resp.status(204);
+			resp.end();
+		});
+	}
+	
+	{
+		log.info('Registering set parameter service ...');
+		
+		app.post(API_PATH + '/param', function (req, resp) {
+			try {
+				var paramName = req.body.paramName;
+				var paramVal = parseFloat(req.body.paramVal);
+				
+				var paramObj = {};
+				paramObj[paramName] = paramVal;
+				
+				hmc.getModel().setParams(paramObj);
+				resp.status(204);	// no content
+			} catch (e) {
+				log.error(e, 'Failed to query MHWirth multilevel visualization!');
+				resp.status(500);	// internal server error
+			}
+			
+			resp.end();
+		});
+		
+		app.get(API_PATH + '/param', function (req, resp) {
+			try {
+				var param = req.query.paramName;
+				
+				var val = hmc.getModel().getParam(param);
+				resp.send({ parameter: param, value: val });
+			} catch (e) {
+				log.error(e, 'Failed to query MHWirth multilevel visualization!');
+				resp.status(500);	// internal server error
+			}
+			
 			resp.end();
 		});
 	}
@@ -382,12 +469,12 @@ function initRestApi() {
 		app.get(API_PATH + '/details', function (req, resp) {
 			try {
 				var stateId = parseInt(req.query.stateId);
-				var level = parseFloat(req.query.level);
+				var height = parseFloat(req.query.level);
 				
 				if (log.debug())
 					log.debug('Fetching details for state: %d', stateId);
 				
-				resp.send(hmc.stateDetails(stateId, level));
+				resp.send(hmc.stateDetails(stateId, height));
 			} catch (e) {
 				log.error(e, 'Failed to query state details!');
 				resp.status(500);	// internal server error
@@ -451,6 +538,48 @@ function initRestApi() {
 			
 			resp.end();
 		});
+		
+		app.post(API_PATH + '/setTarget', function (req, resp) {
+			var stateId, isTarget, height;
+			
+			try {
+				stateId = parseInt(req.body.id);
+				height = parseFloat(req.body.height);
+				isTarget = JSON.parse(req.body.isTarget);
+				
+				if (log.info()) 
+					log.info('Setting target state: %d, isTarget: ' + isTarget, stateId);
+				
+				
+				hmc.getModel().setTarget(stateId, height, isTarget);
+				resp.status(204);	// no content
+			} catch (e) {
+				log.error(e, 'Failed to set target state %d!', stateId);
+				resp.status(500);	// internal server error
+			}
+			
+			resp.end();
+		});
+		
+		app.post(API_PATH + '/setControl', function (req, resp) {
+			var ftrIdx, factor;
+			
+			try {
+				ftrIdx = parseInt(req.body.ftrIdx);
+				factor = parseFloat(req.body.factor);
+				
+				if (log.info()) 
+					log.info('Changing control %d by factor %d ...', ftrIdx, factor);
+				
+				hmc.setControl(ftrIdx, factor);
+				resp.send(hmc.getVizState());
+			} catch (e) {
+				log.error(e, 'Failed to control %d by factor %d', ftrIdx, factor);
+				resp.status(500);	// internal server error
+			}
+			
+			resp.end();
+		});
 	}
 }
 
@@ -464,14 +593,14 @@ function initServer() {
 	initRestApi();
 	
 	// serve static directories on the UI path
-	app.use(UI_PATH, express.static(path.join(__dirname, WWW_DIR)));
+	app.use(UI_PATH, express.static(path.join(__dirname, config.WWW_DIR)));
 	
 	// start server
-	server = app.listen(SERVER_PORT);
+	server = app.listen(config.SERVER_PORT);
 	ws = WebSocketWrapper();
 	
 	log.info('================================================');
-	log.info('Server running at http://localhost:%d', SERVER_PORT);
+	log.info('Server running at http://localhost:%d', config.SERVER_PORT);
 	log.info('Serving UI at: %s', UI_PATH);
 	log.info('Serving API at: %s', API_PATH);
 	log.info('Web socket listening at: %s', WS_PATH);
@@ -480,6 +609,8 @@ function initServer() {
 
 function initHandlers() {
 	log.info('Registering state changed callback ...');
+	
+	if (hmc == null) return;
 	
 	hmc.onStateChanged(function (states) {
 		if (log.debug())
@@ -516,6 +647,46 @@ function initHandlers() {
 		
 		ws.distribute(msg);
 	});
+	
+	hmc.onPrediction(function (currState, targetState, prob, probV, timeV) {
+		var msg = JSON.stringify({
+			type: 'statePrediction',
+			content: {
+				currState: currState,
+				targetState: targetState,
+				probability: prob,
+				pdf: {
+					probV: probV,
+					timeV: timeV
+				}
+			}
+		});
+		broker.send(broker.PREDICTION_PRODUCER_TOPIC, msg);
+		ws.distribute(msg);
+	});
+}
+
+function initBroker() {
+	broker.init();
+	
+	var imported = 0;
+	var printInterval = 100;
+	
+	broker.onMessage(function (msg) {		
+		if (msg.type == 'raw') {
+			if (++imported % printInterval == 0 && log.trace())
+				log.trace('Imported %d values ...', imported);
+			
+			addRawMeasurement(msg.payload);
+		} else if (msg.type == 'cep') {
+			if (log.trace())
+				log.trace('received CEP message: %s', JSON.stringify(msg));
+			
+			addCepAnnotated(msg.payload);
+		} else {
+			log.warn('Invalid message type: %s', msg.type);
+		}
+	});
 }
 
 exports.init = function (hmc1, base1) {
@@ -527,6 +698,7 @@ exports.init = function (hmc1, base1) {
 	// serve static files at www
 	initServer();
 	initHandlers();
+	initBroker();
 	
 	log.info('Done!');
 };

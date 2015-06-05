@@ -1,14 +1,13 @@
 var fs = require('fs');
 var bunyan = require('bunyan');
 var logformat = require('bunyan-format');
+var fields = require('./fields.js');
 
 var confFile = process.argv[2];
 
 console.log('Reading configuration file: ' + confFile);
 var configStr = fs.readFileSync(confFile);
 var config = JSON.parse(configStr);
-
-var projectConfig = require(config.config.jsFile)
 
 //================================================================
 // LOG
@@ -25,61 +24,61 @@ global.log = bunyan.createLogger({
 //================================================================
 // SERVER
 //================================================================
-global.SERVER_PORT = config.server.port;
-global.WWW_DIR = '../ui';
-global.PING_INTERVAL = config.server.pingInterval;
+exports.SERVER_PORT = config.server.port;
+exports.WWW_DIR = '../ui';
+exports.PING_INTERVAL = config.server.pingInterval;
 
 //================================================================
 // QMINER
 //================================================================
 global.QM_MODULE_PATH = config.qminer.path;
-global.QM_READ_ONLY = config.qminer.readOnly;
-global.QM_CONF_FILE = config.qminer.confFile;
-global.QM_SCHEMA_FILE = config.qminer.schemaFile;
-global.QM_CREATE_DB = config.qminer.createDb;
-global.QM_CREATE_PIPELINE = config.qminer.createPipeline;
+exports.QM_CREATE_PIPELINE = config.qminer.createPipeline;
+exports.QM_DATABASE_PATH = config.qminer.dbPath;
+exports.QM_DATABASE_MODE = config.qminer.mode;
 
 global.qm = require(QM_MODULE_PATH);
+
+// configure the stores
 
 //================================================================
 // REPLAY
 //================================================================
-global.REPLAY_DATA = config.replay;
+exports.REPLAY_DATA = config.replay;
 
 //================================================================
-// MARKOV CHAIN
+// STREAM STORY
 //================================================================
-global.CTMC_STORE_NAME = projectConfig.hmcStoreName;
-global.CTMC_DIR_NAME = config.models.dir;
-global.CTMC_TIME_FIELD_ID = projectConfig.hmcTimeField;
-global.CTMC_SEQUENCE_CATEGORY = projectConfig.hmcSequenceCategory;
+exports.STREAM_STORY_FNAME = config.models.SSFName;
 
-global.CTMC_PARAMS = projectConfig.hmcParams;
+exports.STREAM_STORY_PARAMS = {
+	transitions: {
+		type: 'continuous',
+		timeUnit: 'hour'
+	},
+	clustering: {
+		type: 'dpmeans',
+		lambda: 0.4,
+		minClusts: 10,
+		rndseed: 1,
+		sample: 1,
+		histogramBins: 20
+	},
+	pastStates: 2,
+	verbose: true
+};
+
+//================================================================
+// INTEGRATION
+//================================================================
+
+exports.useBroker = config.integration == 'broker';
 
 //================================================================
 // PRINT
 //================================================================
+log.info('Configured!');
 log.info('================================================');
 log.info('Working directory: %s', process.cwd());
-log.info('Configuration file: %s', QM_CONF_FILE);
 log.info('Module path: %s', QM_MODULE_PATH);
-log.info('Read only: ' + QM_READ_ONLY);
-log.info('Model directory: %s', CTMC_DIR_NAME);
+log.info('Mode: ' + config.qminer.mode);
 log.info('================================================');
-
-log.info('Configured!');
-
-exports.createDb = function (callback) {
-	var base = projectConfig.createDb(qm, function (e, result) {
-		if (e != null) {
-			log.error(e, 'Failed to create base!');
-			callback(e);
-			return;
-		}
-		callback(null, result);
-	});
-}
-
-exports.getFieldConfig = function (base) {
-	return projectConfig.getFieldConfig(base);
-}
