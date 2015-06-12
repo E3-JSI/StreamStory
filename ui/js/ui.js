@@ -394,6 +394,7 @@ var UI;
 						});
 					});
 					
+					$('#chk-target').off('change');	// remove the previous handlers
 					$('#chk-target').change(function (event) {
 						var stateId = data.id;
 						var height = viz.getCurrentHeight();
