@@ -25,6 +25,8 @@ exports.replayHmc = function (hmc, base) {
 		if (currIdx % 1000 == 0 && log.debug()) 
 			log.debug('Pushed %d records ...', currIdx);
 		
+		currIdx %= recs.length;
+		
 		setTimeout(pushRecord, PUSH_DELAY);
 	}
 	

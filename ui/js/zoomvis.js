@@ -15,9 +15,19 @@ var zoomVis = function (opts) {
 	
 	var DEFAULT_BORDER_WIDTH = 5;
 	
+	var BACKGROUND_Z_INDEX = 0;
+	var MIDDLEGROUND_Z_INDEX = 10;
+	var FOREGROUND_Z_INDEX = 20;
+	
 	// size
 	var MIN_NODE_DIAMETER = 30;
 	var NODE_SCALE_FACTOR = 200;
+	
+	var TARGET_NODE_CSS = {
+		'background-image': 'img/target.png',
+		'background-image-opacity': .2,
+		'background-fit': 'cover'
+	}
 	
 	var visContainer = document.getElementById(opts.visContainer);
 	var currentHeightContainer = document.getElementById(opts.currentHeightContainer);
@@ -43,11 +53,6 @@ var zoomVis = function (opts) {
 	
 	var maxNodeSize = 0;
 	
-//	var zoomLevel = 0;
-//	var minZoomLevel = 1;
-//	var maxZoomLevel = 60;
-//	var zoomStep = 1;
-	
 	var minCyZoom = .3;
 	var maxCyZoom = 1.3;
 	
@@ -64,6 +69,7 @@ var zoomVis = function (opts) {
 	var levelJumps = [];
 	var levelHeights = [];
 	var levelCurrentStates = [];
+	var levelNodeMap = {};
 	
 	var visWidth = visContainer.clientWidth;
 	var visHeight = visContainer.clientHeight;
@@ -109,11 +115,18 @@ var zoomVis = function (opts) {
 		}
 	}
 	
-	function calculatePosition(x, y) {
-		return [
-		    visWidth * (xOffset + (1 - xOffset) * (minX + x) / (maxX - minX)),
-		    visHeight * (yOffset + (1 - yOffset) * (minY + y) / (maxY - minY))
-		];
+	function cyPosition(x, y) {
+		return {
+		    x: visWidth * (xOffset + (1 - xOffset) * (minX + x) / (maxX - minX)),
+		    y: visHeight * (yOffset + (1 - yOffset) * (minY + y) / (maxY - minY))
+		};
+	}
+	
+	function serverPosition(pos) {
+		return {
+			x: (pos.x/visWidth - xOffset)*(maxX - minX) / (1 - yOffset) - minX,
+			y: (pos.y/visHeight - yOffset)*(maxY - minY) / (1 - yOffset) - minY
+		}
 	}
 	
 	function calcCyPan(newZoom) {
@@ -163,6 +176,7 @@ var zoomVis = function (opts) {
 		levelJumps = [];
 		levelCurrentStates = [];
 		levelNodes = [];
+		levelNodeMap = {};
 	}
 	
 	//===============================================================
@@ -180,25 +194,23 @@ var zoomVis = function (opts) {
 		for (var i = 0; i < levelInfo.length; i++) {
 			var node = levelInfo[i];
 			var dispNode;
-			var position = calculatePosition(levelInfo[i].x, levelInfo[i].y);		//[x, y]
+			var position = cyPosition(levelInfo[i].x, levelInfo[i].y);		//[x, y]
 			var nodeSize = calculateNodeRadius(levelInfo[i].size);
-			
-			console.log('ID: ' + levelInfo[i].id + ', name: ' + levelInfo[i].name + ', pos: ' + JSON.stringify(position));
-			
+						
 			var style = {
 				'background-color': DEFAULT_NODE_COLOR,
 				'width': nodeSize,
 				'height': nodeSize,
 				'border-width': DEFAULT_BORDER_WIDTH,
 				'border-color': DEFAULT_BORDER_COLOR,
-				'label': levelInfo[i].name != null ? levelInfo[i].name : levelInfo[i].id,
-				'z-index': 1							
+				'label': node.name != null ? node.name : node.id,
+				'z-index': BACKGROUND_Z_INDEX						
 			}
 			
 			if (node.isTarget) {
-				style['background-image'] = 'img/target.png';
-				style['background-image-opacity'] = .2;
-				style['background-fit'] = 'cover';
+				for (var cssClass in TARGET_NODE_CSS) {
+					style[cssClass] = TARGET_NODE_CSS[cssClass];
+				}
 			}
 			
 			nodesArray.push({
@@ -208,13 +220,14 @@ var zoomVis = function (opts) {
 					label: (node.name != null ? node.name : (node.id + '')) + '\ntime: ' + node.holdingTime.toPrecision(2)
 				},
 				position: {
-					x: position[0],
-					y: position[1]
+					x: position.x,
+					y: position.y
 				},
 				css: style,
 				selected: false,
-				selctable: true,
-				locked: true
+				selectable: true,
+//				locked: true
+				locked: false
 			});
 		}
 		
@@ -290,11 +303,16 @@ var zoomVis = function (opts) {
 			levelJumps.push(data[i].transitions);
 			levelCurrentStates.push({currentState: data[i].currentState, futureStates: data[i].futureStates});
 			levelNodes.push(states);
+			levelNodeMap[i] = {};
 			
 			uiConfig.levelMaxNodeSize.push(0);
 			
 			for (var j = 0; j < states.length; j++) {
-				var size = states[j].size;
+				var node = states[j];
+				
+				levelNodeMap[i][node.id] = node;
+				
+				var size = node.size;
 				if (size > uiConfig.maxNodeSize)
 					uiConfig.maxNodeSize = states[j].size;
 				if (size > uiConfig.levelMaxNodeSize[i])
@@ -336,6 +354,7 @@ var zoomVis = function (opts) {
 		
 		if (nodeId == modeConfig.selected) {
 			node.css('border-width', '10');
+			node.css('z-index', FOREGROUND_Z_INDEX);
 		}
 		if (nodeId == modeConfig.current) {
 			node.css('border-color', CURRENT_NODE_COLOR);
@@ -383,6 +402,7 @@ var zoomVis = function (opts) {
 		nodes.css('border-color', DEFAULT_BORDER_COLOR);
 		nodes.css('backgroundColor', DEFAULT_NODE_COLOR);
 		nodes.css('border-color', DEFAULT_BORDER_COLOR);
+		nodes.css('z-index', BACKGROUND_Z_INDEX);
 	}
 	
 	function drawNodes() {
@@ -634,8 +654,6 @@ var zoomVis = function (opts) {
 		panningEnabled: true,
 		userPanningEnabled: true,
 		
-//		minZoom: 1e-15,
-		// maxZoom: 1e50
 		minZoom: minCyZoom,
 		maxZoom: maxCyZoom
 	});
@@ -659,16 +677,46 @@ var zoomVis = function (opts) {
 	});
 	
 	cy.on('mouseover', 'node', function (event) {
-		//console.log("mouseover event");
+		var node = event.cyTarget;
 		
-		var x = event.cyPosition.x;
-		var y = event.cyPosition.y;
-		console.log("mouseover position: " + x + ", " + y + ', pan: ' + JSON.stringify(cy.pan()));
-		/*
-		$( ".selector" ).tooltip({
-			track: true,
-			content: "Test"
-		});*/
+		if (parseInt(node.id()) != modeConfig.selected) {
+			node.css('z-index', MIDDLEGROUND_Z_INDEX);
+		}
+	});
+	
+	cy.on('mouseout', 'node', function (event) {
+		var node = event.cyTarget;
+		
+		if (parseInt(node.id()) != modeConfig.selected) {
+			node.css('z-index', BACKGROUND_Z_INDEX);
+		}		
+	});
+	
+	cy.on('grab', 'node', function (event) {
+		var cyNode = event.cyTarget;
+		var id = parseInt(cyNode.id());
+		var pos = cyNode.position();
+		
+		var level = currentLevel;
+		var node = levelNodeMap[level][id];
+		
+		console.log('Started dragging node ' + id + ', pos' + JSON.stringify({x: node.x, y: node.y}) + ', cyPos: ' + JSON.stringify(pos));
+	})
+	
+	// fired when a node is moved
+	cy.on('free', 'node', function (event) {
+		var cyNode = event.cyTarget;
+		var id = parseInt(cyNode.id());
+		var pos = cyNode.position();
+		
+		var level = currentLevel;
+		var node = levelNodeMap[level][id];
+		
+		var serverPos = serverPosition(pos);
+		node.x = serverPos.x;
+		node.y = serverPos.y;
+		
+		console.log('Stopped dragging node ' + id + ', pos: ' + JSON.stringify(pos));
 	});
 	
 	//===============================================================
@@ -728,6 +776,30 @@ var zoomVis = function (opts) {
 				modeConfig.mode.config = {}
 			} else {
 				fetchTargetFtr(ftrIdx);
+			}
+		},
+		
+		setTargetState: function (stateId, isTarget) {
+			var level = currentLevel;
+			var levelInfo = levelNodes[level];
+			// find the node
+			for (var i = 0; i < levelInfo.length; i++) {
+				var node = levelInfo[i];
+				if (node.id == stateId) {
+					node.isTarget = isTarget;
+					break;
+				}
+			}
+			
+			var node = cy.nodes('#' + stateId);
+			if (isTarget) {
+				for (var cssClass in TARGET_NODE_CSS) {
+					node.css(cssClass, TARGET_NODE_CSS[cssClass]);
+				}
+			} else {
+				for (var cssClass in TARGET_NODE_CSS) {
+					node.removeCss(cssClass);
+				}
 			}
 		},
 		

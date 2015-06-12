@@ -1,5 +1,7 @@
 var config = require('./config.js');
 
+console.log('Initializing fields ...');
+
 var WINDOW_SIZE = 10000;
 
 var rawStores = [
@@ -231,13 +233,15 @@ exports.getStreamStoryFtrSpaceFields = function () {
 	var storeFields = realTimeStores.fields;
 	
 	var inFlds = {
-		'oil_temp_gearbox': true,
-		'oil_temp_swivel': true,
-		'pressure_gearbox': true,
-		'wob': true,
-		'rpm': true,
-		'torque': true,
-		'ibop': true
+		hook_load: true,
+		oil_temp_gearbox: true,
+		oil_temp_swivel: true,
+		pressure_gearbox: true,
+		wob: true,
+		ram_vel_setpoint: true,
+		rpm: true,
+		torque: true,
+		ibop: true
 	}
 	
 	for (var i = 0; i < storeFields.length; i++) {
@@ -250,7 +254,7 @@ exports.getStreamStoryFtrSpaceFields = function () {
 			field: fieldNm,
 			source: exports.STREAM_STORY_STORE,
 			type: 'numeric',
-			normalize: field.type == 'numeric'
+			normalize: fieldNm != 'ibop'
 		};
 		
 		if (log.info())
@@ -279,7 +283,10 @@ exports.getStreamAggrFields = function () {
 		
 		if (fieldNm == 'time') continue;
 		
-		var interpolation = 'current';//fieldNm != 'ibop' ? 'linear' : 'current';
+		var interpolation = 'linear';
+		
+		if (fieldNm == 'ibop')
+			interpolation = 'current';
 		
 		if (fieldNm != 'coeff_swivel' && fieldNm != 'coeff_gearbox') {
 			result.merger.push({

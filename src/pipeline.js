@@ -4,7 +4,6 @@ var fields = require('../fields.js');
 var utils = require('./utils.js')
 var broker = require('./broker.js');
 var math = require('mathjs');
-const CORRECT_VEL_STORE = 'drilling_fixed';
 
 var base;
 var hmc;

@@ -37,7 +37,7 @@ function initStreamStory(base) {
 			contrFields: ftrSpaceParams.contrFields
 		});
 		
-		var opts = {recSet: recs, timeField: fields.SS_TIME_FIELD, batchEndV: opts.endsBatchV};
+		var opts = {recSet: recs, timeField: fields.SS_TIME_FIELD, batchEndV: null};
 		result.fit(opts);
 		
 		result.save(config.STREAM_STORY_FNAME);

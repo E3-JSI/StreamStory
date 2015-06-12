@@ -158,18 +158,9 @@ var UI;
 						var div = $('<div />').appendTo(controlDiv);
 						var label = $('<label />').appendTo(div);
 						var input = $('<div />').appendTo(div);
-//						var input = $('<input />').appendTo(div);
-						
-						// TODO
-						
+												
 						div.addClass('form-group');
 						
-//						input.attr('type', 'range');
-//						input.attr('min', 0);
-//						input.attr('max', 2);
-//						input.attr('step', .1);
-//						input.val(1);
-//						input.addClass('form-control');
 						input.attr('id', 'control-' + (idx + ftrs.observation.length));
 						
 						label.attr('for', 'control-' + (idx + ftrs.observation.length));
@@ -207,14 +198,6 @@ var UI;
 							viz.setTargetFtr(null);
 						}
 					});
-//					
-//					controlDiv.find('input[type=range]').change(function (event) {
-//						var el = $(event.target);
-//						var val = el.val();
-//						var ftrIdx = el.attr('id').split('-').pop();
-//						
-//						changeControlVal(ftrIdx, val);
-//					});
 				},
 				error: function (jqXHR, status) {
 					alert(status);
@@ -422,6 +405,9 @@ var UI;
 							data: { id: stateId, height: height, isTarget: isTarget },
 							error: function () {
 								alert('Failed to set target state!');
+							},
+							success: function () {
+								viz.setTargetState(stateId, isTarget);
 							}
 						});
 					});

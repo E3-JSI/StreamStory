@@ -2,7 +2,7 @@
 	"qminer": {
 		"dbPath": "/media/lstopar/hdd/project-data/proasense-db/",
 		"path": "../qminer/",
-		"mode": "createClean",
+		"mode": "openReadOnly",
 		"createPipeline": true
 	},
 	"models": {
@@ -16,5 +16,5 @@
 		"level": "debug"
 	},
 	"integration": "http",
-	"replay": false
+	"replay": true
 }
