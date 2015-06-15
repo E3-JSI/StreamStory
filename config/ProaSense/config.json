@@ -17,6 +17,7 @@
 	},
 	"integration": {
 		"type": "http",
-	}
+	},
+	"interpolation": "current",
 	"replay": true
 }

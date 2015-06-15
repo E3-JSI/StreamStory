@@ -18,5 +18,6 @@
 	"integration": {
 		"type": "broker"
 	},
+	"interpolation": "current",
 	"replay": false
 }

@@ -25,6 +25,7 @@ global.log = bunyan.createLogger({
 // INITIALIZATION
 //================================================================
 exports.INITIALIZE_ZERO = false;
+exports.interpolation = config.interpolation;
 
 //================================================================
 // SERVER

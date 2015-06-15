@@ -15,15 +15,21 @@ function initStreamAggregates() {
 	var resamplerFields = [];
 	
 	// create stream aggregates
-	var merger = new qm.StreamAggr(base, {
+	var mergerConfig = {
 		type: 'stmerger',
 		name: 'drilling_merger',
 		outStore: fields.ENRICHED_STORE,
 		createStore: false,
 		timestamp: 'time',
-		onlyPast: true,
+		onlyPast: true,	// TODO remove when using linear interpolation
 		fields: flds.merger
-	});
+	};
+	
+	if (config.interpolation == 'current') {
+		mergerConfig.onlyPast = true;
+	}
+	
+	var merger = new qm.StreamAggr(base, mergerConfig);
 	
 	base.store(fields.OA_IN_STORE).addStreamAggr({
 		type: 'resampler',
