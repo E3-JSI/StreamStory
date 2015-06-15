@@ -48,20 +48,25 @@ function addRawMeasurement(val) {
 }
 
 function addCepAnnotated(val) {	
-	if (isNaN(val.time)) {
+	var time = val.time;
+	
+	if (isNaN(time)) {
 		log.warn('CEP sent NaN time %s', JSON.stringify(val));
 	}
 	
+	
+	var date = 
+	
 	val.time = utils.dateToQmDate(new Date(val.time));
 
-	if (val.time.getTime() <= lastCepTime.getTime()) {
-		log.warn('CEP sent invalid time %d <= %d: %s', val.time.getTime(), lastCepTime.getTime(), JSON.stringify(val));
+	if (time <= lastCepTime) {
+		log.warn('CEP sent invalid time %d <= %d: %s', time, lastCepTime, JSON.stringify(val));
 		return;
 	}
 	
 	base.store(fields.OA_IN_STORE).push(val);
 	
-	lastCepTime = val.time;
+	lastCepTime = time;
 }
 
 var WebSocketWrapper = function () {
