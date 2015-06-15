@@ -36,7 +36,7 @@ function addRawMeasurement(val) {
 			log.debug('Counts: %s', JSON.stringify(counts));
 		
 		if (val.variable_timestamp < lastRawTime)
-			throw 'Invalid time!';
+			throw 'Invalid time! Current: ' + val.variable_timestamp + ', prev: ' + lastRawTime;
 		
 		var insertVal = {
 			time_ms: val.variable_timestamp,
