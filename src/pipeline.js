@@ -21,6 +21,7 @@ function initStreamAggregates() {
 		outStore: fields.ENRICHED_STORE,
 		createStore: false,
 		timestamp: 'time',
+		onlyPast: true,
 		fields: flds.merger
 	});
 	
