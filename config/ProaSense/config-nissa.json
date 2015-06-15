@@ -2,7 +2,7 @@
 	"qminer": {
 		"dbPath": "/root/db/",
 		"path": "../qminer/",
-		"mode": "openReadOnly",
+		"mode": "createClean",
 		"createPipeline": true
 	},
 	"models": {
