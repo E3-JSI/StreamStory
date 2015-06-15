@@ -48,12 +48,13 @@ function addRawMeasurement(val) {
 }
 
 function addCepAnnotated(val) {	
-	val.time = utils.dateToQmDate(new Date(val.time.getTime()));
-
 	if (isNaN(val.time)) {
 		log.warn('CEP sent NaN time %s', JSON.stringify(val));
 	}
-	else if (val.time <= lastCepTime) {
+	
+	val.time = utils.dateToQmDate(new Date(val.time));
+
+	if (val.time <= lastCepTime) {
 		log.warn('CEP sent invalid time %d', val.time);
 		return;
 	}
