@@ -54,7 +54,7 @@ function addRawMeasurement(val) {
 function addCepAnnotated(val) {
 //	var internal = {};
 //	
-	val.time = utils.dateToQmDate(new Date(val.time));
+	val.time = utils.dateToQmDate(new Date(val.time.getTime()));
 //	for (var key in val) {
 //		if (key == 'time') continue;
 //		internal[utils.storeFromTag(key)] = val[key];

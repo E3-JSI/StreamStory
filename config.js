@@ -76,7 +76,8 @@ exports.STREAM_STORY_PARAMS = {
 // INTEGRATION
 //================================================================
 
-exports.useBroker = config.integration == 'broker';
+exports.useBroker = config.integration.type == 'broker';
+exports.intergration = config.integration;
 
 //================================================================
 // PRINT
