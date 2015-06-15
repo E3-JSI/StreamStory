@@ -648,10 +648,13 @@ function initHandlers() {
 		ws.distribute(msg);
 	});
 	
-	hmc.onPrediction(function (currState, targetState, prob, probV, timeV) {
-		var msg = JSON.stringify({
+	hmc.onPrediction(function (date, currState, targetState, prob, probV, timeV) {
+		log.info('Sending prediction, with PDF length: %d', probV.length);
+		
+		var msg = {
 			type: 'statePrediction',
 			content: {
+				time: date.getTime(),
 				currState: currState,
 				targetState: targetState,
 				probability: prob,
@@ -660,9 +663,11 @@ function initHandlers() {
 					timeV: timeV
 				}
 			}
-		});
-		broker.send(broker.PREDICTION_PRODUCER_TOPIC, msg);
-		ws.distribute(msg);
+		};
+		
+		var msgStr = JSON.stringify(msg);
+		broker.send(broker.PREDICTION_PRODUCER_TOPIC, msgStr);
+		ws.distribute(msgStr);
 	});
 }
 
