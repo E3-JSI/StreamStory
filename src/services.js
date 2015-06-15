@@ -32,7 +32,7 @@ function addRawMeasurement(val) {
 		if (!(storeNm in counts))
 			counts[storeNm] = 0;
 		counts[storeNm]++;
-		if (totalCounts++ % 10000 == 0)
+		if (totalCounts++ % 1000 == 0)
 			log.debug('Counts: %s', JSON.stringify(counts));
 		
 		if (val.variable_timestamp < lastRawTime)
