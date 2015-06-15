@@ -283,7 +283,7 @@ exports.getStreamAggrFields = function () {
 		
 		if (fieldNm == 'time') continue;
 		
-		var interpolation = 'linear';
+		var interpolation = 'current';
 		
 		if (fieldNm == 'ibop')
 			interpolation = 'current';
