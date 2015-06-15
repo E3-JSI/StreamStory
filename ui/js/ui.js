@@ -344,8 +344,26 @@ var UI;
 					// basic info
 					if (data.name != null) $('#txt-name').val(data.name);
 					$('#state-id').html(data.id);
-					if (data.isTarget != null && data.isTarget)
-						$('#chk-target').attr('checked', 'checked');
+					
+					$('#chk-target').off('change');	// remove the previous handlers
+					$('#chk-target').prop('checked', data.isTarget != null && data.isTarget);
+					$('#chk-target').change(function (event) {
+						var stateId = data.id;
+						var height = viz.getCurrentHeight();
+						var isTarget = $('#chk-target').is(':checked');
+						
+						$.ajax('api/setTarget', {
+							dataType: 'json',
+							type: 'POST',
+							data: { id: stateId, height: height, isTarget: isTarget },
+							error: function () {
+								alert('Failed to set target state!');
+							},
+							success: function () {
+								viz.setTargetState(stateId, isTarget);
+							}
+						});
+					});
 					
 					// features
 					// feature weights
@@ -393,25 +411,10 @@ var UI;
 						    }
 						});
 					});
-					
-					$('#chk-target').off('change');	// remove the previous handlers
-					$('#chk-target').change(function (event) {
-						var stateId = data.id;
-						var height = viz.getCurrentHeight();
-						var isTarget = $('#chk-target').is(':checked');
-						
-						$.ajax('api/setTarget', {
-							dataType: 'json',
-							type: 'POST',
-							data: { id: stateId, height: height, isTarget: isTarget },
-							error: function () {
-								alert('Failed to set target state!');
-							},
-							success: function () {
-								viz.setTargetState(stateId, isTarget);
-							}
-						});
-					});
+				},
+				error: function (jqXHR, status, err) {
+					console.log(JSON.stringify(err));
+					alert(status);
 				}
 			});
 		});
