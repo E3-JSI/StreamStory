@@ -17,6 +17,6 @@
 	},
 	"integration": {
 		"type": "broker"
-	}
+	},
 	"replay": false
 }
