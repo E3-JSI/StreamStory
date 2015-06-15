@@ -54,9 +54,6 @@ function addCepAnnotated(val) {
 		log.warn('CEP sent NaN time %s', JSON.stringify(val));
 	}
 	
-	
-	var date = 
-	
 	val.time = utils.dateToQmDate(new Date(val.time));
 
 	if (time <= lastCepTime) {
