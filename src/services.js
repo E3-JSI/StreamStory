@@ -52,15 +52,13 @@ function addCepAnnotated(val) {
 	
 	if (isNaN(time)) {
 		log.warn('CEP sent NaN time %s', JSON.stringify(val));
-	}
-	
-	val.time = utils.dateToQmDate(new Date(val.time));
-
-	if (time <= lastCepTime) {
+	} 
+	else if (time <= lastCepTime) {
 		log.warn('CEP sent invalid time %d <= %d: %s', time, lastCepTime, JSON.stringify(val));
 		return;
 	}
 	
+	val.time = utils.dateToQmDate(new Date(val.time));
 	base.store(fields.OA_IN_STORE).push(val);
 	
 	lastCepTime = time;
