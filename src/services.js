@@ -26,42 +26,30 @@ var lastCepTime = 0;
 var lastRawTime = 0;
 
 function addRawMeasurement(val) {
-//	try {
-		var storeNm = utils.storeFromTag(val.variable_type);
-		
-		if (!(storeNm in counts))
-			counts[storeNm] = 0;
-		counts[storeNm]++;
-		if (totalCounts++ % 10000 == 0)
-			log.debug('Counts: %s', JSON.stringify(counts));
-		
-		if (val.variable_timestamp < lastRawTime)
-			throw 'Invalid time! Current: ' + val.variable_timestamp + ', prev: ' + lastRawTime;
-		
-		var insertVal = {
-			time_ms: val.variable_timestamp,
-			time: utils.dateToQmDate(new Date(val.variable_timestamp)),
-			value: val.value
-		};
+	var storeNm = utils.storeFromTag(val.variable_type);
 	
-		base.store(storeNm).push(insertVal);
-		lastRawTime = val.variable_timestamp;
-//	} catch (e) {
-//		log.error(e, 'Failed to insert raw measurement into store %s: %s, %s!', storeNm, JSON.stringify(val), JSON.stringify(insertVal));
-//	}
+	if (!(storeNm in counts))
+		counts[storeNm] = 0;
+	counts[storeNm]++;
+	if (totalCounts++ % 10000 == 0)
+		log.debug('Counts: %s', JSON.stringify(counts));
+	
+	if (val.variable_timestamp < lastRawTime)
+		throw 'Invalid time! Current: ' + val.variable_timestamp + ', prev: ' + lastRawTime;
+	
+	var insertVal = {
+		time_ms: val.variable_timestamp,
+		time: utils.dateToQmDate(new Date(val.variable_timestamp)),
+		value: val.value
+	};
+
+	base.store(storeNm).push(insertVal);
+	lastRawTime = val.variable_timestamp;
 }
 
-function addCepAnnotated(val) {
-//	var internal = {};
-//	
+function addCepAnnotated(val) {	
 	val.time = utils.dateToQmDate(new Date(val.time.getTime()));
-//	for (var key in val) {
-//		if (key == 'time') continue;
-//		internal[utils.storeFromTag(key)] = val[key];
-//	}
-	
-//	if (log.debug()) 
-//		log.debug('Storing CEP message: %s', JSON.stringify(val));
+
 	if (isNaN(val.time)) {
 		log.warn('CEP sent NaN time %s', JSON.stringify(val));
 	}
