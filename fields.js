@@ -211,6 +211,10 @@ exports.STREAM_STORY_STORE = 'stream_story';
 
 exports.SS_TIME_FIELD = 'time';
 
+exports.getRawStores = function () {
+	return rawStores;
+}
+
 exports.getQmSchema = function () {
 	var enrichedStore = JSON.parse(JSON.stringify(realTimeStores));
     var oaInStore = JSON.parse(JSON.stringify(realTimeStores));

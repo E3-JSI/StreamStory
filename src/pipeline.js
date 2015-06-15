@@ -64,6 +64,24 @@ function initGC() {
 		}
 	}
 	
+	if (config.INITIALIZE_ZERO) {
+		log.info('Initializing default values ...');
+		var stores = exports.getRawStores();
+		
+		for (var i = 0; i < stores.length; i++) {
+			var storeConf = stores[i];
+			var name = storeConf.name;
+			
+			log.info('Initializing store %s ...', name);
+			
+			base.store(name).push({
+				time_ms: 0,
+				time: utils.dateToQmDate(new Date(0)),
+				value: 0
+			});
+		}
+	}
+	
 	log.info('GC initialized!');
 }
 
