@@ -66,7 +66,7 @@ function initGC() {
 	
 	if (config.INITIALIZE_ZERO) {
 		log.info('Initializing default values ...');
-		var stores = exports.getRawStores();
+		var stores = fields.getRawStores();
 		
 		for (var i = 0; i < stores.length; i++) {
 			var storeConf = stores[i];
