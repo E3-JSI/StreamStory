@@ -80,13 +80,16 @@ function initGC() {
 			var storeConf = stores[i];
 			var name = storeConf.name;
 			
-			log.info('Initializing store %s ...', name);
-			
-			base.store(name).push({
+			var val = {
 				time_ms: startTm,
 				time: utils.dateToQmDate(new Date(startTm)),
 				value: 0
-			});
+			};
+			
+			log.info('Initializing store %s ...', name);
+			log.info('Inserting value %s ...', JSON.stringify(val));
+			
+			base.store(name).push(val);
 		}
 	}
 	
