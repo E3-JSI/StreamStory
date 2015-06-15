@@ -21,7 +21,6 @@ function initStreamAggregates() {
 		outStore: fields.ENRICHED_STORE,
 		createStore: false,
 		timestamp: 'time',
-		onlyPast: true,	// TODO remove when using linear interpolation
 		fields: flds.merger
 	};
 	
