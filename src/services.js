@@ -55,7 +55,7 @@ function addCepAnnotated(val) {
 	val.time = utils.dateToQmDate(new Date(val.time));
 
 	if (val.time.getTime() <= lastCepTime.getTime()) {
-		log.warn('CEP sent invalid time %d: %s', val.time, JSON.stringify(val));
+		log.warn('CEP sent invalid time %d <= %d: %s', val.time.getTime(), lastCepTime.getTime(), JSON.stringify(val));
 		return;
 	}
 	
