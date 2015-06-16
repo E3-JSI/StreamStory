@@ -53,6 +53,7 @@ var UI;
 			
 			console.log('Connecting websocket to address: ' + address); 
 			var ws = new WebSocket(address);
+//			var ws = new WebSocket('./ws');
 			
 			ws.onopen = function () {
 	   			console.log('Web socket connected!');

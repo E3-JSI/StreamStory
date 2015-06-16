@@ -9,7 +9,7 @@ var analytics = qm.analytics;
 function initStreamStory(base) {
 	if (fs.existsSync(config.STREAM_STORY_FNAME)) {
 		log.info('Loading StreamStory ...');
-		var result = analytics.HierarchMarkov({base: base, hmcFile: config.STREAM_STORY_FNAME});	
+		var result = analytics.StreamStory({base: base, hmcFile: config.STREAM_STORY_FNAME});	
 		return result;
 	} 
 	else {
@@ -30,7 +30,9 @@ function initStreamStory(base) {
 	
 		var ftrSpaceParams = fields.getStreamStoryFtrSpaceFields();
 		
-		var result = analytics.HierarchMarkov({
+		log.info('Building StreamStory with params: %s', JSON.stringify(config.STREAM_STORY_PARAMS));
+		
+		var result = analytics.StreamStory({
 			base: base,
 			hmcConfig: config.STREAM_STORY_PARAMS,
 			obsFields: ftrSpaceParams.obsFields,
@@ -55,15 +57,15 @@ try {
 		mode: config.QM_DATABASE_MODE
 	});
 	
-	var hmc = initStreamStory(base);
+	var ss = initStreamStory(base);
 
 	if (config.QM_CREATE_PIPELINE) 
-		pipeline.init({ base: base, hmc: hmc });
+		pipeline.init({ base: base, hmc: ss });
 	
-	services.init(hmc, base);
+	services.init(ss, base);
 	
 	if (config.REPLAY_DATA)
-		require('./src/replay.js').replayHmc(hmc, base);
+		require('./src/replay.js').replayHmc(ss, base);
 } catch (e) {
 	log.error(e, 'Exception in main!');
 	utils.exit(base);

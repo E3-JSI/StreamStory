@@ -4,12 +4,9 @@ var config = require('../config.js');
 
 
 //var BROKER_URL = '';
-var ZOOKEPER_PORT = 2181;
-var PRODUCER_PORT = 8090;
-var BROKER_URL = '192.168.1.111';
-//var BROKER_URL = 'kalmar39.fzi.de';
-//var CONSUMER_PORT = 2181;
-//var PRODUCER_PORT = 9092;
+var ZOOKEPER_PORT = config.integration.zookeperPort;
+var PRODUCER_PORT = config.integration.producerPort;
+var BROKER_URL = config.integration.brokerUrl;
 
 var topics = {
 	// input topics 
@@ -112,18 +109,10 @@ function initClient() {
 	});
 }
 
-exports.init = function () {
-	if (!config.useBroker) return;
-	
-	log.info('Initilizing Kafka ...');
-	
-	initClient();
-}
-
 var nsent = 0;
 
 exports.send = function (topic, msg) {
-	if (!config.useBroker) return;
+	if (!config.USE_BROKER) return;
 	
 	if (nsent++ % 1000 == 0 && log.debug())
 		log.debug('Sent %d messages: %s',nsent, JSON.stringify(msg));
@@ -143,4 +132,12 @@ exports.onMessage = function (callback) {
 // export topics
 for (var topic in topics) {
 	exports[topic] = topics[topic];
+}
+
+exports.init = function () {
+	if (!config.USE_BROKER) return;
+	
+	log.info('Initilizing Kafka ...');
+	
+	initClient();
 }

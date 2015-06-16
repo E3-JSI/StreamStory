@@ -24,8 +24,8 @@ global.log = bunyan.createLogger({
 //================================================================
 // INITIALIZATION
 //================================================================
-exports.INITIALIZE_ZERO = true;
-exports.interpolation = config.interpolation;
+exports.INITIALIZE_ZERO = config.qminer.initializeZeros;
+exports.INTERPOLATION = config.interpolation;
 
 //================================================================
 // SERVER
@@ -55,30 +55,15 @@ exports.REPLAY_DATA = config.replay;
 // STREAM STORY
 //================================================================
 exports.STREAM_STORY_FNAME = config.models.SSFName;
-
-exports.STREAM_STORY_PARAMS = {
-	transitions: {
-		type: 'continuous',
-		timeUnit: 'hour'
-	},
-	clustering: {
-		type: 'dpmeans',
-		lambda: 0.4,
-		minClusts: 10,
-		rndseed: 1,
-		sample: 1,
-		histogramBins: 20
-	},
-	pastStates: 2,
-	verbose: true
-};
+exports.STREAM_STORY_PARAMS = config.models.StreamStoryParams;
 
 //================================================================
 // INTEGRATION
 //================================================================
 
-exports.useBroker = config.integration.type == 'broker';
-exports.intergration = config.integration;
+exports.USE_BROKER = config.integration.type == 'broker';
+exports.integration = config.integration;
+
 
 //================================================================
 // PRINT
@@ -88,4 +73,5 @@ log.info('================================================');
 log.info('Working directory: %s', process.cwd());
 log.info('Module path: %s', QM_MODULE_PATH);
 log.info('Mode: ' + config.qminer.mode);
+log.info('StreamStory params: %s', JSON.stringify(exports.STREAM_STORY_PARAMS));
 log.info('================================================');

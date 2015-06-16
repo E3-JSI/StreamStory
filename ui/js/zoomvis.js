@@ -558,13 +558,12 @@ var zoomVis = function (opts) {
 					stateVals[state] = value;
 				}
 				
-				modeConfig.mode.type = MODE_TARGET_FTR;
-				modeConfig.mode.config = { 
+				setMode(MODE_TARGET_FTR, { 
 					targetFtr: ftrIdx,
 					ftrVals: stateVals,
 					maxVal: maxVal,
 					minVal: minVal
-				};
+				});
 				
 				drawNodes();
 			}
@@ -719,6 +718,11 @@ var zoomVis = function (opts) {
 		console.log('Stopped dragging node ' + id + ', pos: ' + JSON.stringify(pos));
 	});
 	
+	function setMode(mode, config) {
+		modeConfig.mode.type = mode;
+		modeConfig.mode.config = config;
+	}
+	
 	//===============================================================
 	// OBJECT
 	//===============================================================
@@ -764,16 +768,15 @@ var zoomVis = function (opts) {
 				config.probs[stateId] = prob;
 			}
 			
-			modeConfig.mode.type = MODE_PROBS;
-			modeConfig.mode.config = config;
-			
+			setMode(MODE_PROBS, config);
 			redrawSpecial();
 		},
 		
 		setTargetFtr: function (ftrIdx) {
 			if (ftrIdx == null) {	// reset to normal mode
-				modeConfig.mode = MODE_NORMAL;
-				modeConfig.mode.config = {}
+				setMode(MODE_NORMAL, {});
+				redraw();
+				redrawSpecial();
 			} else {
 				fetchTargetFtr(ftrIdx);
 			}

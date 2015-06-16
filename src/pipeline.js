@@ -24,7 +24,7 @@ function initStreamAggregates() {
 		fields: flds.merger
 	};
 	
-	if (config.interpolation == 'current') {
+	if (config.INTERPOLATION == 'current') {
 		mergerConfig.onlyPast = true;
 	}
 	
@@ -274,7 +274,7 @@ function initTriggers() {
 				
 				var outVal = val.toJSON(false, false, false);
 				
-				if (config.useBroker) {
+				if (config.USE_BROKER) {
 //					log.info('Sending: %s', JSON.stringify(outVal));
 					outVal.time = val.time.getTime();
 					broker.send(broker.ENRICHED_DATA_PRODUCER_TOPIC, JSON.stringify(outVal));
