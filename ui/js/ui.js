@@ -53,7 +53,6 @@ var UI;
 			
 			console.log('Connecting websocket to address: ' + address); 
 			var ws = new WebSocket(address);
-//			var ws = new WebSocket('./ws');
 			
 			ws.onopen = function () {
 	   			console.log('Web socket connected!');
@@ -150,24 +149,30 @@ var UI;
 					var observList = $('#ul-ftrs-obs');
 					var controlDiv = $('#div-ftrs-control');
 					
+					$('#chk-sim-inputs').off('checked');
+					$('#chk-sim-inputs').prop('checked', false);
+					
 					$.each(ftrs.observation.concat(ftrs.control), function (idx, name) {
 						var li = $('<li />').appendTo(observList);
 						li.html('<input type="checkbox" value="' + idx + '" />' + name + '<br />');
 					});
 					
 					$.each(ftrs.control, function (idx, name) {
+						var controlId = 'control-' + (idx + ftrs.observation.length);
+						
 						var div = $('<div />').appendTo(controlDiv);
 						var label = $('<label />').appendTo(div);
 						var input = $('<div />').appendTo(div);
 												
 						div.addClass('form-group');
 						
-						input.attr('id', 'control-' + (idx + ftrs.observation.length));
+						input.attr('id', controlId);
 						
-						label.attr('for', 'control-' + (idx + ftrs.observation.length));
+						label.attr('for', controlId);
 						label.html(name);
 						
-						$('#control-' + (idx + ftrs.observation.length)).slider({
+						
+						$('#' + controlId).slider({
 							value: 1,
 							min: 0,
 							max: 2,
@@ -180,6 +185,15 @@ var UI;
 								var ftrIdx = el.attr('id').split('-').pop();
 								
 								changeControlVal(ftrIdx, val);
+							}
+						});
+						
+						// enable / disable handlers
+						$('#' + controlId).slider('disable');
+						$('#chk-sim-inputs').change(function (event) {
+							$('#' + controlId).slider(event.target.checked ? 'enable' : 'disable');
+							if (!event.target.checked) {
+								$('#' + controlId).slider('value', 1);
 							}
 						});
 					});

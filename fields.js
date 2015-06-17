@@ -243,6 +243,7 @@ exports.getStreamStoryFtrSpaceFields = function () {
 		pressure_gearbox: true,
 		wob: true,
 		ram_vel_setpoint: true,
+//		ram_pos_setpoint: true,
 		rpm: true,
 		torque: true,
 		ibop: true

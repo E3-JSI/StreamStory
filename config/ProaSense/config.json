@@ -1,13 +1,13 @@
 {
 	"qminer": {
-		"dbPath": "/media/lstopar/hdd/project-data/proasense-db/",
+		"dbPath": "/mnt/raidM2T/project-data/proasense-db/",
 		"path": "../qminer/",
 		"mode": "openReadOnly",
 		"createPipeline": true,
 		"initializeZeros": false
 	},
 	"models": {
-		"SSFName": "/media/lstopar/hdd/project-data/proasense-models/StreamStory.bin",
+		"SSFName": "/mnt/raidM2T/project-data/proasense-models/StreamStory.bin",
 		"StreamStoryParams": {
 			"transitions": {
 				"type": "continuous",

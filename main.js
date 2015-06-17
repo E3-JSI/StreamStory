@@ -23,9 +23,7 @@ function initStreamStory(base) {
 			log.warn('Tried to initialize StreamStory with 0 records!');
 			return null;
 		}
-		
-//		var recs = store.recs.trunc(10000);	// TODO remove
-		
+				
 		log.info('Creating a model out of %d records ...', recs.length);
 	
 		var ftrSpaceParams = fields.getStreamStoryFtrSpaceFields();

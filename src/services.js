@@ -622,7 +622,7 @@ function initHandlers() {
 			content: desc
 		});
 		
-		ws.distribute(msg);
+		//ws.distribute(msg); TODO
 	});
 	
 	hmc.onOutlier(function (ftrV) {

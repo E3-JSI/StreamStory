@@ -1,13 +1,13 @@
 {
 	"qminer": {
-		"dbPath": "/media/lstopar/hdd/project-data/proasense-db-development/",
+		"dbPath": "/mnt/raidM2T/project-data/proasense-db-development/",
 		"path": "../qminer/",
 		"mode": "openReadOnly",
 		"createPipeline": true,
 		"initializeZeros": false
 	},
 	"models": {
-		"SSFName": "/media/lstopar/hdd/project-data/proasense-models/StreamStory-development.bin",
+		"SSFName": "/mnt/raidM2T/project-data/proasense-models/StreamStory-development.bin",
 		"StreamStoryParams": {
 			"transitions": {
 				"type": "continuous",
@@ -15,7 +15,7 @@
 			},
 			"clustering": {
 				"type": "dpmeans",
-				"lambda": 0.6,
+				"lambda": 0.7,
 				"minClusts": 10,
 				"rndseed": 1,
 				"sample": 1,
