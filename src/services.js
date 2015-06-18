@@ -638,7 +638,8 @@ function initHandlers() {
 	});
 	
 	hmc.onPrediction(function (date, currState, targetState, prob, probV, timeV) {
-		log.info('Sending prediction, with PDF length: %d', probV.length);
+		if (log.info())
+			log.info('Sending prediction, with PDF length: %d', probV.length);
 		
 		var msg = {
 			type: 'statePrediction',
