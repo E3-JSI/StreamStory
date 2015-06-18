@@ -33,7 +33,7 @@
 		"level": "debug"
 	},
 	"integration": {
-		"type": "http",
+		"type": "broker",
 		"brokerUrl": "192.168.1.111",
 		"zookeperPort": 2181,
 		"producerPort": 8090
