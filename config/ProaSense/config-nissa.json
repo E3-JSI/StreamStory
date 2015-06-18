@@ -39,5 +39,5 @@
 		"producerPort": 8090
 	},
 	"interpolation": "current",
-	"replay": true
+	"replay": false
 }
