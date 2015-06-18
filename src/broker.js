@@ -51,7 +51,6 @@ function initConsumer() {
 	{
 		var nReceivedRaw = 0;
 		var nReceivedCep = 0;
-		var PRINT_INTERVAL = 10000;
 		
 		consumer.on('message', function (msg) {
 			try {
@@ -60,12 +59,12 @@ function initConsumer() {
 				
 				if (msgCallback != null) {
 					if (topic == topics.RAW_DATA_CONSUMER_TOPIC) {
-						if (nReceivedRaw++ % PRINT_INTERVAL == 0 && log.debug())
+						if (nReceivedRaw++ % config.BROKER_PRINT_INTERVAL == 0 && log.debug())
 							log.debug('Received %d raw data messages ...', nReceivedRaw);
 						
 						msgCallback({type: 'raw', payload: payload})
 					} else if (topic == topics.CEP_DATA_CONSUMER_TOPIC) {
-						if (nReceivedCep++ % 100 == 0 && log.debug())
+						if (nReceivedCep++ % config.BROKER_PRINT_INTERVAL == 0 && log.debug())
 							log.debug('Received %d CEP messages %s ...', nReceivedCep, JSON.stringify(payload));
 						
 						msgCallback({type: 'cep', payload: payload});
@@ -114,7 +113,7 @@ var nsent = 0;
 exports.send = function (topic, msg) {
 	if (!config.USE_BROKER) return;
 	
-	if (nsent++ % config.SEND_PRINT_INTERVAL == 0 && log.debug())
+	if (nsent++ % config.BROKER_PRINT_INTERVAL == 0 && log.debug())
 		log.debug('Sent %d messages: %s',nsent, JSON.stringify(msg));
 	
 	producer.send([{ topic: topic, messages: [msg] }], function (e, data) {

@@ -67,10 +67,10 @@ exports.integration = config.integration;
 //================================================================
 // PRINT
 //================================================================
-exports.RAW_PRINT_INTERVAL = 10000;
+exports.RAW_PRINT_INTERVAL = 30000;
 exports.STREAM_STORY_PRINT_INTERVAL = 1000;
 exports.STORE_PRINT_INTERVAL = 10000;
-exports.SEND_PRINT_INTERVAL = 10000;
+exports.BROKER_PRINT_INTERVAL = 10000;
 
 
 log.info('Configured!');
