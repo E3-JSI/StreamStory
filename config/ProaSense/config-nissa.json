@@ -4,7 +4,7 @@
 		"path": "../qminer/",
 		"mode": "createClean",
 		"createPipeline": true,
-		"initializeZeros": false
+		"initializeZeros": true
 	},
 	"models": {
 		"SSFName": "/root/models/StreamStory.bin",
