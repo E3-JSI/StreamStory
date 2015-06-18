@@ -332,7 +332,7 @@ function initTriggers() {
 					
 					//==========================================================
 					// TODO remove
-					broker.send(broker.PREDICTION_PRODUCER_TOPIC, {type: 'anomaly', content: 'Hello world'});
+					broker.send(broker.PREDICTION_PRODUCER_TOPIC, JSON.stringify({type: 'anomaly', content: 'Hello world'}));
 					//==========================================================
 				} catch (e) {
 					log.error(e, 'Exception while printing statistics of the resampled store!');

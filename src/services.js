@@ -622,7 +622,7 @@ function initHandlers() {
 			content: desc
 		});
 		
-		//ws.distribute(msg); TODO
+		//ws.distribute(JSON.stringify(msg)); TODO
 	});
 	
 	hmc.onOutlier(function (ftrV) {
@@ -634,7 +634,7 @@ function initHandlers() {
 			content: ftrV
 		})
 		
-		ws.distribute(msg);
+		ws.distribute(JSON.stringify(msg));
 	});
 	
 	hmc.onPrediction(function (date, currState, targetState, prob, probV, timeV) {
