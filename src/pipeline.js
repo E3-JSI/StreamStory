@@ -254,7 +254,7 @@ function initTriggers() {
 			onAdd: function (val) {
 				var len = enricherOutStore.length;
 				
-				if (len % 10000 == 0 && log.debug()) 
+				if (len % config.STORE_PRINT_INTERVAL == 0 && log.debug()) 
 					log.debug('Store %s has %d records ...', enricherOutStore.name, len);
 				
 				if (log.trace())
@@ -290,7 +290,7 @@ function initTriggers() {
 		onAdd: function (val) {
 			var len = oaInStore.length;
 			
-			if (len % 10000 == 0 && log.debug()) 
+			if (len % config.STORE_PRINT_INTERVAL == 0 && log.debug()) 
 				log.debug('Store %s has %d records ...', oaInStore.name, len);
 			if (log.trace())
 				log.trace('%s: %s', oaInStore.name, JSON.stringify(val));
@@ -306,7 +306,7 @@ function initTriggers() {
 				try {
 					var len = streamStoryStore.length;
 					
-					if (len % 10000 == 0 && log.debug()) 
+					if (len % config.STORE_PRINT_INTERVAL == 0 && log.debug()) 
 						log.debug('Store %s has %d records ...', streamStoryStore.name, len);
 					
 					if (log.trace())
@@ -318,7 +318,7 @@ function initTriggers() {
 					}
 					
 					if (hmc != null) {
-						if (log.debug() && nProcessed % 1000 == 0)
+						if (log.debug() && nProcessed % config.STREAM_STORY_PRINT_INTERVAL == 0)
 							log.debug('StreamStory processed %d values ...', nProcessed);
 						hmc.update(val);
 					}

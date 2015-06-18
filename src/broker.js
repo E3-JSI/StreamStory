@@ -114,7 +114,7 @@ var nsent = 0;
 exports.send = function (topic, msg) {
 	if (!config.USE_BROKER) return;
 	
-	if (nsent++ % 1000 == 0 && log.debug())
+	if (nsent++ % config.SEND_PRINT_INTERVAL == 0 && log.debug())
 		log.debug('Sent %d messages: %s',nsent, JSON.stringify(msg));
 	
 	producer.send([{ topic: topic, messages: [msg] }], function (e, data) {

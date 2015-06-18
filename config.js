@@ -60,7 +60,6 @@ exports.STREAM_STORY_PARAMS = config.models.StreamStoryParams;
 //================================================================
 // INTEGRATION
 //================================================================
-
 exports.USE_BROKER = config.integration.type == 'broker';
 exports.integration = config.integration;
 
@@ -68,6 +67,12 @@ exports.integration = config.integration;
 //================================================================
 // PRINT
 //================================================================
+exports.RAW_PRINT_INTERVAL = 10000;
+exports.STREAM_STORY_PRINT_INTERVAL = 1000;
+exports.STORE_PRINT_INTERVAL = 10000;
+exports.SEND_PRINT_INTERVAL = 10000;
+
+
 log.info('Configured!');
 log.info('================================================');
 log.info('Working directory: %s', process.cwd());
