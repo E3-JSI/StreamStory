@@ -165,8 +165,11 @@ var otherStores = [
 	{
 		"name" : "friction_coeffs",
 		"fields" : [
-			{"name": "friction_coeff", "type": "float", "null": true},
-			{"name": "std_dev", "type": "float"}
+		    {name: 'timestamp', type: 'datetime'},
+			{name: 'coeff_swivel', 'type': "float"},
+			{name: 'coeff_gearbox', 'type': "float"},
+			{name: 'interval_start', 'type': 'datetime'},
+			{name: 'interval_end', 'type': 'datetime'}
 		]
 	}
 ];
@@ -208,6 +211,7 @@ var streamStoryIgnoreFields = {}
 exports.ENRICHED_STORE = 'enriched';
 exports.OA_IN_STORE = 'oa_in';
 exports.STREAM_STORY_STORE = 'stream_story';
+exports.COEFF_STORE = 'friction_coeffs';
 
 exports.SS_TIME_FIELD = 'time';
 
@@ -227,7 +231,7 @@ exports.getQmSchema = function () {
     enrichedStore.window = WINDOW_SIZE;
     
     var schema = rawStores.concat(otherStores)
-    					   .concat([enrichedStore, oaInStore, streamStoryStore]);
+    					  .concat([enrichedStore, oaInStore, streamStoryStore]);
     
     return schema;
 }

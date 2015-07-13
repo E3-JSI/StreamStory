@@ -2,7 +2,7 @@
 	"qminer": {
 		"dbPath": "/mnt/raidM2T/project-data/proasense-db-development/",
 		"path": "../qminer/",
-		"mode": "openReadOnly",
+		"mode": "createClean",
 		"createPipeline": true,
 		"initializeZeros": false
 	},
@@ -38,6 +38,6 @@
 		"zookeperPort": 2181,
 		"producerPort": 8090
 	},
-	"interpolation": "current",
-	"replay": true
+	"interpolation": "linear",
+	"replay": false
 }

@@ -63,14 +63,19 @@ exports.STREAM_STORY_PARAMS = config.models.StreamStoryParams;
 exports.USE_BROKER = config.integration.type == 'broker';
 exports.integration = config.integration;
 
+//================================================================
+// PIPELINE
+//================================================================
+exports.GC_INTERVAL = 1000000
 
 //================================================================
 // PRINT
 //================================================================
 exports.RAW_PRINT_INTERVAL = 100000;
-exports.STREAM_STORY_PRINT_INTERVAL = 10;
-exports.STORE_PRINT_INTERVAL = 10000;
+exports.STREAM_STORY_PRINT_INTERVAL = 10000;
+exports.STORE_PRINT_INTERVAL = 100000;
 exports.BROKER_PRINT_INTERVAL = 10000;
+exports.COEFF_PRINT_INTERVAL = 1000;
 
 
 log.info('Configured!');

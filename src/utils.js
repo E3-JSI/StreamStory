@@ -115,5 +115,9 @@ module.exports = {
 	
 	dateToQmDate: function (date) {
 		return date.toISOString().split('Z')[0];
+	},
+	
+	isFinite: function (num) {
+		return !isNaN(num) && isFinite(num);
 	}
 }

@@ -357,7 +357,7 @@ var zoomVis = function (opts) {
 			node.css('z-index', FOREGROUND_Z_INDEX);
 		}
 		if (nodeId == modeConfig.current) {
-			node.css('border-color', CURRENT_NODE_COLOR);
+			node.css('backgroundColor', CURRENT_NODE_COLOR);
 		}
 		if (nodeId in modeConfig.past) {
 			node.css('border-color', 'red');
