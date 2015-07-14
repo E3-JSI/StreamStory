@@ -204,7 +204,7 @@ function calcFriction() {
 		var zScore = statistics.getZScore(residual, 0, 5.3808e-09);
 		
 		if (log.info())
-			log.info('Residual: %d, z=%d', residual, zScore);
+			log.info('Residual: %d, z=%d, time=%d', residual, zScore, time);
 		
 		if (Math.abs(zScore) > .1) {	// TODO hardcoded
 			log.info('Sending prediction based on the friction coefficient!');
