@@ -53,7 +53,7 @@ function initStreamAggregates() {
 			var storeConf = stores[i];
 			var name = storeConf.name;
 			
-			if (name == 'rpm') continue;
+			if (name == 'hook_load') continue;
 			
 			var val = {
 				time_ms: startTm,
