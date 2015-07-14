@@ -206,7 +206,7 @@ function calcFriction() {
 		if (log.info())
 			log.info('Residual: %d, z=%d', residual, zScore);
 		
-		if (Math.abs(zScore) > 2) {	// TODO hardcoded
+		if (Math.abs(zScore) > .1) {	// TODO hardcoded
 			log.info('Sending prediction based on the friction coefficient!');
 			var msg = {
 				type: 'prediciton',
