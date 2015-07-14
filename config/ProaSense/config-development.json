@@ -30,7 +30,14 @@
 		"pingInterval": 10000
 	},
 	"log": {
-		"level": "debug"
+		"level": "debug",
+		"print": {
+			"rawData": 100000,
+			"streamStory": 10000,
+			"stores": 100000,
+			"broker": 10000,
+			"coeff": 1000
+		}
 	},
 	"integration": {
 		"type": "broker",

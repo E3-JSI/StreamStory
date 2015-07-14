@@ -71,11 +71,11 @@ exports.GC_INTERVAL = 1000000
 //================================================================
 // PRINT
 //================================================================
-exports.RAW_PRINT_INTERVAL = 100000;
-exports.STREAM_STORY_PRINT_INTERVAL = 10000;
-exports.STORE_PRINT_INTERVAL = 100000;
-exports.BROKER_PRINT_INTERVAL = 10000;
-exports.COEFF_PRINT_INTERVAL = 1000;
+exports.RAW_PRINT_INTERVAL = config.log.print.rawData;//100000;
+exports.STREAM_STORY_PRINT_INTERVAL = config.log.print.streamStory;//10000;
+exports.STORE_PRINT_INTERVAL = config.log.print.stores;//100000;
+exports.BROKER_PRINT_INTERVAL = config.log.print.broker;//10000;
+exports.COEFF_PRINT_INTERVAL = config.log.print.coeff;//1000;
 
 
 log.info('Configured!');
