@@ -448,7 +448,7 @@ function initTriggers() {
 						var msg1 = {
 							type: 'prediciton',
 							content: {
-								time: time,
+								time: 1387555900212,
 								pdf: {
 									type: 'exponential',
 									lambda: 2
