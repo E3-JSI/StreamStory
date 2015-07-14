@@ -1,13 +1,13 @@
 {
 	"qminer": {
-		"dbPath": "/mnt/raidM2T/project-data/proasense-db-development/",
+		"dbPath": "/media/lstopar/HDD/project-data/proasense-db-development/",
 		"path": "../qminer/",
 		"mode": "createClean",
 		"createPipeline": true,
 		"initializeZeros": false
 	},
 	"models": {
-		"SSFName": "/mnt/raidM2T/project-data/proasense-models/StreamStory-development.bin",
+		"SSFName": "/media/lstopar/HDD/project-data/proasense-models/StreamStory-development.bin",
 		"StreamStoryParams": {
 			"transitions": {
 				"type": "continuous",
@@ -33,8 +33,8 @@
 		"level": "debug"
 	},
 	"integration": {
-		"type": "http",
-		"brokerUrl": "192.168.1.111",
+		"type": "broker",
+		"brokerUrl": "10.172.67.55",
 		"zookeperPort": 2181,
 		"producerPort": 8090
 	},

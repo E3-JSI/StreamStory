@@ -642,13 +642,14 @@ function initHandlers() {
 			log.info('Sending prediction, with PDF length: %d', probV.length);
 		
 		var msg = {
-			type: 'statePrediction',
+			type: 'prediction',
 			content: {
 				time: date.getTime(),
 				currState: currState,
 				targetState: targetState,
 				probability: prob,
 				pdf: {
+					type: 'histogram',
 					probV: probV,
 					timeV: timeV
 				}

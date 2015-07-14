@@ -196,13 +196,28 @@ function calcFriction() {
 		return getTempLoss(deltaT, dt, COOLING_ALPHA_GEARBOX);
 	}
 	
-	function checkOutlier(coeff, temp, alpha) {
+	function checkOutlier(coeff, temp, alpha, time) {
 		var yHat = alpha[0] + temp*alpha[1];
 		var residual = coeff - yHat;
 		var zScore = statistics.getZScore(residual, 0, 5.3808e-09);
 		
 		if (log.info())
 			log.info('Residual: %d, z=%d', residual, zScore);
+		
+		if (Math.abs(zScore) > 2) {	// TODO hardcoded
+			log.info('Sending prediction based on the friction coefficient!');
+			var msg = {
+				type: 'prediciton',
+				content: {
+					time: time,
+					pdf: {
+						type: 'exponential',
+						lambda: 2
+					}
+				}
+			};
+			broker.send(broker.PREDICTION_PRODUCER_TOPIC, JSON.stringify(msg));
+		}
 	}
 	
 	function startCalc(val) {
@@ -246,8 +261,8 @@ function calcFriction() {
 			log.info('Coeffs: (swivel: %d, gearbox: %d) at time %s', coeffSwivel, coeffGearbox, val.time.toISOString());
 			
 			var avgTemp = (firstVal.tempAmbient + lastVal.tempAmbient) / 2;
-			checkOutlier(coeffSwivel, avgTemp, LINREG_ALPHA_SWIVEL);
-			checkOutlier(coeffGearbox, avgTemp, LINREG_ALPHA_GEARBOX);
+			checkOutlier(coeffSwivel, avgTemp, LINREG_ALPHA_SWIVEL, intervalEnd);
+			checkOutlier(coeffGearbox, avgTemp, LINREG_ALPHA_GEARBOX, intervalEnd);
 		} else {
 			log.info('Drilling didn not take long enough, the coefficient will be ignored!');
 		}
@@ -344,55 +359,53 @@ function initTriggers() {
 	
 	// print progress
 	{
-		var fname = '/mnt/raidM2T/data/Aker/high_coeff/joined/drilling-high-coeff.csv';
-		var outFields = [
-		    'hoist_press_A',
-		    'hoist_press_B',
-		    'hook_load',
-		    'ibop',
-		    'oil_temp_gearbox',
-		    'oil_temp_swivel',
-		    'pressure_gearbox',
-		    'rpm',
-		    'temp_ambient',
-		    'torque',
-		    'wob',
-		    'mru_pos',
-		    'mru_vel',
-		    'ram_pos_measured',
-		    'ram_pos_setpoint',
-		    'ram_vel_measured',
-		    'ram_vel_setpoint'
-		]
-		
-		
-		var fout = new qm.fs.FOut(fname, false);
-		
-		var line = 'time,';
-		for (var i = 0; i < outFields.length; i++) {
-			line += outFields[i];
-			if (i < outFields.length-1)
-				line += ',';
-		}
-		fout.writeLine(line);
-		fout.flush();
-		fout.close();
+//		var fname = '/mnt/raidM2T/data/Aker/high_coeff/joined/drilling-high-coeff.csv';
+//		var outFields = [
+//		    'hoist_press_A',
+//		    'hoist_press_B',
+//		    'hook_load',
+//		    'ibop',
+//		    'oil_temp_gearbox',
+//		    'oil_temp_swivel',
+//		    'pressure_gearbox',
+//		    'rpm',
+//		    'temp_ambient',
+//		    'torque',
+//		    'wob',
+//		    'mru_pos',
+//		    'mru_vel',
+//		    'ram_pos_measured',
+//		    'ram_pos_setpoint',
+//		    'ram_vel_measured',
+//		    'ram_vel_setpoint'
+//		]
+//		
+//		
+//		var fout = new qm.fs.FOut(fname, false);
+//		
+//		var line = 'time,';
+//		for (var i = 0; i < outFields.length; i++) {
+//			line += outFields[i];
+//			if (i < outFields.length-1)
+//				line += ',';
+//		}
+//		fout.writeLine(line);
+//		fout.flush();
+//		fout.close();
 		
 		enricherOutStore.addTrigger({
-			onAdd: function (val) {
-				var len = enricherOutStore.length;
-				
-				fout = new qm.fs.FOut(fname, true);
-				line = '' + val.time.getTime() + ',';
-				for (var i = 0; i < outFields.length; i++) {
-					line += val[outFields[i]];
-					if (i < outFields.length-1)
-						line += ',';
-				}
-				
-				fout.writeLine(line);
-				fout.flush();
-				fout.close();
+			onAdd: function (val) {				
+//				fout = new qm.fs.FOut(fname, true);
+//				line = '' + val.time.getTime() + ',';
+//				for (var i = 0; i < outFields.length; i++) {
+//					line += val[outFields[i]];
+//					if (i < outFields.length-1)
+//						line += ',';
+//				}
+//				
+//				fout.writeLine(line);
+//				fout.flush();
+//				fout.close();
 				
 				var outVal = val.toJSON(false, false, false);
 				
