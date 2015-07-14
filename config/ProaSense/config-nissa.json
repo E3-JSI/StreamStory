@@ -32,10 +32,10 @@
 	"log": {
 		"level": "debug",
 		"print": {
-			"rawData": 1000,
+			"rawData": 10000,
 			"streamStory": 100,
 			"stores": 10000,
-			"broker": 100,
+			"broker": 1000,
 			"coeff": 100
 		}
 	},
