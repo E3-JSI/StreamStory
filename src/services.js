@@ -32,7 +32,7 @@ function addRawMeasurement(val) {
 		counts[storeNm] = 0;
 	counts[storeNm]++;
 	if (totalCounts++ % config.RAW_PRINT_INTERVAL == 0)
-		log.debug('Counts: %s', JSON.stringify(counts));
+		log.debug('Time: %s, Counts: %s', new Date(val.variable_timestamp).toString(), JSON.stringify(counts));
 	
 	if (val.variable_timestamp < lastRawTime)
 		throw 'Invalid time! Current: ' + val.variable_timestamp + ', prev: ' + lastRawTime;
