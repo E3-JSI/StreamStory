@@ -31,6 +31,17 @@ function initStreamAggregates() {
 	
 	new qm.StreamAggr(base, mergerConfig);
 	
+	// create the resampler used by StreamStory
+	base.store(fields.OA_IN_STORE).addStreamAggr({
+		type: 'resampler',
+		name: 'drilling_resampler',
+		outStore: fields.STREAM_STORY_STORE,
+		createStore: false,
+		timestamp: 'time',
+		interval: 1000*20,	// 20 secs
+		fields: flds.resampler
+	});
+	
 	// insert zeros now, so they won't get resampled
 	if (config.INITIALIZE_ZERO) {
 		var startTm = 100000;
@@ -41,6 +52,8 @@ function initStreamAggregates() {
 		for (var i = 0; i < stores.length; i++) {
 			var storeConf = stores[i];
 			var name = storeConf.name;
+			
+			if (name == 'rpm') continue;
 			
 			var val = {
 				time_ms: startTm,
@@ -54,17 +67,6 @@ function initStreamAggregates() {
 			base.store(name).push(val);
 		}
 	}
-	
-	// create the resampler used by StreamStory
-	base.store(fields.OA_IN_STORE).addStreamAggr({
-		type: 'resampler',
-		name: 'drilling_resampler',
-		outStore: fields.STREAM_STORY_STORE,
-		createStore: false,
-		timestamp: 'time',
-		interval: 1000*20,	// 20 secs
-		fields: flds.resampler
-	});
 }
 
 function initGC() {
