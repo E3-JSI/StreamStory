@@ -121,7 +121,7 @@ exports.send = function (topic, msg) {
 			log.error(e, 'Failed to send message: %s', msg);
 			return;
 		}
-	})
+	});
 }
 
 exports.onMessage = function (callback) {

@@ -223,9 +223,9 @@ function calcFriction() {
 	}
 	
 	function startCalc(val) {
-		log.info('Starting calculation of the friction coefficient ...');
 		isCalculating = true;
 		startTime = val.time.getTime();
+		log.info('Starting calculation of the friction coefficient, time=%d ...', startTime);
 	}
 	
 	function finishCalc(val) {
