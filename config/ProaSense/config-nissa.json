@@ -32,11 +32,11 @@
 	"log": {
 		"level": "debug",
 		"print": {
-			"rawData": 10000,
+			"rawData": 100000,
 			"streamStory": 100,
-			"stores": 10000,
+			"stores": 100000,
 			"broker": 1000,
-			"coeff": 100
+			"coeff": 1000
 		}
 	},
 	"integration": {
