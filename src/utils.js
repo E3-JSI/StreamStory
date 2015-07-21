@@ -119,5 +119,23 @@ module.exports = {
 	
 	isFinite: function (num) {
 		return !isNaN(num) && isFinite(num);
+	},
+	
+	RecBuffer: function (size) {
+		var buff = [];
+		
+		this.add = function (rec) {
+			buff.unshift(rec);
+			while (buff.length > size) 
+				buff.pop();
+		};
+		
+		this.getLast = function () {
+			return buff.length > 0 ? buff[0] : null;
+		}
+		
+		this.clear = function () {
+			buff = [];
+		};
 	}
 }

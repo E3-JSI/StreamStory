@@ -292,10 +292,12 @@ exports.getStreamAggrFields = function () {
 		
 		if (fieldNm == 'time') continue;
 		
-		var interpolation = 'current';
+		var interpolation = config.INTERPOLATION;
 		
 		if (fieldNm == 'ibop')
 			interpolation = 'current';
+		
+		log.info('Field %s is using %s interpolation ...', fieldNm, interpolation);
 		
 		if (fieldNm != 'coeff_swivel' && fieldNm != 'coeff_gearbox') {
 			result.merger.push({
