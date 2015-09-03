@@ -42,6 +42,12 @@ exports.QM_CREATE_PIPELINE = config.qminer.createPipeline;
 exports.QM_DATABASE_PATH = config.qminer.dbPath;
 exports.QM_DATABASE_MODE = config.qminer.mode;
 
+//================================================================
+// QMINER - multiple users
+//================================================================
+exports.QM_USER_BASES_PATH = config.qminer.basesPath;
+exports.QM_USER_DEFAULT_STORE_NAME = 'default';
+
 global.qm = require(QM_MODULE_PATH);
 
 // configure the stores

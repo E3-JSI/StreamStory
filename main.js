@@ -32,7 +32,7 @@ function initStreamStory(base) {
 		
 		var result = analytics.StreamStory({
 			base: base,
-			hmcConfig: config.STREAM_STORY_PARAMS,
+			config: config.STREAM_STORY_PARAMS,
 			obsFields: ftrSpaceParams.obsFields,
 			contrFields: ftrSpaceParams.contrFields
 		});

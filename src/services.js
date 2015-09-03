@@ -2,10 +2,16 @@ var express = require('express');
 var bodyParser = require("body-parser");
 var path = require('path');
 var WebSocket = require('ws');
+var fs = require('fs');
+var mkdirp = require('mkdirp');
+var multer = require('multer');
+var session = require('express-session');
 var utils = require('./utils.js');
 var broker = require('./broker.js');
 var config = require('../config.js');
 var fields = require('../fields.js');
+
+var qmutil = qm.qm_util;
 
 var UI_PATH = '/';
 var API_PATH = '/api';
@@ -24,6 +30,12 @@ var totalCounts = 0;
 
 var lastCepTime = 0;
 var lastRawTime = 0;
+
+var modelStore = {};
+
+function getModel(sessionId, session) {
+	return modelStore[sessionId].model;
+}
 
 function addRawMeasurement(val) {
 	var storeNm = utils.storeFromTag(val.variable_type);
@@ -226,7 +238,8 @@ function initRestApi() {
 		// multilevel analysis
 		app.get(API_PATH + '/save', function (req, resp) {
 			try {
-				hmc.save(config.STREAM_STORY_FNAME);
+				var model = getModel(req.sessionID, req.session);
+				model.save(config.STREAM_STORY_FNAME);	// TODO change the file name
 				resp.status(204);
 			} catch (e) {
 				log.error(e, 'Failed to save visualization model!');
@@ -268,10 +281,12 @@ function initRestApi() {
 				var paramName = req.body.paramName;
 				var paramVal = parseFloat(req.body.paramVal);
 				
+				var model = getModel(req.sessionID, req.session);
+				
 				var paramObj = {};
 				paramObj[paramName] = paramVal;
 				
-				hmc.getModel().setParams(paramObj);
+				model.getModel().setParams(paramObj);
 				resp.status(204);	// no content
 			} catch (e) {
 				log.error(e, 'Failed to query MHWirth multilevel visualization!');
@@ -284,8 +299,9 @@ function initRestApi() {
 		app.get(API_PATH + '/param', function (req, resp) {
 			try {
 				var param = req.query.paramName;
+				var model = getModel(req.sessionID, req.session);
 				
-				var val = hmc.getModel().getParam(param);
+				var val = model.getModel().getParam(param);
 				resp.send({ parameter: param, value: val });
 			} catch (e) {
 				log.error(e, 'Failed to query MHWirth multilevel visualization!');
@@ -302,8 +318,10 @@ function initRestApi() {
 		// multilevel analysis
 		app.get(API_PATH + '/multilevel', function (req, resp) {
 			try {
+				var model = getModel(req.sessionID, req.session);
+				
 				log.debug('Querying MHWirth multilevel model ...');
-				resp.send(hmc.getVizState());
+				resp.send(model.getVizState());
 			} catch (e) {
 				log.error(e, 'Failed to query MHWirth multilevel visualization!');
 				resp.status(500);	// internal server error
@@ -315,9 +333,10 @@ function initRestApi() {
 		// multilevel analysis
 		app.get(API_PATH + '/features', function (req, resp) {
 			try {
+				var model = getModel(req.sessionID, req.session);
 				log.debug('Fetching all the features ...');
 				
-				var ftrNames = hmc.getFtrNames();
+				var ftrNames = model.getFtrNames();
 				
 				resp.send(ftrNames);
 			} catch (e) {
@@ -336,11 +355,12 @@ function initRestApi() {
 		app.get(API_PATH + '/transitionModel', function (req, resp) {
 			try {
 				var level = parseFloat(req.query.level);
+				var model = getModel(req.sessionID, req.session);
 				
 				if (log.debug())
 					log.debug('Fetching transition model for level: %.3f', level);
 				
-				resp.send(hmc.getModel().getTransitionModel(level));
+				resp.send(model.getModel().getTransitionModel(level));
 			} catch (e) {
 				log.error(e, 'Failed to query MHWirth multilevel visualization!');
 				resp.status(500);	// internal server error
@@ -357,15 +377,17 @@ function initRestApi() {
 		app.get(API_PATH + '/currentState', function (req, resp) {
 			try {
 				var level = parseFloat(req.query.level);
+				var model = getModel(req.sessionID, req.session);
+				
 				if (log.info())
 					log.info('Fetching current state for level ' + level);
 				
-				var result = hmc.currState(level);
+				var result = model.currState(level);
 				
 				if (log.info())
 					log.info("Current state: %s", JSON.stringify(result));
 				
-				resp.send(hmc.currState(level));
+				resp.send(result);
 			} catch (e) {
 				log.error(e, 'Failed to query MHWirth multilevel visualization!');
 				resp.status(500);	// internal server error
@@ -380,13 +402,15 @@ function initRestApi() {
 				var level = parseFloat(req.query.level);
 				var currState = parseInt(req.query.state);
 				
+				var model = getModel(req.sessionID, req.session);
+				
 				if (req.query.time == null) {
 					log.debug('Fetching future states currState: %d, height: %d', currState, level);
-					resp.send(hmc.futureStates(level, currState));
+					resp.send(model.futureStates(level, currState));
 				} else {
 					var time = parseFloat(req.query.time);
 					log.debug('Fetching future states, currState: %d, level: %d, time: %d', currState, level, time);
-					resp.send(hmc.futureStates(level, currState, time));
+					resp.send(model.futureStates(level, currState, time));
 				}
 			} catch (e) {
 				log.error(e, 'Failed to query MHWirth multilevel visualization!');
@@ -401,13 +425,15 @@ function initRestApi() {
 				var level = parseFloat(req.query.level);
 				var currState = parseInt(req.query.state);
 				
+				var model = getModel(req.sessionID, req.session);
+				
 				if (req.query.time == null) {
 					log.debug('Fetching past states currState: %d, height: %d', currState, level);
-					resp.send(hmc.pastStates(level, currState));
+					resp.send(model.pastStates(level, currState));
 				} else {
 					var time = parseFloat(req.query.time);
 					log.debug('Fetching past states, currState: %d, level: %d, time: %d', currState, level, time);
-					resp.send(hmc.pastStates(level, currState, time));
+					resp.send(model.pastStates(level, currState, time));
 				}
 			} catch (e) {
 				log.error(e, 'Failed to query MHWirth multilevel visualization!');
@@ -425,7 +451,9 @@ function initRestApi() {
 				var deltaTm = parseFloat(req.query.deltaTm);
 				var height = parseFloat(req.query.level);
 				
-				resp.send(hmc.getModel().probsOverTime(height, state, startTm, endTm, deltaTm));
+				var model = getModel(req.sessionID, req.session);
+				
+				resp.send(model.getModel().probsOverTime(height, state, startTm, endTm, deltaTm));
 			} catch (e) {
 				log.error(e, 'Failed to query MHWirth multilevel visualization!');
 				resp.status(500);	// internal server error
@@ -437,11 +465,12 @@ function initRestApi() {
 		app.get(API_PATH + '/history', function (req, resp) {
 			try {
 				var level = parseFloat(req.query.level);
+				var model = getModel(req.sessionID, req.session);
 				
 				if (log.debug())
 					log.debug('Fetching history for level %d', level);
 				
-				resp.send(hmc.getModel().histStates(level));
+				resp.send(model.getModel().histStates(level));
 			} catch (e) {
 				log.error(e, 'Failed to query MHWirth multilevel visualization!');
 				resp.status(500);	// internal server error
@@ -460,10 +489,12 @@ function initRestApi() {
 				var stateId = parseInt(req.query.stateId);
 				var height = parseFloat(req.query.level);
 				
+				var model = getModel(req.sessionID, req.session);
+				
 				if (log.debug())
 					log.debug('Fetching details for state: %d', stateId);
 				
-				resp.send(hmc.stateDetails(stateId, height));
+				resp.send(model.stateDetails(stateId, height));
 			} catch (e) {
 				log.error(e, 'Failed to query state details!');
 				resp.status(500);	// internal server error
@@ -478,10 +509,12 @@ function initRestApi() {
 				var stateId = parseInt(req.query.stateId);
 				var ftrIdx = parseInt(req.query.feature);
 				
+				var model = getModel(req.sessionID, req.session);
+				
 				if (log.debug())
 					log.debug('Fetching histogram for state %d, feature %d ...', stateId, ftrIdx);
 				
-				resp.send(hmc.histogram(stateId, ftrIdx));
+				resp.send(model.histogram(stateId, ftrIdx));
 			} catch (e) {
 				log.error(e, 'Failed to query state details!');
 				resp.status(500);	// internal server error
@@ -496,10 +529,12 @@ function initRestApi() {
 				var height = parseFloat(req.query.height);
 				var ftrIdx = parseInt(req.query.ftr);
 				
+				var model = getModel(req.sessionID, req.session);
+				
 				if (log.debug())
 					log.debug('Fetching distribution for feature "%d" for height %d ...', ftrIdx, height);
 				
-				resp.send(hmc.getFtrDist(height, ftrIdx));
+				resp.send(model.getFtrDist(height, ftrIdx));
 			} catch (e) {
 				log.error(e, 'Failed to query state details!');
 				resp.status(500);	// internal server error
@@ -515,10 +550,12 @@ function initRestApi() {
 				stateId = parseInt(req.body.id);
 				stateNm = req.body.name;
 				
+				var model = getModel(req.sessionID, req.session);
+				
 				if (log.info()) 
 					log.info('Setting name of state %d to %s ...', stateId, stateNm);
 				
-				hmc.getModel().setStateName(stateId, stateNm);
+				model.getModel().setStateName(stateId, stateNm);
 				resp.status(204);	// no content
 			} catch (e) {
 				log.error(e, 'Failed to set name of state %d to %s', stateId, stateNm);
@@ -536,11 +573,13 @@ function initRestApi() {
 				height = parseFloat(req.body.height);
 				isTarget = JSON.parse(req.body.isTarget);
 				
+				var model = getModel(req.sessionID, req.session);
+				
 				if (log.info()) 
 					log.info('Setting target state: %d, isTarget: ' + isTarget, stateId);
 				
 				
-				hmc.getModel().setTarget(stateId, height, isTarget);
+				model.getModel().setTarget(stateId, height, isTarget);
 				resp.status(204);	// no content
 			} catch (e) {
 				log.error(e, 'Failed to set target state %d!', stateId);
@@ -557,11 +596,13 @@ function initRestApi() {
 				ftrIdx = parseInt(req.body.ftrIdx);
 				factor = parseFloat(req.body.factor);
 				
+				var model = getModel(req.sessionID, req.session);
+				
 				if (log.info()) 
 					log.info('Changing control %d by factor %d ...', ftrIdx, factor);
 				
-				hmc.setControl(ftrIdx, factor);
-				resp.send(hmc.getVizState());
+				model.setControl(ftrIdx, factor);
+				resp.send(model.getVizState());
 			} catch (e) {
 				log.error(e, 'Failed to control %d by factor %d', ftrIdx, factor);
 				resp.status(500);	// internal server error
@@ -572,14 +613,266 @@ function initRestApi() {
 	}
 }
 
+function initDataUpload() {
+	var upload = multer({
+		storage: multer.memoryStorage(),				// will have file.buffer
+		fileFilter: function (req, file, callback) {	// only accept csv files
+			var passes = qmutil.stringEndsWith(file.originalname, '.csv');
+			log.debug('Filtering uploaded file %s. File passess filter: ' + passes, JSON.stringify(file));
+			callback(null, passes);
+		}
+	});	
+	
+	function getUserDir(username) {
+		return config.QM_USER_BASES_PATH + username;
+	}
+	
+	function getBaseDir(username, timestamp) {
+		return getUserDir(username) + '/' + timestamp;
+	}
+	
+	function getDbDir(baseDir) {
+		return baseDir + '/db';
+	}
+	
+	var fileBuff = null;
+	
+	app.post('/upload', upload.single('dataset'), function (req, res, next) {
+		var session = req.session;
+		var storeName = req.file.originalname.substring(0, req.file.originalname.indexOf('.')) + new Date().getTime();
+		
+		session.storeName = storeName;
+		
+		fileBuff = req.file.buffer;
+		
+		var headers = [];
+		qm.fs.readCsvLines(fileBuff, {
+			lineLimit: 1,
+			onLine: function (lineArr) {
+				// read the header and create the store
+				for (var i = 0; i < lineArr.length; i++) {
+					headers.push({ name: lineArr[i] });
+				}
+
+				log.debug('Fields read!');
+			},
+			onEnd: function (err) {
+				if (err != null) {
+					log.error(err, 'Exception while reading CSV headers!');
+					res.status(500);	// internal server error
+					res.end();
+					return;
+				}
+				
+				log.info('Headers read, sending them back to the UI ...');
+				session.headers = headers;
+				res.send(headers);
+				res.end();
+			}
+		});
+	});
+	
+	function initBase(req, res) {
+		try {
+			var session = req.session;
+			var sessionId = req.sessionID;
+			
+			var timeAttr = req.body.time;
+			var username = req.body.username;
+			var timeUnit = req.body.timeUnit;
+			var controlAttrs = req.body.controlAttrs;
+			
+			
+			var headers = session.headers;
+			
+			log.info('Creating a new base for the current user ...');
+			var baseDir = getBaseDir(username, new Date().getTime());
+			var dbDir = getDbDir(baseDir);
+			
+			mkdirp(dbDir, function (e) {
+				if (e != null) {
+					log.error(e, 'Failed to create base directory!');
+					log.error(err, 'Exception while parsing the uploaded CSV file!');
+					res.status(500);	// internal server error
+					return;
+				}
+				
+				var userBase = new qm.Base({
+					mode: 'create',
+					dbPath: dbDir
+				});
+				
+				log.debug('Creating default store ...');
+				var storeFields = [];
+				for (var i = 0; i < headers.length; i++) {
+					storeFields.push({
+						name: headers[i].name,
+						type: headers[i].name == timeAttr ? 'datetime' : 'float',
+						'null': false
+					})
+				}
+				
+				var store = userBase.createStore({
+					name: config.QM_USER_DEFAULT_STORE_NAME,
+					fields: storeFields
+				});
+				
+				// fill the store
+				log.debug('Filling the store ...');
+				var i = 0;
+				qm.fs.readCsvLines(fileBuff, {
+					skipLines: 1,
+					onLine: function (lineArr) {
+						if (++i % 10 == 0)
+							log.debug('Read %d lines ...', i);
+						
+						var rec = {};
+						for (var i = 0; i < headers.length; i++) {
+							if (headers[i].name == timeAttr) {
+								rec[timeAttr] = utils.dateToQmDate(new Date(parseInt(lineArr[i])));
+							} else {
+								rec[headers[i].name] = parseFloat(lineArr[i]);
+							}
+						}
+						
+						if (log.trace())
+							log.trace('Inserting value: %s', JSON.stringify(rec));
+						
+						store.push(rec);
+					},
+					onEnd: function (err) {
+						if (err != null) {
+							log.error(err, 'Exception while parsing the uploaded CSV file!');
+							res.status(500);	// internal server error
+							return;
+						}
+						
+						log.info('New store created, building StreamStory model ...');
+						
+						try {
+							// create the configuration
+							var obsFields = [];
+							var contrFields = [];
+							
+							var usedFields = {};
+							for (var i = 0; i < controlAttrs.length; i++) {
+								var fieldNm = controlAttrs[i];
+								
+								var fieldConfig = {
+									field: fieldNm,
+									source: config.QM_USER_DEFAULT_STORE_NAME,
+									type: 'numeric',
+									normalize: true
+								}
+								
+								contrFields.push(fieldConfig);
+								usedFields[fieldNm] = true;
+							}
+							
+							for (var i = 0; i < headers.length; i++) {
+								var fieldNm = headers[i].name;
+								
+								if (fieldNm in usedFields || fieldNm == timeAttr) continue;
+								
+								var fieldConfig = {
+									field: fieldNm,
+									source: config.QM_USER_DEFAULT_STORE_NAME,
+									type: 'numeric',
+									normalize: true
+								}
+								
+								obsFields.push(fieldConfig);
+							}
+							
+							// create the model
+							var model = qm.analytics.StreamStory({
+								base: userBase,
+								config: {
+									transitions: {
+										type: 'continuous',
+										timeUnit: timeUnit
+									},
+									clustering: {
+										type: 'dpmeans',
+										lambda: .7,
+										minClusts: 10,
+										rndSeed: 1,
+										sample: 1,
+										histogramBins: 20
+									},
+									pastStates: 2,
+									verbose: true
+								},
+								obsFields: obsFields,
+								contrFields: contrFields
+							});
+													
+							model.fit({
+								recSet: store.allRecords,
+								timeField: timeAttr,
+								batchEndV: null
+							});
+							
+							// save to session
+							modelStore[sessionId] = {
+								base: userBase,
+								model: model
+							}
+							
+							// end request
+							res.status(204);	// no content
+							res.end();
+						} catch (e) {
+							log.error(e, 'Failed to create the store!');
+							res.status(500);	// internal server error
+							res.end();
+						}
+					}
+				});
+			});
+		} catch (e) {
+			log.error(e, 'Exception while building model!');
+			res.status(500);	// internal server error
+			res.end();
+		}
+	}
+	
+	app.post(API_PATH + '/configureModel', function (req, res) {
+		log.info('Building the model ...');
+		
+		// create new base with the default store
+		log.info('Creating users directory ...');
+		var userDirNm = getUserDir(req.body.username);
+		
+		fs.exists(userDirNm, function (exists) {
+			if (exists) {
+				log.debug('Reusing directory %s ...', userDirNm);
+				initBase(req, res);
+			} else {
+				fs.mkdir(userDirNm, function (e) {
+					if (e != null) {
+						log.error(e, 'Failed to create directory!');
+						res.status(500);	// internal server error
+						res.end();
+						return;
+					}
+					initBase(req, res);
+				})
+			}
+		});
+	});
+}
+
 function initServer() {
 	log.info('Initializing web server ...');
 
 	// automatically parse body on the API path
+	app.use(session({ secret: 'somesecret_TODO make config' }));
 	app.use(API_PATH + '/', bodyParser.urlencoded({ extended: false }));
 	app.use(API_PATH + '/', bodyParser.json());
 		
 	initRestApi();
+	initDataUpload();
 	
 	// serve static directories on the UI path
 	app.use(UI_PATH, express.static(path.join(__dirname, config.WWW_DIR)));

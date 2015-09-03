@@ -359,57 +359,59 @@ function calcFriction() {
 		}
 	});
 	
-	var fname = '/mnt/raidM2T/data/Aker/testing/drilling-test-coeff.csv';
-	var outFields = [
-	    'hoist_press_A',
-	    'hoist_press_B',
-	    'hook_load',
-	    'ibop',
-	    'oil_temp_gearbox',
-	    'oil_temp_swivel',
-	    'pressure_gearbox',
-	    'rpm',
-	    'temp_ambient',
-	    'torque',
-	    'wob',
-	    'mru_pos',
-	    'mru_vel',
-	    'ram_pos_measured',
-	    'ram_pos_setpoint',
-	    'ram_vel_measured',
-	    'ram_vel_setpoint',
-	    'coeff_swivel',
-	    'coeff_gearbox'
-	]
-	
-	
-	var fout = new qm.fs.FOut(fname, false);
-	
-	var line = 'time,';
-	for (var i = 0; i < outFields.length; i++) {
-		line += outFields[i];
-		if (i < outFields.length-1)
-			line += ',';
-	}
-	fout.writeLine(line);
-	fout.flush();
-	fout.close();
-	
-	oaInStore.addTrigger({
-		onAdd: function (val) {
-			fout = new qm.fs.FOut(fname, true);
-			line = '' + val.time.getTime() + ',';
-			for (var i = 0; i < outFields.length; i++) {
-				line += val[outFields[i]];
-				if (i < outFields.length-1)
-					line += ',';
-			}
-			
-			fout.writeLine(line);
-			fout.flush();
-			fout.close();
-		}
-	});
+//	{
+//		var fname = '/mnt/raidM2T/data/Aker/testing/drilling-test-coeff.csv';
+//		var outFields = [
+//		    'hoist_press_A',
+//		    'hoist_press_B',
+//		    'hook_load',
+//		    'ibop',
+//		    'oil_temp_gearbox',
+//		    'oil_temp_swivel',
+//		    'pressure_gearbox',
+//		    'rpm',
+//		    'temp_ambient',
+//		    'torque',
+//		    'wob',
+//		    'mru_pos',
+//		    'mru_vel',
+//		    'ram_pos_measured',
+//		    'ram_pos_setpoint',
+//		    'ram_vel_measured',
+//		    'ram_vel_setpoint',
+//		    'coeff_swivel',
+//		    'coeff_gearbox'
+//		]
+//		
+//		
+//		var fout = new qm.fs.FOut(fname, false);
+//		
+//		var line = 'time,';
+//		for (var i = 0; i < outFields.length; i++) {
+//			line += outFields[i];
+//			if (i < outFields.length-1)
+//				line += ',';
+//		}
+//		fout.writeLine(line);
+//		fout.flush();
+//		fout.close();
+//		
+//		oaInStore.addTrigger({
+//			onAdd: function (val) {
+//				fout = new qm.fs.FOut(fname, true);
+//				line = '' + val.time.getTime() + ',';
+//				for (var i = 0; i < outFields.length; i++) {
+//					line += val[outFields[i]];
+//					if (i < outFields.length-1)
+//						line += ',';
+//				}
+//				
+//				fout.writeLine(line);
+//				fout.flush();
+//				fout.close();
+//			}
+//		});
+//	}
 }
 
 function initTriggers() {

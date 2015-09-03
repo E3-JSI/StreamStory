@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">	<!-- latest IE rendering mode -->
+	<meta name="viewport" content="width=device-width, initial-scale=1">	<!-- mobile devices -->
+	<title>StreamStory</title>
+	
+	<link rel="stylesheet" href="css/style.css">
+	<link rel="stylesheet" href="lib/jquer-ui.css">	
+	<link rel="stylesheet" href="lib/bootstrap/css/bootstrap.min.css">
+	<link rel="stylesheet" href="lib/bootstrap/css/bootstrap-theme.min.css">
+	
+	<script type="text/javascript" src="lib/jquery-1.11.1.min.js"></script>
+	<script type="text/javascript" src="lib/jquery-ui.min.js"></script>
+	<script src="lib/bootstrap/js/bootstrap.min.js"></script>
+	<script type="text/javascript" src="lib/cytoscape.js"></script>
+	<script type="text/javascript" src="lib/highcharts.js"></script>
+	<script type="text/javascript" src="js/zoomvis.js"></script>
+	<script type="text/javascript" src="js/hist.js"></script>
+	<script type="text/javascript" src="js/ui.js"></script>
+	
+	<style>
+		.dl-horizontal dt {
+		    white-space: normal;
+		    width: 200px;
+		    text-align: left;
+		}
+	</style>
+	<script type="text/javascript">
+		var ui;
+		$(document).ready(function () {
+			ui = UI();
+		});
+	</script>
+</head>
+<body>
+	<nav class="navbar navbar-default">
+		<div class="container-fluid">
+			<div class="navbar-header">
+		      	<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+		        	<span class="sr-only">Toggle navigation</span>
+		        	<span class="icon-bar"></span>
+		        	<span class="icon-bar"></span>
+		        	<span class="icon-bar"></span>
+		      	</button>
+		      	<a class="navbar-brand" href="#">StreamStory</a>
+		    </div>
+		</div>
+	</nav>
+	<div id="container-center" style="margin: 0 auto; width: 70%;">
+		<div class="container-fluid row">
+			<div id="container-left" class="col-md-9 col-xs-9">
+				<div id="parent_container" class="panel panel-default">
+					<div class="panel-heading clearfix">
+						<h4 class="panel-title pull-left">Visualization</h4>
+						<!-- toggler for the visualization options -->
+						<button id="vis-toggler" class="btn btn-default btn-xs pull-right" style="padding: 0px 5px;" aria-label="Left Align">
+						  	<span class="glyphicon glyphicon-align-justify" aria-hidden="true"></span>
+						</button>
+						<!-- options for the visualization component -->
+						<div id="content-options" class="popover fade bottom in">
+							<div class="arrow"></div>
+							<div id="vis_options" class="container-fluid">
+								<div style="padding-top: 12px; padding-bottom: 12px;">
+									<div class="row">
+										<div id="div-ftrs" class="col-md-12">
+											<div>
+												<h4>Show attribute</h4>
+												<ul id="ul-ftrs-obs"></ul>
+											</div>
+											<div>
+												<h4>Adjust control</h4>
+												<div class="checkbox">
+													<label><input id="chk-sim-inputs" type="checkbox" /> Simulate inputs</label>
+												</div>
+												<div id="div-ftrs-control"></div>
+											</div>
+										</div>
+									</div>
+									<div class="row">
+										<div  class="col-md-12">
+											<h4>View future</h4>
+											<input type="checkbox" id="chk-show-fut" />Show future
+											<div id="div-future-opts">
+												<input type="number" id="rng-time-probs" value="0" />
+												<input type="number" id="txt-fut-range" value="1" />
+												<div id="div-fut-time"></div>
+											</div>
+										</div>
+									</div>
+									<div class="row">
+										<div id="container-buttons" class="col-md-12" style="padding-top: 12px;">
+											<input type="button" id="btn-png" value="Save as PNG" class="btn btn-default btn-block" />
+											<input type="button" id="btn-save" value="Save Model" class="btn btn-primary btn-block" />
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+						<script type="application/javascript">
+							$('#vis-toggler').click(function () {
+								$('#content-options').slideToggle();
+							});
+						</script>
+					</div>
+					<div id="vis-wrapper" class="panel-body nopadding">
+						<div id="slider_container">
+							<div id="slider_item_div"></div>
+						</div>
+						<div id="vis_container" class="nopadding"></div>						
+						<div id="threshold_slider"></div>
+					</div>
+				</div>
+				<div id="container-details" class="panel panel-default">
+					<div class="panel-heading">State Details</div>
+					<div class="panel-body nopadding" style="min-height: 400px;">
+						<div id="wrapper-details" style="display: none;">
+							<div id="div-ftrs" class="col-md-12">
+								<h3>Basic info</h3>
+								<p>Name: <input id="txt-name" type="text" /></p>
+								<p>Id: <span id="state-id"></span></p>
+								<div class="checkbox">
+							    	<label>
+							      		<input id="chk-target" type="checkbox" /> Make target
+							    	</label>
+							  	</div>
+							</div>
+							<div id="div-ftrs" class="col-md-12">
+								<!-- thumbnail with the histograms for attributes -->
+								<div id="div-thumbnail" style="display: none;">
+									<div class="col-md-4 thumb-col">
+										<div class="thumbnail">
+											<div class="container-hist" style="height: 200px;"></div>
+									      	<div class="caption">
+									        	<h4 class="attr-name" style="word-wrap: break-word; height: 30px;"></h4>
+									        	<p class="attr-val"></p>
+									      	</div>
+									    </div>
+								    </div>
+							    </div>
+								<h3>Attributes</h3>
+								<div class="row">
+									<div id="div-attrs" class="col-md-12"></div>
+								</div>
+							</div>
+							<div id="div-ftrs" class="col-md-12">
+								<h3>Statistics</h3>
+								<div id="container-future">
+									<h4>Future States:</h4>
+									<div id="div-future"></div>
+								</div>
+								<div id="container-past">
+									<h4>Past States:</h4>
+									<div id="div-past"></div>
+								</div>	
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div id="container-right" class="col-md-3 col-xs-3">
+				<div class="panel panel-default">
+					<div class="panel-heading">Messages</div>
+					<div class="panel-body nopadding">
+						<div id="div-messages">
+							<ul id="list-msg" class="list-group"></ul>
+						</div>
+					</div>
+				</div>
+				<div class="panel panel-default">
+					<div class="panel-heading">Configuration</div>
+					<div class="panel-body">
+						<div id="div-config">
+							<div id="div-config-params">
+								<label for="range-pred-threshold">Prediciton threshold: <span id="span-pred-threshold"></span></label>
+								<div id="range-pred-threshold"></div>
+							</div>
+							<div id="div-config-params">
+								<label for="range-time-horizon">Time horizon: <span id="span-time-horizon"></span></label>
+								<div id="range-time-horizon"></div>
+							</div>
+							<div id="div-config-params">
+								<label for="range-pdf-bins">PDF bins: <span id="span-pdf-bins"></span></label>
+								<div id="range-pdf-bins"></div>
+							</div>
+							<div id="current_height_value"></div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<!-- popover for the histogram of the PDF -->
+	<div id="popover-pdf-hist" class="popover fade bottom in popover-centered">
+		<a class="glyphicon glyphicon-remove btn-close" onclick="$('#popover-pdf-hist').slideUp();"></a>
+		<div id="hist-pdf" style="width: 100%; height: 100%;"></div>
+	</div>
+</body>
