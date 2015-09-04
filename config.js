@@ -14,13 +14,21 @@ var config = JSON.parse(configStr);
 //================================================================
 
 var loggerConfig = config.log.logger;
+var stream;
+if (loggerConfig.stream.type == 'stdout') {
+	console.log('Using stdout as log stream ...');
+	stream = process.stdout;
+} else {	// TODO file stream doesn't work
+	console.log('Using file \'' + loggerConfig.stream.file + '\' as log stream ...');
+	stream = fs.createWriteStream(loggerConfig.stream.file);
+}
 var logStream = {
 	outputMode: loggerConfig.outputMode,
-	out: loggerConfig.stream.type == 'stdout' ? process.stdout : fs.createWriteStream(loggerConfig.stream.file)
+	out: stream
 };
 
 global.log = bunyan.createLogger({
-	name: 'ProaSense',
+	name: 'StreamStory',
 	stream: logformat(logStream),
 	level: config.log.logger.level
 });

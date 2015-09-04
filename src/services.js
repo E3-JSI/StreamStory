@@ -1010,7 +1010,7 @@ function initServer() {
 		// check if we need to redirect to the index page
 		if (session.username == null || session.base == null || session.model == null) {
 			log.info('Session data missing, redirecting to index ...');
-			res.redirect('/');
+			res.redirect('.');
 		} else {
 			next();
 		}
