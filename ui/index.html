@@ -17,6 +17,12 @@
 	<script type="text/javascript" src="lib/bootstrap/js/bootstrap.min.js"></script>
 	<script type="text/javascript" src="lib/jquery.bootstrap-duallistbox.js"></script>
 	
+	<script type="text/javascript">
+		function redirectToUI() {
+			window.location.replace('ui.html');
+		}
+	</script>
+	
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -73,7 +79,15 @@
    								<input id="input-upload" type="button" class="btn btn-default btn-primary" value="Upload Dataset" />
    								<script type="text/javascript">
    									$('#input-upload').click(function () {
-   										$('#popup-data-selection').modal('show');
+   										$('#popup-data-upload').modal('show');
+   									});
+   								</script>
+                            </li>
+                            <li>
+   								<input id="input-select-source" type="button" class="btn btn-default btn-primary" value="Use Stored Dataset" />
+   								<script type="text/javascript">
+   									$('#input-select-source').click(function () {
+   										$('#popup-data-select').modal('show');
    									});
    								</script>
                             </li>
@@ -87,7 +101,7 @@
     </div>
     <!-- /.intro-header -->
 
-	<div id="popup-data-selection" class="modal fade" role="dialog" tabindex="-1">
+	<div id="popup-data-upload" class="modal fade" role="dialog" tabindex="-1">
 		<div class="modal-dialog">
 			<div class="modal-content">
 				<div class="modal-header">
@@ -199,7 +213,7 @@
 													contentType: 'application/json',
 													data: JSON.stringify(data),
 													success: function (data) {
-														window.location.replace('ui.html');
+														redirectToUI();
 													},
 													error: function (xhr, status) {
 														alert(status);
@@ -250,13 +264,100 @@
 			</div>
 		</div>
 	</div>
+	<div id="popup-data-select" class="modal fade" role="dialog" tabindex="-1">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+    				<button type="button" class="close" data-dismiss="modal">&times;</button>
+    				<h4 class="modal-title">Select Dataset</h4>
+  				</div>
+  				<div class="modal-body">
+					<div class="form-group">
+	  					<label for="input-email-select">Email address</label>
+	  					<input id="input-email-select" type="email" class="form-control" placeholder="Email" />
+  						<script type="text/javascript">
+  							function enableDisableSelect() {
+  								var emailPresent = $('#input-email-select').val() != '';
+  								var datasetPresent = $('#select-dataset option[selected="selected"]').val() != null &&
+  									$('#select-dataset option[selected="selected"]').val() != '';
+  							
+  								if (emailPresent && datasetPresent) {
+  									$('#btn-upload-done').removeAttr('disabled');
+  								} else {
+  									$('#btn-upload-done').attr('disabled', 'disabled');
+  								}
+  							}
+  							$('#input-email-select').change(enableDisableSelect);
+  						
+  							$('#input-email-select').change(function () {
+  								var email = $(this).val();
+  								$.ajax('api/selectDataset', {
+  									contentType: false,
+									data: { email: email },
+									method: 'GET',
+									success: function (data, status, xhr) {									
+										var select = $('#select-dataset');
+										select.html('');
+										
+										for (var i = 0; i < data.length; i++) {
+											var option = $('<option />');
+											
+											option.val(data[i].dir);
+											option.html(data[i].dataset);
+											if (i == 0) {
+												option.attr('selected', 'selected');
+											}
+											
+											select.append(option);
+										}
+										
+										$('#select-dataset').off('change');
+										$('#select-dataset').change(enableDisableSelect);
+										$('#select-dataset option[selected="selected"]').change();
+									},
+									error: function (xhr, status) {
+										alert('Failed to upload file: ' + status + '!');
+									}
+  								});
+  							});
+  						</script>
+  					</div>
+  					<div class="form-group">
+                      	<label for="select-dataset">Choose dataset</label>
+ 						<select id="select-dataset" class="form-control"></select>
+					</div>
+  				</div>
+  				<div class="modal-footer">
+    				<button id="btn-upload-done" type="button" class="btn btn-success" disabled="disabled">Done</button>
+  					<script type="text/javascript">
+  						$('#btn-upload-done').click(function () {
+  							var baseDir = $('#select-dataset option[selected="selected"]').val();
+  							
+  							$.ajax('api/selectDataset', {
+  								method: 'POST',
+  								contentType: 'application/json',
+								data: JSON.stringify({ base: baseDir }),
+								success: function (data, status, xhr) {
+									redirectToUI();
+								},
+								error: function (xhr, status) {
+									alert('Failed to select dataset: ' + status + '!');
+								}
+ 							});
+  						});
+  					</script>
+  				</div>
+			</div>
+		</div>
+	</div>
 	<script type="text/javascript">
-		$('#popup-data-selection').modal({ show: false });
+		$('#popup-data-upload').modal({ show: false });
+		$('#popup-data-select').modal({ show: false });
 	</script>
 
     <!-- Page Content -->
 
-	<a  name="services"></a>
+	<a name="services"></a>
     <div class="content-section-a">
         <div class="container">
             <div class="row">

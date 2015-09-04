@@ -6,10 +6,12 @@ var fs = require('fs');
 var mkdirp = require('mkdirp');
 var multer = require('multer');
 var session = require('express-session');
+var SessionStore = require('./util/sessionstore.js');
 var utils = require('./utils.js');
 var broker = require('./broker.js');
 var config = require('../config.js');
 var fields = require('../fields.js');
+var db = require('./dbaccess.js')();
 
 var qmutil = qm.qm_util;
 
@@ -31,10 +33,30 @@ var totalCounts = 0;
 var lastCepTime = 0;
 var lastRawTime = 0;
 
-var modelStore = {};
-
 function getModel(sessionId, session) {
-	return modelStore[sessionId].model;
+	return session.model;
+}
+
+function cleanUpSession(session) {
+	if (session.base != null) {
+		log.debug('Closing base for user %s ...', session.username);
+		session.base.close();
+		log.debug('Base closed!');
+	}
+	delete session.username;
+	delete session.base;
+	delete session.model;
+	delete session.userConfig;
+}
+
+function saveToSession(session, username, userBase, model, userConfig) {
+	log.debug('Saving new data to session ...');
+	if (session.base != null)
+		cleanUpSession(session);
+	session.username = username;
+	session.base = userBase;
+	session.model = model;
+	session.userConfig = userConfig;
 }
 
 function addRawMeasurement(val) {
@@ -635,18 +657,44 @@ function initDataUpload() {
 		return baseDir + '/db';
 	}
 	
-	var fileBuff = null;
+	function getModelDir(baseDir) {
+		return baseDir + '/StreamStory.bin';
+	}
+	
+	function openBase(session, baseDir, username, userConfig) {
+		log.info('Opening new base for user \'%s\': %s', username, baseDir);
+		
+		try {
+			var userBase = new qm.Base({
+				mode: 'openReadOnly',
+				dbPath: getDbDir(baseDir)
+			});
+			
+			var model = new qm.analytics.StreamStory({ 
+				base: userBase, 
+				fname: getModelDir(baseDir) 
+			});
+			
+			saveToSession(session, username, userBase, model, userConfig);
+		} catch (e) {
+			log.error(e, 'Failed to open base!');
+			throw e;
+		}
+	}
+	
+	var fileBuffH = {};
 	
 	app.post('/upload', upload.single('dataset'), function (req, res, next) {
 		var session = req.session;
-		var storeName = req.file.originalname.substring(0, req.file.originalname.indexOf('.')) + new Date().getTime();
 		
-		session.storeName = storeName;
+		var fileBuff = req.file.buffer;
 		
-		fileBuff = req.file.buffer;
+		fileBuffH[req.sessionID] = fileBuff;
 		
+		session.fileName = req.file.originalname;
+				
 		var headers = [];
-		qm.fs.readCsvLines(fileBuff, {
+		qm.fs.readCsvLines(req.file.buffer, {
 			lineLimit: 1,
 			onLine: function (lineArr) {
 				// read the header and create the store
@@ -678,15 +726,14 @@ function initDataUpload() {
 			var sessionId = req.sessionID;
 			
 			var timeAttr = req.body.time;
-			var username = req.body.username;
+			var userEmail = req.body.username;
 			var timeUnit = req.body.timeUnit;
 			var controlAttrs = req.body.controlAttrs;
-			
 			
 			var headers = session.headers;
 			
 			log.info('Creating a new base for the current user ...');
-			var baseDir = getBaseDir(username, new Date().getTime());
+			var baseDir = getBaseDir(userEmail, new Date().getTime());
 			var dbDir = getDbDir(baseDir);
 			
 			mkdirp(dbDir, function (e) {
@@ -716,6 +763,9 @@ function initDataUpload() {
 					name: config.QM_USER_DEFAULT_STORE_NAME,
 					fields: storeFields
 				});
+				
+				var fileBuff = fileBuffH[req.sessionID];	// TODO bit of a hack, take care of possible memory leaks when sessions expire
+				delete fileBuffH[req.sessionID];
 				
 				// fill the store
 				log.debug('Filling the store ...');
@@ -813,15 +863,38 @@ function initDataUpload() {
 								batchEndV: null
 							});
 							
-							// save to session
-							modelStore[sessionId] = {
-								base: userBase,
-								model: model
+							log.info('Saving model and base ...');
+							model.save(getModelDir(baseDir));
+							userBase.close();
+							
+							log.info('Saved, opening base in read mode ...');
+							
+							var userConfig = {
+								email: userEmail,
+								baseDir: baseDir,
+								dataset: session.fileName
 							}
 							
-							// end request
-							res.status(204);	// no content
-							res.end();
+							db.addAndGetUserConfig(userConfig, function (e, userConfig) {
+								if (e != null) {
+									log.error(e, 'Failed to fetch user config from the DB!');
+									res.status(500);	// internal server error
+									res.end();
+									return;
+								}
+								
+								try {
+									openBase(session, baseDir, userEmail, userConfig);
+									
+									// end request
+									res.status(204);	// no content
+									res.end();
+								} catch (e1) {
+									log.error(e1, 'Failed to open base!');
+									res.status(500);	// internal server error
+									res.end();
+								}
+							});
 						} catch (e) {
 							log.error(e, 'Failed to create the store!');
 							res.status(500);	// internal server error
@@ -861,15 +934,87 @@ function initDataUpload() {
 			}
 		});
 	});
+	
+	app.get(API_PATH + '/selectDataset', upload.single('dataset'), function (req, res, next) {
+		var session = req.session;
+		var username = req.query.email;
+		
+		db.getUserConfig(username, function (e, userBases) {
+			if (e != null) {
+				log.error(e, 'Failed to get base info for user: %s', username);
+				res.status(500);	// internal server error
+				res.end();
+				return;
+			}
+			
+			session.username = username;
+			
+			res.send(userBases.bases);
+			res.end();
+		});
+	});
+	
+	app.post(API_PATH + '/selectDataset', function (req, res) {
+		var session = req.session;
+		var username = session.username;
+		
+		var baseDir = req.body.base;
+		
+		log.info('User %s selected base %s ...', username, baseDir);
+		
+		db.getUserConfig(username, function (e, userConfig) {
+			if (e != null) {
+				log.error(e, 'Failed to get base info for user: %s', username);
+				res.status(500);	// internal server error
+				res.end();
+				return;
+			}
+			
+			try {
+				openBase(session, baseDir, username, userConfig);
+				res.status(204);	// no content
+				res.end();
+			} catch (e) {
+				log.error(e, 'Failed to open base for user %s!', username);
+				res.status(500);	// internal server error
+				res.end();
+			}
+		});
+	});
+}
+
+function getHackedSessionStore() {
+	var store =  new SessionStore();
+	store.on('preDestroy', function (sessionId, session) {
+		cleanUpSession(session);
+	});
+	return store;
 }
 
 function initServer() {
 	log.info('Initializing web server ...');
 
+	app.use(session({ 
+		secret: 'somesecret_TODO make config',
+		unset: 'destroy',
+		store: getHackedSessionStore(),
+		cookie: { maxAge: 10*1000 }
+	}));
 	// automatically parse body on the API path
-	app.use(session({ secret: 'somesecret_TODO make config' }));
 	app.use(API_PATH + '/', bodyParser.urlencoded({ extended: false }));
 	app.use(API_PATH + '/', bodyParser.json());
+	// when a session expires, redirect to index
+	app.use('/ui.html', function (req, res, next) {
+		var session = req.session;
+		
+		// check if we need to redirect to the index page
+		if (session.username == null || session.base == null || session.model == null) {
+			log.info('Session data missing, redirecting to index ...');
+			res.redirect('/');
+		} else {
+			next();
+		}
+	});
 		
 	initRestApi();
 	initDataUpload();

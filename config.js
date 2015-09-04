@@ -48,6 +48,11 @@ exports.QM_DATABASE_MODE = config.qminer.mode;
 exports.QM_USER_BASES_PATH = config.qminer.basesPath;
 exports.QM_USER_DEFAULT_STORE_NAME = 'default';
 
+//================================================================
+// MYSQL
+//================================================================
+exports.database = config.database;
+
 global.qm = require(QM_MODULE_PATH);
 
 // configure the stores

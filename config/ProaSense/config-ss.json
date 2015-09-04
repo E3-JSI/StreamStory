@@ -31,7 +31,7 @@
 		"pingInterval": 10000
 	},
 	"log": {
-		"level": "debug",
+		"level": "trace",
 		"print": {
 			"rawData": 100000,
 			"streamStory": 10000,
@@ -39,6 +39,11 @@
 			"broker": 10000,
 			"coeff": 1000
 		}
+	},
+	"database": {
+		"host": "localhost",
+		"user": "StreamStory",
+		"password": "StreamStory"
 	},
 	"integration": {
 		"type": "http",

@@ -9,7 +9,7 @@ var analytics = qm.analytics;
 function initStreamStory(base) {
 	if (fs.existsSync(config.STREAM_STORY_FNAME)) {
 		log.info('Loading StreamStory ...');
-		var result = analytics.StreamStory({base: base, hmcFile: config.STREAM_STORY_FNAME});	
+		var result = analytics.StreamStory({base: base, fname: config.STREAM_STORY_FNAME});	
 		return result;
 	} 
 	else {
@@ -64,6 +64,10 @@ try {
 	
 	if (config.REPLAY_DATA)
 		require('./src/replay.js').replayHmc(ss, base);
+	
+	process.on("SIGINT", function () {
+		utils.exit(base);
+	});
 } catch (e) {
 	log.error(e, 'Exception in main!');
 	utils.exit(base);
