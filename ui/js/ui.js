@@ -11,8 +11,12 @@ var UI;
 		} else {
 		    result = "ws:";
 		}
-		result += "//" + loc.host;
-		result += loc.pathname + (loc.pathname.charAt(loc.pathname.length-1) == '/' ? '' : '/') + "ws";
+		
+		var path = loc.pathname;
+		path = path.substring(0, path.lastIndexOf('/')) + '/ws';
+		
+		result += "//" + loc.host + path;
+//		result += loc.pathname + (loc.pathname.charAt(loc.pathname.length-1) == '/' ? '' : '/') + "ws";
 		
 		return result;
 	}
