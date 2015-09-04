@@ -21,6 +21,7 @@
     "bunyan-format": "^0.1.1",
     "express": "^4.10.6",
     "express-session": "^1.11.3",
+    "fs": "0.0.2",
     "kafka-node": "^0.2.24",
     "mkdirp": "^0.5.1",
     "multer": "^1.0.3",
