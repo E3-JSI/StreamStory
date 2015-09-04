@@ -998,7 +998,7 @@ function initServer() {
 		secret: 'somesecret_TODO make config',
 		unset: 'destroy',
 		store: getHackedSessionStore(),
-		cookie: { maxAge: 10*1000 }
+		cookie: { maxAge: 60*60*1000 }	// the cookie will last for 1h
 	}));
 	// automatically parse body on the API path
 	app.use(API_PATH + '/', bodyParser.urlencoded({ extended: false }));
