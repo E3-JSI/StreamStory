@@ -12,13 +12,17 @@ var config = JSON.parse(configStr);
 //================================================================
 // LOG
 //================================================================
+
+var loggerConfig = config.log.logger;
+var logStream = {
+	outputMode: loggerConfig.outputMode,
+	out: loggerConfig.stream.type == 'stdout' ? process.stdout : fs.createWriteStream(loggerConfig.stream.file)
+};
+
 global.log = bunyan.createLogger({
 	name: 'ProaSense',
-	stream: logformat({ 
-		outputMode: 'short',
-		out: process.stdout
-	}),
-	level: config.log.level
+	stream: logformat(logStream),
+	level: config.log.logger.level
 });
 
 //================================================================

@@ -31,7 +31,14 @@
 		"pingInterval": 10000
 	},
 	"log": {
-		"level": "trace",
+		"logger": {
+			"level": "debug",
+			"outputMode": "long",
+			"stream": {
+				"type": "stdout",
+				"file": "log.log"
+			}
+		},
 		"print": {
 			"rawData": 100000,
 			"streamStory": 10000,
