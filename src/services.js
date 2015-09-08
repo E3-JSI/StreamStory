@@ -6,6 +6,7 @@ var utils = require('./utils.js');
 var broker = require('./broker.js');
 var config = require('../config.js');
 var fields = require('../fields.js');
+var pipeline = require('./pipeline.js');
 
 var UI_PATH = '/';
 var API_PATH = '/api';
@@ -20,6 +21,7 @@ var hmc;
 var base;
 
 var counts = {};
+var storeLastTm = {};
 var totalCounts = 0;
 
 var lastCepTime = 0;
@@ -28,23 +30,31 @@ var lastRawTime = 0;
 function addRawMeasurement(val) {
 	var storeNm = utils.storeFromTag(val.variable_type);
 	
-	if (!(storeNm in counts))
-		counts[storeNm] = 0;
+	if (!(storeNm in counts)) counts[storeNm] = 0;
+	if (!(storeNm in storeLastTm)) storeLastTm[storeNm] = 0;
+	
 	counts[storeNm]++;
+	
 	if (totalCounts++ % config.RAW_PRINT_INTERVAL == 0)
 		log.debug('Time: %s, Counts: %s', new Date(val.variable_timestamp).toString(), JSON.stringify(counts));
 	
-	if (val.variable_timestamp < lastRawTime)
-		throw 'Invalid time! Current: ' + val.variable_timestamp + ', prev: ' + lastRawTime;
+	var timestamp = val.variable_timestamp;
+	var prevTimestamp = storeLastTm[storeNm];
+	
+	if (timestamp <= prevTimestamp)
+		throw 'Invalid time for a single measurement! Current: ' + timestamp + ', prev: ' + prevTimestamp;
+	if (timestamp < lastRawTime)
+		throw 'Invalid time! Current: ' + timestamp + ', prev: ' + lastRawTime;
 	
 	var insertVal = {
-		time_ms: val.variable_timestamp,
-		time: utils.dateToQmDate(new Date(val.variable_timestamp)),
+		time_ms: timestamp,
+		time: utils.dateToQmDate(new Date(timestamp)),
 		value: val.value
 	};
 
 	base.store(storeNm).push(insertVal);
-	lastRawTime = val.variable_timestamp;
+	storeLastTm[storeNm] = timestamp;
+	lastRawTime = timestamp;
 }
 
 function addCepAnnotated(val) {	
@@ -245,18 +255,24 @@ function initRestApi() {
 		
 		app.post(API_PATH + '/push', function (req, resp) {
 			var batch = req.body;
-						
-			for (var i = 0; i < batch.length; i++) {
-				var instance = batch[i];
-				
-				if (++imported % printInterval == 0 && log.trace())
-					log.trace('Imported %d values ...', imported);
-				
-				addRawMeasurement(instance);
-			}
 			
-			resp.status(204);
-			resp.end();
+			try {
+				for (var i = 0; i < batch.length; i++) {
+					var instance = batch[i];
+					
+					if (++imported % printInterval == 0 && log.trace())
+						log.trace('Imported %d values ...', imported);
+					
+					addRawMeasurement(instance);
+				}
+				
+				resp.status(204);
+				resp.end();
+			} catch (e) {
+				log.error(e, 'Failed to process raw measurement!');
+				resp.status(500);
+				resp.end();
+			}
 		});
 	}
 	
@@ -596,7 +612,7 @@ function initServer() {
 	log.info('================================================');
 }
 
-function initHandlers() {
+function initHandlers(pipeline) {
 	log.info('Registering state changed callback ...');
 	
 	if (hmc == null) return;
@@ -622,7 +638,7 @@ function initHandlers() {
 			content: desc
 		});
 		
-		//ws.distribute(JSON.stringify(msg)); TODO
+		ws.distribute(JSON.stringify(msg));
 	});
 	
 	hmc.onOutlier(function (ftrV) {
@@ -660,6 +676,13 @@ function initHandlers() {
 		broker.send(broker.PREDICTION_PRODUCER_TOPIC, msgStr);
 		ws.distribute(msgStr);
 	});
+	
+	// friction coefficient
+	pipeline.onPrediction(function (msg) {
+		var msgStr = JSON.stringify(msg);
+		broker.send(broker.PREDICTION_PRODUCER_TOPIC, msgStr);
+		ws.distribute(msgStr);
+	});
 }
 
 function initBroker() {
@@ -685,15 +708,15 @@ function initBroker() {
 	});
 }
 
-exports.init = function (hmc1, base1) {
+exports.init = function (opts) {
 	log.info('Initializing server ...');
 	
-	hmc = hmc1;
-	base = base1;
+	hmc = opts.model;
+	base = opts.base;
 	
 	// serve static files at www
 	initServer();
-	initHandlers();
+	initHandlers(opts.pipeline);
 	initBroker();
 	
 	log.info('Done!');

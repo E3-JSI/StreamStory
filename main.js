@@ -9,7 +9,7 @@ var analytics = qm.analytics;
 function initStreamStory(base) {
 	if (fs.existsSync(config.STREAM_STORY_FNAME)) {
 		log.info('Loading StreamStory ...');
-		var result = analytics.StreamStory({base: base, hmcFile: config.STREAM_STORY_FNAME});	
+		var result = analytics.StreamStory({base: base, fname: config.STREAM_STORY_FNAME});	
 		return result;
 	} 
 	else {
@@ -32,7 +32,7 @@ function initStreamStory(base) {
 		
 		var result = analytics.StreamStory({
 			base: base,
-			hmcConfig: config.STREAM_STORY_PARAMS,
+			fname: config.STREAM_STORY_PARAMS,
 			obsFields: ftrSpaceParams.obsFields,
 			contrFields: ftrSpaceParams.contrFields
 		});
@@ -49,9 +49,13 @@ function initStreamStory(base) {
 }
 
 try {
+	var schema = fields.getQmSchema();
+	
+	log.info('Opening base with the following schema: %s', JSON.stringify(schema));
+	
 	var base = new qm.Base({
 		dbPath: config.QM_DATABASE_PATH,
-		schema: fields.getQmSchema(),
+		schema: schema,
 		mode: config.QM_DATABASE_MODE
 	});
 	
@@ -60,7 +64,7 @@ try {
 	if (config.QM_CREATE_PIPELINE) 
 		pipeline.init({ base: base, hmc: ss });
 	
-	services.init(ss, base);
+	services.init({ model: ss, base: base, pipeline: pipeline });
 	
 	if (config.REPLAY_DATA)
 		require('./src/replay.js').replayHmc(ss, base);

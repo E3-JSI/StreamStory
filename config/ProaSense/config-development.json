@@ -45,6 +45,7 @@
 		"zookeperPort": 2181,
 		"producerPort": 8090
 	},
+	"calcCoefficients": true,
 	"interpolation": "linear",
 	"replay": false
 }

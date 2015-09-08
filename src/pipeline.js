@@ -8,6 +8,7 @@ var statistics = qm.statistics;
 
 var base;
 var hmc;
+var predictionCb;
 
 function initStreamAggregates() {
 	// create fields
@@ -38,7 +39,7 @@ function initStreamAggregates() {
 		outStore: fields.STREAM_STORY_STORE,
 		createStore: false,
 		timestamp: 'time',
-		interval: 1000*20,	// 20 secs
+		interval: 1000*60,	// 1 min
 		fields: flds.resampler
 	});
 	
@@ -81,6 +82,8 @@ function initGC() {
 		
 		var store = base.store(storeName);
 		
+		log.info('Initializing store %s ...', JSON.stringify(store));
+				
 		// garbagge collector for the stores that have a window
 		if (storeJson.window != null) {
 			log.info('Adding GC trigger to store %s ...', storeName);
@@ -127,24 +130,34 @@ function calcFriction() {
 	var oaInStore = base.store(fields.OA_IN_STORE);
 	
 	// compute the friction coefficient
-	const BUFF_SIZE = 1;
-//	var buff = [];
+	var BUFF_SIZE = 1;
+	var EXPONENTIAL_FIT = false;
 	var buff = new utils.RecBuffer(BUFF_SIZE);
 	
-	const CALC_START_THRESHOLD = 7;//1000;				TODO Mihas units???
+	var CALC_START_THRESHOLD = 7;//1000;				TODO Mihas units???
 //	const CALC_START_THRESHOLD = 1000;
-	const MIN_DRILL_TIME = 1000*60*5;	// 5mins
-	const DEFAULT_COEFF = 0;
+	var MIN_DRILL_TIME = 1000*60*5;	// 5mins
+	var DEFAULT_COEFF = 0;
 	
 //	const Q = 600000; //gearbox
-	const Q = 1;
+	var Q = 1;
 	
-	const COOLING_ALPHA_SWIVEL = [-1.3, 6.5e-08];	// 	TODO Mihas version
-//	const COOLING_ALPHA_SWIVEL = [-1.3, 6.5e-05];
-	const COOLING_ALPHA_GEARBOX = COOLING_ALPHA_SWIVEL;	// TODO
+	var MEAN_SWIVEL = 0;
+	var MEAN_SWIVEL_EXP = 0;
+	var STD_SWIVEL = 5.3808e-09;
+	var STD_SWIVEL_EXP = 5.3138e-09;
+	var COOLING_ALPHA_SWIVEL = [-1.3, 6.5e-08];
+	var LINREG_ALPHA_SWIVEL = [3.445e-08, -4.884e-10];
+	var LINREG_ALPHA_SWIVEL_EXP = [4.445e-08, -0.02771];
 	
-	const LINREG_ALPHA_SWIVEL = [3.445e-08, -4.884e-10];
-	const LINREG_ALPHA_GEARBOX = LINREG_ALPHA_SWIVEL;	// TODO
+	var MEAN_GEARBOX = 0;
+	var MEAN_GEARBOX_EXP = 0;
+	var STD_GEARBOX = 1.1589e-08;
+	var STD_GEARBOX_EXP = 1.1634e-08;
+	var COOLING_ALPHA_GEARBOX = [-1.1, 1.196889526367186e-07];	// file 2015-37
+//	var COOLING_ALPHA_GEARBOX = [-2.1, 1.5e-07];
+	var LINREG_ALPHA_GEARBOX = [2.18613087894122e-08, 7.31514680122367e-11];
+	var LINREG_ALPHA_GEARBOX_EXP = [2.87e-08, -0.004355];
 	
 	// variables needed to calculate the friction
 	var energyGain = 0;
@@ -169,7 +182,6 @@ function calcFriction() {
 	}
 	
 	function resetVars() {
-//		buff = [];
 		buff.clear();
 		
 		energyGain = 0;
@@ -205,27 +217,57 @@ function calcFriction() {
 		return getTempLoss(deltaT, dt, COOLING_ALPHA_GEARBOX);
 	}
 	
-	function checkOutlier(coeff, temp, alpha, time) {
-		var yHat = alpha[0] + temp*alpha[1];
+	function checkOutlier(coeff, temp, alpha, dist_mean, dist_std, time, useCase, type) {
+		var yHat = type == 'exp' ? alpha[0] * math.exp(alpha[1] * temp) :
+								   alpha[0] + temp*alpha[1];
+		
+//		var yHat = alpha[0] + temp*alpha[1];
 		var residual = coeff - yHat;
-		var zScore = statistics.getZScore(residual, 0, 5.3808e-09);
+		var zScore = statistics.getZScore(residual, dist_mean, dist_std);
 		
 		if (log.info())
-			log.info('Residual: %d, z=%d, time=%d', residual, zScore, time);
+			log.info('Residual: use-case: %s, %d, z=%d, time=%d', useCase, residual, zScore, time);
 		
 		if (Math.abs(zScore) > .1) {	// TODO hardcoded
 			log.info('Sending prediction based on the friction coefficient!');
-			var msg = {
-				type: 'prediction',
-				content: {
-					time: time,
-					pdf: {
-						type: 'exponential',
-						lambda: 2
+			if (predictionCb != null) {
+				var msg = {
+					type: 'prediction',
+					content: {
+						time: time,
+						eventId: useCase,
+						pdf: {
+							type: 'exponential',
+							lambda: 2
+						}
 					}
-				}
-			};
-			broker.send(broker.PREDICTION_PRODUCER_TOPIC, JSON.stringify(msg));
+				};
+				predictionCb(msg);
+			} else {
+				log.warn('Prediction callback is not defined!');
+			}
+		}
+	}
+	
+	function checkOutlierSwivel(coeff, temp, time) {
+		if (log.debug())
+			log.debug('Checking swivel coefficient outlier ...');
+		
+		if (EXPONENTIAL_FIT) {
+			checkOutlier(coeff, temp, LINREG_ALPHA_SWIVEL_EXP, MEAN_SWIVEL_EXP, STD_SWIVEL_EXP, time, 'swivel', 'exp');
+		} else {
+			checkOutlier(coeff, temp, LINREG_ALPHA_SWIVEL, MEAN_SWIVEL, STD_SWIVEL, time, 'swivel', 'linear');
+		}
+	}
+	
+	function checkOutlierGearbox(coeff, temp, time) {
+		if (log.debug())
+			log.debug('Checking gearbox coefficient outlier ...');
+		
+		if (EXPONENTIAL_FIT) {
+			checkOutlier(coeff, temp, LINREG_ALPHA_GEARBOX_EXP, MEAN_GEARBOX_EXP, STD_GEARBOX_EXP, time, 'gearbox', 'exp');
+		} else {
+			checkOutlier(coeff, temp, LINREG_ALPHA_GEARBOX, MEAN_GEARBOX, STD_GEARBOX, time, 'gearbox', 'linear');
 		}
 	}
 	
@@ -270,8 +312,8 @@ function calcFriction() {
 			log.info('Coeffs: (swivel: %d, gearbox: %d) at time %s', coeffSwivel, coeffGearbox, val.time.toISOString());
 			
 			var avgTemp = (firstVal.tempAmbient + lastVal.tempAmbient) / 2;
-			checkOutlier(coeffSwivel, avgTemp, LINREG_ALPHA_SWIVEL, intervalEnd);
-			checkOutlier(coeffGearbox, avgTemp, LINREG_ALPHA_GEARBOX, intervalEnd);
+			checkOutlierSwivel(coeffSwivel, avgTemp, intervalEnd);
+			checkOutlierGearbox(coeffGearbox, avgTemp, intervalEnd);
 		} else {
 			log.info('Drilling didn not take long enough, the coefficient will be ignored!');
 		}
@@ -283,6 +325,8 @@ function calcFriction() {
 	oaInStore.addTrigger({
 		onAdd: function (val) {
 			try {
+				if (!config.CALC_COEFFICIENTS) return;
+				
 				var prevVal = buff.getLast();
 				buff.add(val);
 				
@@ -359,57 +403,59 @@ function calcFriction() {
 		}
 	});
 	
-	var fname = '/mnt/raidM2T/data/Aker/testing/drilling-test-coeff.csv';
-	var outFields = [
-	    'hoist_press_A',
-	    'hoist_press_B',
-	    'hook_load',
-	    'ibop',
-	    'oil_temp_gearbox',
-	    'oil_temp_swivel',
-	    'pressure_gearbox',
-	    'rpm',
-	    'temp_ambient',
-	    'torque',
-	    'wob',
-	    'mru_pos',
-	    'mru_vel',
-	    'ram_pos_measured',
-	    'ram_pos_setpoint',
-	    'ram_vel_measured',
-	    'ram_vel_setpoint',
-	    'coeff_swivel',
-	    'coeff_gearbox'
-	]
-	
-	
-	var fout = new qm.fs.FOut(fname, false);
-	
-	var line = 'time,';
-	for (var i = 0; i < outFields.length; i++) {
-		line += outFields[i];
-		if (i < outFields.length-1)
-			line += ',';
-	}
-	fout.writeLine(line);
-	fout.flush();
-	fout.close();
-	
-	oaInStore.addTrigger({
-		onAdd: function (val) {
-			fout = new qm.fs.FOut(fname, true);
-			line = '' + val.time.getTime() + ',';
-			for (var i = 0; i < outFields.length; i++) {
-				line += val[outFields[i]];
-				if (i < outFields.length-1)
-					line += ',';
-			}
-			
-			fout.writeLine(line);
-			fout.flush();
-			fout.close();
-		}
-	});
+//	{
+//		var fname = '/mnt/raidM2T/data/Aker/testing/drilling-test-coeff.csv';
+//		var outFields = [
+//		    'hoist_press_A',
+//		    'hoist_press_B',
+//		    'hook_load',
+//		    'ibop',
+//		    'oil_temp_gearbox',
+//		    'oil_temp_swivel',
+//		    'pressure_gearbox',
+//		    'rpm',
+//		    'temp_ambient',
+//		    'torque',
+//		    'wob',
+//		    'mru_pos',
+//		    'mru_vel',
+//		    'ram_pos_measured',
+//		    'ram_pos_setpoint',
+//		    'ram_vel_measured',
+//		    'ram_vel_setpoint',
+//		    'coeff_swivel',
+//		    'coeff_gearbox'
+//		]
+//		
+//		
+//		var fout = new qm.fs.FOut(fname, false);
+//		
+//		var line = 'time,';
+//		for (var i = 0; i < outFields.length; i++) {
+//			line += outFields[i];
+//			if (i < outFields.length-1)
+//				line += ',';
+//		}
+//		fout.writeLine(line);
+//		fout.flush();
+//		fout.close();
+//		
+//		oaInStore.addTrigger({
+//			onAdd: function (val) {
+//				fout = new qm.fs.FOut(fname, true);
+//				line = '' + val.time.getTime() + ',';
+//				for (var i = 0; i < outFields.length; i++) {
+//					line += val[outFields[i]];
+//					if (i < outFields.length-1)
+//						line += ',';
+//				}
+//				
+//				fout.writeLine(line);
+//				fout.flush();
+//				fout.close();
+//			}
+//		});
+//	}
 }
 
 function initTriggers() {
@@ -456,17 +502,30 @@ function initTriggers() {
 //		fout.flush();
 //		fout.close();
 		
+		var prevTime = 0;
+		
 		enricherOutStore.addTrigger({
-			onAdd: function (val) {	
-				var outVal = val.toJSON(false, false, false);
-				
-				if (config.USE_BROKER) {
-//					log.info('Sending: %s', JSON.stringify(outVal));
-					outVal.time = val.time.getTime();
-					broker.send(broker.ENRICHED_DATA_PRODUCER_TOPIC, JSON.stringify(outVal));
-				} else {
-					outVal.time = utils.dateToQmDate(val.time);
-					oaInStore.push(outVal);
+			onAdd: function (val) {
+				try {
+					var outVal = val.toJSON(false, false, false);
+					
+					var currTime = val.time.getTime();
+					
+					if (currTime < prevTime)
+						throw 'enricherOutStore.addTrigger: Current time lower than previous time: ' + utils.dateToQmDate(new Date(currTime)) + ' < ' + utils.dateToQmDate(new Date(prevTime));
+					
+					if (config.USE_BROKER) {
+	//					log.info('Sending: %s', JSON.stringify(outVal));
+						outVal.time = val.time.getTime();
+						broker.send(broker.ENRICHED_DATA_PRODUCER_TOPIC, JSON.stringify(outVal));
+					} else {
+						outVal.time = utils.dateToQmDate(val.time);
+						oaInStore.push(outVal);
+					}
+					
+					prevTime = currTime;
+				} catch (e) {
+					log.error(e, 'Failed to send enriched data!');
 				}
 //				fout = new qm.fs.FOut(fname, true);
 //				line = '' + val.time.getTime() + ',';
@@ -492,6 +551,9 @@ function initTriggers() {
 			onAdd: function (val) {
 				nProcessed++;
 				try {
+					if (nProcessed % 10 == 0 && log.debug())
+						log.debug('Store %s has %d records ...', val.$store.name, val.$store.length);
+					
 					if (isNaN(val.coeff_swivel) || isNaN(val.coeff_gearbox)) {
 						log.fatal('Resampled store: the friction coefficient is NaN! Store size: %d, friction store size: %d', streamStoryStore.length, oaInStore.length);
 						process.exit(2);
@@ -545,3 +607,7 @@ exports.init = function (opts) {
 	initStreamAggregates();
 	initGC();
 };
+
+exports.onPrediction = function (cb) {
+	predictionCb = cb;
+}

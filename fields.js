@@ -195,12 +195,17 @@ var realTimeStores = {
  		{"name": "ram_pos_measured", "type": "float"},
  		{"name": "ram_pos_setpoint", "type": "float"},
  		{"name": "ram_vel_measured", "type": "float"},
- 		{"name": "ram_vel_setpoint", "type": "float"},
- 		// computed fields
- 		{"name": "coeff_swivel", "type": "float", "null": true},
- 		{"name": "coeff_gearbox", "type": "float", "null": true}
+ 		{"name": "ram_vel_setpoint", "type": "float"}
  	]
 };
+
+var onlineAnalyticsStores = {
+	fields: realTimeStores.fields.slice()
+}
+
+// friction coefficients
+onlineAnalyticsStores.fields.push({"name": "coeff_swivel", "type": "float", "null": true});
+onlineAnalyticsStores.fields.push({"name": "coeff_gearbox", "type": "float", "null": true});
 
 var streamStoryIgnoreFields = {}
 
@@ -221,14 +226,14 @@ exports.getRawStores = function () {
 
 exports.getQmSchema = function () {
 	var enrichedStore = JSON.parse(JSON.stringify(realTimeStores));
-    var oaInStore = JSON.parse(JSON.stringify(realTimeStores));
-    var streamStoryStore = JSON.parse(JSON.stringify(realTimeStores));
+    var oaInStore = JSON.parse(JSON.stringify(onlineAnalyticsStores));
+    var streamStoryStore = JSON.parse(JSON.stringify(onlineAnalyticsStores));
     
     enrichedStore.name = exports.ENRICHED_STORE;
     oaInStore.name = exports.OA_IN_STORE;
     streamStoryStore.name = exports.STREAM_STORY_STORE;
     
-    enrichedStore.window = WINDOW_SIZE;
+//    enrichedStore.window = WINDOW_SIZE;
     
     var schema = rawStores.concat(otherStores)
     					  .concat([enrichedStore, oaInStore, streamStoryStore]);
@@ -285,10 +290,39 @@ exports.getStreamAggrFields = function () {
 		resampler: []
 	}
 	
-	var storeFields = realTimeStores.fields;
+	var resamplerFields = onlineAnalyticsStores.fields;
+	var mergerFields = realTimeStores.fields;
 	
-	for (var i = 0; i < storeFields.length; i++) {
-		var fieldNm = storeFields[i].name;
+	for (var i = 0; i < resamplerFields.length; i++) {
+		var fieldNm = resamplerFields[i].name;
+		
+		if (fieldNm == 'time') continue;
+		
+		var interpolation = config.INTERPOLATION;
+		
+		if (fieldNm == 'ibop')
+			interpolation = 'current';
+		
+		log.info('Field %s is using %s interpolation ...', fieldNm, interpolation);
+//		
+//		if (fieldNm != 'coeff_swivel' && fieldNm != 'coeff_gearbox') {
+//			result.merger.push({
+//				source: fieldNm,
+//				inField: 'value',
+//				outField: fieldNm,
+//				interpolation: interpolation,
+//				timestamp: 'time'
+//			});
+//		}
+		
+		result.resampler.push({
+			name: fieldNm,
+			interpolator: interpolation
+		})
+	}
+	
+	for (var i = 0; i < mergerFields.length; i++) {
+		var fieldNm = mergerFields[i].name;
 		
 		if (fieldNm == 'time') continue;
 		
@@ -308,11 +342,6 @@ exports.getStreamAggrFields = function () {
 				timestamp: 'time'
 			});
 		}
-		
-		result.resampler.push({
-			name: fieldNm,
-			interpolator: interpolation
-		})
 	}
 	
 	return result;

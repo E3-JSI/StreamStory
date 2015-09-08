@@ -74,6 +74,9 @@ var UI;
 				else if (msg.type == 'outlier') {
 					drawMsg('Outlier: ' + JSON.stringify(msg.content));
 				}
+				else if (msg.type == 'prediction') {
+					drawMsg('Prediction: ' + JSON.stringify(msg.content));
+				}
 				else if (msg.type == 'statePrediction') {
 					var content = msg.content;
 					var msgStr = 'Prediction, current: ' + content.currState + ' target: ' + content.targetState + ', prob: ' + content.probability;
