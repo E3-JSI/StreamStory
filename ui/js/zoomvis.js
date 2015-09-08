@@ -606,7 +606,7 @@ var zoomVis = function (opts) {
 		setZoom(newZoom);
 		
 		// TODO remove this
-		currentHeightContainer.innerHTML = hierarchy[currentLevel].height;	// set height text
+		currentHeightContainer.innerHTML = (100*(1 - (hierarchy[currentLevel].height - minHeight) / (maxHeight - minHeight))).toFixed();	// set height text
 	}
 	
 	// adding mouse wheel listener

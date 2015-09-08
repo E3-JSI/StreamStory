@@ -21,7 +21,7 @@ var UI;
 	var UI = function (opts) {
 		var viz = zoomVis({
 			visContainer: 'vis_container',
-			currentHeightContainer: 'current_height_value'
+			currentHeightContainer: 'span-zoom-val'
 		});
 		
 		function drawMsg(msg, handler) {

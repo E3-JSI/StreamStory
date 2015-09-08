@@ -17,6 +17,11 @@
 	left: auto !important;
 }
 
+#span-zoom, #span-zoom-val {
+	font-size: 10px;
+	color: gray;
+}
+
 #container-details {
 	min-height: 200px;
 }
