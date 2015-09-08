@@ -16,8 +16,6 @@ var UI;
 		path = path.substring(0, path.lastIndexOf('/')) + '/ws';
 		
 		result += "//" + loc.host + path;
-//		result += loc.pathname + (loc.pathname.charAt(loc.pathname.length-1) == '/' ? '' : '/') + "ws";
-		
 		return result;
 	}
 	
@@ -34,6 +32,44 @@ var UI;
 				$('#list-msg li').last().addClass('clickable');
 				$('#list-msg li').last().click(handler);
 			}
+		}
+		
+		function getMsgContent(header, contentVals) {
+			var drawStr = '<h5>' + header + '</h5>';
+			drawStr += '<p>';
+			
+			var contentKeys = [];
+			for (var key in contentVals) {
+				contentKeys.push(key);
+			}
+			
+			for (var i = 0; i < contentKeys.length; i++) {
+				var contentKey = contentKeys[i];
+				var contentVal = contentVals[contentKey];
+				
+				if (contentVal != null && typeof contentVal == 'object') {
+					var keys = [];
+					for (var key in contentVal) {
+						keys.push(key);
+					}
+					
+					for (var j = 0; j < keys.length; j++) {
+						drawStr += keys[j] + '=' + contentVal[keys[j]];
+						if (j < keys.length - 1)
+							drawStr += ', ';
+					}	
+				} else {
+					drawStr += contentKey + '=' + contentVal;
+				}
+				
+				if (i < contentKeys.length - 1) {
+					drawStr += '<br />';
+				}
+			}
+			
+			drawStr += '</p>';
+			
+			return drawStr;
 		}
 			
 		var that = {
@@ -79,7 +115,10 @@ var UI;
 					drawMsg('Outlier: ' + JSON.stringify(msg.content));
 				}
 				else if (msg.type == 'prediction') {
-					drawMsg('Prediction: ' + JSON.stringify(msg.content));
+					drawMsg(getMsgContent('Prediction', msg.content));
+				} 
+				else if (msg.type == 'coeff') {
+					drawMsg(getMsgContent('Coefficient', msg.content));
 				}
 				else if (msg.type == 'statePrediction') {
 					var content = msg.content;

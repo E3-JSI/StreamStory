@@ -111,6 +111,83 @@ module.exports = function () {
 					});
 				});
 			});
+		},
+		getMultipleConfig: function (opts, callback) {
+			pool.getConnection(function (e, conn) {
+				if (e != null) {
+					conn.release();
+					callback(e);
+					return;
+				}
+				
+				conn.query("SELECT property, value FROM config WHERE property in (?)", [opts.properties], function (e1, result) {
+					conn.release();
+					if (e1 != null) {
+						callback(e1);
+					} else {
+						callback(undefined, result);
+					}
+				});
+			});
+		},
+		getConfig: function (property, callback) {
+			pool.getConnection(function (e, conn) {
+				if (e != null) {
+					conn.release();
+					callback(e);
+					return;
+				}
+				
+				conn.query("SELECT property, value FROM config WHERE property = ?", [property], function (e1, result) {
+					conn.release();
+					if (e1 != null) {
+						callback(e1);
+					} else {
+						callback(undefined, result.length == 1 ? result[0] : null);
+					}
+				});
+			});
+		},
+		setConfig: function (config, callback) {
+			var props = [];
+			for (var prop in config) {
+				props.push(prop);
+			}
+			
+			if (props.length == 0) {
+				callback();
+				return;
+			}
+			
+			pool.getConnection(function (e, conn) {
+				if (e != null) {
+					conn.release();
+					callback(e);
+					return;
+				}
+
+				var query = 'REPLACE INTO config (property, value) VALUES ';
+				var vals = [];
+				for (var i = 0; i < props.length; i++) {
+					var prop = props[i];
+					
+					query += '(?, ?)';
+					vals.push(prop);
+					vals.push(config[prop]);
+					
+					if (i < props.length - 1)
+						query += ', ';
+				}
+				
+				conn.query(query, vals, function (e1) {
+					conn.release();
+					if (e1 != null) {
+						callback(e1);
+					} else {
+						callback(undefined);
+					}
+				});
+			});
 		}
 	}
 	

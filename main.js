@@ -4,6 +4,7 @@ var services = require('./src/services.js');
 var pipeline = require('./src/pipeline.js');
 var utils = require('./src/utils.js');
 var fields = require('./fields.js');
+var db = require('./src/dbaccess.js')();
 var analytics = qm.analytics;
 
 function initStreamStory(base) {
@@ -62,9 +63,9 @@ try {
 	var ss = initStreamStory(base);
 
 	if (config.QM_CREATE_PIPELINE) 
-		pipeline.init({ base: base, hmc: ss });
+		pipeline.init({ base: base, hmc: ss, db: db });
 	
-	services.init({ model: ss, base: base, pipeline: pipeline });
+	services.init({ model: ss, base: base, pipeline: pipeline, db: db });
 	
 	if (config.REPLAY_DATA)
 		require('./src/replay.js').replayHmc(ss, base);

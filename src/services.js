@@ -3,6 +3,7 @@ var bodyParser = require("body-parser");
 var path = require('path');
 var WebSocket = require('ws');
 var fs = require('fs');
+var math = require('mathjs');
 var mkdirp = require('mkdirp');
 var multer = require('multer');
 var session = require('express-session');
@@ -11,7 +12,6 @@ var utils = require('./utils.js');
 var broker = require('./broker.js');
 var config = require('../config.js');
 var fields = require('../fields.js');
-var db = require('./dbaccess.js')();
 
 var qmutil = qm.qm_util;
 
@@ -26,6 +26,7 @@ var ws;
 
 var hmc;
 var base;
+var db;
 
 var counts = {};
 var storeLastTm = {};
@@ -34,8 +35,11 @@ var totalCounts = 0;
 var lastCepTime = 0;
 var lastRawTime = 0;
 
+var intensConfig = {};
+
 function getModel(sessionId, session) {
-	return session.model;
+//	return session.model;
+	return hmc;
 }
 
 function cleanUpSession(session) {
@@ -135,6 +139,8 @@ var WebSocketWrapper = function () {
 	}
 
 	function closeClient(id) {
+		if (!(id in sockets)) return;
+		
 		var socket = sockets[id].client;
 		
 		if (socket.readyState == WebSocket.CLOSING || socket.readyState == WebSocket.CLOSED)
@@ -230,7 +236,9 @@ var WebSocketWrapper = function () {
 						closeClient(id);
 						continue;
 					}
-										
+					
+					if (log.debug())
+						log.debug('Distributing to web socket: %d ...', id);
 					sockets[id].client.send(msg);
 				} catch (e) {
 					log.error(e, 'Exception while distributig message. Web socket ID: %d', id);
@@ -998,6 +1006,65 @@ function initDataUpload() {
 	});
 }
 
+function initMhwirthRestApi(pipeline) {
+	app.get(API_PATH + '/config', function (req, resp) {
+		try {
+			var properties = req.query.properties;
+			
+			if (log.debug())
+				log.debug('Fetching property %s', JSON.stringify(properties));
+			
+			log.info('Fetching intensities from DB ...');
+       		db.getMultipleConfig({properties: properties}, function (e, result) {
+       			if (e != null) {
+       				log.error(e, 'Failed to fetch properties from DB!');
+       				resp.status(500);	// internal server error
+       				resp.end();
+       				return;
+       			}
+       			
+       			resp.send(result);
+       			resp.end();
+       		});
+		} catch (e) {
+			log.error(e, 'Failed to query state details!');
+			resp.status(500);	// internal server error
+			resp.end();
+		}
+	});
+	
+	app.post(API_PATH + '/config', function (req, res) {
+		try {
+			var config = req.body;
+			
+			if (log.debug())
+				log.debug('Setting configuration %s', JSON.stringify(config));
+			
+       		db.setConfig(config, function (e, result) {
+       			if (e != null) {
+       				log.error(e, 'Failed to update settings!');
+       				res.status(500);	// internal server error
+       				res.end();
+       				return;
+       			}
+       			
+       			if ('calc_coeff' in config) {
+       				if (log.debug())
+       					log.debug('Found calc_coeff in the new configuration. Setting ...')
+       				pipeline.setCalcCoeff(config.calc_coeff == 'true');
+       			}
+       			
+       			res.status(204);	// no content
+       			res.end();
+       		});
+		} catch (e) {
+			log.error(e, 'Failed to query state details!');
+			res.status(500);	// internal server error
+			res.end();
+		}
+	});
+}
+
 function getHackedSessionStore() {
 	var store =  new SessionStore();
 	store.on('preDestroy', function (sessionId, session) {
@@ -1006,7 +1073,7 @@ function getHackedSessionStore() {
 	return store;
 }
 
-function initServer() {
+function initServer(pipeline) {
 	log.info('Initializing web server ...');
 
 	app.use(session({ 
@@ -1020,10 +1087,10 @@ function initServer() {
 	app.use(API_PATH + '/', bodyParser.json());
 	// when a session expires, redirect to index
 	app.use('/ui.html', function (req, res, next) {
-		var session = req.session;
+		var model = getModel(req.sessionID, session);
 		
 		// check if we need to redirect to the index page
-		if (session.username == null || session.base == null || session.model == null) {
+		if (model == null) {
 			log.info('Session data missing, redirecting to index ...');
 			res.redirect('.');
 		} else {
@@ -1032,6 +1099,7 @@ function initServer() {
 	});
 		
 	initRestApi();
+	initMhwirthRestApi(pipeline);
 	initDataUpload();
 	
 	// serve static directories on the UI path
@@ -1057,38 +1125,33 @@ function initHandlers(pipeline) {
 	hmc.onStateChanged(function (states) {
 		if (log.debug())
 			log.debug('State changed: %s', JSON.stringify(states));
-		
-		var msg = JSON.stringify({
+				
+		ws.distribute(JSON.stringify({
 			type: 'stateChanged',
 			content: states
-		});
-		
-		ws.distribute(msg);
+		}));
 	});
 	
 	hmc.onAnomaly(function (desc) {
 		if (log.info())
-			log.info('Anomaly detected: %s', desc);
-		
-		var msg = JSON.stringify({
-			type: 'anomaly',
-			content: desc
-		});
-		
-		ws.distribute(JSON.stringify(msg));
+			log.info('Anomaly detected: %s TODO: currently ignoring!', desc);
+				
+//		ws.distribute(JSON.stringify({
+//			type: 'anomaly',
+//			content: desc
+//		}));
 	});
 	
 	hmc.onOutlier(function (ftrV) {
 		if (log.info())
 			log.info('Outlier detected!');
-		
-		var msg = JSON.stringify({
+				
+		ws.distribute(JSON.stringify({
 			type: 'outlier',
 			content: ftrV
-		})
-		
-		ws.distribute(JSON.stringify(msg));
+		}));
 	});
+	
 	
 	hmc.onPrediction(function (date, currState, targetState, prob, probV, timeV) {
 		if (log.info())
@@ -1114,12 +1177,77 @@ function initHandlers(pipeline) {
 		ws.distribute(msgStr);
 	});
 	
-	// friction coefficient
-	pipeline.onPrediction(function (msg) {
-		var msgStr = JSON.stringify(msg);
-		broker.send(broker.PREDICTION_PRODUCER_TOPIC, msgStr);
-		ws.distribute(msgStr);
-	});
+	// configure coefficient callback
+	{
+		log.info('Fetching intensities from DB ...');
+		var lambdaProps = [
+		    'deviation_extreme_lambda',
+		    'deviation_major_lambda',
+		    'deviation_significant_lambda',
+		    'deviation_minor_lambda'
+		];
+		db.getMultipleConfig({properties: lambdaProps}, function (e, result) {
+			if (e != null) {
+				log.error(e, 'Failed to fetch intensities from DB!');
+				return;
+			}
+			
+			for (var i = 0; i < result.length; i++) {
+				var entry = result[i];
+				var property = entry.property;
+				var val = parseFloat(entry.value);
+				
+				intensConfig[property] = val;
+			}
+					
+			// friction coefficient
+			pipeline.onCoefficient(function (opts) {
+				var pdf = null;
+				
+				if (math.abs(opts.zScore) >= 5) {
+					pdf = {
+						type: 'exponential',
+						lambda: intensConfig.deviation_extreme_lambda		// degradation occurs once per month
+					};
+				} else if (math.abs(opts.zScore) >= 4) {					// major deviation
+					pdf = {
+						type: 'exponential',
+						lambda: intensConfig.deviation_major_lambda			// degradation occurs once per two months
+					};
+				} else if (math.abs(opts.zScore) >= 3) {					// significant deviation
+					pdf = {
+						type: 'exponential',
+						lambda: intensConfig.deviation_significant_lambda	// degradation occurs once per year
+					};
+				} else if (math.abs(opts.zScore) >= 2) {					// minor deviation
+					pdf = {
+						type: 'exponential',
+						lambda: intensConfig.deviation_minor_lambda			// degradation occurs once per two years
+					};
+				}
+				
+				ws.distribute(JSON.stringify({
+					type: 'coeff',
+					content: opts
+				}));
+				
+				if (pdf != null) {
+					var msg = msg = {
+						type: 'prediction',
+						content: {
+							time: opts.time,
+							eventId: opts.eventId,
+							pdf: pdf
+						}
+					};
+					
+					var msgStr = JSON.stringify(msg);
+					broker.send(broker.PREDICTION_PRODUCER_TOPIC, msgStr);
+					ws.distribute(msgStr);
+				}
+			});
+		});
+	}
 }
 
 function initBroker() {
@@ -1150,9 +1278,10 @@ exports.init = function (opts) {
 	
 	hmc = opts.model;
 	base = opts.base;
+	db = opts.db;
 	
 	// serve static files at www
-	initServer();
+	initServer(opts.pipeline);
 	initHandlers(opts.pipeline);
 	initBroker();
 	

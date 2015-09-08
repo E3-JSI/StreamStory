@@ -28,9 +28,40 @@
 		}
 	</style>
 	<script type="text/javascript">
+		function fetchFricConfig() {
+			$.ajax('api/config', {
+				dataType: 'json',
+				method: 'GET',
+				data: { properties: [
+					'calc_coeff',
+					'deviation_extreme_lambda',
+					'deviation_major_lambda',
+					'deviation_minor_lambda',
+					'deviation_significant_lambda'
+				] },
+				success: function (data) {
+					var props = {};
+					for (var i = 0; i < data.length; i++) {
+						props[data[i].property] = data[i].value;
+					}
+					
+					$('#check-calc-coeff').attr('checked', props.calc_coeff == 'true');
+					$('#input-extreme-lambda').val(props.deviation_extreme_lambda);
+					$('#input-major-lambda').val(props.deviation_major_lambda);
+					$('#input-significant-lambda').val(props.deviation_significant_lambda);
+					$('#input-minor-lambda').val(props.deviation_minor_lambda);
+					$('#btn-fric-cancel, #btn-fric-ok').attr('disabled', 'disabled');
+				},
+				error: function (jqXHR, status) {
+					alert(status);
+				}
+			});
+		}
+	
 		var ui;
 		$(document).ready(function () {
 			ui = UI();
+			fetchFricConfig();
 		});
 	</script>
 	
@@ -179,17 +210,93 @@
 					<div class="panel-heading">Configuration</div>
 					<div class="panel-body">
 						<div id="div-config">
-							<div id="div-config-params">
-								<label for="range-pred-threshold">Prediciton threshold: <span id="span-pred-threshold"></span></label>
-								<div id="range-pred-threshold"></div>
+							<div id="div-config-params" class="row">
+								<div class="col-md-12">
+									<label for="range-pred-threshold">Prediciton threshold: <span id="span-pred-threshold"></span></label>
+									<div id="range-pred-threshold"></div>
+								</div>
 							</div>
-							<div id="div-config-params">
-								<label for="range-time-horizon">Time horizon: <span id="span-time-horizon"></span></label>
-								<div id="range-time-horizon"></div>
+							<div id="div-config-params" class="row">
+								<div class="col-md-12">
+									<label for="range-time-horizon">Time horizon: <span id="span-time-horizon"></span></label>
+									<div id="range-time-horizon"></div>
+								</div>
 							</div>
-							<div id="div-config-params">
-								<label for="range-pdf-bins">PDF bins: <span id="span-pdf-bins"></span></label>
-								<div id="range-pdf-bins"></div>
+							<div id="div-config-params" class="row">
+								<div class="col-md-12">
+									<label for="range-pdf-bins">PDF bins: <span id="span-pdf-bins"></span></label>
+									<div id="range-pdf-bins"></div>
+								</div>
+							</div>
+							<div style="outline: 1px solid orange;">
+								<div>
+									<div class="checkbox">
+	    								<label>
+	      									<input id="check-calc-coeff" type="checkbox" /> Calculate firction
+	    								</label>
+	  								</div>
+	  								<script type="text/javascript">
+	  									$('#check-calc-coeff').change(function () {
+	  										var isChecked = $(this).is(':checked');
+	  										if (isChecked) {
+	  											// fetch the configuration from the db
+	  											$('#div-configure-coeff').show();
+	  										}
+	  										else
+	  											$('#div-configure-coeff').hide();
+	  									});
+	  								</script>
+								</div>
+								<div id="div-configure-coeff" style="display: none;">
+									<div class="form-group">
+								    	<label for="input-extreme-lambda">Extreme deviation intensity</label>
+								    	<input id="input-extreme-lambda" type="number" class="form-control" />
+								  	</div>
+								  	<div class="form-group">
+								    	<label for="input-major-lambda">Major deviation intensity</label>
+								    	<input id="input-major-lambda" type="number" class="form-control" />
+								  	</div>
+								  	<div class="form-group">
+								    	<label for="input-significant-lambda">Significant deviation intensity</label>
+								    	<input id="input-significant-lambda" type="number" class="form-control" />
+								  	</div>
+								  	<div class="form-group">
+								    	<label for="input-minor-lambda">Minor deviation intensity</label>
+								    	<input id="input-minor-lambda" type="number" class="form-control" />
+								  	</div>
+								</div>
+								<div class="form-group">
+							  		<input id="btn-fric-cancel" type="button" disabled="disabled" class="btn btn-default btn-block" value="Cancel" />
+							  		<input id="btn-fric-ok" type="button" disabled="disabled" class="btn btn-success btn-block" value="OK" />
+							  		<script type="text/javascript">
+							  			$('#check-calc-coeff, #input-extreme-lambda, #input-major-lambda, #input-significant-lambda, #input-minor-lambda').change(function () {
+							  				$('#btn-fric-cancel, #btn-fric-ok').removeAttr('disabled');
+							  			});
+							  			$('#btn-fric-cancel').click(function () {
+							  				fetchFricConfig();
+							  			});
+							  			$('#btn-fric-ok').click(function () {
+							  				var lambdaExtreme = $('#input-extreme-lambda').val();
+							  			
+							  				$.ajax('api/config', {
+												method: 'POST',
+												data: {
+													calc_coeff: $('#check-calc-coeff').is(':checked'),
+													deviation_extreme_lambda: $('#input-extreme-lambda').val(),
+													deviation_major_lambda: $('#input-major-lambda').val(),
+													deviation_minor_lambda: $('#input-significant-lambda').val(),
+													deviation_significant_lambda: $('#input-minor-lambda').val()
+												},
+												success: function (data) {
+													$('#btn-fric-cancel, #btn-fric-ok').attr('disabled', 'disabled');
+												},
+												error: function (jqXHR, status) {
+													alert(status);
+												}
+											});
+							  			});
+							  		</script>
+							  	</div>
 							</div>
 						</div>
 					</div>

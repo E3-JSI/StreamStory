@@ -38,7 +38,6 @@ global.log = bunyan.createLogger({
 //================================================================
 exports.INITIALIZE_ZERO = config.qminer.initializeZeros;
 exports.INTERPOLATION = config.interpolation;
-exports.CALC_COEFFICIENTS = config.calcCoefficients;
 
 //================================================================
 // SERVER

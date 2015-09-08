@@ -8,7 +8,11 @@ var statistics = qm.statistics;
 
 var base;
 var hmc;
-var predictionCb;
+var db;
+
+var coefficientCb;
+
+var opts = { calcCoeff: false };
 
 function initStreamAggregates() {
 	// create fields
@@ -154,8 +158,8 @@ function calcFriction() {
 	var MEAN_GEARBOX_EXP = 0;
 	var STD_GEARBOX = 1.1589e-08;
 	var STD_GEARBOX_EXP = 1.1634e-08;
-	var COOLING_ALPHA_GEARBOX = [-1.1, 1.196889526367186e-07];	// file 2015-37
-//	var COOLING_ALPHA_GEARBOX = [-2.1, 1.5e-07];
+//	var COOLING_ALPHA_GEARBOX = [-1.1, 1.196889526367186e-07];	// file 2015-37
+	var COOLING_ALPHA_GEARBOX = [-2.1, 1.5e-07];
 	var LINREG_ALPHA_GEARBOX = [2.18613087894122e-08, 7.31514680122367e-11];
 	var LINREG_ALPHA_GEARBOX_EXP = [2.87e-08, -0.004355];
 	
@@ -221,31 +225,20 @@ function calcFriction() {
 		var yHat = type == 'exp' ? alpha[0] * math.exp(alpha[1] * temp) :
 								   alpha[0] + temp*alpha[1];
 		
-//		var yHat = alpha[0] + temp*alpha[1];
 		var residual = coeff - yHat;
 		var zScore = statistics.getZScore(residual, dist_mean, dist_std);
 		
 		if (log.info())
-			log.info('Residual: use-case: %s, %d, z=%d, time=%d', useCase, residual, zScore, time);
-		
-		if (Math.abs(zScore) > .1) {	// TODO hardcoded
-			log.info('Sending prediction based on the friction coefficient!');
-			if (predictionCb != null) {
-				var msg = {
-					type: 'prediction',
-					content: {
-						time: time,
-						eventId: useCase,
-						pdf: {
-							type: 'exponential',
-							lambda: 2
-						}
-					}
-				};
-				predictionCb(msg);
-			} else {
-				log.warn('Prediction callback is not defined!');
-			}
+			log.info('Residual: use-case=%s, %d, z=%d, time=%d', useCase, residual, zScore, time);
+
+		if (coefficientCb != null) {
+			coefficientCb({
+				eventId: useCase,
+				time: time,
+				zScore: zScore
+			});
+		} else {
+			log.warn('Coefficient callback is not defined!');
 		}
 	}
 	
@@ -325,7 +318,7 @@ function calcFriction() {
 	oaInStore.addTrigger({
 		onAdd: function (val) {
 			try {
-				if (!config.CALC_COEFFICIENTS) return;
+				if (!opts.calcCoeff) return;
 				
 				var prevVal = buff.getLast();
 				buff.add(val);
@@ -602,12 +595,35 @@ function initTriggers() {
 exports.init = function (opts) {
 	base = opts.base;
 	hmc = opts.hmc;
+	db = opts.db;
 	
 	initTriggers();
 	initStreamAggregates();
 	initGC();
+	
+	log.debug('Fetching the status of friction coeff calcualtion ...');
+	db.getConfig('calc_coeff', function (e, result) {
+		if (e != null) {
+			log.error(e, 'Failed to fetch the status of the friction coefficient calculation!');
+			return;
+		}
+		if (result == null) {
+			log.warn('Friction coefficient calculation status not present in the DB! Will not calculate!');
+			return;
+		}
+		exports.setCalcCoeff(result.value == 'true');
+	});
 };
 
-exports.onPrediction = function (cb) {
-	predictionCb = cb;
+exports.onCoefficient = function (cb) {
+	coefficientCb = cb;
+}
+
+exports.setCalcCoeff = function (calc) {
+	opts.calcCoeff = calc;
+	
+	if (opts.calcCoeff)
+		log.info('From now on calculating the coefficient ...');
+	else
+		log.info('Not calculating the coefficient anymore!');
 }
