@@ -1,0 +1,63 @@
+{
+	"qminer": {
+		"dbPath": "/mnt/raidM2T/project-data/StreamStory-db/",
+		"basesPath": "/mnt/raidM2T/project-data/StreamStory-bases/",
+		"path": "../qminer/",
+		"mode": "createClean",
+		"createPipeline": true,
+		"initializeZeros": false
+	},
+	"models": {
+		"SSFName": "/mnt/raidM2T/project-data/proasense-models/StreamStory-development.bin",
+		"StreamStoryParams": {
+			"transitions": {
+				"type": "continuous",
+				"timeUnit": "hour"
+			},
+			"clustering": {
+				"type": "dpmeans",
+				"lambda": 0.7,
+				"minClusts": 10,
+				"rndseed": 1,
+				"sample": 1,
+				"histogramBins": 20
+			},
+			"pastStates": 2,
+			"verbose": true
+		}
+	},
+	"server": {
+		"port": 8787,
+		"pingInterval": 10000
+	},
+	"log": {
+		"logger": {
+			"level": "debug",
+			"outputMode": "long",
+			"stream": {
+				"type": "stdout",
+				"file": "log.log"
+			}
+		},
+		"print": {
+			"rawData": 100000,
+			"streamStory": 10000,
+			"stores": 100000,
+			"broker": 10000,
+			"coeff": 1000
+		}
+	},
+	"database": {
+		"host": "localhost",
+		"user": "StreamStory",
+		"password": "StreamStory"
+	},
+	"integration": {
+		"type": "http",
+		"brokerUrl": "10.172.67.55",
+		"zookeperPort": 2181,
+		"producerPort": 8090
+	},
+	"interpolation": "linear",
+	"replay": false
+}

@@ -68,6 +68,10 @@ try {
 	
 	if (config.REPLAY_DATA)
 		require('./src/replay.js').replayHmc(ss, base);
+	
+	process.on("SIGINT", function () {
+		utils.exit(base);
+	});
 } catch (e) {
 	log.error(e, 'Exception in main!');
 	utils.exit(base);

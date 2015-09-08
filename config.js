@@ -12,13 +12,25 @@ var config = JSON.parse(configStr);
 //================================================================
 // LOG
 //================================================================
+
+var loggerConfig = config.log.logger;
+var stream;
+if (loggerConfig.stream.type == 'stdout') {
+	console.log('Using stdout as log stream ...');
+	stream = process.stdout;
+} else {	// TODO file stream doesn't work
+	console.log('Using file \'' + loggerConfig.stream.file + '\' as log stream ...');
+	stream = fs.createWriteStream(loggerConfig.stream.file);
+}
+var logStream = {
+	outputMode: loggerConfig.outputMode,
+	out: stream
+};
+
 global.log = bunyan.createLogger({
-	name: 'ProaSense',
-	stream: logformat({ 
-		outputMode: 'short',
-		out: process.stdout
-	}),
-	level: config.log.level
+	name: 'StreamStory',
+	stream: logformat(logStream),
+	level: config.log.logger.level
 });
 
 //================================================================
@@ -42,6 +54,17 @@ global.QM_MODULE_PATH = config.qminer.path;
 exports.QM_CREATE_PIPELINE = config.qminer.createPipeline;
 exports.QM_DATABASE_PATH = config.qminer.dbPath;
 exports.QM_DATABASE_MODE = config.qminer.mode;
+
+//================================================================
+// QMINER - multiple users
+//================================================================
+exports.QM_USER_BASES_PATH = config.qminer.basesPath;
+exports.QM_USER_DEFAULT_STORE_NAME = 'default';
+
+//================================================================
+// MYSQL
+//================================================================
+exports.database = config.database;
 
 global.qm = require(QM_MODULE_PATH);
 
