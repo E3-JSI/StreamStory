@@ -7,12 +7,13 @@ var math = require('mathjs');
 var statistics = qm.statistics;
 
 var base;
-var hmc;
 var db;
 
-var coefficientCb;
 
-var opts = { calcCoeff: false };
+var opts = { 
+	calcCoeff: false,
+	coefficientCb: null
+};
 
 function initStreamAggregates() {
 	// create fields
@@ -231,8 +232,8 @@ function calcFriction() {
 		if (log.info())
 			log.info('Residual: use-case=%s, %d, z=%d, time=%d', useCase, residual, zScore, time);
 
-		if (coefficientCb != null) {
-			coefficientCb({
+		if (opts.coefficientCb != null) {
+			opts.coefficientCb({
 				eventId: useCase,
 				time: time,
 				zScore: zScore
@@ -461,40 +462,6 @@ function initTriggers() {
 	
 	// print progress
 	{
-//		var fname = '/mnt/raidM2T/data/Aker/high_coeff/joined/drilling-high-coeff.csv';
-//		var outFields = [
-//		    'hoist_press_A',
-//		    'hoist_press_B',
-//		    'hook_load',
-//		    'ibop',
-//		    'oil_temp_gearbox',
-//		    'oil_temp_swivel',
-//		    'pressure_gearbox',
-//		    'rpm',
-//		    'temp_ambient',
-//		    'torque',
-//		    'wob',
-//		    'mru_pos',
-//		    'mru_vel',
-//		    'ram_pos_measured',
-//		    'ram_pos_setpoint',
-//		    'ram_vel_measured',
-//		    'ram_vel_setpoint'
-//		]
-//		
-//		
-//		var fout = new qm.fs.FOut(fname, false);
-//		
-//		var line = 'time,';
-//		for (var i = 0; i < outFields.length; i++) {
-//			line += outFields[i];
-//			if (i < outFields.length-1)
-//				line += ',';
-//		}
-//		fout.writeLine(line);
-//		fout.flush();
-//		fout.close();
-		
 		var prevTime = 0;
 		
 		enricherOutStore.addTrigger({
@@ -520,19 +487,6 @@ function initTriggers() {
 				} catch (e) {
 					log.error(e, 'Failed to send enriched data!');
 				}
-//				fout = new qm.fs.FOut(fname, true);
-//				line = '' + val.time.getTime() + ',';
-//				for (var i = 0; i < outFields.length; i++) {
-//					line += val[outFields[i]];
-//					if (i < outFields.length-1)
-//						line += ',';
-//				}
-//				
-//				fout.writeLine(line);
-//				fout.flush();
-//				fout.close();
-				
-				
 			}
 		});
 	}
@@ -552,11 +506,9 @@ function initTriggers() {
 						process.exit(2);
 					}
 					
-					if (hmc != null) {
-						if (log.debug() && nProcessed % config.STREAM_STORY_PRINT_INTERVAL == 0)
-							log.debug('StreamStory processed %d values ...', nProcessed);
-						hmc.update(val);
-					}
+					if (opts.onValue != null)
+						opts.onValue(val);
+					
 					
 //					if (nProcessed % 10 == 0) {
 //						if (log.debug())
@@ -594,7 +546,6 @@ function initTriggers() {
 
 exports.init = function (opts) {
 	base = opts.base;
-	hmc = opts.hmc;
 	db = opts.db;
 	
 	initTriggers();
@@ -616,7 +567,13 @@ exports.init = function (opts) {
 };
 
 exports.onCoefficient = function (cb) {
-	coefficientCb = cb;
+	opts.coefficientCb = cb;
+	log.info('Coefficient callback defined!');
+}
+
+exports.onValue = function (cb) {
+	opts.onValue = cb;
+	log.info('Registered StreamStory store callback ...');
 }
 
 exports.setCalcCoeff = function (calc) {

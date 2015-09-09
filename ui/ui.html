@@ -51,6 +51,8 @@
 					$('#input-significant-lambda').val(props.deviation_significant_lambda);
 					$('#input-minor-lambda').val(props.deviation_minor_lambda);
 					$('#btn-fric-cancel, #btn-fric-ok').attr('disabled', 'disabled');
+					
+					$('#check-calc-coeff').change();
 				},
 				error: function (jqXHR, status) {
 					alert(status);
@@ -91,11 +93,12 @@
 			<div id="container-left" class="col-md-9 col-xs-9">
 				<div id="parent_container" class="panel panel-default">
 					<div class="panel-heading clearfix">
-						<h4 class="panel-title pull-left">Visualization <span id="span-zoom">&nbsp;(Zoom: <span id="span-zoom-val">0</span>%)</span></h4>
+						<h4 class="panel-title pull-left">Visualization <span id="span-zoom" class="component-title-additional">&nbsp;(Zoom: <span id="span-zoom-val">0</span>%)</span></h4>
 						<!-- toggler for the visualization options -->
 						<button id="vis-toggler" class="btn btn-default btn-xs pull-right" style="padding: 0px 5px;" aria-label="Left Align">
 						  	<span class="glyphicon glyphicon-align-justify" aria-hidden="true"></span>
 						</button>
+						<span class="pull-right component-title-additional">Time unit:&nbsp;<span id="span-tu"></span>&nbsp;&nbsp;&nbsp;</span>
 						<!-- options for the visualization component -->
 						<div id="content-options" class="popover fade bottom in">
 							<div class="arrow"></div>

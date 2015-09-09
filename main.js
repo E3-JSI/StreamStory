@@ -20,6 +20,10 @@ function initStreamStory(base) {
 		var store = base.store(fields.STREAM_STORY_STORE);
 		var recs = store.allRecords;
 		
+//		log.info('Storing CSV file ...');
+//		recs.saveCsv({fname: '/mnt/raidM2T/data/test/mhwrith.csv'});
+//		utils.exit(base);
+		
 		if (recs.length == 0) {
 			log.warn('Tried to initialize StreamStory with 0 records!');
 			return null;
@@ -31,7 +35,7 @@ function initStreamStory(base) {
 		
 		log.info('Building StreamStory with params: %s', JSON.stringify(config.STREAM_STORY_PARAMS));
 		
-		var result = analytics.StreamStory({
+		var model = analytics.StreamStory({
 			base: base,
 			config: config.STREAM_STORY_PARAMS,
 			obsFields: ftrSpaceParams.obsFields,
@@ -39,13 +43,13 @@ function initStreamStory(base) {
 		});
 		
 		var opts = {recSet: recs, timeField: fields.SS_TIME_FIELD, batchEndV: null};
-		result.fit(opts);
+		model.fit(opts);
 		
-		result.save(config.STREAM_STORY_FNAME);
+		model.save(config.STREAM_STORY_FNAME);
 		
 		log.info('Done!');
 		
-		return result;
+		return model;
 	}
 }
 
@@ -63,7 +67,7 @@ try {
 	var ss = initStreamStory(base);
 
 	if (config.QM_CREATE_PIPELINE) 
-		pipeline.init({ base: base, hmc: ss, db: db });
+		pipeline.init({ base: base, db: db });
 	
 	services.init({ model: ss, base: base, pipeline: pipeline, db: db });
 	

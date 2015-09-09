@@ -17,7 +17,7 @@
 	left: auto !important;
 }
 
-#span-zoom, #span-zoom-val {
+.component-title-additional {
 	font-size: 10px;
 	color: gray;
 }

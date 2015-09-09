@@ -175,10 +175,31 @@ var UI;
 		}
 		
 		function populateUI() {
-			function changeControlVal(ftrIdx, val) {
+			function changeControlVal(stateId, ftrIdx, val) {
+				var data = { ftrIdx: ftrIdx, val: val };
+				if (stateId != null) data.stateId = stateId;
+				
 				$.ajax('api/setControl', {
 					dataType: 'json',
-					data: { ftrIdx: ftrIdx, factor: val },
+					data: data,
+					method: 'POST',
+					success: function (data) {
+						viz.setModel(data);
+					},
+					error: function (jqXHR, status) {
+						alert(status);
+					}
+				});
+			}
+			
+			function resetControlVal(stateId, ftrId) {
+				var data = {};
+				if (stateId != null) data.stateId = stateId;
+				if (ftrId != null) data.ftrIdx = ftrId;
+				
+				$.ajax('api/resetControl', {
+					dataType: 'json',
+					data: data,
 					method: 'POST',
 					success: function (data) {
 						viz.setModel(data);
@@ -195,53 +216,68 @@ var UI;
 					var observList = $('#ul-ftrs-obs');
 					var controlDiv = $('#div-ftrs-control');
 					
-					$('#chk-sim-inputs').off('checked');
-					$('#chk-sim-inputs').prop('checked', false);
+					var simInputs = $('#chk-sim-inputs');
 					
-					$.each(ftrs.observation.concat(ftrs.control), function (idx, name) {
+					simInputs.off('checked');
+					simInputs.off('change');
+					simInputs.prop('checked', false);
+					
+					$.each(ftrs.observation.concat(ftrs.control), function (idx, desc) {
 						var li = $('<li />').appendTo(observList);
-						li.html('<input type="checkbox" value="' + idx + '" />' + name + '<br />');
+						li.html('<input type="checkbox" value="' + idx + '" />' + desc.name + '<br />');
 					});
 					
-					$.each(ftrs.control, function (idx, name) {
-						var controlId = 'control-' + (idx + ftrs.observation.length);
-						
-						var div = $('<div />').appendTo(controlDiv);
-						var label = $('<label />').appendTo(div);
-						var input = $('<div />').appendTo(div);
-												
-						div.addClass('form-group');
-						
-						input.attr('id', controlId);
-						
-						label.attr('for', controlId);
-						label.html(name);
-						
-						
-						$('#' + controlId).slider({
-							value: 1,
-							min: 0,
-							max: 2,
-							step: 0.01,
-							animate:"slow",
-							orientation: "hotizontal",
-							change: function (event, ui) {
-								var el = $(event.target);
-								var val = ui.value;
-								var ftrIdx = el.attr('id').split('-').pop();
-								
-								changeControlVal(ftrIdx, val);
-							}
-						});
-						
-						// enable / disable handlers
-						$('#' + controlId).slider('disable');
-						$('#chk-sim-inputs').change(function (event) {
-							$('#' + controlId).slider(event.target.checked ? 'enable' : 'disable');
-							if (!event.target.checked) {
-								$('#' + controlId).slider('value', 1);
-							}
-						});
+					$.each(ftrs.control, function (idx, desc) {
+						(function () {
+							var bounds = desc.bounds;
+							var ftrId = idx + ftrs.observation.length;
+							var controlId = 'control-' + (idx + ftrs.observation.length);
+							
+							var div = $('<div />').appendTo(controlDiv);
+							var label = $('<label />').appendTo(div);
+							var input = $('<div />').appendTo(div);
+													
+							div.addClass('form-group');
+							
+							input.attr('id', controlId);
+							
+							label.attr('for', controlId);
+							label.html(desc.name + ' (' + bounds.min.toFixed(2) + ' to ' + bounds.max.toFixed(2) + ')');
+							
+							var defaultVal = (bounds.max + bounds.min) / 2;
+							
+							$('#' + controlId).slider({
+								value: defaultVal,
+								min: bounds.min,
+								max: bounds.max,
+								step: (bounds.max - bounds.min) / 100,
+								animate:"slow",
+								orientation: "hotizontal",
+								change: function (event, ui) {
+									var val = $('#' + controlId).slider('value');//ui.value;
+									changeControlVal(null, ftrId, val);
+								}
+							});
+							
+							// enable / disable handlers
+							$('#' + controlId).slider('disable');
+							simInputs.change(function (event) {
+								$('#' + controlId).slider(event.target.checked ? 'enable' : 'disable');
+								var slider = $('#' + controlId);
+								if (!event.target.checked) {
+									slider.off('change');
+									slider.slider('value', defaultVal);
+								} else {
+									slider.slider('option', 'change').call(slider);
+								}
+							});
+						}());
+					});
+					
+					simInputs.change(function (event) {
+						if (!event.target.checked) {
+							resetControlVal();
+						}
 					});
 					
 					observList.find('input[type=checkbox]').change(function (event) {
@@ -292,6 +328,17 @@ var UI;
 				data: { paramName: 'pdfBins' },
 				success: function (paramObj) {
 					$('#range-pdf-bins').slider("value", paramObj.value);
+				},
+				error: function (jqXHR, status) {
+					alert(status);
+				}
+			});
+			
+			$.ajax('api/timeUnit', {
+				dataType: 'json',
+				data: { paramName: 'pdfBins' },
+				success: function (result) {
+					$('#span-tu').html(result.value);
 				},
 				error: function (jqXHR, status) {
 					alert(status);

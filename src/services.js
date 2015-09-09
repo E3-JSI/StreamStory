@@ -27,6 +27,7 @@ var ws;
 var hmc;
 var base;
 var db;
+var pipeline;
 
 var counts = {};
 var storeLastTm = {};
@@ -38,16 +39,32 @@ var lastRawTime = 0;
 var intensConfig = {};
 
 function getModel(sessionId, session) {
+	if (session.model != null) return session.model;
 //	return session.model;
 	return hmc;
 }
 
+function setNewModel(model) {
+	log.info('Setting new model ...');
+	hmc = model;
+	model.save(config.STREAM_STORY_FNAME);
+	initStreamStoryHandlers();
+}
+
 function cleanUpSession(session) {
+	if (log.debug())
+		log.debug('Cleaning up session ...');
+	
 	if (session.base != null) {
-		log.debug('Closing base for user %s ...', session.username);
-		session.base.close();
-		log.debug('Base closed!');
+		if (session.base == base) {
+			log.debug('Will not close base as it is the real-time base ...');
+		} else {
+			log.debug('Closing base for user %s ...', session.username);
+			session.base.close();
+			log.debug('Base closed!');
+		}
 	}
+	
 	delete session.username;
 	delete session.base;
 	delete session.model;
@@ -355,6 +372,17 @@ function initRestApi() {
 			
 			resp.end();
 		});
+		
+		app.get(API_PATH + '/timeUnit', function (req, resp) {
+			try {
+				var model = getModel(req.sessionID, req.session);
+				resp.send({ value: model.getModel().getTimeUnit() });
+			} catch (e) {
+				log.error(e, 'Failed to query MHWirth multilevel visualization!');
+				resp.status(500);	// internal server error
+			}
+			resp.end();
+		});
 	}
 	
 	{
@@ -380,10 +408,7 @@ function initRestApi() {
 			try {
 				var model = getModel(req.sessionID, req.session);
 				log.debug('Fetching all the features ...');
-				
-				var ftrNames = model.getFtrNames();
-				
-				resp.send(ftrNames);
+				resp.send(model.getFtrDesc());
 			} catch (e) {
 				log.error(e, 'Failed to query MHWirth multilevel visualization!');
 				resp.status(500);	// internal server error
@@ -568,7 +593,6 @@ function initRestApi() {
 			resp.end();
 		});
 		
-		// multilevel analysis
 		app.get(API_PATH + '/targetFeature', function (req, resp) {
 			try {
 				var height = parseFloat(req.query.height);
@@ -635,21 +659,42 @@ function initRestApi() {
 		});
 		
 		app.post(API_PATH + '/setControl', function (req, resp) {
-			var ftrIdx, factor;
+			var ftrId, val;
 			
 			try {
-				ftrIdx = parseInt(req.body.ftrIdx);
-				factor = parseFloat(req.body.factor);
+				ftrId = parseInt(req.body.ftrIdx);
+				val = parseFloat(req.body.val);
+				var stateId = req.body.stateId != null ? parseInt(req.body.stateId) : null;
 				
 				var model = getModel(req.sessionID, req.session);
 				
 				if (log.info()) 
-					log.info('Changing control %d by factor %d ...', ftrIdx, factor);
+					log.info('Changing control %d by factor %d ...', ftrId, val);
 				
-				model.setControl(ftrIdx, factor);
+				model.setControlVal({ ftrId: ftrId, val: val, stateId: stateId});
 				resp.send(model.getVizState());
 			} catch (e) {
-				log.error(e, 'Failed to control %d by factor %d', ftrIdx, factor);
+				log.error(e, 'Failed to control %d by factor %d', ftrId, val);
+				resp.status(500);	// internal server error
+			}
+			
+			resp.end();
+		});
+		
+		app.post(API_PATH + '/resetControl', function (req, resp) {
+			try {
+				var ftrId = req.body.ftrIdx != null ? parseInt(req.body.ftrIdx) : null;
+				var stateId = req.body.stateId != null ? parseInt(req.body.stateId) : null;
+				
+				var model = getModel(req.sessionID, req.session);
+				
+				if (log.info()) 
+					log.info('Reseting control ...');
+				
+				model.resetControlVal({ ftrId: ftrId, stateId: stateId});
+				resp.send(model.getVizState());
+			} catch (e) {
+				log.error(e, 'Failed to reset control!');
 				resp.status(500);	// internal server error
 			}
 			
@@ -684,8 +729,8 @@ function initDataUpload() {
 		return baseDir + '/StreamStory.bin';
 	}
 	
-	function openBase(session, baseDir, username, userConfig) {
-		log.info('Opening new base for user \'%s\': %s', username, baseDir);
+	function openBase(baseDir) {
+		log.info('Opening new base: %s', baseDir);
 		
 		try {
 			var userBase = new qm.Base({
@@ -698,7 +743,7 @@ function initDataUpload() {
 				fname: getModelDir(baseDir) 
 			});
 			
-			saveToSession(session, username, userBase, model, userConfig);
+			return {base: userBase, model: model};
 		} catch (e) {
 			log.error(e, 'Failed to open base!');
 			throw e;
@@ -751,13 +796,20 @@ function initDataUpload() {
 			var timeAttr = req.body.time;
 			var userEmail = req.body.username;
 			var timeUnit = req.body.timeUnit;
+			var attrs = req.body.attrs;
 			var controlAttrs = req.body.controlAttrs;
+			var isRealTime = req.body.isRealTime;
 			
 			var headers = session.headers;
 			
 			log.info('Creating a new base for the current user ...');
 			var baseDir = getBaseDir(userEmail, new Date().getTime());
 			var dbDir = getDbDir(baseDir);
+			
+			var attrSet = {};
+			for (var i = 0; i < attrs.length; i++) {
+				attrSet[attrs[i]] = true;
+			}
 			
 			mkdirp(dbDir, function (e) {
 				if (e != null) {
@@ -767,51 +819,72 @@ function initDataUpload() {
 					return;
 				}
 				
-				var userBase = new qm.Base({
-					mode: 'create',
-					dbPath: dbDir
-				});
+				// create the store and base, depending on wether the model will be 
+				// applied in real-time
+				var storeNm;
+				var userBase;
+				var store;
 				
-				log.debug('Creating default store ...');
 				var storeFields = [];
 				for (var i = 0; i < headers.length; i++) {
+					var attr = headers[i].name;
 					storeFields.push({
-						name: headers[i].name,
-						type: headers[i].name == timeAttr ? 'datetime' : 'float',
+						name: attr,
+						type: attr == timeAttr ? 'datetime' : 'float',
 						'null': false
-					})
+					});
 				}
 				
-				var store = userBase.createStore({
-					name: config.QM_USER_DEFAULT_STORE_NAME,
-					fields: storeFields
-				});
+				if (isRealTime) {
+					log.info('Using real-time base and store ...');
+					storeNm = fields.STREAM_STORY_STORE;
+					userBase = base;
+					store = base.store(storeNm);
+					
+					store.clear();
+				} else {	// not real-time => create a new base and store
+					if (log.debug())
+						log.debug('Creating new base and store ...');
+					
+					storeNm = config.QM_USER_DEFAULT_STORE_NAME;
+					userBase = new qm.Base({
+						mode: 'create',
+						dbPath: dbDir
+					});
+					
+					log.debug('Creating default store ...');
+					store = userBase.createStore({
+						name: storeNm,
+						fields: storeFields
+					});
+				}
 				
 				var fileBuff = fileBuffH[req.sessionID];	// TODO bit of a hack, take care of possible memory leaks when sessions expire
 				delete fileBuffH[req.sessionID];
 				
 				// fill the store
 				log.debug('Filling the store ...');
-				var i = 0;
+				var lineN = 0;
 				qm.fs.readCsvLines(fileBuff, {
 					skipLines: 1,
 					onLine: function (lineArr) {
-						if (++i % 10 == 0)
-							log.debug('Read %d lines ...', i);
+						if (++lineN % 1000 == 0 && log.debug())
+							log.debug('Read %d lines ...', lineN);
 						
 						var rec = {};
 						for (var i = 0; i < headers.length; i++) {
-							if (headers[i].name == timeAttr) {
-								rec[timeAttr] = utils.dateToQmDate(new Date(parseInt(lineArr[i])));
+							var attr = headers[i].name;
+							if (attr == timeAttr) {
+								rec[attr] = utils.dateToQmDate(new Date(parseInt(lineArr[i])));
 							} else {
-								rec[headers[i].name] = parseFloat(lineArr[i]);
+								rec[attr] = parseFloat(lineArr[i]);
 							}
 						}
 						
 						if (log.trace())
 							log.trace('Inserting value: %s', JSON.stringify(rec));
 						
-						store.push(rec);
+						store.push(rec, false);
 					},
 					onEnd: function (err) {
 						if (err != null) {
@@ -822,8 +895,8 @@ function initDataUpload() {
 						
 						log.info('New store created, building StreamStory model ...');
 						
+						// create the configuration
 						try {
-							// create the configuration
 							var obsFields = [];
 							var contrFields = [];
 							
@@ -833,7 +906,7 @@ function initDataUpload() {
 								
 								var fieldConfig = {
 									field: fieldNm,
-									source: config.QM_USER_DEFAULT_STORE_NAME,
+									source: storeNm,
 									type: 'numeric',
 									normalize: true
 								}
@@ -842,14 +915,14 @@ function initDataUpload() {
 								usedFields[fieldNm] = true;
 							}
 							
-							for (var i = 0; i < headers.length; i++) {
-								var fieldNm = headers[i].name;
+							for (var i = 0; i < attrs.length; i++) {
+								var fieldNm = attrs[i];
 								
 								if (fieldNm in usedFields || fieldNm == timeAttr) continue;
 								
 								var fieldConfig = {
 									field: fieldNm,
-									source: config.QM_USER_DEFAULT_STORE_NAME,
+									source: storeNm,
 									type: 'numeric',
 									normalize: true
 								}
@@ -886,12 +959,16 @@ function initDataUpload() {
 								batchEndV: null
 							});
 							
-							log.info('Saving model and base ...');
-							model.save(getModelDir(baseDir));
-							userBase.close();
-							
-							log.info('Saved, opening base in read mode ...');
-							
+							if (!isRealTime) {
+								log.info('Saving model and base ...');
+								model.save(getModelDir(baseDir));
+								userBase.close();
+								log.info('Saved!');
+							} else {
+								log.info('Cleaning store: %s', storeNm);
+								store.clear();
+							}
+	
 							var userConfig = {
 								email: userEmail,
 								baseDir: baseDir,
@@ -907,7 +984,13 @@ function initDataUpload() {
 								}
 								
 								try {
-									openBase(session, baseDir, userEmail, userConfig);
+									if (isRealTime) {
+										setNewModel(model);
+										saveToSession(session, userEmail, userBase, model, userConfig);
+									} else {
+										var baseConfig = openBase(baseDir);
+										saveToSession(session, userEmail, baseConfig.base, baseConfig.model, userConfig);
+									}
 									
 									// end request
 									res.status(204);	// no content
@@ -994,7 +1077,8 @@ function initDataUpload() {
 			}
 			
 			try {
-				openBase(session, baseDir, username, userConfig);
+				var baseConfig = openBase(baseDir);
+				saveToSession(session, username, baseConfig.base, baseConfig.model, userConfig);
 				res.status(204);	// no content
 				res.end();
 			} catch (e) {
@@ -1006,7 +1090,7 @@ function initDataUpload() {
 	});
 }
 
-function initMhwirthRestApi(pipeline) {
+function initMhwirthRestApi() {
 	app.get(API_PATH + '/config', function (req, resp) {
 		try {
 			var properties = req.query.properties;
@@ -1065,63 +1149,15 @@ function initMhwirthRestApi(pipeline) {
 	});
 }
 
-function getHackedSessionStore() {
-	var store =  new SessionStore();
-	store.on('preDestroy', function (sessionId, session) {
-		cleanUpSession(session);
-	});
-	return store;
-}
-
-function initServer(pipeline) {
-	log.info('Initializing web server ...');
-
-	app.use(session({ 
-		secret: 'somesecret_TODO make config',
-		unset: 'destroy',
-		store: getHackedSessionStore(),
-		cookie: { maxAge: 60*60*1000 }	// the cookie will last for 1h
-	}));
-	// automatically parse body on the API path
-	app.use(API_PATH + '/', bodyParser.urlencoded({ extended: false }));
-	app.use(API_PATH + '/', bodyParser.json());
-	// when a session expires, redirect to index
-	app.use('/ui.html', function (req, res, next) {
-		var model = getModel(req.sessionID, session);
-		
-		// check if we need to redirect to the index page
-		if (model == null) {
-			log.info('Session data missing, redirecting to index ...');
-			res.redirect('.');
-		} else {
-			next();
-		}
-	});
-		
-	initRestApi();
-	initMhwirthRestApi(pipeline);
-	initDataUpload();
+function initStreamStoryHandlers() {
+	log.info('Registering StreamStory callbacks ...');
 	
-	// serve static directories on the UI path
-	app.use(UI_PATH, express.static(path.join(__dirname, config.WWW_DIR)));
+	if (hmc == null) {
+		log.warn('StreamStory is NULL, cannot register callbacks ...');
+		return;
+	}
 	
-	// start server
-	server = app.listen(config.SERVER_PORT);
-	ws = WebSocketWrapper();
-	
-	log.info('================================================');
-	log.info('Server running at http://localhost:%d', config.SERVER_PORT);
-	log.info('Serving UI at: %s', UI_PATH);
-	log.info('Serving API at: %s', API_PATH);
-	log.info('Web socket listening at: %s', WS_PATH);
-	log.info('================================================');
-}
-
-function initHandlers(pipeline) {
 	log.info('Registering state changed callback ...');
-	
-	if (hmc == null) return;
-	
 	hmc.onStateChanged(function (states) {
 		if (log.debug())
 			log.debug('State changed: %s', JSON.stringify(states));
@@ -1132,6 +1168,7 @@ function initHandlers(pipeline) {
 		}));
 	});
 	
+	log.info('Registering anomaly callback ...');
 	hmc.onAnomaly(function (desc) {
 		if (log.info())
 			log.info('Anomaly detected: %s TODO: currently ignoring!', desc);
@@ -1142,6 +1179,7 @@ function initHandlers(pipeline) {
 //		}));
 	});
 	
+	log.info('Registering outlier callback ...');
 	hmc.onOutlier(function (ftrV) {
 		if (log.info())
 			log.info('Outlier detected!');
@@ -1152,13 +1190,13 @@ function initHandlers(pipeline) {
 		}));
 	});
 	
-	
+	log.info('Registering prediction callback ...');
 	hmc.onPrediction(function (date, currState, targetState, prob, probV, timeV) {
 		if (log.info())
 			log.info('Sending prediction, with PDF length: %d', probV.length);
 		
 		var msg = {
-			type: 'prediction',
+			type: 'statePrediction',
 			content: {
 				time: date.getTime(),
 				currState: currState,
@@ -1175,6 +1213,19 @@ function initHandlers(pipeline) {
 		var msgStr = JSON.stringify(msg);
 		broker.send(broker.PREDICTION_PRODUCER_TOPIC, msgStr);
 		ws.distribute(msgStr);
+	});
+}
+
+function initHandlers() {
+	pipeline.onValue(function (val) {
+		if (log.trace())
+			log.trace('Inserting value into StreamStory ...');
+		
+		if (hmc != null) {
+			hmc.update(val);
+		} else {
+			log.warn('Cannot insert value, model is NULL!');
+		}
 	});
 	
 	// configure coefficient callback
@@ -1201,6 +1252,7 @@ function initHandlers(pipeline) {
 			}
 					
 			// friction coefficient
+			log.info('Creating coefficient callback ...');
 			pipeline.onCoefficient(function (opts) {
 				var pdf = null;
 				
@@ -1248,6 +1300,8 @@ function initHandlers(pipeline) {
 			});
 		});
 	}
+	
+	initStreamStoryHandlers();
 }
 
 function initBroker() {
@@ -1273,16 +1327,70 @@ function initBroker() {
 	});
 }
 
+function getHackedSessionStore() {
+	var store =  new SessionStore();
+	store.on('preDestroy', function (sessionId, session) {
+		cleanUpSession(session);
+	});
+	return store;
+}
+
+function initServer() {
+	log.info('Initializing web server ...');
+
+	app.use(session({ 
+		secret: 'somesecret_TODO make config',
+		unset: 'destroy',
+		store: getHackedSessionStore(),
+		cookie: { maxAge: 60*60*1000 }	// the cookie will last for 1h
+//		cookie: { maxAge: 30*1000 }	// the cookie will last for 30 secs
+	}));
+	// automatically parse body on the API path
+	app.use(API_PATH + '/', bodyParser.urlencoded({ extended: false }));
+	app.use(API_PATH + '/', bodyParser.json());
+	// when a session expires, redirect to index
+	app.use('/ui.html', function (req, res, next) {
+		var model = getModel(req.sessionID, req.session);
+		
+		// check if we need to redirect to the index page
+		if (model == null) {
+			log.info('Session data missing, redirecting to index ...');
+			res.redirect('.');
+		} else {
+			next();
+		}
+	});
+		
+	initRestApi();
+	initMhwirthRestApi();
+	initDataUpload();
+	
+	// serve static directories on the UI path
+	app.use(UI_PATH, express.static(path.join(__dirname, config.WWW_DIR)));
+	
+	// start server
+	server = app.listen(config.SERVER_PORT);
+	ws = WebSocketWrapper();
+	
+	log.info('================================================');
+	log.info('Server running at http://localhost:%d', config.SERVER_PORT);
+	log.info('Serving UI at: %s', UI_PATH);
+	log.info('Serving API at: %s', API_PATH);
+	log.info('Web socket listening at: %s', WS_PATH);
+	log.info('================================================');
+}
+
 exports.init = function (opts) {
 	log.info('Initializing server ...');
 	
 	hmc = opts.model;
 	base = opts.base;
 	db = opts.db;
+	pipeline = opts.pipeline;
 	
 	// serve static files at www
-	initServer(opts.pipeline);
-	initHandlers(opts.pipeline);
+	initServer();
+	initHandlers();
 	initBroker();
 	
 	log.info('Done!');
