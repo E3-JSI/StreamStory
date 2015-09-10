@@ -2,6 +2,7 @@
 	"qminer": {
 		"dbPath": "/mnt/raidM2T/project-data/proasense-db-development/",
 		"basesPath": "/mnt/raidM2T/project-data/StreamStory-bases/",
+		"realTimeModelsPath": "/mnt/raidM2T/project-data/StreamStory-bases/real-time-models/",
 		"path": "../qminer/",
 		"mode": "createClean",
 		"createPipeline": true,
@@ -33,7 +34,7 @@
 	"log": {
 		"logger": {
 			"level": "debug",
-			"outputMode": "long",
+			"outputMode": "short",
 			"stream": {
 				"type": "stdout",
 				"file": "log.log"

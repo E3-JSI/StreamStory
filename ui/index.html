@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">	<!-- latest IE rendering mode -->
+	<meta name="viewport" content="width=device-width, initial-scale=1">	<!-- mobile devices -->
+	<title>StreamStory</title>
+	
+	<link rel="stylesheet" href="lib/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/landing-page.css">
+    <link rel="stylesheet" href="lib/bootstrap-duallistbox.css">
+	<!-- Custom Fonts -->
+    <link href="lib/bootstrap/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+    <link href="http://fonts.googleapis.com/css?family=Lato:300,400,700,300italic,400italic,700italic" rel="stylesheet" type="text/css">
+	
+	<script type="text/javascript" src="lib/jquery-1.11.1.min.js"></script>
+	<script type="text/javascript" src="lib/bootstrap/js/bootstrap.min.js"></script>
+	<script type="text/javascript" src="lib/jquery.bootstrap-duallistbox.js"></script>
+	
+	<script type="text/javascript">
+		function redirectToUI() {
+			window.location.replace('ui.html');
+		}
+	</script>
+	
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+</head>
+<body>
+	<!-- Navigation -->
+    <nav class="navbar navbar-default navbar-fixed-top topnav" role="navigation">
+        <div class="container topnav">
+            <!-- Brand and toggle get grouped for better mobile display -->
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand topnav" href="#">StreamStory</a>
+            </div>
+            <!-- Collect the nav links, forms, and other content for toggling -->
+            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                <ul class="nav navbar-nav navbar-right">
+                    <li>
+                        <a href="#about">About</a>
+                    </li>
+                    <li>
+                        <a href="#services">Services</a>
+                    </li>
+                    <li>
+                        <a href="#contact">Contact</a>
+                    </li>
+                </ul>
+            </div>
+            <!-- /.navbar-collapse -->
+        </div>
+        <!-- /.container -->
+    </nav>
+
+
+    <!-- Header -->
+    <a name="about"></a>
+    <div class="intro-header">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="intro-message">
+                        <h1>Stream Story</h1>
+                        <h3>Data Stream Analysis Tool</h3>
+                        <hr class="intro-divider">
+                        <ul class="list-inline intro-social-buttons">
+                            <li>
+   								<input id="input-upload" type="button" class="btn btn-default btn-primary" value="Upload Dataset" />
+   								<script type="text/javascript">
+   									$('#input-upload').click(function () {
+   										$('#popup-data-upload').modal('show');
+   									});
+   								</script>
+                            </li>
+                            <li>
+   								<input id="input-select-source" type="button" class="btn btn-default btn-primary" value="Use Stored Dataset" />
+   								<script type="text/javascript">
+   									$('#input-select-source').click(function () {
+   										$('#popup-data-select').modal('show');
+   									});
+   								</script>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- /.container -->
+
+    </div>
+    <!-- /.intro-header -->
+
+	<div id="popup-data-upload" class="modal fade" role="dialog" tabindex="-1">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+    				<button type="button" class="close" data-dismiss="modal">&times;</button>
+    				<h4 class="modal-title">Configure Dataset</h4>
+  				</div>
+  				<div class="modal-body">
+  					<form id="form-upload" action="upload" method="POST" enctype="multipart/form-data">
+  						<div class="form-group">
+		  					<label for="input-email">Email address</label>
+		  					<input id="input-email" type="email" class="form-control" placeholder="Email" />
+	  					</div>
+	  					<div class="form-group">
+                          	<label for="input-email">Choose file</label>
+	  						<input type="file" id="input-choose-upload" name="dataset" class="btn btn-default btn-file" />
+	  					</div>
+	  					<div class="form-group">
+	  						<div class="checkbox">
+	                          	<label for="check-realtime">Apply dataset in real-time</label>
+		  						<input id="check-realtime" type="checkbox" />
+	  						</div>
+	  					</div>
+	  					<div id="form-phase2" style="display: none;">
+	  						<div class="panel panel-default">
+	  							<div class="panel-heading">Select Attributes</div>
+	  							<div id="div-select-attrs" class="panel-body">
+	  								<select id="select-attrs" multiple="multiple"></select>
+								</div>
+	  						</div>
+		  					<div id="form-phase3" style="display: none;">
+		  						<div class="panel panel-default">
+		  							<div class="panel-heading">Configure Time Attribute</div>
+		  							<div id="div-select-controls" class="panel-body">
+		  								<label for="radio-time">Select time attribute (must be timestamp)</label>
+		  								<div id="radio-time" class="radios"></div>
+		  								
+		  								<label for="select-tu">Select time unit</label>
+		  								<select id="select-tu" class="form-control">
+					  						<option value="second">Second</option>
+					  						<option value="minute">Minute</option>
+					  						<option value="hour" selected="selected">Hour</option>
+					  						<option value="day">Day</option>
+					  						<option value="month">Month</option>
+					  					</select>
+									</div>
+		  						</div>
+		  						<div id="form-phase4"  style="display: none;">
+		  							<div class="panel panel-default">
+			  							<div class="panel-heading">Organize Attributes</div>
+			  							<div id="div-select-controls" class="panel-body">
+										    <select id="select-controls" multiple="multiple"></select>
+										</div>
+			  						</div>
+		  						</div>
+		  					</div>
+	  					</div>
+  					</form>
+  				</div>
+  				<div class="modal-footer">
+    				<button id="btn-done" type="button" class="btn btn-success" disabled="disabled">Done</button>
+  				</div>
+			</div>
+			<script type="application/javascript">
+				function enableDisableSubmit() {
+					var radio = $('#radio-time');
+					var timeVal = radio.find('input:radio').val();
+					
+					// check if all the values are there
+					var hasEmail = $('#input-email').val() != '';
+					var hasTimeAttr = timeVal != null && timeVal != '';
+					var hasData = $('#input-choose-upload').val() != '';
+					
+					if (hasEmail && hasTimeAttr && hasData)
+						$('#btn-done').removeAttr('disabled');
+					else
+						$('#btn-done').attr('disabled', 'disabled');
+				}
+			
+				$('#input-choose-upload, #input-email').change(enableDisableSubmit);
+			
+				$('#input-choose-upload').change(function () {
+					$('#form-phase2').hide(0);
+					$('#form-phase3').hide(0);
+					$('#form-phase4').hide(0);
+			
+					console.log('Uploading the file ...');
+					
+					var form = $('#form-upload');
+					var formData = new FormData(form[0]);
+					
+					var action = form.attr('action');
+					var enctype = form.attr('enctype');
+					var method = form.attr('method');
+			
+					$.ajax(action, {
+						contentType: false,
+						enctype: enctype,
+						data: formData,
+						method: method,
+						processData: false,
+						success: function (fields, status, xhr) {
+							var select = $('#select-attrs');
+								
+							// clear the attributes
+							select.html('');
+							for (var i = 0; i < fields.length; i++) {
+								var attr = fields[i].name;												
+								select.append('<option value="' + attr + '">' + attr + '</option>');
+							}
+							
+							select.bootstrapDualListbox({
+								showFilterInputs: true,
+								selectedListLabel: 'Selected Attributes',
+								nonSelectedListLabel: 'Ignored Attributes'
+							});
+							select.bootstrapDualListbox('refresh');
+						
+							select.change(function () {
+								$('#form-phase3').hide(0);
+									$('#form-phase4').hide(0);
+							
+								var selectedAttrs = select.val();
+								
+								if (selectedAttrs == null) return;
+								
+								// set the time radio selector
+								var timeRadio = $('#radio-time');
+								timeRadio.html('');	// clear the element
+								
+								for (var i = 0; i < selectedAttrs.length; i++) {
+									var div = $('<div class="radio" />') 
+									var label = $('<label />');
+									var input = $('<input />');
+									
+									input.attr('type', 'radio');
+									input.attr('name', 'attr-time');
+									input.val(selectedAttrs[i]);
+									
+									label.append(input);
+									label.append(selectedAttrs[i]);
+									div.append(label);
+									timeRadio.append(div);
+								}
+								
+								timeRadio.find('input:radio').change(function () {
+									var timeAttr = $(this).val();
+									var select = $('#select-controls');
+									
+									// clear the attributes
+									select.html('');
+									for (var i = 0; i < fields.length; i++) {
+										var attr = fields[i].name;
+										if (attr == timeAttr) continue;
+										
+										select.append('<option value="' + attr + '">' + attr + '</option>');
+									}
+									
+									$('#select-controls').bootstrapDualListbox({
+										showFilterInputs: false,
+										selectedListLabel: 'Control Atrtibutes',
+										nonSelectedListLabel: 'Observation Attributes'
+									});
+									$('#select-controls').bootstrapDualListbox('refresh');
+									
+									// show the attribute selection
+									$('#form-phase4').show();
+								});
+								
+								timeRadio.find('input:radio').change(enableDisableSubmit);
+								
+								$('#form-phase3').show(0);
+							});
+							
+							$('#btn-done').off('click');
+							$('#btn-done').click(function () {
+								var attrs = $('#select-attrs').val();
+								var controlAttrs = $('#select-controls').val();
+								var isRealTime = $('#check-realtime').is(':checked');
+								
+								var data = {
+									username: $('#input-email').val(),
+									time: $('#radio-time').find('input:radio').val(),
+									timeUnit: $('#select-tu').val(),
+									attrs: attrs,
+									controlAttrs: controlAttrs != null ? controlAttrs : [],
+									isRealTime: isRealTime
+								}
+								
+								$.ajax('api/configureModel', {
+									method: 'POST',
+									contentType: 'application/json',
+									data: JSON.stringify(data),
+									success: function (data) {
+										redirectToUI();
+									},
+									error: function (xhr, status) {
+										alert(status);
+									}
+								});
+							});
+							
+							$('#form-phase2').show();
+						},
+						error: function (xhr, status) {
+							alert('Failed to upload file: ' + status + '!');
+						}
+					});
+				});
+			</script>
+		</div>
+	</div>
+	<div id="popup-data-select" class="modal fade" role="dialog" tabindex="-1">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+    				<button type="button" class="close" data-dismiss="modal">&times;</button>
+    				<h4 class="modal-title">Select Dataset</h4>
+  				</div>
+  				<div class="modal-body">
+					<div class="form-group">
+	  					<label for="input-email-select">Email address</label>
+	  					<input id="input-email-select" type="email" class="form-control" placeholder="Email" />
+  						<script type="text/javascript">
+  							function enableDisableSelect() {
+  								var emailPresent = $('#input-email-select').val() != '';
+  								var datasetPresent = $('#select-dataset option[selected="selected"]').val() != null &&
+  									$('#select-dataset option[selected="selected"]').val() != '';
+  							
+  								if (emailPresent && datasetPresent) {
+  									$('#btn-upload-done').removeAttr('disabled');
+  								} else {
+  									$('#btn-upload-done').attr('disabled', 'disabled');
+  								}
+  							}
+  							$('#input-email-select').change(enableDisableSelect);
+  						
+  							$('#input-email-select').change(function () {
+  								var email = $(this).val();
+  								$.ajax('api/selectDataset', {
+  									contentType: false,
+									data: { email: email },
+									method: 'GET',
+									success: function (data, status, xhr) {									
+										var select = $('#select-dataset');
+										select.html('');
+										
+										for (var i = 0; i < data.length; i++) {
+											var option = $('<option />');
+											
+											var modelData = data[i];
+											
+											option.val(modelData.model_file);
+											option.html((modelData.is_realtime == 1 ? 'online: ' : 'offline: ') + modelData.dataset + ' (' + modelData.date_created + ')');
+											if (i == 0) {
+												option.attr('selected', 'selected');
+											}
+											
+											select.append(option);
+										}
+										
+										$('#select-dataset').off('change');
+										$('#select-dataset').change(enableDisableSelect);
+										$('#select-dataset option[selected="selected"]').change();
+									},
+									error: function (xhr, status) {
+										alert('Failed to upload file: ' + status + '!');
+									}
+  								});
+  							});
+  						</script>
+  					</div>
+  					<div class="form-group">
+                      	<label for="select-dataset">Choose dataset</label>
+ 						<select id="select-dataset" class="form-control"></select>
+					</div>
+  				</div>
+  				<div class="modal-footer">
+    				<button id="btn-upload-done" type="button" class="btn btn-success" disabled="disabled">Done</button>
+  					<script type="text/javascript">
+  						$('#btn-upload-done').click(function () {
+  							var modelId = $('#select-dataset').val();
+  							
+  							$.ajax('api/selectDataset', {
+  								method: 'POST',
+  								contentType: 'application/json',
+								data: JSON.stringify({ modelId: modelId }),
+								success: function (data, status, xhr) {
+									redirectToUI();
+								},
+								error: function (xhr, status) {
+									alert('Failed to select dataset: ' + status + '!');
+								}
+ 							});
+  						});
+  					</script>
+  				</div>
+			</div>
+		</div>
+	</div>
+	<script type="text/javascript">
+		$('#popup-data-upload').modal({ show: false });
+		$('#popup-data-select').modal({ show: false });
+	</script>
+
+    <!-- Page Content -->
+
+	<a name="services"></a>
+    <div class="content-section-a">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-5 col-sm-6">
+                    <hr class="section-heading-spacer">
+                    <div class="clearfix"></div>
+                    <h2 class="section-heading">Qualitative representation of sensory data</h2>
+                    <p class="lead">
+                    	[TODO]
+                    	A special thanks to <a target="_blank" href="http://join.deathtothestockphoto.com/">
+                    	Death to the Stock Photo</a> for providing the photographs 
+                    	that you see in this template. Visit their website to become 
+                    	a member.</p>
+                </div>
+                <div class="col-lg-5 col-lg-offset-2 col-sm-6">
+                    <img class="img-responsive" src="img/landing/ui-circle.png" alt="">
+                </div>
+            </div>
+
+        </div>
+        <!-- /.container -->
+
+    </div>
+    <!-- /.content-section-a -->
+
+    <div class="content-section-b">
+
+        <div class="container">
+
+            <div class="row">
+                <div class="col-lg-5 col-lg-offset-1 col-sm-push-6  col-sm-6">
+                    <hr class="section-heading-spacer">
+                    <div class="clearfix"></div>
+                    <h2 class="section-heading">[TODO] Write some text</h2>
+                    <p class="lead">[TODO]Turn your 2D designs into high quality, 3D product shots in seconds using free Photoshop actions by <a target="_blank" href="http://www.psdcovers.com/">PSDCovers</a>! Visit their website to download some of their awesome, free photoshop actions!</p>
+                </div>
+                <div class="col-lg-5 col-sm-pull-6  col-sm-6">
+                    <img class="img-responsive" src="img/landing/ui-circle.png" alt="">
+                </div>
+            </div>
+
+        </div>
+        <!-- /.container -->
+
+    </div>
+
+	<a  name="contact"></a>
+    <div class="banner">
+
+        <div class="container">
+
+            <div class="row">
+                <div class="col-lg-6">
+                    <h2>Connect to Start Bootstrap:</h2>
+                </div>
+                <div class="col-lg-6">
+                    <ul class="list-inline banner-social-buttons">
+                        <li>
+                            <a href="https://twitter.com/SBootstrap" class="btn btn-default btn-lg"><i class="fa fa-twitter fa-fw"></i> <span class="network-name">Twitter</span></a>
+                        </li>
+                        <li>
+                            <a href="https://github.com/IronSummitMedia/startbootstrap" class="btn btn-default btn-lg"><i class="fa fa-github fa-fw"></i> <span class="network-name">Github</span></a>
+                        </li>
+                        <li>
+                            <a href="#" class="btn btn-default btn-lg"><i class="fa fa-linkedin fa-fw"></i> <span class="network-name">Linkedin</span></a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+        <!-- /.container -->
+
+    </div>
+    <!-- /.banner -->
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-12">
+                    <ul class="list-inline">
+                        <li>
+                            <a href="#">Home</a>
+                        </li>
+                        <li class="footer-menu-divider">&sdot;</li>
+                        <li>
+                            <a href="#about">About</a>
+                        </li>
+                        <li class="footer-menu-divider">&sdot;</li>
+                        <li>
+                            <a href="#services">Services</a>
+                        </li>
+                        <li class="footer-menu-divider">&sdot;</li>
+                        <li>
+                            <a href="#contact">Contact</a>
+                        </li>
+                    </ul>
+                    <p class="copyright text-muted small">Copyright &copy; Your Company 2014. All Rights Reserved</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>

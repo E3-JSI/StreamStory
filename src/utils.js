@@ -137,5 +137,9 @@ module.exports = {
 		this.clear = function () {
 			buff = [];
 		};
+	},
+	
+	clone: function (obj) {
+		return JSON.parse(JSON.stringify(obj));
 	}
 }

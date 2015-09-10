@@ -1,17 +1,21 @@
 var express = require('express');
 var bodyParser = require("body-parser");
 var path = require('path');
-var WebSocket = require('ws');
 var fs = require('fs');
 var math = require('mathjs');
 var mkdirp = require('mkdirp');
 var multer = require('multer');
 var session = require('express-session');
+var cookieParser = require('cookie-parser');
+
 var SessionStore = require('./util/sessionstore.js');
 var utils = require('./utils.js');
 var broker = require('./broker.js');
 var config = require('../config.js');
 var fields = require('../fields.js');
+
+var ModelStore = require('./util/servicesutil.js').RealTimeModelStore;
+var WebSocketWrapper = require('./util/servicesutil.js').WebSocketWrapper;
 
 var qmutil = qm.qm_util;
 
@@ -21,13 +25,11 @@ var WS_PATH = '/ws';
 
 var app = express();
 
-var server;
-var ws;
-
-var hmc;
+var hmc;	// TODO remove hmc
 var base;
 var db;
 var pipeline;
+var modelStore;
 
 var counts = {};
 var storeLastTm = {};
@@ -39,16 +41,25 @@ var lastRawTime = 0;
 var intensConfig = {};
 
 function getModel(sessionId, session) {
-	if (session.model != null) return session.model;
-//	return session.model;
-	return hmc;
+	return session.model;
 }
 
-function setNewModel(model) {
-	log.info('Setting new model ...');
-	hmc = model;
-	model.save(config.STREAM_STORY_FNAME);
-	initStreamStoryHandlers();
+function setNewModel(modelId, model) {
+	try {
+		log.info('Adding a new online model ...');
+		modelStore.add(modelId, model);
+	} catch (e) {
+		log.error(e, 'Failed to set a new real-time model!');
+	}
+}
+
+function saveToSession(session, username, userBase, model, userConfig) {
+	log.debug('Saving new data to session ...');
+	if (session.base != null)
+		cleanUpSession(session);
+	session.username = username;
+	session.base = userBase;
+	session.model = model;
 }
 
 function cleanUpSession(session) {
@@ -68,17 +79,6 @@ function cleanUpSession(session) {
 	delete session.username;
 	delete session.base;
 	delete session.model;
-	delete session.userConfig;
-}
-
-function saveToSession(session, username, userBase, model, userConfig) {
-	log.debug('Saving new data to session ...');
-	if (session.base != null)
-		cleanUpSession(session);
-	session.username = username;
-	session.base = userBase;
-	session.model = model;
-	session.userConfig = userConfig;
 }
 
 function addRawMeasurement(val) {
@@ -126,147 +126,6 @@ function addCepAnnotated(val) {
 	base.store(fields.OA_IN_STORE).push(val);
 	
 	lastCepTime = time;
-}
-
-var WebSocketWrapper = function () {
-	log.info('Creating web socket server ...');
-	
-	var sockets = {};
-	var socketId = 0;
-	
-	var wss = new WebSocket.Server({
-		server: server,
-		path: WS_PATH
-	});
-	
-	function delSocket(id) {
-		if (id == null) {
-			log.warn('Tried to delete socket with null ID! Ignoring ...');
-			return;
-		}
-		
-		try {
-			if (id in sockets)
-				delete sockets[id];
-			else
-				log.warn('Tried to delete a socket that is not cached %d!', id);
-		} catch (e) {
-			log.error(e, 'Failed to delete socket %d!', id);
-		}
-	}
-
-	function closeClient(id) {
-		if (!(id in sockets)) return;
-		
-		var socket = sockets[id].client;
-		
-		if (socket.readyState == WebSocket.CLOSING || socket.readyState == WebSocket.CLOSED)
-			delSocket(id);
-			return;
-		
-		if (log.debug())
-			log.debug("Closing client %d", id);
-		
-		sockets[id].client.close();
-		delSocket(id);
-	}
-	
-	function removeIdle() {
-		for (var id in sockets) {
-			if (!sockets[id].gotPong) {
-				if (log.debug())
-					log.debug('Socket %s idle, removing ...', id)
-				closeClient(id);
-			}
-			sockets[id].gotPong = false;
-		}
-	}
-	
-	wss.on('connection', function (socket) {
-		var id = socketId++;
-		
-		if (log.info())
-			log.info('New websocket connected id: %d ...', id);
-		
-		sockets[id] = { client: socket, gotPong: true };
-		
-		socket.on('message', function (msg) {
-			log.debug('Received message from websocket id: %d, msg: %s', id, msg);
-		});
-		
-		socket.on('pong', function () {
-			if (log.trace())
-				log.trace('Received pong %d', id);
-			sockets[id].gotPong = true;
-		});
-		
-		socket.on('error', function (e) {
-			log.error(e, 'Error on web socket %d! Closing ...', id);
-			closeClient(id);
-		});
-		
-		socket.on('close', function (code, msg) {
-			log.debug('Web socket %d closed with code %d, message: %s. Removing from socket list!', id, code, msg);
-			delSocket(id);
-		});
-	});
-	
-	function isOpen(socketId) {
-		return socketId in sockets && sockets[socketId].client.readyState == WebSocket.OPEN;
-	}
-	
-	// ping clients periodically
-	function ping() {
-		try {
-			removeIdle();
-			
-			if (log.trace())
-				log.trace('Pinging %d clients ...', Object.keys(sockets).length);
-			
-			for (var id in sockets) {
-				if (!isOpen(id)) {
-					log.warn('Socket is not open %d, closing ...', id);
-					closeClient(id);
-					continue;
-				}
-				sockets[id].client.ping();
-			}
-		} catch (e) {
-			log.error(e, 'Failed to ping!');
-		}
-		setTimeout(ping, config.PING_INTERVAL);
-	}
-	ping();
-	
-	return {
-		/**
-		 * Distributes the message to all the clients.
-		 */
-		distribute: function (msg) {
-			if (log.debug())
-				log.debug('Distributing message: %s', msg);
-			
-			for (var id in sockets) {
-				try {
-					if (!isOpen(id)) {
-						log.warn('Socket is not open %d, closing ...', id);
-						closeClient(id);
-						continue;
-					}
-					
-					if (log.debug())
-						log.debug('Distributing to web socket: %d ...', id);
-					sockets[id].client.send(msg);
-				} catch (e) {
-					log.error(e, 'Exception while distributig message. Web socket ID: %d', id);
-				}
-			}
-		},
-		
-		close: function () {
-			wss.close();
-		}
-	}
 }
 
 function initRestApi() {
@@ -725,7 +584,7 @@ function initDataUpload() {
 		return baseDir + '/db';
 	}
 	
-	function getModelDir(baseDir) {
+	function getModelFName(baseDir) {
 		return baseDir + '/StreamStory.bin';
 	}
 	
@@ -740,7 +599,7 @@ function initDataUpload() {
 			
 			var model = new qm.analytics.StreamStory({ 
 				base: userBase, 
-				fname: getModelDir(baseDir) 
+				fname: getModelFName(baseDir) 
 			});
 			
 			return {base: userBase, model: model};
@@ -794,7 +653,7 @@ function initDataUpload() {
 			var sessionId = req.sessionID;
 			
 			var timeAttr = req.body.time;
-			var userEmail = req.body.username;
+			var username = req.body.username;
 			var timeUnit = req.body.timeUnit;
 			var attrs = req.body.attrs;
 			var controlAttrs = req.body.controlAttrs;
@@ -803,7 +662,7 @@ function initDataUpload() {
 			var headers = session.headers;
 			
 			log.info('Creating a new base for the current user ...');
-			var baseDir = getBaseDir(userEmail, new Date().getTime());
+			var baseDir = getBaseDir(username, new Date().getTime());
 			var dbDir = getDbDir(baseDir);
 			
 			var attrSet = {};
@@ -819,32 +678,33 @@ function initDataUpload() {
 					return;
 				}
 				
+				var fileBuff = fileBuffH[req.sessionID];	// TODO bit of a hack, take care of possible memory leaks when sessions expire
+				delete fileBuffH[req.sessionID];
+				
 				// create the store and base, depending on wether the model will be 
 				// applied in real-time
 				var storeNm;
 				var userBase;
 				var store;
 				
-				var storeFields = [];
-				for (var i = 0; i < headers.length; i++) {
-					var attr = headers[i].name;
-					storeFields.push({
-						name: attr,
-						type: attr == timeAttr ? 'datetime' : 'float',
-						'null': false
-					});
-				}
-				
 				if (isRealTime) {
 					log.info('Using real-time base and store ...');
 					storeNm = fields.STREAM_STORY_STORE;
 					userBase = base;
 					store = base.store(storeNm);
-					
-					store.clear();
 				} else {	// not real-time => create a new base and store
 					if (log.debug())
 						log.debug('Creating new base and store ...');
+					
+					var storeFields = [];
+					for (var i = 0; i < headers.length; i++) {
+						var attr = headers[i].name;
+						storeFields.push({
+							name: attr,
+							type: attr == timeAttr ? 'datetime' : 'float',
+							'null': false
+						});
+					}
 					
 					storeNm = config.QM_USER_DEFAULT_STORE_NAME;
 					userBase = new qm.Base({
@@ -859,11 +719,47 @@ function initDataUpload() {
 					});
 				}
 				
-				var fileBuff = fileBuffH[req.sessionID];	// TODO bit of a hack, take care of possible memory leaks when sessions expire
-				delete fileBuffH[req.sessionID];
+				// initialize the feature spaces
+	    		var obsFields = [];
+				var contrFields = [];
 				
+				var usedFields = {};
+				for (var i = 0; i < controlAttrs.length; i++) {
+					var fieldNm = controlAttrs[i];
+					
+					var fieldConfig = {
+						field: fieldNm,
+						source: storeNm,
+						type: 'numeric',
+						normalize: true
+					}
+					
+					contrFields.push(fieldConfig);
+					usedFields[fieldNm] = true;
+				}
+				
+				for (var i = 0; i < attrs.length; i++) {
+					var fieldNm = attrs[i];
+					
+					if (fieldNm in usedFields || fieldNm == timeAttr) continue;
+					
+					var fieldConfig = {
+						field: fieldNm,
+						source: storeNm,
+						type: 'numeric',
+						normalize: true
+					}
+					
+					obsFields.push(fieldConfig);
+				}
+				
+				var obsFtrSpace = new qm.FeatureSpace(userBase, obsFields);
+	    		var controlFtrSpace = new qm.FeatureSpace(userBase, contrFields);
+				
+	    		var recs = [];
+	    		
 				// fill the store
-				log.debug('Filling the store ...');
+				log.debug('Processing CSV file ...');
 				var lineN = 0;
 				qm.fs.readCsvLines(fileBuff, {
 					skipLines: 1,
@@ -871,20 +767,21 @@ function initDataUpload() {
 						if (++lineN % 1000 == 0 && log.debug())
 							log.debug('Read %d lines ...', lineN);
 						
-						var rec = {};
+						var recJson = {};
 						for (var i = 0; i < headers.length; i++) {
 							var attr = headers[i].name;
 							if (attr == timeAttr) {
-								rec[attr] = utils.dateToQmDate(new Date(parseInt(lineArr[i])));
+								recJson[attr] = utils.dateToQmDate(new Date(parseInt(lineArr[i])));
 							} else {
-								rec[attr] = parseFloat(lineArr[i]);
+								recJson[attr] = parseFloat(lineArr[i]);
 							}
 						}
 						
 						if (log.trace())
-							log.trace('Inserting value: %s', JSON.stringify(rec));
+							log.trace('Inserting value: %s', JSON.stringify(recJson));
 						
-						store.push(rec, false);
+						// create the actual record and update the feature spaces						
+						recs.push(store.newRecord(recJson));
 					},
 					onEnd: function (err) {
 						if (err != null) {
@@ -897,39 +794,6 @@ function initDataUpload() {
 						
 						// create the configuration
 						try {
-							var obsFields = [];
-							var contrFields = [];
-							
-							var usedFields = {};
-							for (var i = 0; i < controlAttrs.length; i++) {
-								var fieldNm = controlAttrs[i];
-								
-								var fieldConfig = {
-									field: fieldNm,
-									source: storeNm,
-									type: 'numeric',
-									normalize: true
-								}
-								
-								contrFields.push(fieldConfig);
-								usedFields[fieldNm] = true;
-							}
-							
-							for (var i = 0; i < attrs.length; i++) {
-								var fieldNm = attrs[i];
-								
-								if (fieldNm in usedFields || fieldNm == timeAttr) continue;
-								
-								var fieldConfig = {
-									field: fieldNm,
-									source: storeNm,
-									type: 'numeric',
-									normalize: true
-								}
-								
-								obsFields.push(fieldConfig);
-							}
-							
 							// create the model
 							var model = qm.analytics.StreamStory({
 								base: userBase,
@@ -949,58 +813,98 @@ function initDataUpload() {
 									pastStates: 2,
 									verbose: true
 								},
-								obsFields: obsFields,
-								contrFields: contrFields
+								obsFtrSpace: obsFtrSpace,
+								controlFtrSpace: controlFtrSpace
 							});
-													
+							
+							// fit the model
+							// first create a matrix out of the records
 							model.fit({
-								recSet: store.allRecords,
+								recV: recs,
 								timeField: timeAttr,
 								batchEndV: null
 							});
 							
-							if (!isRealTime) {
-								log.info('Saving model and base ...');
-								model.save(getModelDir(baseDir));
-								userBase.close();
-								log.info('Saved!');
-							} else {
-								log.info('Cleaning store: %s', storeNm);
-								store.clear();
-							}
-	
-							var userConfig = {
-								email: userEmail,
-								baseDir: baseDir,
-								dataset: session.fileName
-							}
-							
-							db.addAndGetUserConfig(userConfig, function (e, userConfig) {
-								if (e != null) {
-									log.error(e, 'Failed to fetch user config from the DB!');
-									res.status(500);	// internal server error
-									res.end();
-									return;
+							if (isRealTime) {
+								var fname = config.REAL_TIME_MODELS_PATH + new Date().getTime() + '.bin';
+								
+								log.info('Saving model ...');
+								model.save(fname);
+								
+								var dbOpts = {
+									username: username,
+									model_file: fname,
+									dataset: session.fileName,
+									is_realtime: 1
 								}
 								
-								try {
-									if (isRealTime) {
-										setNewModel(model);
-										saveToSession(session, userEmail, userBase, model, userConfig);
-									} else {
-										var baseConfig = openBase(baseDir);
-										saveToSession(session, userEmail, baseConfig.base, baseConfig.model, userConfig);
+								log.info('Storing a new online model ...');
+								db.storeModel(dbOpts, function (e) {
+									if (e != null) {
+										log.error(e, 'Failed to store offline model to DB!');
+										res.status(500);	// internal server error
+										res.end();
+										return;
 									}
 									
-									// end request
-									res.status(204);	// no content
-									res.end();
-								} catch (e1) {
-									log.error(e1, 'Failed to open base!');
-									res.status(500);	// internal server error
-									res.end();
+									try {
+										if (log.debug())
+											log.debug('Online model stored!');
+										
+										setNewModel(username, model);
+										saveToSession(session, username, userBase, model);
+										
+										// end request
+										res.status(204);	// no content
+										res.end();
+									} catch (e1) {
+										log.error(e1, 'Failed to open base!');
+										res.status(500);	// internal server error
+										res.end();
+									}
+								});
+							}
+							else {
+								var modelFile = getModelFName(baseDir);
+								
+								log.info('Saving model and base ...');
+								model.save(modelFile);
+								userBase.close();
+								log.info('Saved!');
+								
+								var dbOpts = {
+									username: username,
+									base_dir: baseDir,
+									model_file: modelFile,
+									dataset: session.fileName
 								}
-							});
+								
+								log.info('Storing a new offline model ...');
+								db.storeOfflineModel(dbOpts, function (e) {
+									if (e != null) {
+										log.error(e, 'Failed to store offline model to DB!');
+										res.status(500);	// internal server error
+										res.end();
+										return;
+									}
+									
+									try {
+										if (log.debug())
+											log.debug('Offline model stored!');
+										
+										var baseConfig = openBase(baseDir);
+										saveToSession(session, username, baseConfig.base, baseConfig.model);
+										
+										// end request
+										res.status(204);	// no content
+										res.end();
+									} catch (e1) {
+										log.error(e1, 'Failed to open base!');
+										res.status(500);	// internal server error
+										res.end();
+									}
+								})
+							}
 						} catch (e) {
 							log.error(e, 'Failed to create the store!');
 							res.status(500);	// internal server error
@@ -1045,17 +949,16 @@ function initDataUpload() {
 		var session = req.session;
 		var username = req.query.email;
 		
-		db.getUserConfig(username, function (e, userBases) {
+		db.fetchUserModels(username, function (e, models) {
 			if (e != null) {
-				log.error(e, 'Failed to get base info for user: %s', username);
+				log.error(e, 'Failed to fetch models for user: %s', username);
 				res.status(500);	// internal server error
 				res.end();
 				return;
 			}
 			
 			session.username = username;
-			
-			res.send(userBases.bases);
+			res.send(models);
 			res.end();
 		});
 	});
@@ -1064,11 +967,11 @@ function initDataUpload() {
 		var session = req.session;
 		var username = session.username;
 		
-		var baseDir = req.body.base;
+		var modelId = req.body.modelId;
 		
-		log.info('User %s selected base %s ...', username, baseDir);
+		log.info('User %s selected model %s ...', username, modelId);
 		
-		db.getUserConfig(username, function (e, userConfig) {
+		db.fetchModel(modelId, function (e, modelConfig) {
 			if (e != null) {
 				log.error(e, 'Failed to get base info for user: %s', username);
 				res.status(500);	// internal server error
@@ -1077,12 +980,22 @@ function initDataUpload() {
 			}
 			
 			try {
-				var baseConfig = openBase(baseDir);
-				saveToSession(session, username, baseConfig.base, baseConfig.model, userConfig);
+				if (modelConfig.is_realtime == 1) {
+					var model = new qm.analytics.StreamStory({ 
+						base: base, 
+						fname: modelConfig.model_file
+					});
+					setNewModel(modelConfig.model_file, model);
+					saveToSession(session, username, base, model);
+				} else {
+					var baseConfig = openBase(modelConfig.base_dir);
+					saveToSession(session, username, baseConfig.base, baseConfig.model);
+				}
+				
 				res.status(204);	// no content
 				res.end();
-			} catch (e) {
-				log.error(e, 'Failed to open base for user %s!', username);
+			} catch (e1) {
+				log.error(e1, 'Failed to initialize model!');
 				res.status(500);	// internal server error
 				res.end();
 			}
@@ -1149,83 +1062,88 @@ function initMhwirthRestApi() {
 	});
 }
 
-function initStreamStoryHandlers() {
+function initStreamStoryHandlers(model, enable) {
 	log.info('Registering StreamStory callbacks ...');
 	
-	if (hmc == null) {
+	if (model == null) {
 		log.warn('StreamStory is NULL, cannot register callbacks ...');
 		return;
 	}
 	
-	log.info('Registering state changed callback ...');
-	hmc.onStateChanged(function (states) {
-		if (log.debug())
-			log.debug('State changed: %s', JSON.stringify(states));
-				
-		ws.distribute(JSON.stringify({
-			type: 'stateChanged',
-			content: states
-		}));
-	});
-	
-	log.info('Registering anomaly callback ...');
-	hmc.onAnomaly(function (desc) {
-		if (log.info())
-			log.info('Anomaly detected: %s TODO: currently ignoring!', desc);
-				
-//		ws.distribute(JSON.stringify({
-//			type: 'anomaly',
-//			content: desc
-//		}));
-	});
-	
-	log.info('Registering outlier callback ...');
-	hmc.onOutlier(function (ftrV) {
-		if (log.info())
-			log.info('Outlier detected!');
-				
-		ws.distribute(JSON.stringify({
-			type: 'outlier',
-			content: ftrV
-		}));
-	});
-	
-	log.info('Registering prediction callback ...');
-	hmc.onPrediction(function (date, currState, targetState, prob, probV, timeV) {
-		if (log.info())
-			log.info('Sending prediction, with PDF length: %d', probV.length);
+	if (enable) {
+		log.info('Registering state changed callback ...');
+		model.onStateChanged(function (states) {
+			if (log.debug())
+				log.debug('State changed: %s', JSON.stringify(states));
+					
+			modelStore.sendMsg(model.getId(), JSON.stringify({
+				type: 'stateChanged',
+				content: states
+			}));
+		});
 		
-		var msg = {
-			type: 'statePrediction',
-			content: {
-				time: date.getTime(),
-				currState: currState,
-				targetState: targetState,
-				probability: prob,
-				pdf: {
-					type: 'histogram',
-					probV: probV,
-					timeV: timeV
+		log.info('Registering anomaly callback ...');
+		model.onAnomaly(function (desc) {
+			if (log.info())
+				log.info('Anomaly detected: %s TODO: currently ignoring!', desc);
+			
+			// TODO not notifying anyone!
+		});
+		
+		log.info('Registering outlier callback ...');
+		model.onOutlier(function (ftrV) {
+			if (log.info())
+				log.info('Outlier detected!');
+			
+			modelStore.sendMsg(model.getId(), JSON.stringify({
+				type: 'outlier',
+				content: ftrV
+			}));
+		});
+		
+		log.info('Registering prediction callback ...');
+		model.onPrediction(function (date, currState, targetState, prob, probV, timeV) {
+			if (log.info())
+				log.info('Sending prediction, with PDF length: %d', probV.length);
+			
+			var msg = {
+				type: 'statePrediction',
+				content: {
+					time: date.getTime(),
+					currState: currState,
+					targetState: targetState,
+					probability: prob,
+					pdf: {
+						type: 'histogram',
+						probV: probV,
+						timeV: timeV
+					}
 				}
-			}
-		};
-		
-		var msgStr = JSON.stringify(msg);
-		broker.send(broker.PREDICTION_PRODUCER_TOPIC, msgStr);
-		ws.distribute(msgStr);
-	});
+			};
+			
+			var msgStr = JSON.stringify(msg);
+			broker.send(broker.PREDICTION_PRODUCER_TOPIC, msgStr);
+			modelStore.sendMsg(model.getId(), msgStr);
+		});
+	} else {
+		log.debug('Disabling handlers ...');
+		log.debug('Unregistering state changed callback ...');
+		model.onStateChanged(null);
+		log.debug('Registering anomaly callback ...');
+		model.onAnomaly(null);
+		log.debug('Registering outlier callback ...');
+		model.onOutlier(null);
+		log.debug('Registering prediction callback ...');
+		model.onPrediction();
+	}
 }
 
-function initHandlers() {
+function initPipelineHandlers() {
 	pipeline.onValue(function (val) {
 		if (log.trace())
-			log.trace('Inserting value into StreamStory ...');
+			log.trace('Inserting value into StreamStories ...');
 		
-		if (hmc != null) {
-			hmc.update(val);
-		} else {
-			log.warn('Cannot insert value, model is NULL!');
-		}
+		modelStore.updateModels(val);
 	});
 	
 	// configure coefficient callback
@@ -1278,7 +1196,7 @@ function initHandlers() {
 					};
 				}
 				
-				ws.distribute(JSON.stringify({
+				modelStore.distributeMsg(JSON.stringify({
 					type: 'coeff',
 					content: opts
 				}));
@@ -1295,13 +1213,11 @@ function initHandlers() {
 					
 					var msgStr = JSON.stringify(msg);
 					broker.send(broker.PREDICTION_PRODUCER_TOPIC, msgStr);
-					ws.distribute(msgStr);
+					modelStore.distributeMsg(msgStr);
 				}
 			});
 		});
 	}
-	
-	initStreamStoryHandlers();
 }
 
 function initBroker() {
@@ -1335,13 +1251,13 @@ function getHackedSessionStore() {
 	return store;
 }
 
-function initServer() {
+function initServer(sessionStore, parseCookie) {
 	log.info('Initializing web server ...');
 
+	app.use(parseCookie);
 	app.use(session({ 
-		secret: 'somesecret_TODO make config',
 		unset: 'destroy',
-		store: getHackedSessionStore(),
+		store: sessionStore,
 		cookie: { maxAge: 60*60*1000 }	// the cookie will last for 1h
 //		cookie: { maxAge: 30*1000 }	// the cookie will last for 30 secs
 	}));
@@ -1369,8 +1285,7 @@ function initServer() {
 	app.use(UI_PATH, express.static(path.join(__dirname, config.WWW_DIR)));
 	
 	// start server
-	server = app.listen(config.SERVER_PORT);
-	ws = WebSocketWrapper();
+	var server = app.listen(config.SERVER_PORT);
 	
 	log.info('================================================');
 	log.info('Server running at http://localhost:%d', config.SERVER_PORT);
@@ -1378,6 +1293,8 @@ function initServer() {
 	log.info('Serving API at: %s', API_PATH);
 	log.info('Web socket listening at: %s', WS_PATH);
 	log.info('================================================');
+	
+	return server;
 }
 
 exports.init = function (opts) {
@@ -1388,9 +1305,44 @@ exports.init = function (opts) {
 	db = opts.db;
 	pipeline = opts.pipeline;
 	
+	var sessionStore = getHackedSessionStore();
+	var parseCookie = cookieParser('somesecret_TODO make config');
+	
 	// serve static files at www
-	initServer();
-	initHandlers();
+	var server = initServer(sessionStore, parseCookie);
+	
+	var ws = WebSocketWrapper({
+		server: server,
+		sessionStore: sessionStore,
+		parseCookie: parseCookie,
+		webSocketPath: WS_PATH,
+		onConnected: function (socketId, sessionId, session) {
+			var model = session.model;
+			if (model.getId() != null) {
+				modelStore.addWebSocketId(model.getId(), socketId);
+			} else {
+				log.warn('Model ID not set when opening a new web socket connection!');
+			}
+		},
+		onDisconnected: function (socketId) {
+			if (log.debug())
+				log.debug('Socket %d disconnected, removing from model store ...', socketId);
+			modelStore.removeWebSocketId(socketId);
+		}
+	});
+	
+	modelStore = ModelStore({
+		ws: ws,
+		onAdd: function (model) {
+			initStreamStoryHandlers(model, true);
+		},
+		onRemove: function (model) {
+			log.info('Model %s removed from the model store!', model.getId());
+		}
+	});
+	
+	initPipelineHandlers();
+	initStreamStoryHandlers(hmc, true);
 	initBroker();
 	
 	log.info('Done!');

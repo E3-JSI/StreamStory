@@ -1,5 +1,6 @@
 var mysql = require('mysql');
 var config = require('../config.js');
+var utils = require('./utils.js');
 
 module.exports = function () {
 	log.info('Creating MySQL connection pool ...');
@@ -13,12 +14,6 @@ module.exports = function () {
 	});
 	
 	log.info('MySql connection created!');
-	
-	function fetchUserConfig(email, callback) {
-		log.debug('fetching user config for user %s ...', email);
-		
-		
-	}
 	
 	var that = {
 		createUser: function (email, callback) {
@@ -52,40 +47,65 @@ module.exports = function () {
 				});
 			});
 		},
-		getUserConfig: function (email, callback) {
-			log.debug('Fetching or creating user config ...');
+		storeModel: function (opts, callback) {
+			var username = opts.username;
 			
-			that.createUser(email, function (e) {
+			that.createUser(username, function (e) {
+				if (e != null) {
+					callback(e);
+					return;
+				}
+				
 				pool.getConnection(function (e1, conn) {
-					if (e != null) {
-						conn.release();
+					if (e1 != null) {
+						conn.release();	// TODO should release be here?
 						callback(e1);
 						return;
 					}
 					
-					conn.query('SELECT base_dir, dataset FROM user_base where user_email = ?', [email], function (e, result) {
-						if (e != null) {
-							conn.release();
-							callback(e);
-							return;
-						}
-						
-						var userConfig = {
-							bases: []
-						};
-						
-						for (var i = 0; i < result.length; i++) {
-							userConfig.bases.push({dir: result[i].base_dir, dataset: result[i].dataset});
-						}
-						
+					conn.query('INSERT INTO model SET ?', opts, function (e2, result) {
 						conn.release();
-						callback(undefined, userConfig);
+						callback(e2 != null ? undefined : e2, result);
 					});
 				});
 			});
 		},
-		addAndGetUserConfig: function (opts, callback) {
-			that.createUser(opts.email, function (e) {
+		storeOfflineModel: function (opts, callback) {
+			var baseDir = opts.base_dir;
+			
+			var offlineOpts = utils.clone(opts);
+			offlineOpts.is_realtime = 0;
+			delete offlineOpts.base_dir;
+			
+			that.storeModel(offlineOpts, function (e, result) {
+				if (e != null) {
+					callback(e);
+					return;
+				}
+				
+				var modelId = result.insertId;
+				
+				pool.getConnection(function (e1, conn) {
+					if (e1 != null) {
+						conn.release();	// TODO should release be here?
+						callback(e1);
+						return;
+					}
+					
+					conn.query('INSERT INTO model_base SET ?', { mid: modelId, base_dir: baseDir }, function (e2, result) {
+						conn.release();
+						callback(e2 != null ? undefined : e2);
+					});
+				});
+			});
+		},
+		fetchUserModels: function (username, callback) {
+			that.createUser(username, function (e) {
+				if (e != null) {
+					callback(e);
+					return;
+				}
+				
 				pool.getConnection(function (e1, conn) {
 					if (e1 != null) {
 						conn.release();
@@ -93,13 +113,7 @@ module.exports = function () {
 						return;
 					}
 					
-					var insertVals = {
-						user_email: opts.email,
-						base_dir: opts.baseDir,
-						dataset: opts.dataset
-					}
-					
-					conn.query("INSERT INTO user_base SET ?", insertVals, function (e2) {
+					conn.query('SELECT * FROM model where username = ?', [username], function (e2, result) {
 						conn.release();
 						
 						if (e2 != null) {
@@ -107,11 +121,99 @@ module.exports = function () {
 							return;
 						}
 						
-						that.getUserConfig(opts.email, callback);
+						callback(undefined, result);
 					});
 				});
 			});
 		},
+		fetchModel: function (modelId, callback) {
+			pool.getConnection(function (e, conn) {
+				if (e != null) {
+					conn.release();
+					callback(e);
+					return;
+				}
+				
+				var query = 'SELECT * FROM model m LEFT JOIN model_base mb ON m.mid = mb.mid ' + 
+								'WHERE m.model_file = ?';
+				
+				conn.query(query, [modelId], function (e1, result) {
+					conn.release();
+					
+					if (e1 != null) {
+						callback(e1);
+						return;
+					}
+					
+					if (result.length == null) {
+						callback(new Error('The model doesn\'t exist!'));
+						return;
+					}
+					
+					callback(undefined, result[0]);
+				});
+			});
+		},
+//		getUserConfig: function (email, callback) {
+//			log.debug('Fetching or creating user config ...');
+//			
+//			that.createUser(email, function (e) {
+//				pool.getConnection(function (e1, conn) {
+//					if (e != null) {
+//						conn.release();
+//						callback(e1);
+//						return;
+//					}
+//					
+//					conn.query('SELECT base_dir, dataset FROM user_base where user_email = ?', [email], function (e, result) {
+//						if (e != null) {
+//							conn.release();
+//							callback(e);
+//							return;
+//						}
+//						
+//						var userConfig = {
+//							bases: []
+//						};
+//						
+//						for (var i = 0; i < result.length; i++) {
+//							userConfig.bases.push({dir: result[i].base_dir, dataset: result[i].dataset});
+//						}
+//						
+//						conn.release();
+//						callback(undefined, userConfig);
+//					});
+//				});
+//			});
+//		},
+//		addAndGetUserConfig: function (opts, callback) {
+//			that.createUser(opts.email, function (e) {
+//				pool.getConnection(function (e1, conn) {
+//					if (e1 != null) {
+//						conn.release();
+//						callback(e1);
+//						return;
+//					}
+//					
+//					var insertVals = {
+//						user_email: opts.email,
+//						base_dir: opts.baseDir,
+//						dataset: opts.dataset
+//					}
+//					
+//					conn.query("INSERT INTO user_base SET ?", insertVals, function (e2) {
+//						conn.release();
+//						
+//						if (e2 != null) {
+//							callback(e2);
+//							return;
+//						}
+//						
+//						that.getUserConfig(opts.email, callback);
+//					});
+//				});
+//			});
+//		},
 		getMultipleConfig: function (opts, callback) {
 			pool.getConnection(function (e, conn) {
 				if (e != null) {

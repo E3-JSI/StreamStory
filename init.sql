@@ -10,11 +10,31 @@ GRANT ALL PRIVILEGES ON StreamStory.* TO 'StreamStory'@'localhost';
 
 USE StreamStory;
 
-CREATE TABLE user (email VARCHAR(100) PRIMARY KEY);
-CREATE TABLE user_base (bid INT PRIMARY KEY AUTO_INCREMENT, user_email VARCHAR(100) NOT NULL, base_dir VARCHAR(255) NOT NULL, dataset VARCHAR(255) NOT NULL, FOREIGN KEY (user_email) REFERENCES user(email));
+CREATE TABLE user (e
+	mail VARCHAR(100) PRIMARY KEY
+);
+
+CREATE TABLE model (
+	mid INT PRIMARY KEY AUTO_INCREMENT,
+	username VARCHAR(100) NOT NULL,
+	model_file VARCHAR(255) NOT NULL UNIQUE,
+	dataset VARCHAR(255) NOT NULL,
+	is_realtime BOOLEAN NOT NULL DEFAULT 0,
+	date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	FOREIGN KEY (username) REFERENCES user(email)
+);
+
+CREATE TABLE model_base (
+	mid INT PRIMARY KEY,
+	base_dir VARCHAR(255) NOT NULL,
+	FOREIGN KEY (mid) REFERENCES model(mid)
+);
 
 -- configuration of the friction coefficient
-CREATE TABLE config (property VARCHAR(100) PRIMARY KEY, value VARCHAR(100) NOT NULL);
+CREATE TABLE config (
+	property VARCHAR(100) PRIMARY KEY,
+	value VARCHAR(100) NOT NULL
+);
 
 INSERT INTO config (property, value) values ('calc_coeff', 'false');
 INSERT INTO config (property, value) values ('deviation_extreme', '5');
