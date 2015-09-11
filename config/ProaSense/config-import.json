@@ -55,6 +55,6 @@
 		"zookeperPort": 2181,
 		"producerPort": 8090
 	},
-	"interpolation": "current",
+	"interpolation": "linear",
 	"dataPath": "/mnt/raidM2T/project-data/StreamStory/StreamStory-import/"
 }
