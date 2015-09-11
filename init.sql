@@ -24,9 +24,15 @@ CREATE TABLE model (
 	FOREIGN KEY (username) REFERENCES user(email)
 );
 
-CREATE TABLE model_base (
+CREATE TABLE offline_model (
 	mid INT PRIMARY KEY,
 	base_dir VARCHAR(255) NOT NULL,
+	FOREIGN KEY (mid) REFERENCES model(mid)
+);
+
+CREATE TABLE online_model (
+	mid INT PRIMARY KEY,
+	is_active BOOLEAN NOT NULL DEFAULT 0,
 	FOREIGN KEY (mid) REFERENCES model(mid)
 );
 

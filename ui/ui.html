@@ -64,6 +64,13 @@
 		$(document).ready(function () {
 			ui = UI();
 			fetchFricConfig();
+			
+			$.ajax('api/countActiveModels', {
+				dataType: 'json',
+				success: function (data) {
+					$('#span-no-active').html(data.count);
+				}
+			});
 		});
 	</script>
 	
@@ -84,7 +91,7 @@
 		        	<span class="icon-bar"></span>
 		        	<span class="icon-bar"></span>
 		      	</button>
-		      	<a class="navbar-brand" href="#">StreamStory</a>
+		      	<a class="navbar-brand" href=".">StreamStory</a>
 		    </div>
 		</div>
 	</nav>
@@ -98,7 +105,9 @@
 						<button id="vis-toggler" class="btn btn-default btn-xs pull-right" style="padding: 0px 5px;" aria-label="Left Align">
 						  	<span class="glyphicon glyphicon-align-justify" aria-hidden="true"></span>
 						</button>
-						<span class="pull-right component-title-additional">Time unit:&nbsp;<span id="span-tu"></span>&nbsp;&nbsp;&nbsp;</span>
+						<span class="pull-right component-title-additional">
+							<span id="span-no-active"></span> online models, time unit:&nbsp;<span id="span-tu"></span>&nbsp;&nbsp;&nbsp;
+						</span>
 						<!-- options for the visualization component -->
 						<div id="content-options" class="popover fade bottom in">
 							<div class="arrow"></div>
@@ -132,8 +141,52 @@
 									</div>
 									<div class="row">
 										<div id="container-buttons" class="col-md-12" style="padding-top: 12px;">
+											<input type="button" id="btn-activate" value="Activate Model" class="btn btn-success btn-block hidden" />
 											<input type="button" id="btn-png" value="Save as PNG" class="btn btn-default btn-block" />
 											<input type="button" id="btn-save" value="Save Model" class="btn btn-primary btn-block" />
+											<script type="text/javascript">
+												{
+													var isActive = false;
+													
+													$.ajax('api/modelMode', {
+														dataType: 'json',
+														success: function (data) {
+															if (!data.isRealtime)
+																return;
+																
+															isActive = data.isActive;
+															var btn = $('#btn-activate');
+															
+															btn.removeClass('hidden');
+															if (isActive) {
+																btn.val('Deactivate Model');
+																btn.removeClass('btn-success');
+																btn.addClass('btn-danger');
+															} else {
+																btn.val('Activate Model');
+																btn.removeClass('btn-danger');
+																btn.addClass('btn-success');
+															}
+														},
+														error: function (jqXHR, status) {
+															alert(status);
+														}
+													});
+													$('#btn-activate').click(function () {
+														$.ajax('api/activateModel', {
+														dataType: 'json',
+														method: 'POST',
+														data: { activate: !isActive },
+														success: function () {
+															window.location.reload();
+														},
+														error: function (jqXHR, status) {
+															alert(status);
+														}
+													});
+													});
+												}
+											</script>
 										</div>
 									</div>
 								</div>

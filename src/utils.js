@@ -1,3 +1,6 @@
+var fs = require('fs');
+var mkdirp = require('mkdirp');
+
 //=============================================
 // INTERNAL/EXTERNAL CONVERSION
 //=============================================
@@ -137,6 +140,13 @@ module.exports = {
 		this.clear = function () {
 			buff = [];
 		};
+	},
+	
+	createDirSync: function (dir) {
+		if (!fs.existsSync()) {
+			log.info('Creating directory %s ...', dir);
+			mkdirp.sync(dir);
+		}
 	},
 	
 	clone: function (obj) {

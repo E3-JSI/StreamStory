@@ -1,15 +1,11 @@
 {
 	"qminer": {
-		"dbPath": "/mnt/raidM2T/project-data/proasense-db-development/",
-		"basesPath": "/mnt/raidM2T/project-data/StreamStory-bases/",
-		"realTimeModelsPath": "/mnt/raidM2T/project-data/StreamStory-bases/real-time-models/",
 		"path": "../qminer/",
 		"mode": "createClean",
 		"createPipeline": true,
 		"initializeZeros": false
 	},
 	"models": {
-		"SSFName": "/mnt/raidM2T/project-data/proasense-models/StreamStory-mhwirth.bin",
 		"StreamStoryParams": {
 			"transitions": {
 				"type": "continuous",
@@ -60,5 +56,5 @@
 		"producerPort": 8090
 	},
 	"interpolation": "current",
-	"replay": false
+	"dataPath": "/mnt/raidM2T/project-data/StreamStory-mhwirth/"
 }

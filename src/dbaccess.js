@@ -15,7 +15,40 @@ module.exports = function () {
 	
 	log.info('MySql connection created!');
 	
+	//===============================================================
+	// HELPER FUNCTIONS
+	//===============================================================
+	
+	function storeModel(opts, callback) {
+		var username = opts.username;
+		
+		that.createUser(username, function (e) {
+			if (e != null) {
+				callback(e);
+				return;
+			}
+			
+			pool.getConnection(function (e1, conn) {
+				if (e1 != null) {
+					conn.release();	// TODO should release be here?
+					callback(e1);
+					return;
+				}
+				
+				conn.query('INSERT INTO model SET ?', opts, function (e2, result) {
+					conn.release();
+					callback(e2 != null ? undefined : e2, result);
+				});
+			});
+		});
+	};
+	
 	var that = {
+			
+		//===============================================================
+		// USER QUERIES
+		//===============================================================
+			
 		createUser: function (email, callback) {
 			log.debug('Fetching user by email: %s', email);
 			
@@ -47,58 +80,11 @@ module.exports = function () {
 				});
 			});
 		},
-		storeModel: function (opts, callback) {
-			var username = opts.username;
-			
-			that.createUser(username, function (e) {
-				if (e != null) {
-					callback(e);
-					return;
-				}
-				
-				pool.getConnection(function (e1, conn) {
-					if (e1 != null) {
-						conn.release();	// TODO should release be here?
-						callback(e1);
-						return;
-					}
-					
-					conn.query('INSERT INTO model SET ?', opts, function (e2, result) {
-						conn.release();
-						callback(e2 != null ? undefined : e2, result);
-					});
-				});
-			});
-		},
-		storeOfflineModel: function (opts, callback) {
-			var baseDir = opts.base_dir;
-			
-			var offlineOpts = utils.clone(opts);
-			offlineOpts.is_realtime = 0;
-			delete offlineOpts.base_dir;
-			
-			that.storeModel(offlineOpts, function (e, result) {
-				if (e != null) {
-					callback(e);
-					return;
-				}
-				
-				var modelId = result.insertId;
-				
-				pool.getConnection(function (e1, conn) {
-					if (e1 != null) {
-						conn.release();	// TODO should release be here?
-						callback(e1);
-						return;
-					}
-					
-					conn.query('INSERT INTO model_base SET ?', { mid: modelId, base_dir: baseDir }, function (e2, result) {
-						conn.release();
-						callback(e2 != null ? undefined : e2);
-					});
-				});
-			});
-		},
+		
+		//===============================================================
+		// MODEL QUERIES
+		//===============================================================
+		
 		fetchUserModels: function (username, callback) {
 			that.createUser(username, function (e) {
 				if (e != null) {
@@ -113,7 +99,8 @@ module.exports = function () {
 						return;
 					}
 					
-					conn.query('SELECT * FROM model where username = ?', [username], function (e2, result) {
+					conn.query('SELECT * FROM model m LEFT JOIN offline_model ofm ON m.mid = ofm.mid LEFT JOIN online_model onm ON m.mid = onm.mid ' + 
+									'WHERE m.username = ?', [username], function (e2, result) {
 						conn.release();
 						
 						if (e2 != null) {
@@ -126,15 +113,73 @@ module.exports = function () {
 				});
 			});
 		},
-		fetchModel: function (modelId, callback) {
-			pool.getConnection(function (e, conn) {
+		storeOnlineModel: function (opts, callback) {
+			var is_active = opts.is_active;
+			
+			var onlineOpts = utils.clone(opts);
+			onlineOpts.is_realtime = 1;
+			delete onlineOpts.is_active;
+			
+			storeModel(onlineOpts, function (e, result) {
 				if (e != null) {
-					conn.release();
 					callback(e);
 					return;
 				}
 				
-				var query = 'SELECT * FROM model m LEFT JOIN model_base mb ON m.mid = mb.mid ' + 
+				var modelId = result.insertId;
+				
+				pool.getConnection(function (e1, conn) {
+					if (e1 != null) {
+						conn.release();	// TODO should release be here?
+						callback(e1);
+						return;
+					}
+					
+					conn.query('INSERT INTO online_model SET ?', { mid: modelId, is_active: is_active }, function (e2, result) {
+						conn.release();
+						callback(e2 != null ? undefined : e2);
+					});
+				});
+			});
+		},
+		storeOfflineModel: function (opts, callback) {
+			var baseDir = opts.base_dir;
+			
+			var offlineOpts = utils.clone(opts);
+			offlineOpts.is_realtime = 0;
+			delete offlineOpts.base_dir;
+			
+			storeModel(offlineOpts, function (e, result) {
+				if (e != null) {
+					callback(e);
+					return;
+				}
+				
+				var modelId = result.insertId;
+				
+				pool.getConnection(function (e1, conn) {
+					if (e1 != null) {
+						conn.release();	// TODO should release be here?
+						callback(e1);
+						return;
+					}
+					
+					conn.query('INSERT INTO offline_model SET ?', { mid: modelId, base_dir: baseDir }, function (e2, result) {
+						conn.release();
+						callback(e2 != null ? undefined : e2);
+					});
+				});
+			});
+		},
+		fetchModel: function (modelId, callback) {
+			pool.getConnection(function (e, conn) {
+				if (e != null) {
+					conn.release();		// TODO should this be here?
+					callback(e);
+					return;
+				}
+				
+				var query = 'SELECT * FROM model m LEFT JOIN offline_model ofm ON m.mid = ofm.mid LEFT JOIN online_model onm ON m.mid = onm.mid ' + 
 								'WHERE m.model_file = ?';
 				
 				conn.query(query, [modelId], function (e1, result) {
@@ -154,66 +199,79 @@ module.exports = function () {
 				});
 			});
 		},
-//		getUserConfig: function (email, callback) {
-//			log.debug('Fetching or creating user config ...');
-//			
-//			that.createUser(email, function (e) {
-//				pool.getConnection(function (e1, conn) {
-//					if (e != null) {
-//						conn.release();
-//						callback(e1);
-//						return;
-//					}
-//					
-//					conn.query('SELECT base_dir, dataset FROM user_base where user_email = ?', [email], function (e, result) {
-//						if (e != null) {
-//							conn.release();
-//							callback(e);
-//							return;
-//						}
-//						
-//						var userConfig = {
-//							bases: []
-//						};
-//						
-//						for (var i = 0; i < result.length; i++) {
-//							userConfig.bases.push({dir: result[i].base_dir, dataset: result[i].dataset});
-//						}
-//						
-//						conn.release();
-//						callback(undefined, userConfig);
-//					});
-//				});
-//			});
-//		},
-//		addAndGetUserConfig: function (opts, callback) {
-//			that.createUser(opts.email, function (e) {
-//				pool.getConnection(function (e1, conn) {
-//					if (e1 != null) {
-//						conn.release();
-//						callback(e1);
-//						return;
-//					}
-//					
-//					var insertVals = {
-//						user_email: opts.email,
-//						base_dir: opts.baseDir,
-//						dataset: opts.dataset
-//					}
-//					
-//					conn.query("INSERT INTO user_base SET ?", insertVals, function (e2) {
-//						conn.release();
-//						
-//						if (e2 != null) {
-//							callback(e2);
-//							return;
-//						}
-//						
-//						that.getUserConfig(opts.email, callback);
-//					});
-//				});
-//			});
-//		},
+		countActiveModels: function (callback) {
+			pool.getConnection(function (e, conn) {
+				if (e != null) {
+					conn.release();
+					callback(e);
+					return;
+				}
+				
+				conn.query('SELECT COUNT(1) AS count FROM online_model WHERE is_active = 1', function (e1, result) {
+					conn.release();
+					
+					if (e1 != null) {
+						callback(e1);
+						return;
+					}
+					
+					if (result.length == 0) {
+						callback(new Error('WTF? Did not get a result for count!'));
+						return;
+					}
+					
+					callback(undefined, result[0]);
+				});
+			});
+		},
+		fetchActiveModels: function (callback) {
+			pool.getConnection(function (e, conn) {
+				if (e != null) {
+					conn.release();		// TODO should this be here?
+					callback(e);
+					return;
+				}
+				
+				var query = 'SELECT * FROM model NATURAL JOIN online_model ' + 
+								'WHERE is_active = 1';
+
+				conn.query(query, function (e1, result) {
+					conn.release();
+					
+					if (e1 != null) {
+						callback(e1);
+						return;
+					}
+					
+					if (result.length == null) {
+						callback(new Error('The model doesn\'t exist!'));
+						return;
+					}
+					
+					callback(undefined, result);
+				});
+			});
+		},
+		activateModel: function (opts, callback) {
+			pool.getConnection(function (e, conn) {
+				if (e != null) {
+					conn.release();		// TODO should this be here?
+					callback(e);
+					return;
+				}
+				
+				var query = 'UPDATE online_model SET is_active = ? WHERE mid = (SELECT m.mid FROM model m WHERE m.model_file = ?)';
+				conn.query(query, [opts.activate ? 1 : 0, opts.modelId], function (e1) {
+					conn.release();
+					callback(e1);
+				});
+			});
+		},
+		
+		//===============================================================
+		// CONFIGURATION QUERIES
+		//===============================================================
+		
 		getMultipleConfig: function (opts, callback) {
 			pool.getConnection(function (e, conn) {
 				if (e != null) {

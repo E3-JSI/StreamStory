@@ -22,6 +22,11 @@
 			window.location.replace('ui.html');
 		}
 	</script>
+	<style>
+	.model-active {
+		background-color: #CCFFCC;
+	}
+	</style>
 	
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
@@ -118,12 +123,6 @@
                           	<label for="input-email">Choose file</label>
 	  						<input type="file" id="input-choose-upload" name="dataset" class="btn btn-default btn-file" />
 	  					</div>
-	  					<div class="form-group">
-	  						<div class="checkbox">
-	                          	<label for="check-realtime">Apply dataset in real-time</label>
-		  						<input id="check-realtime" type="checkbox" />
-	  						</div>
-	  					</div>
 	  					<div id="form-phase2" style="display: none;">
 	  						<div class="panel panel-default">
 	  							<div class="panel-heading">Select Attributes</div>
@@ -155,6 +154,15 @@
 										    <select id="select-controls" multiple="multiple"></select>
 										</div>
 			  						</div>
+			  						<div class="form-group">
+				  						<div class="checkbox">
+				  							<input id="check-realtime" type="checkbox" />
+				                          	<label for="check-realtime">Apply dataset in real-time</label>
+				  						</div>
+				  					</div>
+				  					<div id="form-done-progress" style="display: none;">
+				  					
+				  					</div>
 		  						</div>
 		  					</div>
 	  					</div>
@@ -357,6 +365,9 @@
 											option.html((modelData.is_realtime == 1 ? 'online: ' : 'offline: ') + modelData.dataset + ' (' + modelData.date_created + ')');
 											if (i == 0) {
 												option.attr('selected', 'selected');
+											}
+											if (modelData.is_active == 1) {
+												option.addClass('model-active');
 											}
 											
 											select.append(option);

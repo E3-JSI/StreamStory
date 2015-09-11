@@ -13,6 +13,11 @@ exports.RealTimeModelStore = function (opts) {
 	var onRemoveBc = opts.onRemove;
 	
 	function getModel(modelId) {
+		if (!(modelId in store)) {
+			log.warn('Tried to get a model that is not in the model store!');
+			return null;
+		}
+		
 		return store[modelId].model;
 	}
 	
@@ -58,6 +63,27 @@ exports.RealTimeModelStore = function (opts) {
 	}
 	
 	var that = {
+		getModel: getModel,
+		add: function (model) {
+			if (model.getId() == null) throw new Error('Tried to add a model with no ID to the real-time model store!');
+			
+			if (log.debug())
+				log.debug('Adding a new model to the store with id: %s ...', model.getId());
+			
+			saveModel(model);
+			if (onAddCb != null)
+				onAddCb(model);
+		},
+		remove: function (model) {
+			if (model.getId() == null) throw new Error('Tried to add a model with no ID to the real-time model store!');
+			
+			if (log.debug())
+				log.debug('Removing model with id %s from the store ...', model.getId());
+			
+			removeModel(model);
+			if (onRemoveBc != null)
+				onRemoveBc(model);
+		},
 		updateModels: function (val) {
 			for (var modelId in store) {
 				var model = getModel(modelId);
@@ -74,20 +100,6 @@ exports.RealTimeModelStore = function (opts) {
 			for (var modelId in store) {
 				that.sendMsg(modelId, msgStr);
 			}
-		},
-		add: function (modelId, model) {
-			log.debug('Adding a new model to the store with id: %s ...', modelId);
-			
-			model.setId(modelId);
-			saveModel(model);
-			
-			if (onAddCb != null)
-				onAddCb(model);
-		},
-		remove: function (model) {
-			removeModel(model);
-			if (onRemoveBc != null)
-				onRemoveBc(model);
 		},
 		addWebSocketId: function (modelId, socketId) {
 			addWebSocketId(modelId, socketId);

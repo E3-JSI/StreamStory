@@ -530,7 +530,7 @@ var zoomVis = function (opts) {
 	
 	function fetchUI() {
 		$.ajax({
-			url: 'api/multilevel',
+			url: 'api/model',
 			success: function (data) {
 				setUI(data, true);
 			},	

@@ -1,57 +1,9 @@
-var fs = require('fs');
 var config = require('./config.js');
 var services = require('./src/services.js');
 var pipeline = require('./src/pipeline.js');
 var utils = require('./src/utils.js');
 var fields = require('./fields.js');
 var db = require('./src/dbaccess.js')();
-var analytics = qm.analytics;
-
-function initStreamStory(base) {
-	if (fs.existsSync(config.STREAM_STORY_FNAME)) {
-		log.info('Loading StreamStory ...');
-		var result = analytics.StreamStory({base: base, fname: config.STREAM_STORY_FNAME});	
-		return result;
-	} 
-	else {
-		log.info('Initializing StreamStory ...');
-		log.info('Reading store %s', fields.STREAM_STORY_STORE);
-		
-		var store = base.store(fields.STREAM_STORY_STORE);
-		var recs = store.allRecords;
-		
-//		log.info('Storing CSV file ...');
-//		recs.saveCsv({fname: '/mnt/raidM2T/data/test/mhwrith.csv'});
-//		utils.exit(base);
-		
-		if (recs.length == 0) {
-			log.warn('Tried to initialize StreamStory with 0 records!');
-			return null;
-		}
-				
-		log.info('Creating a model out of %d records ...', recs.length);
-	
-		var ftrSpaceParams = fields.getStreamStoryFtrSpaceFields();
-		
-		log.info('Building StreamStory with params: %s', JSON.stringify(config.STREAM_STORY_PARAMS));
-		
-		var model = analytics.StreamStory({
-			base: base,
-			config: config.STREAM_STORY_PARAMS,
-			obsFields: ftrSpaceParams.obsFields,
-			contrFields: ftrSpaceParams.contrFields
-		});
-		
-		var opts = {recSet: recs, timeField: fields.SS_TIME_FIELD, batchEndV: null};
-		model.fit(opts);
-		
-		model.save(config.STREAM_STORY_FNAME);
-		
-		log.info('Done!');
-		
-		return model;
-	}
-}
 
 try {
 	var schema = fields.getQmSchema();
@@ -59,21 +11,20 @@ try {
 	log.info('Opening base with the following schema: %s', JSON.stringify(schema));
 	
 	var base = new qm.Base({
-		dbPath: config.QM_DATABASE_PATH,
+		dbPath: config.REAL_TIME_BASE_PATH,
 		schema: schema,
 		mode: config.QM_DATABASE_MODE
 	});
-	
-	var ss = initStreamStory(base);
 
-	if (config.QM_CREATE_PIPELINE) 
+	if (config.QM_CREATE_PIPELINE) {
+		log.info('Initializing pipeline ...');
 		pipeline.init({ base: base, db: db });
+	}
 	
-	services.init({ model: ss, base: base, pipeline: pipeline, db: db });
+	services.init({ base: base, pipeline: pipeline, db: db });
 	
-	if (config.REPLAY_DATA)
-		require('./src/replay.js').replayHmc(ss, base);
-	
+	log.info('Registering signal handlers ...');
+	log.info('Registering SIGINT handler ...');
 	process.on("SIGINT", function () {
 		utils.exit(base);
 	});

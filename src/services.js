@@ -25,7 +25,6 @@ var WS_PATH = '/ws';
 
 var app = express();
 
-var hmc;	// TODO remove hmc
 var base;
 var db;
 var pipeline;
@@ -40,26 +39,95 @@ var lastRawTime = 0;
 
 var intensConfig = {};
 
+function getUserDir(username) {
+	return config.USER_BASES_PATH + username;
+}
+
+function getBaseDir(username, timestamp) {
+	return getUserDir(username) + '/' + timestamp;
+}
+
+function getDbDir(baseDir) {
+	return baseDir + '/db';
+}
+
+function getModelFName(baseDir) {
+	return baseDir + '/StreamStory.bin';
+}
+
+function activateModel(model, session) {
+	try {
+		log.info('Activating an online model ...');
+		modelStore.add(model);
+		initStreamStoryHandlers(model, true);
+		if (session != null)
+			session.isModelActive = true;
+	} catch (e) {
+		log.error(e, 'Failed to activate real-time model!');
+		throw e;
+	}
+}
+
+function deactivateModel(model, session) {
+	try {
+		log.info('Deactivating an online model ...');
+		modelStore.remove(model);
+		initStreamStoryHandlers(model, false);
+		if (session != null)
+			session.isModelActive = false;
+	} catch (e) {
+		log.error(e, 'Failed to deactivate a model!');
+	}
+}
+
+function loadModel(modelBase, fname) {
+	var model = new qm.analytics.StreamStory({ 
+		base: modelBase, 
+		fname: fname
+	});
+	model.setId(fname);
+	return model;
+}
+
+function loadOfflineModel(baseDir) {
+	log.info('Opening new base: %s', baseDir);
+	
+	try {
+		var userBase = new qm.Base({
+			mode: 'openReadOnly',
+			dbPath: getDbDir(baseDir)
+		});
+		var model = loadModel(userBase, getModelFName(baseDir));
+		
+		return {base: userBase, model: model};
+	} catch (e) {
+		log.error(e, 'Failed to open base!');
+		throw e;
+	}
+}
+
+function loadOnlineModel(fname) {
+	return loadModel(base, fname);
+}
+
 function getModel(sessionId, session) {
 	return session.model;
 }
 
-function setNewModel(modelId, model) {
-	try {
-		log.info('Adding a new online model ...');
-		modelStore.add(modelId, model);
-	} catch (e) {
-		log.error(e, 'Failed to set a new real-time model!');
-	}
+function getModelFile(session) {
+	return session.modelFile;
 }
 
-function saveToSession(session, username, userBase, model, userConfig) {
+function saveToSession(session, username, userBase, model, modelId, isActive) {
 	log.debug('Saving new data to session ...');
 	if (session.base != null)
 		cleanUpSession(session);
 	session.username = username;
 	session.base = userBase;
 	session.model = model;
+	session.modelId = modelId;
+	session.modelFile = modelId;	// TODO maybe in the future set modelId to something else
+	session.isModelActive = isActive;
 }
 
 function cleanUpSession(session) {
@@ -79,6 +147,8 @@ function cleanUpSession(session) {
 	delete session.username;
 	delete session.base;
 	delete session.model;
+	delete session.modelId;
+	delete session.modelFile;
 }
 
 function addRawMeasurement(val) {
@@ -128,69 +198,113 @@ function addCepAnnotated(val) {
 	lastCepTime = time;
 }
 
-function initRestApi() {
+function initStreamStoryHandlers(model, enable) {
+	log.info('Registering StreamStory callbacks ...');
+	
+	if (model == null) {
+		log.warn('StreamStory is NULL, cannot register callbacks ...');
+		return;
+	}
+	
+	if (enable) {
+		log.info('Registering state changed callback ...');
+		model.onStateChanged(function (states) {
+			if (log.debug())
+				log.debug('State changed: %s', JSON.stringify(states));
+					
+			modelStore.sendMsg(model.getId(), JSON.stringify({
+				type: 'stateChanged',
+				content: states
+			}));
+		});
+		
+		log.info('Registering anomaly callback ...');
+		model.onAnomaly(function (desc) {
+			if (log.info())
+				log.info('Anomaly detected: %s TODO: currently ignoring!', desc);
+			
+			// TODO not notifying anyone!
+		});
+		
+		log.info('Registering outlier callback ...');
+		model.onOutlier(function (ftrV) {
+			if (log.info())
+				log.info('Outlier detected!');
+			
+			modelStore.sendMsg(model.getId(), JSON.stringify({
+				type: 'outlier',
+				content: ftrV
+			}));
+		});
+		
+		log.info('Registering prediction callback ...');
+		model.onPrediction(function (date, currState, targetState, prob, probV, timeV) {
+			if (log.info())
+				log.info('Sending prediction, with PDF length: %d', probV.length);
+			
+			var msg = {
+				type: 'statePrediction',
+				content: {
+					time: date.getTime(),
+					currState: currState,
+					targetState: targetState,
+					probability: prob,
+					pdf: {
+						type: 'histogram',
+						probV: probV,
+						timeV: timeV
+					}
+				}
+			};
+			
+			var msgStr = JSON.stringify(msg);
+			broker.send(broker.PREDICTION_PRODUCER_TOPIC, msgStr);
+			modelStore.sendMsg(model.getId(), msgStr);
+		});
+	} else {
+		log.debug('Removing StreamStory handlers for model %s ...', model.getId());
+		log.debug('Removing state changed callback ...');
+		model.onStateChanged(null);
+		log.debug('Removing anomaly callback ...');
+		model.onAnomaly(null);
+		log.debug('Removing outlier callback ...');
+		model.onOutlier(null);
+		log.debug('Removing prediction callback ...');
+		model.onPrediction();
+	}
+}
+
+function initStreamStoryRestApi() {
 	log.info('Registering REST services ...');
 	
 	{
-		log.info('Registering exit service ...');
-		
-		// multilevel analysis
-		app.get(API_PATH + '/exit', function (req, resp) {
-			try {
-				log.info(API_PATH + '/exit called. Exiting qminer and closing server ...');
-				utils.exit(base);
-				resp.status(204);
-			} catch (e) {
-				log.error(e, 'Failed to exit!');
-				resp.status(500);	// internal server error
-			}
-			
-			resp.end();
-		});
-		
 		log.info('Registering save service ...');
-		
-		// multilevel analysis
-		app.get(API_PATH + '/save', function (req, resp) {
-			try {
-				var model = getModel(req.sessionID, req.session);
-				model.save(config.STREAM_STORY_FNAME);	// TODO change the file name
-				resp.status(204);
-			} catch (e) {
-				log.error(e, 'Failed to save visualization model!');
-				resp.status(500);	// internal server error
-			}
-			
-			resp.end();
-		});
-	}
-	
-	{
-		log.info('Registering push data service ...');
-		
-		var imported = 0;
-		var printInterval = 10000;
-		
-		app.post(API_PATH + '/push', function (req, resp) {
-			var batch = req.body;
+		app.get(API_PATH + '/save', function (req, res) {
+			var session = req.session;
+			var sessionId = req.sessionID;
 			
 			try {
-				for (var i = 0; i < batch.length; i++) {
-					var instance = batch[i];
-					
-					if (++imported % printInterval == 0 && log.trace())
-						log.trace('Imported %d values ...', imported);
-					
-					addRawMeasurement(instance);
+				var model = getModel(sessionId, session);
+				
+				if (model == null) {
+					res.status(401);	// unauthorized
+					res.end();
+					return;
 				}
 				
-				resp.status(204);
-				resp.end();
+				var modelFile = getModelFile(session);
+				
+				if (modelFile == null)
+					throw new Error('Model file missing when saving!');
+				
+				model.save(modelFile);
+				res.status(204);
 			} catch (e) {
-				log.error(e, 'Failed to process raw measurement!');
-				resp.status(500);
-				resp.end();
+				log.error(e, 'Failed to save visualization model!');
+				res.status(500);	// internal server error
 			}
+			
+			res.end();
 		});
 	}
 	
@@ -248,7 +362,7 @@ function initRestApi() {
 		log.info('Registering multilevel service at drilling/multilevel ...');
 		
 		// multilevel analysis
-		app.get(API_PATH + '/multilevel', function (req, resp) {
+		app.get(API_PATH + '/model', function (req, resp) {
 			try {
 				var model = getModel(req.sessionID, req.session);
 				
@@ -562,7 +676,7 @@ function initRestApi() {
 	}
 }
 
-function initDataUpload() {
+function initDataUploadApi() {
 	var upload = multer({
 		storage: multer.memoryStorage(),				// will have file.buffer
 		fileFilter: function (req, file, callback) {	// only accept csv files
@@ -570,44 +684,7 @@ function initDataUpload() {
 			log.debug('Filtering uploaded file %s. File passess filter: ' + passes, JSON.stringify(file));
 			callback(null, passes);
 		}
-	});	
-	
-	function getUserDir(username) {
-		return config.QM_USER_BASES_PATH + username;
-	}
-	
-	function getBaseDir(username, timestamp) {
-		return getUserDir(username) + '/' + timestamp;
-	}
-	
-	function getDbDir(baseDir) {
-		return baseDir + '/db';
-	}
-	
-	function getModelFName(baseDir) {
-		return baseDir + '/StreamStory.bin';
-	}
-	
-	function openBase(baseDir) {
-		log.info('Opening new base: %s', baseDir);
-		
-		try {
-			var userBase = new qm.Base({
-				mode: 'openReadOnly',
-				dbPath: getDbDir(baseDir)
-			});
-			
-			var model = new qm.analytics.StreamStory({ 
-				base: userBase, 
-				fname: getModelFName(baseDir) 
-			});
-			
-			return {base: userBase, model: model};
-		} catch (e) {
-			log.error(e, 'Failed to open base!');
-			throw e;
-		}
-	}
+	});
 	
 	var fileBuffH = {};
 	
@@ -726,31 +803,25 @@ function initDataUpload() {
 				var usedFields = {};
 				for (var i = 0; i < controlAttrs.length; i++) {
 					var fieldNm = controlAttrs[i];
-					
-					var fieldConfig = {
+					contrFields.push({
 						field: fieldNm,
 						source: storeNm,
 						type: 'numeric',
 						normalize: true
-					}
-					
-					contrFields.push(fieldConfig);
+					});
 					usedFields[fieldNm] = true;
 				}
 				
 				for (var i = 0; i < attrs.length; i++) {
 					var fieldNm = attrs[i];
-					
 					if (fieldNm in usedFields || fieldNm == timeAttr) continue;
-					
-					var fieldConfig = {
+										
+					obsFields.push({
 						field: fieldNm,
 						source: storeNm,
 						type: 'numeric',
 						normalize: true
-					}
-					
-					obsFields.push(fieldConfig);
+					});
 				}
 				
 				var obsFtrSpace = new qm.FeatureSpace(userBase, obsFields);
@@ -827,6 +898,7 @@ function initDataUpload() {
 							
 							if (isRealTime) {
 								var fname = config.REAL_TIME_MODELS_PATH + new Date().getTime() + '.bin';
+								var modelId = fname;
 								
 								log.info('Saving model ...');
 								model.save(fname);
@@ -835,11 +907,11 @@ function initDataUpload() {
 									username: username,
 									model_file: fname,
 									dataset: session.fileName,
-									is_realtime: 1
+									is_active: 1
 								}
 								
 								log.info('Storing a new online model ...');
-								db.storeModel(dbOpts, function (e) {
+								db.storeOnlineModel(dbOpts, function (e) {
 									if (e != null) {
 										log.error(e, 'Failed to store offline model to DB!');
 										res.status(500);	// internal server error
@@ -851,8 +923,8 @@ function initDataUpload() {
 										if (log.debug())
 											log.debug('Online model stored!');
 										
-										setNewModel(username, model);
-										saveToSession(session, username, userBase, model);
+										activateModel(model, session);
+										saveToSession(session, username, userBase, model, modelId, true);
 										
 										// end request
 										res.status(204);	// no content
@@ -866,6 +938,7 @@ function initDataUpload() {
 							}
 							else {
 								var modelFile = getModelFName(baseDir);
+								var modelId = modelFile;
 								
 								log.info('Saving model and base ...');
 								model.save(modelFile);
@@ -892,8 +965,8 @@ function initDataUpload() {
 										if (log.debug())
 											log.debug('Offline model stored!');
 										
-										var baseConfig = openBase(baseDir);
-										saveToSession(session, username, baseConfig.base, baseConfig.model);
+										var baseConfig = loadOfflineModel(baseDir);
+										saveToSession(session, username, baseConfig.base, baseConfig.model, modelId, false);
 										
 										// end request
 										res.status(204);	// no content
@@ -981,15 +1054,23 @@ function initDataUpload() {
 			
 			try {
 				if (modelConfig.is_realtime == 1) {
-					var model = new qm.analytics.StreamStory({ 
-						base: base, 
-						fname: modelConfig.model_file
-					});
-					setNewModel(modelConfig.model_file, model);
-					saveToSession(session, username, base, model);
+					var isActive = modelConfig.is_active == 1;
+					if (isActive) {
+						if (log.debug())
+							log.debug('Adding an already active model to the session ...');
+						
+						var model = modelStore.getModel(modelId);
+						saveToSession(session, username, base, model, modelId, isActive);
+					} else {
+						if (log.debug())
+							log.debug('Adding an inactive model to the session ...');
+						
+						var model = loadOnlineModel(modelConfig.model_file);
+						saveToSession(session, username, base, model, modelId, isActive);
+					}
 				} else {
-					var baseConfig = openBase(modelConfig.base_dir);
-					saveToSession(session, username, baseConfig.base, baseConfig.model);
+					var baseConfig = loadOfflineModel(modelConfig.base_dir);
+					saveToSession(session, username, baseConfig.base, baseConfig.model, modelId, false);
 				}
 				
 				res.status(204);	// no content
@@ -1003,7 +1084,143 @@ function initDataUpload() {
 	});
 }
 
-function initMhwirthRestApi() {
+function initServerApi() {
+	log.info('Initializing general server REST API ...');
+	
+	{
+		log.info('Registering exit service ...');
+		app.get(API_PATH + '/exit', function (req, resp) {
+			try {
+				log.info(API_PATH + '/exit called. Exiting qminer and closing server ...');
+				utils.exit(base);
+				resp.status(204);
+			} catch (e) {
+				log.error(e, 'Failed to exit!');
+				resp.status(500);	// internal server error
+			}
+			
+			resp.end();
+		});
+	}
+	
+	{
+		log.info('Registering push data service ...');
+		
+		var imported = 0;
+		var printInterval = 10000;
+		
+		app.post(API_PATH + '/push', function (req, resp) {
+			var batch = req.body;
+			
+			try {
+				for (var i = 0; i < batch.length; i++) {
+					var instance = batch[i];
+					
+					if (++imported % printInterval == 0 && log.trace())
+						log.trace('Imported %d values ...', imported);
+					
+					addRawMeasurement(instance);
+				}
+				
+				resp.status(204);
+				resp.end();
+			} catch (e) {
+				log.error(e, 'Failed to process raw measurement!');
+				resp.status(500);
+				resp.end();
+			}
+		});
+	}
+	
+	{
+		log.info('Registering count active models service ...');
+		app.get(API_PATH + '/countActiveModels', function (req, res) {
+			log.debug('Fetching the number of active models from the DB ...');
+			
+			db.countActiveModels(function (e, result) {
+				if (e != null) {
+					log.error(e, 'Failed to count the number of active models!');
+					res.status(500);	// internal server error
+					res.end();
+				}
+				
+				res.send(result);
+				res.end();
+			});
+		});
+	}
+	
+	{
+		log.info('Registering activate model service ...');
+		
+		app.post(API_PATH + '/activateModel', function (req, res) {
+			try {
+				var session = req.session;
+				var model = getModel(req.sessionID, session);
+				
+				var activate = req.body.activate == 'true';
+				
+				if (activate == null) throw new Error('Missing parameter activate!');
+				if (model.getId() == null) throw new Error('WTF?! Tried to activate a model that doesn\'t have an ID!');
+				
+				if (log.info())
+					log.info('Activating model %s: ' + activate, model.getId());
+				
+				db.activateModel({modelId: model.getId(), activate: activate}, function (e1) {
+					if (e1 != null) {
+						log.error(e1, 'Failed to activate model %s!', modelId);
+						res.status(500);
+						res.end();
+					}
+					
+					try {
+						if (activate)
+							activateModel(model, session);
+						else
+							deactivateModel(model, session);
+						
+						res.status(204);
+						res.end();
+					} catch (e2) {
+						log.error('Model activated in the DB, but failed to activate it in the app!');
+						res.status(500);
+						res.end();
+					}
+				});
+			} catch (e) {
+				log.error(e, 'Failed to process raw measurement!');
+				res.status(500);
+				res.end();
+			}
+		});
+	}
+	
+	{
+		log.info('Registering model mode service ...');
+		app.get(API_PATH + '/modelMode', function (req, res) {
+			log.debug('Fetching model mode from the db DB ...');
+			
+			var model = getModel(req.sessionID, req.session);
+			
+			db.fetchModel(model.getId(), function (e, modelConfig) {
+				if (e != null) {
+					log.error(e, 'Failed to get model mode from the DB!');
+					res.status(500);	// internal server error
+					res.end();
+					return;
+				}
+				
+				res.send({
+					isRealtime: modelConfig.is_realtime == 1,
+					isActive: modelConfig.is_active == 1
+				});
+				res.end();
+			});
+		});
+	}
+}
+
+function initConfigRestApi() {
 	app.get(API_PATH + '/config', function (req, resp) {
 		try {
 			var properties = req.query.properties;
@@ -1060,82 +1277,6 @@ function initMhwirthRestApi() {
 			res.end();
 		}
 	});
-}
-
-function initStreamStoryHandlers(model, enable) {
-	log.info('Registering StreamStory callbacks ...');
-	
-	if (model == null) {
-		log.warn('StreamStory is NULL, cannot register callbacks ...');
-		return;
-	}
-	
-	if (enable) {
-		log.info('Registering state changed callback ...');
-		model.onStateChanged(function (states) {
-			if (log.debug())
-				log.debug('State changed: %s', JSON.stringify(states));
-					
-			modelStore.sendMsg(model.getId(), JSON.stringify({
-				type: 'stateChanged',
-				content: states
-			}));
-		});
-		
-		log.info('Registering anomaly callback ...');
-		model.onAnomaly(function (desc) {
-			if (log.info())
-				log.info('Anomaly detected: %s TODO: currently ignoring!', desc);
-			
-			// TODO not notifying anyone!
-		});
-		
-		log.info('Registering outlier callback ...');
-		model.onOutlier(function (ftrV) {
-			if (log.info())
-				log.info('Outlier detected!');
-			
-			modelStore.sendMsg(model.getId(), JSON.stringify({
-				type: 'outlier',
-				content: ftrV
-			}));
-		});
-		
-		log.info('Registering prediction callback ...');
-		model.onPrediction(function (date, currState, targetState, prob, probV, timeV) {
-			if (log.info())
-				log.info('Sending prediction, with PDF length: %d', probV.length);
-			
-			var msg = {
-				type: 'statePrediction',
-				content: {
-					time: date.getTime(),
-					currState: currState,
-					targetState: targetState,
-					probability: prob,
-					pdf: {
-						type: 'histogram',
-						probV: probV,
-						timeV: timeV
-					}
-				}
-			};
-			
-			var msgStr = JSON.stringify(msg);
-			broker.send(broker.PREDICTION_PRODUCER_TOPIC, msgStr);
-			modelStore.sendMsg(model.getId(), msgStr);
-		});
-	} else {
-		log.debug('Disabling handlers ...');
-		log.debug('Unregistering state changed callback ...');
-		model.onStateChanged(null);
-		log.debug('Registering anomaly callback ...');
-		model.onAnomaly(null);
-		log.debug('Registering outlier callback ...');
-		model.onOutlier(null);
-		log.debug('Registering prediction callback ...');
-		model.onPrediction();
-	}
 }
 
 function initPipelineHandlers() {
@@ -1243,6 +1384,34 @@ function initBroker() {
 	});
 }
 
+function loadActiveModels() {
+	log.info('Loading active models ...');
+	
+	db.fetchActiveModels(function (e, models) {
+		if (e != null) {
+			log.error(e, 'Failed to load active models!');
+			return;
+		}
+		
+		if (log.info())
+			log.info('There are %d active models on startup ...', models.length);
+		
+		for (var i = 0; i < models.length; i++) {
+			var modelConfig = models[i];
+			
+			try {
+				if (log.info())
+					log.info('Initializing model %s ...', JSON.stringify(modelConfig));
+				
+				var model = loadOnlineModel(modelConfig.model_file);
+				activateModel(model);
+			} catch (e1) {
+				log.error(e1, 'Exception while initializing model %s', JSON.stringify(model));
+			}
+		}
+	});
+}
+
 function getHackedSessionStore() {
 	var store =  new SessionStore();
 	store.on('preDestroy', function (sessionId, session) {
@@ -1259,7 +1428,6 @@ function initServer(sessionStore, parseCookie) {
 		unset: 'destroy',
 		store: sessionStore,
 		cookie: { maxAge: 60*60*1000 }	// the cookie will last for 1h
-//		cookie: { maxAge: 30*1000 }	// the cookie will last for 30 secs
 	}));
 	// automatically parse body on the API path
 	app.use(API_PATH + '/', bodyParser.urlencoded({ extended: false }));
@@ -1267,7 +1435,6 @@ function initServer(sessionStore, parseCookie) {
 	// when a session expires, redirect to index
 	app.use('/ui.html', function (req, res, next) {
 		var model = getModel(req.sessionID, req.session);
-		
 		// check if we need to redirect to the index page
 		if (model == null) {
 			log.info('Session data missing, redirecting to index ...');
@@ -1276,10 +1443,11 @@ function initServer(sessionStore, parseCookie) {
 			next();
 		}
 	});
-		
-	initRestApi();
-	initMhwirthRestApi();
-	initDataUpload();
+	
+	initServerApi();
+	initStreamStoryRestApi();
+	initConfigRestApi();
+	initDataUploadApi();
 	
 	// serve static directories on the UI path
 	app.use(UI_PATH, express.static(path.join(__dirname, config.WWW_DIR)));
@@ -1300,7 +1468,6 @@ function initServer(sessionStore, parseCookie) {
 exports.init = function (opts) {
 	log.info('Initializing server ...');
 	
-	hmc = opts.model;
 	base = opts.base;
 	db = opts.db;
 	pipeline = opts.pipeline;
@@ -1318,10 +1485,12 @@ exports.init = function (opts) {
 		webSocketPath: WS_PATH,
 		onConnected: function (socketId, sessionId, session) {
 			var model = session.model;
-			if (model.getId() != null) {
-				modelStore.addWebSocketId(model.getId(), socketId);
-			} else {
+			
+			if (model.getId() == null)
 				log.warn('Model ID not set when opening a new web socket connection!');
+			
+			if (session.isModelActive) {
+				modelStore.addWebSocketId(model.getId(), socketId);
 			}
 		},
 		onDisconnected: function (socketId) {
@@ -1334,15 +1503,18 @@ exports.init = function (opts) {
 	modelStore = ModelStore({
 		ws: ws,
 		onAdd: function (model) {
-			initStreamStoryHandlers(model, true);
+			if (log.debug())
+				log.debug('Model %s added to the model store, activating handlers ...', model.getId());
+			
 		},
 		onRemove: function (model) {
-			log.info('Model %s removed from the model store!', model.getId());
+			if (log.debug())
+				log.debug('Model %s removed from the model store! Deactivating handlers ...', model.getId());
 		}
 	});
 	
+	loadActiveModels();
 	initPipelineHandlers();
-	initStreamStoryHandlers(hmc, true);
 	initBroker();
 	
 	log.info('Done!');
