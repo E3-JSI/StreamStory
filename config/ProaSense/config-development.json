@@ -56,5 +56,5 @@
 		"producerPort": 8090
 	},
 	"interpolation": "current",
-	"dataPath": "/mnt/raidM2T/project-data/StreamStory-mhwirth/"
+	"dataPath": "/mnt/raidM2T/project-data/StreamStory/StreamStory-mhwirth/"
 }
