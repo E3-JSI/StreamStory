@@ -86,6 +86,10 @@ var zoomVis = function (opts) {
 	// UTILITY FUNCTIONS
 	//===============================================================
 	
+	function getNodeLabel(node) {
+		return (node.name != null ? node.name : (node.id + '')) + '\ntime: ' + node.holdingTime.toPrecision(2);
+	}
+	
 	function scaleNode(size) {
 		return Math.sqrt(size / uiConfig.levelMaxNodeSize[currentLevel]);//.maxNodeSize);
 	}
@@ -217,7 +221,7 @@ var zoomVis = function (opts) {
 				group: 'nodes',
 				data: {
 					id: '' + node.id,
-					label: (node.name != null ? node.name : (node.id + '')) + '\ntime: ' + node.holdingTime.toPrecision(2)
+					label: getNodeLabel(node)
 				},
 				position: {
 					x: position.x,
@@ -226,7 +230,6 @@ var zoomVis = function (opts) {
 				css: style,
 				selected: false,
 				selectable: true,
-//				locked: true
 				locked: false
 			});
 		}
@@ -804,6 +807,27 @@ var zoomVis = function (opts) {
 					node.removeCss(cssClass);
 				}
 			}
+		},
+		
+		setStateName: function (stateId, name) {
+			var level = currentLevel;
+			var levelInfo = levelNodes[level];
+			
+			var node;
+			for (var i = 0; i < levelInfo.length; i++) {
+				node = levelInfo[i];
+				if (node.id == stateId) {
+					node.name = name;
+					break;
+				}
+			}
+			
+			if (node == null) return;
+			
+			var graphNode = cy.nodes('#' + stateId);
+			graphNode.css('label', name);
+			graphNode.data('label', getNodeLabel(node));
+			// TODO
 		},
 		
 		setZoom: function (value) {

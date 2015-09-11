@@ -508,12 +508,16 @@ var UI;
 					$('#div-past').html(JSON.stringify(data.pastStates));
 										
 					// add handlers
+					$('#txt-name').off('change');
 					$('#txt-name').change(function (event) {
 						var name = $('#txt-name').val();
 						$.ajax('api/stateName', {
 							dataType: 'json',
 						    type: 'POST',
 						    data: { id: stateId, name: name },
+						    success: function () {
+						    	viz.setStateName(stateId, name);
+						    },
 						    error: function () {
 						    	alert('Failed to set name!');
 						    }
