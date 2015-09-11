@@ -143,7 +143,7 @@ module.exports = {
 	},
 	
 	createDirSync: function (dir) {
-		if (!fs.existsSync()) {
+		if (!fs.existsSync(dir)) {
 			log.info('Creating directory %s ...', dir);
 			mkdirp.sync(dir);
 		}

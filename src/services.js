@@ -55,26 +55,24 @@ function getModelFName(baseDir) {
 	return baseDir + '/StreamStory.bin';
 }
 
-function activateModel(model, session) {
+function activateModel(model) {
 	try {
 		log.info('Activating an online model ...');
 		modelStore.add(model);
 		initStreamStoryHandlers(model, true);
-		if (session != null)
-			session.isModelActive = true;
+		model.setActive(true);
 	} catch (e) {
 		log.error(e, 'Failed to activate real-time model!');
 		throw e;
 	}
 }
 
-function deactivateModel(model, session) {
+function deactivateModel(model) {
 	try {
 		log.info('Deactivating an online model ...');
 		modelStore.remove(model);
 		initStreamStoryHandlers(model, false);
-		if (session != null)
-			session.isModelActive = false;
+		model.setActive(false);
 	} catch (e) {
 		log.error(e, 'Failed to deactivate a model!');
 	}
@@ -118,7 +116,7 @@ function getModelFile(session) {
 	return session.modelFile;
 }
 
-function saveToSession(session, username, userBase, model, modelId, isActive) {
+function saveToSession(session, username, userBase, model, modelId) {
 	log.debug('Saving new data to session ...');
 	if (session.base != null)
 		cleanUpSession(session);
@@ -127,7 +125,6 @@ function saveToSession(session, username, userBase, model, modelId, isActive) {
 	session.model = model;
 	session.modelId = modelId;
 	session.modelFile = modelId;	// TODO maybe in the future set modelId to something else
-	session.isModelActive = isActive;
 }
 
 function cleanUpSession(session) {
@@ -924,8 +921,8 @@ function initDataUploadApi() {
 											if (log.debug())
 												log.debug('Online model stored!');
 											
-											activateModel(model, session);
-											saveToSession(session, username, userBase, model, modelId, true);
+											activateModel(model);
+											saveToSession(session, username, userBase, model, modelId);
 											
 											// end request
 											res.status(204);	// no content
@@ -967,7 +964,7 @@ function initDataUploadApi() {
 												log.debug('Offline model stored!');
 											
 											var baseConfig = loadOfflineModel(baseDir);
-											saveToSession(session, username, baseConfig.base, baseConfig.model, modelId, false);
+											saveToSession(session, username, baseConfig.base, baseConfig.model, modelId);
 											
 											// end request
 											res.status(204);	// no content
@@ -1066,17 +1063,17 @@ function initDataUploadApi() {
 							log.debug('Adding an already active model to the session ...');
 						
 						var model = modelStore.getModel(modelId);
-						saveToSession(session, username, base, model, modelId, isActive);
+						saveToSession(session, username, base, model, modelId);
 					} else {
 						if (log.debug())
 							log.debug('Adding an inactive model to the session ...');
 						
 						var model = loadOnlineModel(modelConfig.model_file);
-						saveToSession(session, username, base, model, modelId, isActive);
+						saveToSession(session, username, base, model, modelId);
 					}
 				} else {
 					var baseConfig = loadOfflineModel(modelConfig.base_dir);
-					saveToSession(session, username, baseConfig.base, baseConfig.model, modelId, false);
+					saveToSession(session, username, baseConfig.base, baseConfig.model, modelId);
 				}
 				
 				res.status(204);	// no content
@@ -1181,9 +1178,9 @@ function initServerApi() {
 					
 					try {
 						if (activate)
-							activateModel(model, session);
+							activateModel(model);
 						else
-							deactivateModel(model, session);
+							deactivateModel(model);
 						
 						res.status(204);
 						res.end();
@@ -1490,13 +1487,15 @@ exports.init = function (opts) {
 		parseCookie: parseCookie,
 		webSocketPath: WS_PATH,
 		onConnected: function (socketId, sessionId, session) {
-			var model = session.model;
-			
-			if (model.getId() == null)
-				log.warn('Model ID not set when opening a new web socket connection!');
-			
-			if (session.isModelActive) {
-				modelStore.addWebSocketId(model.getId(), socketId);
+			try {
+				var model = getModel(sessionId, session);
+				
+				if (model.getId() == null)
+					log.warn('Model ID not set when opening a new web socket connection!');
+				if (model.isActive())
+					modelStore.addWebSocketId(model.getId(), socketId);
+			} catch (e) {
+				log.error(e, 'Exception on web socket connection callback!');
 			}
 		},
 		onDisconnected: function (socketId) {
