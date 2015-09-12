@@ -142,6 +142,7 @@
 									<div class="row">
 										<div id="container-buttons" class="col-md-12" style="padding-top: 12px;">
 											<input type="button" id="btn-activate" value="Activate Model" class="btn btn-success btn-block hidden" />
+											<input type="button" id="btn-reset-sim" value="Reset Simulation" class="btn btn-default btn-block hidden" />
 											<input type="button" id="btn-png" value="Save as PNG" class="btn btn-default btn-block" />
 											<input type="button" id="btn-save" value="Save Model" class="btn btn-primary btn-block" />
 											<script type="text/javascript">
@@ -174,16 +175,16 @@
 													});
 													$('#btn-activate').click(function () {
 														$.ajax('api/activateModel', {
-														dataType: 'json',
-														method: 'POST',
-														data: { activate: !isActive },
-														success: function () {
-															window.location.reload();
-														},
-														error: function (jqXHR, status) {
-															alert(status);
-														}
-													});
+															dataType: 'json',
+															method: 'POST',
+															data: { activate: !isActive },
+															success: function () {
+																window.location.reload();
+															},
+															error: function (jqXHR, status) {
+																alert(status);
+															}
+														});
 													});
 												}
 											</script>
@@ -228,7 +229,12 @@
 											<div class="container-hist" style="height: 200px;"></div>
 									      	<div class="caption">
 									        	<h4 class="attr-name" style="word-wrap: break-word; height: 30px;"></h4>
-									        	<p class="attr-val"></p>
+									        	<p>
+									        		<span class="attr-val"></span>
+								        			<span class="div-ftr-range" style="display: none;">
+											        	<div class="range-contr-val"></div>
+											      	</span>
+								        		</p>
 									      	</div>
 									    </div>
 								    </div>

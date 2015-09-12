@@ -275,8 +275,12 @@ var UI;
 					});
 					
 					simInputs.change(function (event) {
-						if (!event.target.checked) {
+						if (event.target.checked) {
+							$('#btn-reset-sim').removeClass('hidden');
+						}
+						else {
 							resetControlVal();
+							$('#btn-reset-sim').addClass('hidden');
 						}
 					});
 					
@@ -486,7 +490,7 @@ var UI;
 					}
 					
 					// fetch histograms
-					$.each(data.features.observations.concat(data.features.controls), function (idx, val) {
+					$.each(data.features.observations, function (idx, val) {
 						var color;
 						if (ftrWgts[idx] > 0)
 							color = 'rgb(0,' + Math.floor(255*ftrWgts[idx] / maxWgt) + ',0)';
@@ -503,9 +507,60 @@ var UI;
 						ui.fetchHistogram(stateId, idx, false, 'container-hist-' + idx);
 					});
 					
-					// future/past states
-					$('#div-future').html(JSON.stringify(data.futureStates));
-					$('#div-past').html(JSON.stringify(data.pastStates));
+					var nObsFtrs = data.features.observations.length;
+					
+					$.each(data.features.controls, function (idx, val) {
+						var ftrVal = val.value;
+						var bounds = val.bounds;
+						var ftrId = nObsFtrs + idx;
+						
+						var thumbnail = $('#div-thumbnail').find('.thumb-col').clone();
+						thumbnail.find('.attr-name').html(val.name);
+						thumbnail.find('.attr-val').html(ftrVal.toPrecision(3));
+						thumbnail.find('.container-hist').attr('id', 'container-hist-' + (nObsFtrs + idx));
+						
+						if (data.isLeaf) {
+							thumbnail.find('.div-ftr-range').show();
+							
+							var range = thumbnail.find('.range-contr-val');
+							range.attr('id', 'range-contr-' + ftrId);
+							
+							(function () {
+								var localFtrId = ftrId;
+								var localStateId = stateId;
+								var valField = thumbnail.find('.attr-val');
+								
+								range.slider({
+									value: ftrVal,
+									min: bounds.min,
+									max: bounds.max,
+									step: (bounds.max - bounds.min) / 100,
+									animate: true,
+									change: function (event, ui) {
+										var val = ui.value;
+										
+										$.ajax('api/setControl', {
+											dataType: 'json',
+											method: 'POST',
+											data: { stateId: localStateId, ftrIdx: localFtrId, val: val },
+											success: function (data) {
+												$('#btn-reset-sim').removeClass('hidden');
+												valField.html(parseFloat(val).toPrecision(3));
+												viz.setModel(data);
+											},
+											error: function (xhr, status) {
+												alert(status);
+											}
+										});
+									}
+								});
+							})()
+						}
+						
+						$('#div-attrs').append(thumbnail);
+						
+						ui.fetchHistogram(stateId, nObsFtrs + idx, false, 'container-hist-' + (nObsFtrs + idx));
+					});
 										
 					// add handlers
 					$('#txt-name').off('change');
@@ -583,17 +638,23 @@ var UI;
 		});
 		
 		// buttons
-		$('#btn-save').click(function () {
-			var rq = $.get('api/save');
-			rq.fail(function () {
-				alert('Failed to save!');
-			});
+		$('#btn-reset-sim').click(function () {
+			$('#btn-reset-sim').addClass('hidden');
+			$('#chk-sim-inputs').attr('checked', false);
+			$('#chk-sim-inputs').change();
 		});
 		
 		$('#btn-png').click(function () {
 			var png = viz.getPNG();
 			//console.log("PNG: " + png);
 			window.open(png, '_newtab');
+		});
+		
+		$('#btn-save').click(function () {
+			var rq = $.get('api/save');
+			rq.fail(function () {
+				alert('Failed to save!');
+			});
 		});
 		
 		viz.refresh();

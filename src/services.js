@@ -639,7 +639,7 @@ function initStreamStoryRestApi() {
 				var model = getModel(req.sessionID, req.session);
 				
 				if (log.info()) 
-					log.info('Changing control %d by factor %d ...', ftrId, val);
+					log.info('Changing control %d to value %d ...', ftrId, val);
 				
 				model.setControlVal({ ftrId: ftrId, val: val, stateId: stateId});
 				resp.send(model.getVizState());
