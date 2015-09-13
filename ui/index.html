@@ -198,6 +198,10 @@
 					$('#form-phase4').hide(0);
 					$('#progress-build-model-wrapper').hide(0);
 			
+					var hasData = $('#input-choose-upload').val() != '';
+					
+					if (!hasData) return;
+			
 					console.log('Uploading the file ...');
 					
 					var form = $('#form-upload');
@@ -285,63 +289,63 @@
 								$('#form-phase3').show(0);
 							});
 							
-							$('#btn-done').off('click');
-							$('#btn-done').click(function () {
-								$('#progress-build-model-wrapper').show(0);
-							
-								var attrs = $('#select-attrs').val();
-								var controlAttrs = $('#select-controls').val();
-								var isRealTime = $('#check-realtime').is(':checked');
-								
-								var data = {
-									username: $('#input-email').val(),
-									time: $('#radio-time').find('input:radio').val(),
-									timeUnit: $('#select-tu').val(),
-									attrs: attrs,
-									controlAttrs: controlAttrs != null ? controlAttrs : [],
-									isRealTime: isRealTime
-								}
-								
-								var startTime = new Date().getTime();
-								
-								var currProgress = 0;
-								var prevProgress = 0;
-								var intervalId = setInterval(function () {
-									var time = (new Date().getTime() - startTime) / 1000;
-									currProgress = Math.floor((1 - Math.exp(-time/(60*2))) * 100);
-									
-									if (currProgress != prevProgress) {
-										$('#progress-build-model').css('width', currProgress + '%');
-										prevProgress = currProgress;
-									}
-								}, 300);
-								
-								$.ajax('api/configureModel', {
-									method: 'POST',
-									contentType: 'application/json',
-									data: JSON.stringify(data),
-									success: function (data) {
-										redirectToUI();
-									},
-									error: function (xhr, status) {
-										$('#input-choose-upload').val('');
-										$('#input-choose-upload').change();
-										alert(status);
-									},
-									complete: function () {
-										clearInterval(intervalId);
-									}
-								});
-								
-								$('#btn-done').attr('disabled', 'disabled');
-							});
-							
 							$('#form-phase2').show();
 						},
 						error: function (xhr, status) {
 							alert('Failed to upload file: ' + status + '!');
 						}
 					});
+				});
+				
+				$('#btn-done').click(function () {
+					$('#progress-build-model-wrapper').show(0);
+				
+					var attrs = $('#select-attrs').val();
+					var controlAttrs = $('#select-controls').val();
+					var isRealTime = $('#check-realtime').is(':checked');
+					
+					var data = {
+						username: $('#input-email').val(),
+						time: $('#radio-time').find('input:radio').val(),
+						timeUnit: $('#select-tu').val(),
+						attrs: attrs,
+						controlAttrs: controlAttrs != null ? controlAttrs : [],
+						isRealTime: isRealTime
+					}
+					
+					var startTime = new Date().getTime();
+					
+					var currProgress = 0;
+					var prevProgress = 0;
+					var intervalId = setInterval(function () {
+						var time = (new Date().getTime() - startTime) / 1000;
+						currProgress = Math.floor((1 - Math.exp(-time/(60*2))) * 100);
+						
+						if (currProgress != prevProgress) {
+							$('#progress-build-model').css('width', currProgress + '%');
+							prevProgress = currProgress;
+						}
+					}, 500);
+					
+					$.ajax('api/configureModel', {
+						method: 'POST',
+						contentType: 'application/json',
+						data: JSON.stringify(data),
+						timeout: 1000*60*60*24,	// 1 day
+						success: function (data) {
+							redirectToUI();
+						},
+						error: function (xhr, status) {
+							$('#input-choose-upload').val('');
+							$('#input-choose-upload').change();
+							alert(status);
+						},
+						complete: function () {
+							clearInterval(intervalId);
+						}
+					});
+					
+					$('#btn-done').attr('disabled', 'disabled');
 				});
 			</script>
 		</div>
@@ -539,7 +543,7 @@
                             <a href="#contact">Contact</a>
                         </li>
                     </ul>
-                    <p class="copyright text-muted small">Copyright &copy; Your Company 2014. All Rights Reserved</p>
+                    <p class="copyright text-muted small">Copyright &copy; Jožef Stefan Institute 2015. All Rights Reserved</p>
                 </div>
             </div>
         </div>

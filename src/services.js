@@ -23,7 +23,11 @@ var UI_PATH = '/';
 var API_PATH = '/api';
 var WS_PATH = '/ws';
 
+var LONG_REQUEST_TIMEOUT = 1000*60*60*24;
+
 var app = express();
+
+var fileBuffH = {};	// if I store the file buffer directly into the session, the request takes forever to complete
 
 var base;
 var db;
@@ -702,19 +706,20 @@ function initDataUploadApi() {
 		}
 	});
 	
-	var fileBuffH = {};
-	
 	app.post('/upload', upload.single('dataset'), function (req, res, next) {
+		var sessionId = req.sessionID;
 		var session = req.session;
+		
+		if (req.file == null)
+			throw new Error('File not uploaded in the upload request!');
 		
 		var fileBuff = req.file.buffer;
 		
-		fileBuffH[req.sessionID] = fileBuff;
+		session.datasetName = req.file.originalname;
+		fileBuffH[sessionId] = fileBuff;
 		
-		session.fileName = req.file.originalname;
-				
 		var headers = [];
-		qm.fs.readCsvLines(req.file.buffer, {
+		qm.fs.readCsvLines(fileBuff, {
 			lineLimit: 1,
 			onLine: function (lineArr) {
 				// read the header and create the store
@@ -732,8 +737,11 @@ function initDataUploadApi() {
 					return;
 				}
 				
-				log.info('Headers read, sending them back to the UI ...');
-				session.headers = headers;
+				log.debug('Headers read, sending them back to the UI ...');
+				if (log.trace()) 
+					log.trace('Read headers: %s', JSON.stringify(headers));
+				
+				session.headerFields = headers;
 				res.send(headers);
 				res.end();
 			}
@@ -742,6 +750,8 @@ function initDataUploadApi() {
 	
 	function initBase(req, res) {
 		try {
+			req.connection.setTimeout(LONG_REQUEST_TIMEOUT);	// set long timeout since the processing can take quite long
+			
 			var session = req.session;
 			var sessionId = req.sessionID;
 			
@@ -752,29 +762,34 @@ function initDataUploadApi() {
 			var controlAttrs = req.body.controlAttrs;
 			var isRealTime = req.body.isRealTime;
 			
-			var headers = session.headers;
+			var fileBuff = fileBuffH[sessionId];
+			var datasetName = session.datasetName;
+			var headers = session.headerFields;
 			
-			log.info('Creating a new base for the current user ...');
-			var baseDir = getBaseDir(username, new Date().getTime());
-			var dbDir = getDbDir(baseDir);
+			delete fileBuffH[sessionId];
+			delete session.datasetName;
+			delete session.headerFields;
+			
+			if (fileBuff == null)
+				throw new Error('File is not defined while building a new model!');
 			
 			var attrSet = {};
 			for (var i = 0; i < attrs.length; i++) {
 				attrSet[attrs[i]] = true;
 			}
 			
+			log.debug('Creating a new base for the current user ...');
+			var baseDir = getBaseDir(username, new Date().getTime());
+			var dbDir = getDbDir(baseDir);
+			
 			mkdirp(dbDir, function (e) {
 				if (e != null) {
 					log.error(e, 'Failed to create base directory!');
-					log.error(err, 'Exception while parsing the uploaded CSV file!');
 					res.status(500);	// internal server error
 					return;
 				}
 				
 				try {
-					var fileBuff = fileBuffH[req.sessionID];	// TODO bit of a hack, take care of possible memory leaks when sessions expire
-					delete fileBuffH[req.sessionID];
-					
 					// create the store and base, depending on wether the model will be 
 					// applied in real-time
 					var storeNm;
@@ -782,7 +797,7 @@ function initDataUploadApi() {
 					var store;
 					
 					if (isRealTime) {
-						log.info('Using real-time base and store ...');
+						log.debug('Using real-time base and store ...');
 						storeNm = fields.STREAM_STORY_STORE;
 						userBase = base;
 						store = base.store(storeNm);
@@ -908,7 +923,7 @@ function initDataUploadApi() {
 									var dbOpts = {
 										username: username,
 										model_file: fname,
-										dataset: session.fileName,
+										dataset: datasetName,
 										is_active: 1
 									}
 									
@@ -952,7 +967,7 @@ function initDataUploadApi() {
 										username: username,
 										base_dir: baseDir,
 										model_file: modelFile,
-										dataset: session.fileName
+										dataset: datasetName
 									}
 									
 									log.info('Storing a new offline model ...');
@@ -1424,6 +1439,8 @@ function getHackedSessionStore() {
 	var store =  new SessionStore();
 	store.on('preDestroy', function (sessionId, session) {
 		cleanUpSession(session);
+		if (sessionId in fileBuffH)
+			delete fileBuffH[sessionId];
 	});
 	return store;
 }
@@ -1440,6 +1457,7 @@ function initServer(sessionStore, parseCookie) {
 	// automatically parse body on the API path
 	app.use(API_PATH + '/', bodyParser.urlencoded({ extended: false }));
 	app.use(API_PATH + '/', bodyParser.json());
+	
 	// when a session expires, redirect to index
 	app.use('/ui.html', function (req, res, next) {
 		var model = getModel(req.sessionID, req.session);
