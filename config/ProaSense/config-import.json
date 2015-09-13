@@ -1,7 +1,7 @@
 {
 	"qminer": {
 		"path": "../qminer/",
-		"mode": "createClean",
+		"mode": "openReadOnly",
 		"createPipeline": true,
 		"initializeZeros": false
 	},

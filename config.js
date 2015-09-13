@@ -76,7 +76,6 @@ exports.database = config.database;
 //================================================================
 // STREAM STORY
 //================================================================
-exports.STREAM_STORY_FNAME = config.models.SSFName;
 exports.STREAM_STORY_PARAMS = config.models.StreamStoryParams;
 
 //================================================================

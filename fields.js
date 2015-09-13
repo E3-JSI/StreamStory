@@ -233,56 +233,55 @@ exports.getQmSchema = function () {
     oaInStore.name = exports.OA_IN_STORE;
     streamStoryStore.name = exports.STREAM_STORY_STORE;
     
-//    enrichedStore.window = WINDOW_SIZE;
+    enrichedStore.window = WINDOW_SIZE;
+    oaInStore.window = WINDOW_SIZE;
     
-    var schema = rawStores.concat(otherStores)
+    return rawStores.concat(otherStores)
     					  .concat([enrichedStore, oaInStore, streamStoryStore]);
-    
-    return schema;
 }
 
-exports.getStreamStoryFtrSpaceFields = function () {
-	var result = { obsFields: [], contrFields: [] };
-	var storeFields = realTimeStores.fields;
-	
-	var inFlds = {
-		hook_load: true,
-		oil_temp_gearbox: true,
-		oil_temp_swivel: true,
-		pressure_gearbox: true,
-		wob: true,
-		ram_vel_setpoint: true,
-//		ram_pos_setpoint: true,
-		rpm: true,
-		torque: true,
-		ibop: true
-	}
-	
-	for (var i = 0; i < storeFields.length; i++) {
-		var field = storeFields[i];
-		var fieldNm = field.name;
-		
-		if (!(fieldNm in inFlds)) continue;
-		
-		var fldConfig = {
-			field: fieldNm,
-			source: exports.STREAM_STORY_STORE,
-			type: 'numeric',
-			normalize: fieldNm != 'ibop'
-		};
-		
-		if (log.info())
-			log.info('Feature space field: %s', JSON.stringify(fldConfig));
-		
-		if (fieldNm == 'rpm' || fieldNm == 'torque' || fieldNm == 'ibop') {
-			result.contrFields.push(fldConfig);
-		} else {
-			result.obsFields.push(fldConfig);
-		}
-	}
-	
-	return result;
-}
+//exports.getStreamStoryFtrSpaceFields = function () {
+//	var result = { obsFields: [], contrFields: [] };
+//	var storeFields = realTimeStores.fields;
+//	
+//	var inFlds = {
+//		hook_load: true,
+//		oil_temp_gearbox: true,
+//		oil_temp_swivel: true,
+//		pressure_gearbox: true,
+//		wob: true,
+//		ram_vel_setpoint: true,
+////		ram_pos_setpoint: true,
+//		rpm: true,
+//		torque: true,
+//		ibop: true
+//	}
+//	
+//	for (var i = 0; i < storeFields.length; i++) {
+//		var field = storeFields[i];
+//		var fieldNm = field.name;
+//		
+//		if (!(fieldNm in inFlds)) continue;
+//		
+//		var fldConfig = {
+//			field: fieldNm,
+//			source: exports.STREAM_STORY_STORE,
+//			type: 'numeric',
+//			normalize: fieldNm != 'ibop'
+//		};
+//		
+//		if (log.info())
+//			log.info('Feature space field: %s', JSON.stringify(fldConfig));
+//		
+//		if (fieldNm == 'rpm' || fieldNm == 'torque' || fieldNm == 'ibop') {
+//			result.contrFields.push(fldConfig);
+//		} else {
+//			result.obsFields.push(fldConfig);
+//		}
+//	}
+//	
+//	return result;
+//}
 
 exports.getStreamAggrFields = function () {
 	var result = {
@@ -304,16 +303,6 @@ exports.getStreamAggrFields = function () {
 			interpolation = 'current';
 		
 		log.info('Field %s is using %s interpolation ...', fieldNm, interpolation);
-//		
-//		if (fieldNm != 'coeff_swivel' && fieldNm != 'coeff_gearbox') {
-//			result.merger.push({
-//				source: fieldNm,
-//				inField: 'value',
-//				outField: fieldNm,
-//				interpolation: interpolation,
-//				timestamp: 'time'
-//			});
-//		}
 		
 		result.resampler.push({
 			name: fieldNm,

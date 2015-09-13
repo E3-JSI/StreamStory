@@ -5,12 +5,14 @@ var utils = require('./src/utils.js');
 var fields = require('./fields.js');
 var db = require('./src/dbaccess.js')();
 
+var base;
+
 try {
 	var schema = fields.getQmSchema();
 	
 	log.info('Opening base with the following schema: %s', JSON.stringify(schema));
 	
-	var base = new qm.Base({
+	base = new qm.Base({
 		dbPath: config.REAL_TIME_BASE_PATH,
 		schema: schema,
 		mode: config.QM_DATABASE_MODE

@@ -72,6 +72,7 @@
     <!-- Header -->
     <a name="about"></a>
     <div class="intro-header">
+    	<div class="intro-background"></div>
         <div class="container">
             <div class="row">
                 <div class="col-lg-12">
@@ -302,13 +303,19 @@
 									isRealTime: isRealTime
 								}
 								
-								var currProgress = 0;
+								var startTime = new Date().getTime();
 								
+								var currProgress = 0;
+								var prevProgress = 0;
 								var intervalId = setInterval(function () {
-									currProgress++;
-									currProgress %= 100;
-									$('#progress-build-model').css('width', currProgress + '%');
-								}, 500);
+									var time = (new Date().getTime() - startTime) / 1000;
+									currProgress = Math.floor((1 - Math.exp(-time/(60*2))) * 100);
+									
+									if (currProgress != prevProgress) {
+										$('#progress-build-model').css('width', currProgress + '%');
+										prevProgress = currProgress;
+									}
+								}, 300);
 								
 								$.ajax('api/configureModel', {
 									method: 'POST',
@@ -464,7 +471,7 @@
     </div>
     <!-- /.content-section-a -->
 
-    <div class="content-section-b">
+    <div class="content-section-b" style="display: none;">
 
         <div class="container">
 
