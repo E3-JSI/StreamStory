@@ -323,6 +323,7 @@
 						
 						if (currProgress != prevProgress) {
 							$('#progress-build-model').css('width', currProgress + '%');
+							$('#progress-build-model').html(currProgress + '%');
 							prevProgress = currProgress;
 						}
 					}, 500);
