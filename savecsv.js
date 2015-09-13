@@ -16,7 +16,7 @@ try {
 	var store = base.store(fields.STREAM_STORY_STORE);
 	var recSet = store.allRecords;
 	
-	log.info('Storing %d records ...');
+	log.info('Storing %d records ...', recSet.length);
 	
 	recSet.saveCsv({
 		fname: '/mnt/raidM2T/data/test/mhwirth-4m.csv'

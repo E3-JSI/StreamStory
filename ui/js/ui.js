@@ -657,6 +657,18 @@ var UI;
 			});
 		});
 		
+		$.ajax('api/controlsSet', {
+			dataType: 'json',
+			method: 'GET',
+			success: function (data) {
+				if (data.active)
+					$('#btn-reset-sim').removeClass('hidden');
+			},
+			error: function (jqXHR, status) {
+				alert('Faield to fetch simulation status: ' + status);
+			}
+		});
+		
 		viz.refresh();
 		initWs();
 		populateUI();

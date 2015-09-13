@@ -308,7 +308,7 @@ function initStreamStoryRestApi() {
 	{
 		log.info('Registering set parameter service ...');
 		
-		app.post(API_PATH + '/param', function (req, resp) {
+		app.post(API_PATH + '/param', function (req, res) {
 			try {
 				var paramName = req.body.paramName;
 				var paramVal = parseFloat(req.body.paramVal);
@@ -319,39 +319,39 @@ function initStreamStoryRestApi() {
 				paramObj[paramName] = paramVal;
 				
 				model.getModel().setParams(paramObj);
-				resp.status(204);	// no content
+				res.status(204);	// no content
 			} catch (e) {
 				log.error(e, 'Failed to query MHWirth multilevel visualization!');
-				resp.status(500);	// internal server error
+				res.status(500);	// internal server error
 			}
 			
-			resp.end();
+			res.end();
 		});
 		
-		app.get(API_PATH + '/param', function (req, resp) {
+		app.get(API_PATH + '/param', function (req, res) {
 			try {
 				var param = req.query.paramName;
 				var model = getModel(req.sessionID, req.session);
 				
 				var val = model.getModel().getParam(param);
-				resp.send({ parameter: param, value: val });
+				res.send({ parameter: param, value: val });
 			} catch (e) {
 				log.error(e, 'Failed to query MHWirth multilevel visualization!');
-				resp.status(500);	// internal server error
+				res.status(500);	// internal server error
 			}
 			
-			resp.end();
+			res.end();
 		});
 		
-		app.get(API_PATH + '/timeUnit', function (req, resp) {
+		app.get(API_PATH + '/timeUnit', function (req, res) {
 			try {
 				var model = getModel(req.sessionID, req.session);
-				resp.send({ value: model.getModel().getTimeUnit() });
+				res.send({ value: model.getModel().getTimeUnit() });
 			} catch (e) {
 				log.error(e, 'Failed to query MHWirth multilevel visualization!');
-				resp.status(500);	// internal server error
+				res.status(500);	// internal server error
 			}
-			resp.end();
+			res.end();
 		});
 	}
 	
@@ -359,32 +359,32 @@ function initStreamStoryRestApi() {
 		log.info('Registering multilevel service at drilling/multilevel ...');
 		
 		// multilevel analysis
-		app.get(API_PATH + '/model', function (req, resp) {
+		app.get(API_PATH + '/model', function (req, res) {
 			try {
 				var model = getModel(req.sessionID, req.session);
 				
 				log.debug('Querying MHWirth multilevel model ...');
-				resp.send(model.getVizState());
+				res.send(model.getVizState());
 			} catch (e) {
 				log.error(e, 'Failed to query MHWirth multilevel visualization!');
-				resp.status(500);	// internal server error
+				res.status(500);	// internal server error
 			}
 			
-			resp.end();
+			res.end();
 		});
 		
 		// multilevel analysis
-		app.get(API_PATH + '/features', function (req, resp) {
+		app.get(API_PATH + '/features', function (req, res) {
 			try {
 				var model = getModel(req.sessionID, req.session);
 				log.debug('Fetching all the features ...');
-				resp.send(model.getFtrDesc());
+				res.send(model.getFtrDesc());
 			} catch (e) {
 				log.error(e, 'Failed to query MHWirth multilevel visualization!');
-				resp.status(500);	// internal server error
+				res.status(500);	// internal server error
 			}
 			
-			resp.end();
+			res.end();
 		});
 	}
 	
@@ -392,7 +392,7 @@ function initStreamStoryRestApi() {
 		log.info('Registering transition model service ...');
 		
 		// multilevel analysis
-		app.get(API_PATH + '/transitionModel', function (req, resp) {
+		app.get(API_PATH + '/transitionModel', function (req, res) {
 			try {
 				var level = parseFloat(req.query.level);
 				var model = getModel(req.sessionID, req.session);
@@ -400,13 +400,13 @@ function initStreamStoryRestApi() {
 				if (log.debug())
 					log.debug('Fetching transition model for level: %.3f', level);
 				
-				resp.send(model.getModel().getTransitionModel(level));
+				res.send(model.getModel().getTransitionModel(level));
 			} catch (e) {
 				log.error(e, 'Failed to query MHWirth multilevel visualization!');
-				resp.status(500);	// internal server error
+				res.status(500);	// internal server error
 			}
 			
-			resp.end();
+			res.end();
 		});
 	}
 	
@@ -414,7 +414,7 @@ function initStreamStoryRestApi() {
 		log.info('Registering future and states services ...');
 		
 		// multilevel analysis
-		app.get(API_PATH + '/currentState', function (req, resp) {
+		app.get(API_PATH + '/currentState', function (req, res) {
 			try {
 				var level = parseFloat(req.query.level);
 				var model = getModel(req.sessionID, req.session);
@@ -427,17 +427,17 @@ function initStreamStoryRestApi() {
 				if (log.info())
 					log.info("Current state: %s", JSON.stringify(result));
 				
-				resp.send(result);
+				res.send(result);
 			} catch (e) {
 				log.error(e, 'Failed to query MHWirth multilevel visualization!');
-				resp.status(500);	// internal server error
+				res.status(500);	// internal server error
 			}
 			
-			resp.end();
+			res.end();
 		});
 		
 		// multilevel analysis
-		app.get(API_PATH + '/futureStates', function (req, resp) {
+		app.get(API_PATH + '/futureStates', function (req, res) {
 			try {
 				var level = parseFloat(req.query.level);
 				var currState = parseInt(req.query.state);
@@ -446,21 +446,21 @@ function initStreamStoryRestApi() {
 				
 				if (req.query.time == null) {
 					log.debug('Fetching future states currState: %d, height: %d', currState, level);
-					resp.send(model.futureStates(level, currState));
+					res.send(model.futureStates(level, currState));
 				} else {
 					var time = parseFloat(req.query.time);
 					log.debug('Fetching future states, currState: %d, level: %d, time: %d', currState, level, time);
-					resp.send(model.futureStates(level, currState, time));
+					res.send(model.futureStates(level, currState, time));
 				}
 			} catch (e) {
 				log.error(e, 'Failed to query MHWirth multilevel visualization!');
-				resp.status(500);	// internal server error
+				res.status(500);	// internal server error
 			}
 			
-			resp.end();
+			res.end();
 		});
 		
-		app.get(API_PATH + '/pastStates', function (req, resp) {
+		app.get(API_PATH + '/pastStates', function (req, res) {
 			try {
 				var level = parseFloat(req.query.level);
 				var currState = parseInt(req.query.state);
@@ -469,21 +469,21 @@ function initStreamStoryRestApi() {
 				
 				if (req.query.time == null) {
 					log.debug('Fetching past states currState: %d, height: %d', currState, level);
-					resp.send(model.pastStates(level, currState));
+					res.send(model.pastStates(level, currState));
 				} else {
 					var time = parseFloat(req.query.time);
 					log.debug('Fetching past states, currState: %d, level: %d, time: %d', currState, level, time);
-					resp.send(model.pastStates(level, currState, time));
+					res.send(model.pastStates(level, currState, time));
 				}
 			} catch (e) {
 				log.error(e, 'Failed to query MHWirth multilevel visualization!');
-				resp.status(500);	// internal server error
+				res.status(500);	// internal server error
 			}
 			
-			resp.end();
+			res.end();
 		});
 		
-		app.get(API_PATH + '/timeDist', function (req, resp) {
+		app.get(API_PATH + '/timeDist', function (req, res) {
 			try {
 				var state = parseInt(req.query.state);
 				var startTm = parseFloat(req.query.start);
@@ -493,16 +493,16 @@ function initStreamStoryRestApi() {
 				
 				var model = getModel(req.sessionID, req.session);
 				
-				resp.send(model.getModel().probsOverTime(height, state, startTm, endTm, deltaTm));
+				res.send(model.getModel().probsOverTime(height, state, startTm, endTm, deltaTm));
 			} catch (e) {
 				log.error(e, 'Failed to query MHWirth multilevel visualization!');
-				resp.status(500);	// internal server error
+				res.status(500);	// internal server error
 			}
 			
-			resp.end();
+			res.end();
 		});
 		
-		app.get(API_PATH + '/history', function (req, resp) {
+		app.get(API_PATH + '/history', function (req, res) {
 			try {
 				var level = parseFloat(req.query.level);
 				var model = getModel(req.sessionID, req.session);
@@ -510,13 +510,13 @@ function initStreamStoryRestApi() {
 				if (log.debug())
 					log.debug('Fetching history for level %d', level);
 				
-				resp.send(model.getModel().histStates(level));
+				res.send(model.getModel().histStates(level));
 			} catch (e) {
 				log.error(e, 'Failed to query MHWirth multilevel visualization!');
-				resp.status(500);	// internal server error
+				res.status(500);	// internal server error
 			}
 			
-			resp.end();
+			res.end();
 		});
 	}
 	
@@ -524,7 +524,7 @@ function initStreamStoryRestApi() {
 		log.info('Registering state details service ...');
 		
 		// state details
-		app.get(API_PATH + '/details', function (req, resp) {
+		app.get(API_PATH + '/details', function (req, res) {
 			try {
 				var stateId = parseInt(req.query.stateId);
 				var height = parseFloat(req.query.level);
@@ -534,17 +534,17 @@ function initStreamStoryRestApi() {
 				if (log.debug())
 					log.debug('Fetching details for state: %d', stateId);
 				
-				resp.send(model.stateDetails(stateId, height));
+				res.send(model.stateDetails(stateId, height));
 			} catch (e) {
 				log.error(e, 'Failed to query state details!');
-				resp.status(500);	// internal server error
+				res.status(500);	// internal server error
 			}
 			
-			resp.end();
+			res.end();
 		});
 		
 		// multilevel analysis
-		app.get(API_PATH + '/histogram', function (req, resp) {
+		app.get(API_PATH + '/histogram', function (req, res) {
 			try {
 				var stateId = parseInt(req.query.stateId);
 				var ftrIdx = parseInt(req.query.feature);
@@ -554,16 +554,16 @@ function initStreamStoryRestApi() {
 				if (log.debug())
 					log.debug('Fetching histogram for state %d, feature %d ...', stateId, ftrIdx);
 				
-				resp.send(model.histogram(stateId, ftrIdx));
+				res.send(model.histogram(stateId, ftrIdx));
 			} catch (e) {
 				log.error(e, 'Failed to query state details!');
-				resp.status(500);	// internal server error
+				res.status(500);	// internal server error
 			}
 			
-			resp.end();
+			res.end();
 		});
 		
-		app.get(API_PATH + '/targetFeature', function (req, resp) {
+		app.get(API_PATH + '/targetFeature', function (req, res) {
 			try {
 				var height = parseFloat(req.query.height);
 				var ftrIdx = parseInt(req.query.ftr);
@@ -573,16 +573,16 @@ function initStreamStoryRestApi() {
 				if (log.debug())
 					log.debug('Fetching distribution for feature "%d" for height %d ...', ftrIdx, height);
 				
-				resp.send(model.getFtrDist(height, ftrIdx));
+				res.send(model.getFtrDist(height, ftrIdx));
 			} catch (e) {
 				log.error(e, 'Failed to query state details!');
-				resp.status(500);	// internal server error
+				res.status(500);	// internal server error
 			}
 			
-			resp.end();
+			res.end();
 		});
 		
-		app.post(API_PATH + '/stateName', function (req, resp) {
+		app.post(API_PATH + '/stateName', function (req, res) {
 			var stateId, stateNm;
 			
 			try {
@@ -595,16 +595,16 @@ function initStreamStoryRestApi() {
 					log.info('Setting name of state %d to %s ...', stateId, stateNm);
 				
 				model.getModel().setStateName(stateId, stateNm);
-				resp.status(204);	// no content
+				res.status(204);	// no content
 			} catch (e) {
 				log.error(e, 'Failed to set name of state %d to %s', stateId, stateNm);
-				resp.status(500);	// internal server error
+				res.status(500);	// internal server error
 			}
 			
-			resp.end();
+			res.end();
 		});
 		
-		app.post(API_PATH + '/setTarget', function (req, resp) {
+		app.post(API_PATH + '/setTarget', function (req, res) {
 			var stateId, isTarget, height;
 			
 			try {
@@ -619,16 +619,16 @@ function initStreamStoryRestApi() {
 				
 				
 				model.getModel().setTarget(stateId, height, isTarget);
-				resp.status(204);	// no content
+				res.status(204);	// no content
 			} catch (e) {
 				log.error(e, 'Failed to set target state %d!', stateId);
-				resp.status(500);	// internal server error
+				res.status(500);	// internal server error
 			}
 			
-			resp.end();
+			res.end();
 		});
 		
-		app.post(API_PATH + '/setControl', function (req, resp) {
+		app.post(API_PATH + '/setControl', function (req, res) {
 			var ftrId, val;
 			
 			try {
@@ -642,33 +642,52 @@ function initStreamStoryRestApi() {
 					log.info('Changing control %d to value %d ...', ftrId, val);
 				
 				model.setControlVal({ ftrId: ftrId, val: val, stateId: stateId});
-				resp.send(model.getVizState());
+				res.send(model.getVizState());
 			} catch (e) {
 				log.error(e, 'Failed to control %d by factor %d', ftrId, val);
-				resp.status(500);	// internal server error
+				res.status(500);	// internal server error
 			}
 			
-			resp.end();
+			res.end();
 		});
 		
-		app.post(API_PATH + '/resetControl', function (req, resp) {
+		app.post(API_PATH + '/resetControl', function (req, res) {
 			try {
 				var ftrId = req.body.ftrIdx != null ? parseInt(req.body.ftrIdx) : null;
 				var stateId = req.body.stateId != null ? parseInt(req.body.stateId) : null;
 				
 				var model = getModel(req.sessionID, req.session);
 				
+				if (model == null) throw new Error('Model is null, has the session expired?');
+				
 				if (log.info()) 
 					log.info('Reseting control ...');
 				
 				model.resetControlVal({ ftrId: ftrId, stateId: stateId});
-				resp.send(model.getVizState());
+				res.send(model.getVizState());
+				
 			} catch (e) {
 				log.error(e, 'Failed to reset control!');
-				resp.status(500);	// internal server error
+				res.status(500);	// internal server error
 			}
 			
-			resp.end();
+			res.end();
+		});
+		
+		app.get(API_PATH + '/controlsSet', function (req, res) {
+			try {
+				var model = getModel(req.sessionID, req.session);
+				
+				if (log.debug())
+					log.debug('Fetching the state of any control features ...');
+				
+				res.send({ active: model.getModel().isAnyControlFtrSet() });
+			} catch (e) {
+				log.error(e, 'Failed to query state details!');
+				res.status(500);	// internal server error
+			}
+			
+			res.end();
 		});
 	}
 }
@@ -859,29 +878,14 @@ function initDataUploadApi() {
 								return;
 							}
 							
-							log.info('New store created, building StreamStory model ...');
+							log.info('Building StreamStory model ...');
 							
 							// create the configuration
 							try {
 								// create the model
 								var model = qm.analytics.StreamStory({
 									base: userBase,
-									config: {
-										transitions: {
-											type: 'continuous',
-											timeUnit: timeUnit
-										},
-										clustering: {
-											type: 'dpmeans',
-											lambda: .7,
-											minClusts: 10,
-											rndSeed: 1,
-											sample: 1,
-											histogramBins: 20
-										},
-										pastStates: 2,
-										verbose: true
-									},
+									config: config.STREAM_STORY_PARAMS,
 									obsFtrSpace: obsFtrSpace,
 									controlFtrSpace: controlFtrSpace
 								});
@@ -921,6 +925,7 @@ function initDataUploadApi() {
 											if (log.debug())
 												log.debug('Online model stored!');
 											
+											model.setId(modelId);
 											activateModel(model);
 											saveToSession(session, username, userBase, model, modelId);
 											

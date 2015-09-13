@@ -263,11 +263,10 @@
 									
 									// clear the attributes
 									select.html('');
-									for (var i = 0; i < fields.length; i++) {
-										var attr = fields[i].name;
-										if (attr == timeAttr) continue;
-										
-										select.append('<option value="' + attr + '">' + attr + '</option>');
+									for (var i = 0; i < selectedAttrs.length; i++) {
+										var attr = selectedAttrs[i];
+										if (attr != timeAttr)
+											select.append('<option value="' + attr + '">' + attr + '</option>');
 									}
 									
 									$('#select-controls').bootstrapDualListbox({
@@ -454,11 +453,7 @@
                     <div class="clearfix"></div>
                     <h2 class="section-heading">Qualitative representation of sensory data</h2>
                     <p class="lead">
-                    	[TODO]
-                    	A special thanks to <a target="_blank" href="http://join.deathtothestockphoto.com/">
-                    	Death to the Stock Photo</a> for providing the photographs 
-                    	that you see in this template. Visit their website to become 
-                    	a member.</p>
+                    	Visualize your data as a hierarchical state machine. Explore the distribution of states and transitions. Offers prediction and anomaly detection services.
                 </div>
                 <div class="col-lg-5 col-lg-offset-2 col-sm-6">
                     <img class="img-responsive" src="img/landing/ui-circle.png" alt="">
