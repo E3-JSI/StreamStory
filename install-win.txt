@@ -1,44 +1,68 @@
-PREREQUISITES:
+--------------------------------------
+PREREQUISITES
+--------------------------------------
 - Git
 - Python v2.7.3 is recommended. It was also tested on python 2.6. It doesn't work on python 3.
 - Node v0-12-0: [http://blog.nodejs.org/2015/02/06/node-v0-12-0-stable/]. On Windows install it using the msi file. This will also install npm. Restart the system.
 - Visual studio 2013
 
-PROCEDURE:
-Create some root directory, in this example 'workspace'
 
-cd workspace
-git clone https://github.com/lstopar/qminer.git
-git clone https://github.com/JozefStefanInstitute/StreamStory.git
 
+
+
+--------------------------------------
+INSTALLATION PROCEDURE
+--------------------------------------
+To install the online analytics and ericher components, several tools have to be installed.
+
+
+
+INSTALL OPENBLAS
 Download OpenBLAS win64 with 32-bit matrix indexing from the following URL and extract it:
 http://sourceforge.net/projects/openblas/files/v0.2.14/
-
-If node-gyp is not found type:
-npm install -f node-gyp
 
 Download: http://sourceforge.net/projects/openblas/files/v0.2.14/mingw64_dll.zip/download
 Add to OpenBLAS/bin: libgcc_s_seh-1.dll, libgfortran-3.dll, libquadmath-0.dll
 
 Add OpenBLAS/bin to your PATH environment variable
 
-To build QMiner run the following commands from the terminal:
+
+
+INSTALL QMINER
+Type "node-gyp -v" into the terminal. If the command is not found, then type: "npm install -f node-gyp".
+
+Type the following commands (adjust the paths appropriately):
+cd workspace
+git clone https://github.com/lstopar/qminer.git
 cd qminer
 npm install
 call node-gyp clean
 call node-gyp configure --nodedir="D:/work/code/cpp/node-v0.12.0" -- -DLIN_ALG_BLAS=BLAS -DLIN_ALG_LAPACKE=LAPACKE -DLIN_ALG_INCLUDE="D:/work/code/cpp/openblas/include" -DLIN_ALG_LIB="D:/work/code/cpp/openblas/lib/libopenblas.dll.a"
 call node-gyp build
 
-Download the MySQL database from the following URL: http://dev.mysql.com/downloads/windows/installer/
-- Install
-Type the follownig into the terminal:
-C:\workspace\StreamStory>type init.sql | "..\..\Program Files\MySQL\MySQL Server 5.6\bin\mysql.exe" -u root -p
 
-to install StreamStory type the following commands in the terminal window:
+
+INSTALL STREAMSTORY
+Type the following commands into the terminal:
+cd workspace
+git clone https://github.com/JozefStefanInstitute/StreamStory.git
 cd StreamStory
 npm install
 
 
+INSTALL MYSQL
+Download the MySQL database from the following URL: http://dev.mysql.com/downloads/windows/installer/
+- Install
+Type the follownig into the terminal (adjust the paths appropriately):
+C:\workspace\StreamStory>type init.sql | "..\..\Program Files\MySQL\MySQL Server 5.6\bin\mysql.exe" -u root -p
+
+
+
+
+
+--------------------------------------
+RUNNING THE APPLICATION
+--------------------------------------
 To run the application, open the terminal and type:
 cd StreamStory
 node main.js config/config-release.json
