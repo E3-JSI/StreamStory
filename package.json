@@ -24,6 +24,7 @@
     "express-session": "^1.11.3",
     "fs": "0.0.2",
     "kafka-node": "^0.2.24",
+    "mathjs": "^2.2.0",
     "mkdirp": "^0.5.1",
     "multer": "^1.0.3",
     "mysql": "^2.9.0",
