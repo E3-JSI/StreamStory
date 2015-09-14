@@ -1,12 +1,9 @@
---====================================================================
 -- create the user
 CREATE USER 'StreamStory'@'localhost' IDENTIFIED BY 'StreamStory';
 
 -- create database
 CREATE DATABASE StreamStory;
 GRANT ALL PRIVILEGES ON StreamStory.* TO 'StreamStory'@'localhost';
-
---====================================================================
 
 USE StreamStory;
 
