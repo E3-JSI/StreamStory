@@ -1,6 +1,7 @@
 -- remove already existing structure
-DELETE FROM mysql.user WHERE User = 'StreamStory';
+DROP USER 'StreamStory'@'localhost';
 DROP DATABASE IF EXISTS StreamStory;
+FLUSH PRIVILEGES;
 
 -- create the user and database
 CREATE USER 'StreamStory'@'localhost' IDENTIFIED BY 'StreamStory';
@@ -41,6 +42,7 @@ CREATE TABLE config (
 	value VARCHAR(100) NOT NULL
 );
 
+-- insert values
 INSERT INTO config (property, value) values ('calc_coeff', 'false');
 INSERT INTO config (property, value) values ('deviation_extreme', '5');
 INSERT INTO config (property, value) values ('deviation_major', '4');
