@@ -1,0 +1,15 @@
+PREREQUISITES:
+- Git
+- Python v2.7.3 is recommended. It was also tested on python 2.6. It doesn't work on python 3.
+- Node v0-12-0: [http://blog.nodejs.org/2015/02/06/node-v0-12-0-stable/]. On Windows install it using the msi file. This will also install npm. Restart the system.
+- Visual studio 2013
+
+PROCEDURE:
+Create some root directory, in this example 'workspace'
+
+cd workspace
+git clone https://github.com/lstopar/qminer.git
+git clone https://github.com/JozefStefanInstitute/StreamStory.git
+
+cd qminer
+npm install
