@@ -35,6 +35,7 @@ npm install
 
 Download the MySQL database from the following URL: http://dev.mysql.com/downloads/mysql/
 - Use the 64-bit version
+- Extract and install
 
 To run the application, open the terminal and type:
 cd StreamStory
