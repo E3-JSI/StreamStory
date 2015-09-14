@@ -1,8 +1,9 @@
--- create the user
+-- remove already existing structure
 DELETE FROM mysql.user WHERE User = 'StreamStory';
-CREATE USER 'StreamStory'@'localhost' IDENTIFIED BY 'StreamStory';
+DROP DATABASE IF EXISTS StreamStory;
 
--- create database
+-- create the user and database
+CREATE USER 'StreamStory'@'localhost' IDENTIFIED BY 'StreamStory';
 CREATE DATABASE StreamStory;
 GRANT ALL PRIVILEGES ON StreamStory.* TO 'StreamStory'@'localhost';
 
