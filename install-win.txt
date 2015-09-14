@@ -65,4 +65,4 @@ RUNNING THE APPLICATION
 --------------------------------------
 To run the application, open the terminal and type:
 cd StreamStory
-node main.js config/config-release.json
+run.bat
