@@ -319,7 +319,10 @@ function calcFriction() {
 	oaInStore.addTrigger({
 		onAdd: function (val) {
 			try {
-				if (!opts.calcCoeff) return;
+				if (!opts.calcCoeff) {
+					setDefaultVals(val);
+					return;
+				}
 				
 				var prevVal = buff.getLast();
 				buff.add(val);
@@ -393,6 +396,7 @@ function calcFriction() {
 				}
 			} catch (e) {
 				log.error(e, 'Exception while computing the friction coefficient!');
+				setDefaultVals(val);
 			}
 		}
 	});
