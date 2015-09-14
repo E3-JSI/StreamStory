@@ -1,4 +1,5 @@
 -- create the user
+DELETE FROM mysql.user WHERE User = 'StreamStory';
 CREATE USER 'StreamStory'@'localhost' IDENTIFIED BY 'StreamStory';
 
 -- create database
