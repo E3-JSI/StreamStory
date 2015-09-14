@@ -3,3 +3,6 @@
 .project
 .jshintrc 
 .tern-project
+
+# node modules
+node_modules/
