@@ -1,8 +1,3 @@
--- remove already existing structure
-DROP USER 'StreamStory'@'localhost';
-DROP DATABASE IF EXISTS StreamStory;
-FLUSH PRIVILEGES;
-
 -- create the user and database
 CREATE USER 'StreamStory'@'localhost' IDENTIFIED BY 'StreamStory';
 CREATE DATABASE StreamStory;
