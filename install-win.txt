@@ -33,7 +33,8 @@ to install StreamStory type the following commands in the terminal window:
 cd StreamStory
 npm install
 
-Download the MySQL database from the following URL: 
+Download the MySQL database from the following URL: http://dev.mysql.com/downloads/mysql/
+- Use the 64-bit version
 
 To run the application, open the terminal and type:
 cd StreamStory
