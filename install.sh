@@ -21,7 +21,6 @@ if [ `type -t nvm` == 'function' ]; then
 	echo 'NVM already installed!'
 else
 	echo 'Installing NVM ...'
-	#curl https://raw.githubusercontent.com/creationix/nvm/v0.16.1/install.sh | sh
 	curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.26.1/install.sh | bash
 	source ~/.profile
 fi
@@ -41,16 +40,16 @@ git clone https://github.com/JozefStefanInstitute/StreamStory.git
 echo 'Building qminer ...'
 # build qminer
 cd qminer
+npm install
 node-gyp clean && node-gyp configure -- -DLIN_ALG_BLAS=BLAS -DLIN_ALG_LAPACKE=LAPACKE -DLIN_ALG_LIB=-llapacke
 node-gyp --verbose build
-npm install
 cd ..
 
 # create the database
 echo 'Creating database. Please enter your MySQL root password'
 cd StreamStory
-cat init.sql | mysql -u root -p
 npm install
+cat init.sql | mysql -u root -p
 cd ..
 
 echo 'Done!'
