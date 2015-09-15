@@ -1,5 +1,6 @@
 var fs = require('fs');
 var mkdirp = require('mkdirp');
+var config = require('../config.js');
 
 //=============================================
 // INTERNAL/EXTERNAL CONVERSION
@@ -23,23 +24,23 @@ var sensorToStoreIdMap = {
 };
 
 var tagToStoreIdMap = {
-	1000693: 'rpm',
-	1000700: 'torque',
-	1002311: 'hook_load',
-	1000695: 'oil_temp_gearbox',
-	1000692: 'pressure_gearbox',
-	1000696: 'oil_temp_swivel',
-	1002123: 'wob',
-	1033619: 'temp_ambient',
-	1002113: 'ram_pos_setpoint',
-	1002115: 'ram_pos_measured',
-	1002114: 'ram_vel_setpoint',
-	1002116: 'ram_vel_measured',
-	1002127: 'mru_pos',
-	1002128: 'mru_vel',
-	1012923: 'ibop',
-	1001378: 'hoist_press_A',
-	1001379: 'hoist_press_B'
+	'1000693': 'rpm',
+	'1000700': 'torque',
+	'1002311': 'hook_load',
+	'1000695': 'oil_temp_gearbox',
+	'1000692': 'pressure_gearbox',
+	'1000696': 'oil_temp_swivel',
+	'1002123': 'wob',
+	'1033619': 'temp_ambient',
+	'1002113': 'ram_pos_setpoint',
+	'1002115': 'ram_pos_measured',
+	'1002114': 'ram_vel_setpoint',
+	'1002116': 'ram_vel_measured',
+	'1002127': 'mru_pos',
+	'1002128': 'mru_vel',
+	'1012923': 'ibop',
+	'1001378': 'hoist_press_A',
+	'1001379': 'hoist_press_B'
 };
 
 var storeToSensorIdMap = {};
@@ -109,11 +110,17 @@ module.exports = {
 	getStoreId: getStoreId,
 	
 	storeFromTag: function (tag) {
-		return tagToStoreIdMap[tag];
+		if (config.USE_CASE == config.USE_CASE_MHWIRTH)
+			return tagToStoreIdMap[tag];
+		else
+			return tag;
 	},
 	
 	tagFromStore: function (store) {
-		return storeToTagMap[store];
+		if (config.USE_CASE == config.USE_CASE_MHWIRTH)
+			return storeToTagMap[store];
+		else
+			return store;
 	},
 	
 	dateToQmDate: function (date) {

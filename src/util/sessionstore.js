@@ -170,8 +170,8 @@ StreamStoryStore.prototype.length = function length(callback) {
 }
 
 StreamStoryStore.prototype.set = function set(sessionId, session, callback) {
-	if (log.trace())
-		log.trace('Set called, sessionId: %s, session: %s ...', sessionId, JSON.stringify(session));
+	if (log.debug())
+		log.debug('Set called, sessionId: %s, session: %s ...', sessionId, JSON.stringify(session));
 	this.sessions[sessionId] = session;
 	callback && defer(callback)
 }

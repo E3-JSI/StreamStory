@@ -21,6 +21,7 @@ var qmutil = qm.qm_util;
 
 var UI_PATH = '/';
 var API_PATH = '/api';
+var DATA_PATH = '/data';
 var WS_PATH = '/ws';
 
 var LONG_REQUEST_TIMEOUT = 1000*60*60*24;
@@ -121,7 +122,7 @@ function getModelFile(session) {
 }
 
 function saveToSession(sessionId, session, username, userBase, model, modelId) {
-	log.debug('Saving new data to session ...');
+	log.debug('Saving new data to session %s ...', sessionId);
 	if (session.base != null)
 		cleanUpSession(sessionId, session);
 	session.username = username;
@@ -1133,7 +1134,7 @@ function initServerApi() {
 		var imported = 0;
 		var printInterval = 10000;
 		
-		app.post(API_PATH + '/push', function (req, resp) {
+		app.post(DATA_PATH + '/push', function (req, resp) {
 			var batch = req.body;
 			
 			try {
@@ -1449,15 +1450,36 @@ function getHackedSessionStore() {
 function initServer(sessionStore, parseCookie) {
 	log.info('Initializing web server ...');
 
-	app.use(parseCookie);
-	app.use(session({ 
+	var sess = session({ 
 		unset: 'destroy',
 		store: sessionStore,
-		cookie: { maxAge: 60*60*1000 }	// the cookie will last for 1h
-	}));
+		cookie: { maxAge: 1000*60*60 }	// the cookie will last for 1h
+	});
+	
+	function excludeDir(dir, middleware) {
+		return function (req, res, next) {
+			var path = req.path;
+			if (log.trace())
+				log.trace('Request to path %s', path);
+			
+			if (path.indexOf(dir) == 0) {
+				if (log.trace())
+					log.trace('Will not use middleware!')
+				return next();
+			} else {
+				if (log.trace())
+					log.trace('Will use middleware!')
+				return middleware(req, res, next);
+			}
+		}
+	}
+	
+	app.use(parseCookie);
+	app.use(excludeDir(DATA_PATH, sess));
 	// automatically parse body on the API path
 	app.use(API_PATH + '/', bodyParser.urlencoded({ extended: false }));
 	app.use(API_PATH + '/', bodyParser.json());
+	app.use(DATA_PATH + '/', bodyParser.json());
 	
 	// when a session expires, redirect to index
 	app.use('/ui.html', function (req, res, next) {

@@ -36,6 +36,13 @@ global.log = bunyan.createLogger({
 });
 
 //================================================================
+// USE-CASE CONFIGURATION
+//================================================================
+exports.USE_CASE_HELLA = 0;
+exports.USE_CASE_MHWIRTH = 1;
+exports.USE_CASE = config.useCase == 'hella' ? exports.USE_CASE_HELLA : exports.USE_CASE_MHWIRTH;
+
+//================================================================
 // INITIALIZATION
 //================================================================
 exports.INITIALIZE_ZERO = config.qminer.initializeZeros;

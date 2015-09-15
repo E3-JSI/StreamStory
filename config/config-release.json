@@ -55,6 +55,7 @@
 		"zookeperPort": 2181,
 		"producerPort": 8090
 	},
+	"useCase": "hella",
 	"interpolation": "current",
 	"dataPath": "../StreamStory-db/"
 }
