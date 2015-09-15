@@ -195,6 +195,9 @@ StreamStoryStore.prototype.touch = function touch(sessionId, session, callback) 
 		// update expiration
 		currentSession.cookie = session.cookie
 		this.sessions[sessionId] = currentSession
+		
+		if (log.trace())
+			log.trace('New session cookie: %s', JSON.stringify(session.cookie));
 	}
 
 	callback && defer(callback)
@@ -217,7 +220,7 @@ StreamStoryStore.prototype.regenerate = function (req, fn) {
  */
 function getSession(sessionId) {
 	if (log.trace())
-		log.trace('getSession called ...');
+		log.trace('getSession called for session: %s ...', sessionId);
 	
 	return this.sessions[sessionId];
 }
