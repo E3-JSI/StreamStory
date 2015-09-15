@@ -50,7 +50,7 @@
 		"password": "StreamStory"
 	},
 	"integration": {
-		"type": "http",
+		"type": "broker",
 		"brokerUrl": "10.172.67.55",
 		"zookeperPort": 2181,
 		"producerPort": 8090
