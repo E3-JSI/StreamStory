@@ -235,18 +235,20 @@ var UI;
 							
 							var div = $('<div />').appendTo(controlDiv);
 							var label = $('<label />').appendTo(div);
-							var input = $('<div />').appendTo(div);
+							var slider = $('<div />').appendTo(div);
 													
 							div.addClass('form-group');
 							
-							input.attr('id', controlId);
+							slider.attr('id', controlId);
 							
 							label.attr('for', controlId);
 							label.html(desc.name + ' (' + bounds.min.toFixed(2) + ' to ' + bounds.max.toFixed(2) + ')');
 							
 							var defaultVal = (bounds.max + bounds.min) / 2;
 							
-							$('#' + controlId).slider({
+							var shouldFireSlideChange = true;	// fix, strange behaviour of the slider
+							
+							slider.slider({
 								value: defaultVal,
 								min: bounds.min,
 								max: bounds.max,
@@ -254,20 +256,23 @@ var UI;
 								animate:"slow",
 								orientation: "hotizontal",
 								change: function (event, ui) {
-									var val = $('#' + controlId).slider('value');//ui.value;
-									changeControlVal(null, ftrId, val);
+									if (shouldFireSlideChange) {
+										var val = $('#' + controlId).slider('value');//ui.value;
+										changeControlVal(null, ftrId, val);
+									}
 								}
 							});
 							
 							// enable / disable handlers
-							$('#' + controlId).slider('disable');
+							slider.slider('disable');
 							simInputs.change(function (event) {
-								$('#' + controlId).slider(event.target.checked ? 'enable' : 'disable');
-								var slider = $('#' + controlId);
+								slider.slider(event.target.checked ? 'enable' : 'disable');
 								if (!event.target.checked) {
-									slider.off('change');
+									shouldFireSlideChange = false;
+//									slider.off('change');
 									slider.slider('value', defaultVal);
 								} else {
+									shouldFireSlideChange = true;
 									slider.slider('option', 'change').call(slider);
 								}
 							});

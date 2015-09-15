@@ -141,7 +141,7 @@ function calcFriction() {
 	
 	var CALC_START_THRESHOLD = 7;//1000;				TODO Mihas units???
 //	const CALC_START_THRESHOLD = 1000;
-	var MIN_DRILL_TIME = 1000*60*8;	// 8mins
+	var MIN_DRILL_TIME = 1000*60*10;	// 10mins
 	var DEFAULT_COEFF = 0;
 	
 //	const Q = 600000; //gearbox
