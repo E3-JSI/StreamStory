@@ -65,7 +65,7 @@ function StreamStoryStore() {
 	var that = this;
 	setInterval(function () { 
 		cleanup(that);
-	}, 10000);
+	}, 30*1000);
 }
 
 /**
@@ -170,8 +170,8 @@ StreamStoryStore.prototype.length = function length(callback) {
 }
 
 StreamStoryStore.prototype.set = function set(sessionId, session, callback) {
-	if (log.debug())
-		log.debug('Set called, sessionId: %s, session: %s ...', sessionId, JSON.stringify(session));
+	if (log.trace())
+		log.trace('Set called, sessionId: %s, session: %s ...', sessionId, JSON.stringify(session));
 	this.sessions[sessionId] = session;
 	callback && defer(callback)
 }
@@ -187,7 +187,7 @@ StreamStoryStore.prototype.set = function set(sessionId, session, callback) {
 
 StreamStoryStore.prototype.touch = function touch(sessionId, session, callback) {
 	if (log.trace())
-		log.trace('Touch called ...');
+		log.trace('StreamStoryStore.touch called for session %s ...', sessionId);
 	
 	var currentSession = getSession.call(this, sessionId)
 
@@ -198,6 +198,17 @@ StreamStoryStore.prototype.touch = function touch(sessionId, session, callback) 
 	}
 
 	callback && defer(callback)
+}
+
+StreamStoryStore.prototype.regenerate = function (req, fn) {
+	if (log.trace())
+		log.trace('StreamStoryStore.regenerate called ...');
+	
+	var self = this;
+	this.destroy(req.sessionID, function(err){
+		self.generate(req);
+	    fn(err);
+	});
 }
 
 /**

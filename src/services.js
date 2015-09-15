@@ -1453,7 +1453,9 @@ function initServer(sessionStore, parseCookie) {
 	var sess = session({ 
 		unset: 'destroy',
 		store: sessionStore,
-		cookie: { maxAge: 1000*60*60 }	// the cookie will last for 1h
+		cookie: { maxAge: 1000*60*60*24 },	// the cookie will last for 1 day
+		resave: false,
+		saveUninitialized: true
 	});
 	
 	function excludeDir(dir, middleware) {
