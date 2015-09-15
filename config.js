@@ -125,4 +125,5 @@ log.info('Module path: %s', QM_MODULE_PATH);
 log.info('Mode: ' + config.qminer.mode);
 log.info('StreamStory params: %s', JSON.stringify(exports.STREAM_STORY_PARAMS));
 log.info('Data path: %s', dataPath);
+log.info('Use-case: %s', config.useCase);
 log.info('================================================');
