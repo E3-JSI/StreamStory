@@ -120,10 +120,10 @@ function getModelFile(session) {
 	return session.modelFile;
 }
 
-function saveToSession(session, username, userBase, model, modelId) {
+function saveToSession(sessionId, session, username, userBase, model, modelId) {
 	log.debug('Saving new data to session ...');
 	if (session.base != null)
-		cleanUpSession(session);
+		cleanUpSession(sessionId, session);
 	session.username = username;
 	session.base = userBase;
 	session.model = model;
@@ -131,9 +131,9 @@ function saveToSession(session, username, userBase, model, modelId) {
 	session.modelFile = modelId;	// TODO maybe in the future set modelId to something else
 }
 
-function cleanUpSession(session) {
+function cleanUpSession(sessionId, session) {
 	if (log.debug())
-		log.debug('Cleaning up session ...');
+		log.debug('Cleaning up session %s ...', sessionId);
 	
 	if (session.base != null) {
 		if (session.base == base) {
@@ -942,7 +942,7 @@ function initDataUploadApi() {
 											
 											model.setId(modelId);
 											activateModel(model);
-											saveToSession(session, username, userBase, model, modelId);
+											saveToSession(sessionId, session, username, userBase, model, modelId);
 											
 											// end request
 											res.status(204);	// no content
@@ -984,7 +984,7 @@ function initDataUploadApi() {
 												log.debug('Offline model stored!');
 											
 											var baseConfig = loadOfflineModel(baseDir);
-											saveToSession(session, username, baseConfig.base, baseConfig.model, modelId);
+											saveToSession(sessionId, session, username, baseConfig.base, baseConfig.model, modelId);
 											
 											// end request
 											res.status(204);	// no content
@@ -1061,6 +1061,7 @@ function initDataUploadApi() {
 	
 	app.post(API_PATH + '/selectDataset', function (req, res) {
 		var session = req.session;
+		var sessionId = req.sessionID;
 		var username = session.username;
 		
 		var modelId = req.body.modelId;
@@ -1083,17 +1084,17 @@ function initDataUploadApi() {
 							log.debug('Adding an already active model to the session ...');
 						
 						var model = modelStore.getModel(modelId);
-						saveToSession(session, username, base, model, modelId);
+						saveToSession(sessionId, session, username, base, model, modelId);
 					} else {
 						if (log.debug())
 							log.debug('Adding an inactive model to the session ...');
 						
 						var model = loadOnlineModel(modelConfig.model_file);
-						saveToSession(session, username, base, model, modelId);
+						saveToSession(sessionId, session, username, base, model, modelId);
 					}
 				} else {
 					var baseConfig = loadOfflineModel(modelConfig.base_dir);
-					saveToSession(session, username, baseConfig.base, baseConfig.model, modelId);
+					saveToSession(sessionId, session, username, baseConfig.base, baseConfig.model, modelId);
 				}
 				
 				res.status(204);	// no content
@@ -1438,7 +1439,7 @@ function loadActiveModels() {
 function getHackedSessionStore() {
 	var store =  new SessionStore();
 	store.on('preDestroy', function (sessionId, session) {
-		cleanUpSession(session);
+		cleanUpSession(sessionId, session);
 		if (sessionId in fileBuffH)
 			delete fileBuffH[sessionId];
 	});
