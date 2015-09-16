@@ -1,0 +1,26 @@
+--------------------------------------
+INSTALL THE COMPONENTS
+--------------------------------------
+Create directory StreamStory and copy file install-ubuntu.sh into it
+cd StreamStory
+./install-ubuntu.sh
+
+Follow the installation procedure. After the installation finishes, reboot the computer or start a new terminal.
+Type "node -v", the output should be v0.11.14
+
+--------------------------------------
+CONFIGURE STREAMSTORY
+--------------------------------------
+cd StreamStory/StreamStory
+edit file config/config-release.json
+
+set "brokerUrl" to the appropriate URL
+set "zookeperPort" and "producerPort" to appropriate values
+set "useCase" to either "mhwirth" or "hella"
+set "database.database" to StreamStory
+
+--------------------------------------
+RUN STREAMSTORY
+--------------------------------------
+cd StreamStory/StreamStory
+./run.sh

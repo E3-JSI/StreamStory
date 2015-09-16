@@ -13,6 +13,7 @@ var utils = require('./utils.js');
 var broker = require('./broker.js');
 var config = require('../config.js');
 var fields = require('../fields.js');
+var transform = require('./util/transform.js');
 
 var ModelStore = require('./util/servicesutil.js').RealTimeModelStore;
 var WebSocketWrapper = require('./util/servicesutil.js').WebSocketWrapper;
@@ -154,33 +155,31 @@ function cleanUpSession(sessionId, session) {
 }
 
 function addRawMeasurement(val) {
-	var storeNm = utils.storeFromTag(val.variable_type);
+	var insertVals = transform.transform(val);
 	
-	if (!(storeNm in counts)) counts[storeNm] = 0;
-	if (!(storeNm in storeLastTm)) storeLastTm[storeNm] = 0;
-	
-	counts[storeNm]++;
-	
-	if (totalCounts++ % config.RAW_PRINT_INTERVAL == 0)
-		log.debug('Time: %s, Counts: %s', new Date(val.variable_timestamp).toString(), JSON.stringify(counts));
-	
-	var timestamp = val.variable_timestamp;
-	var prevTimestamp = storeLastTm[storeNm];
-	
-	if (timestamp <= prevTimestamp)
-		throw 'Invalid time for a single measurement! Current: ' + timestamp + ', prev: ' + prevTimestamp;
-	if (timestamp < lastRawTime)
-		throw 'Invalid time! Current: ' + timestamp + ', prev: ' + lastRawTime;
-	
-	var insertVal = {
-		time_ms: timestamp,
-		time: utils.dateToQmDate(new Date(timestamp)),
-		value: val.value
-	};
-
-	base.store(storeNm).push(insertVal);
-	storeLastTm[storeNm] = timestamp;
-	lastRawTime = timestamp;
+	for (var i = 0; i < insertVals.length; i++) {
+		var transformed = insertVals[i];
+		
+		var storeNm = transformed.store;
+		var timestamp = transformed.timestamp;
+		
+		if (!(storeNm in counts)) counts[storeNm] = 0;
+		if (!(storeNm in storeLastTm)) storeLastTm[storeNm] = 0;
+		
+		counts[storeNm]++;
+		var prevTimestamp = storeLastTm[storeNm];
+		
+		if (totalCounts++ % config.RAW_PRINT_INTERVAL == 0 && log.debug())
+			log.debug('Time: %s, Counts: %s', new Date(timestamp).toString(), JSON.stringify(counts));
+		if (timestamp <= prevTimestamp)
+			throw 'Invalid time for a single measurement! Current: ' + timestamp + ', prev: ' + prevTimestamp;
+		if (timestamp < lastRawTime)
+			throw 'Invalid time! Current: ' + timestamp + ', prev: ' + lastRawTime;
+		
+		base.store(storeNm).push(transformed.value);
+		storeLastTm[storeNm] = timestamp;
+		lastRawTime = timestamp;
+	}
 }
 
 function addCepAnnotated(val) {	

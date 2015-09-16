@@ -44,7 +44,7 @@ function initStreamAggregates() {
 		outStore: fields.STREAM_STORY_STORE,
 		createStore: false,
 		timestamp: 'time',
-		interval: 1000*60,	// 1 min
+		interval: config.STREAM_STORY_RESAMPLING_INTERVAL,	// 1 min
 		fields: flds.resampler
 	});
 	
@@ -315,6 +315,8 @@ function calcFriction() {
 		resetVars();
 	}
 	
+	var rpmStartTime = 0;
+	
 	// compute the friction coefficient
 	oaInStore.addTrigger({
 		onAdd: function (val) {
@@ -335,20 +337,22 @@ function calcFriction() {
 				var rpm = val.rpm / (60.0 * 1000);// / 60.0;	TODO should 1000 be here Mihas? units???
 //				var rpm = val.rpm / 60.0;
 				var torque = val.torque * 1000;
+				var time = val.time.getTime();
 				
 				if (isCalculating && rpm * torque < CALC_START_THRESHOLD) {
+					rpmStartTime = 0;
 					finishCalc(val);
 				}
 				
 				if (!isCalculating && rpm * torque >= CALC_START_THRESHOLD) {
+					rpmStartTime = time;
 					startCalc(val);
 				}
 				
-				if (isCalculating) {
+				if (isCalculating && time - rpmStartTime > 1000*60*5) {	// only start the calculation after 3 minutes
 					recN++;
 					
 					// variables
-					var time = val.time.getTime();//				TODO Mihas units???
 					var prevTime = prevVal.time.getTime();//		TODO Mihas units???
 //					var time = val.time.getTime() / 1000.0;
 //					var prevTime = prevVal.time.getTime() / 1000.0;
@@ -400,60 +404,6 @@ function calcFriction() {
 			}
 		}
 	});
-	
-//	{
-//		var fname = '/mnt/raidM2T/data/Aker/testing/drilling-test-coeff.csv';
-//		var outFields = [
-//		    'hoist_press_A',
-//		    'hoist_press_B',
-//		    'hook_load',
-//		    'ibop',
-//		    'oil_temp_gearbox',
-//		    'oil_temp_swivel',
-//		    'pressure_gearbox',
-//		    'rpm',
-//		    'temp_ambient',
-//		    'torque',
-//		    'wob',
-//		    'mru_pos',
-//		    'mru_vel',
-//		    'ram_pos_measured',
-//		    'ram_pos_setpoint',
-//		    'ram_vel_measured',
-//		    'ram_vel_setpoint',
-//		    'coeff_swivel',
-//		    'coeff_gearbox'
-//		]
-//		
-//		
-//		var fout = new qm.fs.FOut(fname, false);
-//		
-//		var line = 'time,';
-//		for (var i = 0; i < outFields.length; i++) {
-//			line += outFields[i];
-//			if (i < outFields.length-1)
-//				line += ',';
-//		}
-//		fout.writeLine(line);
-//		fout.flush();
-//		fout.close();
-//		
-//		oaInStore.addTrigger({
-//			onAdd: function (val) {
-//				fout = new qm.fs.FOut(fname, true);
-//				line = '' + val.time.getTime() + ',';
-//				for (var i = 0; i < outFields.length; i++) {
-//					line += val[outFields[i]];
-//					if (i < outFields.length-1)
-//						line += ',';
-//				}
-//				
-//				fout.writeLine(line);
-//				fout.flush();
-//				fout.close();
-//			}
-//		});
-//	}
 }
 
 function initTriggers() {
@@ -502,10 +452,11 @@ function initTriggers() {
 			onAdd: function (val) {
 				nProcessed++;
 				try {
-					if (nProcessed % 10 == 0 && log.debug())
+					if (nProcessed % config.STREAM_STORY_PRINT_INTERVAL == 0 && log.debug())
 						log.debug('Store %s has %d records ...', val.$store.name, val.$store.length);
 					
-					if (isNaN(val.coeff_swivel) || isNaN(val.coeff_gearbox)) {
+					if (config.USE_CASE == config.USE_CASE_MHWIRTH && 
+							(isNaN(val.coeff_swivel) || isNaN(val.coeff_gearbox))) {
 						log.fatal('Resampled store: the friction coefficient is NaN! Store size: %d, friction store size: %d', streamStoryStore.length, oaInStore.length);
 						process.exit(2);
 					}
@@ -543,7 +494,8 @@ function initTriggers() {
 		});
 	}
 	
-	calcFriction();
+	if (config.USE_CASE == config.USE_CASE_MHWIRTH)
+		calcFriction();
 	
 	log.info('Triggers initialized!');
 }

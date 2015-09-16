@@ -6,10 +6,10 @@ module.exports = function () {
 	log.info('Creating MySQL connection pool ...');
 	
 	var pool = mysql.createPool({
-		database: 'StreamStory',
+		database: config.database.database,
 		host: config.database.host,
 		user: config.database.user,
-		password: 'StreamStory',
+		password: config.database.password,
 		connectionLimit: 10
 	});
 	

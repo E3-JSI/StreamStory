@@ -4,7 +4,11 @@ var fields = require('./fields.js');
 
 var base;
 
+if (process.argv.length < 3)
+	throw new Error('Missing last argument!')
+
 try {
+	var fname = process.argv[2];
 	var schema = fields.getQmSchema();
 	
 	base = new qm.Base({
@@ -16,10 +20,10 @@ try {
 	var store = base.store(fields.STREAM_STORY_STORE);
 	var recSet = store.allRecords;
 	
-	log.info('Storing %d records ...', recSet.length);
+	log.info('Saving %d records to CSV ...', recSet.length);
 	
 	recSet.saveCsv({
-		fname: '/mnt/raidM2T/data/test/mhwirth-4m.csv'
+		fname: fname
 	});
 	
 	utils.exit(base);

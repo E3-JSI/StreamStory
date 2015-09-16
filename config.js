@@ -1,7 +1,6 @@
 var fs = require('fs');
 var bunyan = require('bunyan');
 var logformat = require('bunyan-format');
-var fields = require('./fields.js');
 var utils = require('./src/utils.js');
 
 // read the configuration file
@@ -41,6 +40,11 @@ global.log = bunyan.createLogger({
 exports.USE_CASE_HELLA = 0;
 exports.USE_CASE_MHWIRTH = 1;
 exports.USE_CASE = config.useCase == 'hella' ? exports.USE_CASE_HELLA : exports.USE_CASE_MHWIRTH;
+
+if (exports.USE_CASE == exports.USE_CASE_MHWIRTH)
+	exports.STREAM_STORY_RESAMPLING_INTERVAL = 1000*60;
+else
+	exports.STREAM_STORY_RESAMPLING_INTERVAL = 1000*10;
 
 //================================================================
 // INITIALIZATION
