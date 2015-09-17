@@ -767,12 +767,12 @@ function initDataUploadApi() {
 			var datasetName = session.datasetName;
 			var headers = session.headerFields;
 			
+			if (fileBuff == null)
+				throw new Error('File is not defined while building a new model!');
+			
 			delete fileBuffH[sessionId];
 			delete session.datasetName;
 			delete session.headerFields;
-			
-			if (fileBuff == null)
-				throw new Error('File is not defined while building a new model!');
 			
 			var attrSet = {};
 			for (var i = 0; i < attrs.length; i++) {
