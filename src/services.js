@@ -1403,17 +1403,19 @@ function initBroker() {
 			var event = msg.payload;			
 			var val = transform.parseDerivedEvent(event);
 
-			if (isNaN(event.timestamp)) {
+			var timestamp = event.timestamp;
+			
+			if (isNaN(timestamp)) {
 				log.warn('CEP sent NaN time %s', JSON.stringify(val));
 				return;
 			} 
-			else if (event.timestamp <= lastCepTime) {
+			else if (timestamp <= lastCepTime) {
 				log.warn('CEP sent invalid time %d <= %d: %s', timestamp, lastCepTime, JSON.stringify(val));
 				return;
 			}
 			
 			base.store(fields.OA_IN_STORE).push(val);
-			lastCepTime = event.timestamp;
+			lastCepTime = timestamp;
 		} else {
 			log.warn('Invalid message type: %s', msg.type);
 		}

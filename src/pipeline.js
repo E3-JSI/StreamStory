@@ -456,7 +456,7 @@ function initTriggers() {
 					//==========================================================
 //					// TODO remove
 					
-					if (nProcessed % 10 == 0) {
+					if (nProcessed % 100 == 0) {
 						if (log.debug())
 							log.debug('Sending prediction ...');
 //						var msg = {"type":"prediction","content":{"time":1387555900212,"currState":6,"targetState":2,"probability":0.13657759234055278,"pdf":{"type":"histogram","probV":,"timeV":}}};
