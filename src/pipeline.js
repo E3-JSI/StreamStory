@@ -439,13 +439,15 @@ function initTriggers() {
 					if (currTime < prevTime)
 						throw 'enricherOutStore.addTrigger: Current time lower than previous time: ' + utils.dateToQmDate(new Date(currTime)) + ' < ' + utils.dateToQmDate(new Date(prevTime));
 					
-					if (config.USE_BROKER) {
-	//					log.info('Sending: %s', JSON.stringify(outVal));
-						outVal.time = val.time.getTime();
-						broker.send(broker.ENRICHED_DATA_PRODUCER_TOPIC, JSON.stringify(outVal));
-					} else {
-						outVal.time = utils.dateToQmDate(val.time);
-						oaInStore.push(outVal);
+					if (resamplerInitialized) {
+						if (config.USE_BROKER) {
+		//					log.info('Sending: %s', JSON.stringify(outVal));
+							outVal.time = val.time.getTime();
+							broker.send(broker.ENRICHED_DATA_PRODUCER_TOPIC, JSON.stringify(outVal));
+						} else {
+							outVal.time = utils.dateToQmDate(val.time);
+							oaInStore.push(outVal);
+						}
 					}
 					
 					prevTime = currTime;
