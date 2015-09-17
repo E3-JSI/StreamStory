@@ -349,10 +349,15 @@ module.exports.toDerivedEvent = function (timestamp, val) {
 		props[key] = val[key];
 	}
 	
-	return {
+	var event = {
 		timestamp: timestamp,
 		componentId: 'Enricher',
 		eventName: 'EnrichedEvent',
 		eventProperties: props
 	}
+	
+	if (log.debug())
+		log.debug('Derived event: %s', JSON.stringify(event));
+	
+	return event;
 }
