@@ -9,17 +9,34 @@ var statistics = qm.statistics;
 var base;
 var db;
 
+var resamplerInitialized = false;
 
 var opts = { 
 	calcCoeff: false,
 	coefficientCb: null
 };
 
+function initResampler() {
+	if (resamplerInitialized) return;
+	
+	var flds = fields.getStreamAggrFields();
+	
+	// create the resampler used by StreamStory
+	base.store(fields.OA_IN_STORE).addStreamAggr({
+		type: 'resampler',
+		name: 'drilling_resampler',
+		outStore: fields.STREAM_STORY_STORE,
+		createStore: false,
+		timestamp: 'time',
+		interval: config.STREAM_STORY_RESAMPLING_INTERVAL,	// 1 min
+		fields: flds.resampler
+	});
+	resamplerInitialized = true;
+}
+
 function initStreamAggregates() {
 	// create fields
 	var flds = fields.getStreamAggrFields();
-	var mergerFields = [];
-	var resamplerFields = [];
 	
 	// create the merger used for enrichment
 	var mergerConfig = {
@@ -36,17 +53,6 @@ function initStreamAggregates() {
 	}
 	
 	new qm.StreamAggr(base, mergerConfig);
-	
-	// create the resampler used by StreamStory
-	base.store(fields.OA_IN_STORE).addStreamAggr({
-		type: 'resampler',
-		name: 'drilling_resampler',
-		outStore: fields.STREAM_STORY_STORE,
-		createStore: false,
-		timestamp: 'time',
-		interval: config.STREAM_STORY_RESAMPLING_INTERVAL,	// 1 min
-		fields: flds.resampler
-	});
 	
 	// insert zeros now, so they won't get resampled
 	if (config.INITIALIZE_ZERO) {
@@ -72,6 +78,11 @@ function initStreamAggregates() {
 			
 			base.store(name).push(val);
 		}
+	} else {
+		// if we initialize all stores with zeros, then the resampler should be
+		// initialized only after at least a single value has gone through the merger
+		// otherwise, the resampler will resample from 1970
+		initResampler();
 	}
 }
 
@@ -500,6 +511,35 @@ function initTriggers() {
 	log.info('Triggers initialized!');
 }
 
+exports.insertRaw = function (storeNm, val) {
+	base.store(storeNm).push(val);
+	
+	// if we initialize all stores with zeros, then the resampler should be
+	// initialized only after at least a single value has gone through the merger
+	// otherwise, the resampler will resample from 1970
+	if (!resamplerInitialized)
+		initResampler();
+}
+
+exports.onCoefficient = function (cb) {
+	opts.coefficientCb = cb;
+	log.info('Coefficient callback defined!');
+}
+
+exports.onValue = function (cb) {
+	opts.onValue = cb;
+	log.info('Registered StreamStory store callback ...');
+}
+
+exports.setCalcCoeff = function (calc) {
+	opts.calcCoeff = calc;
+	
+	if (opts.calcCoeff)
+		log.info('From now on calculating the coefficient ...');
+	else
+		log.info('Not calculating the coefficient anymore!');
+}
+
 exports.init = function (opts) {
 	base = opts.base;
 	db = opts.db;
@@ -521,22 +561,3 @@ exports.init = function (opts) {
 		exports.setCalcCoeff(result.value == 'true');
 	});
 };
-
-exports.onCoefficient = function (cb) {
-	opts.coefficientCb = cb;
-	log.info('Coefficient callback defined!');
-}
-
-exports.onValue = function (cb) {
-	opts.onValue = cb;
-	log.info('Registered StreamStory store callback ...');
-}
-
-exports.setCalcCoeff = function (calc) {
-	opts.calcCoeff = calc;
-	
-	if (opts.calcCoeff)
-		log.info('From now on calculating the coefficient ...');
-	else
-		log.info('Not calculating the coefficient anymore!');
-}

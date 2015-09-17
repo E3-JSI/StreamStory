@@ -176,7 +176,8 @@ function addRawMeasurement(val) {
 		if (timestamp < lastRawTime)
 			throw 'Invalid time! Current: ' + timestamp + ', prev: ' + lastRawTime;
 		
-		base.store(storeNm).push(transformed.value);
+		var insertVal = transformed.value;
+		pipeline.insertRaw(storeNm, insertVal);
 		storeLastTm[storeNm] = timestamp;
 		lastRawTime = timestamp;
 	}
