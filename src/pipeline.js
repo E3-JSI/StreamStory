@@ -446,7 +446,7 @@ function initTriggers() {
 					
 					if (resamplerInitialized) {
 						if (config.USE_BROKER) {
-							broker.send(broker.ENRICHED_DATA_PRODUCER_TOPIC, JSON.stringify(transform.toDerivedEvent(outVal)));
+							broker.send(broker.ENRICHED_DATA_PRODUCER_TOPIC, JSON.stringify(transform.toDerivedEvent(currTime, outVal)));
 						} else {
 							outVal.time = utils.dateToQmDate(val.time);
 							oaInStore.push(outVal);

@@ -342,7 +342,7 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 	}
 }
 
-module.exports.toDerivedEvent = function (val) {
+module.exports.toDerivedEvent = function (timestamp, val) {
 	var props = {};
 	for (var key in val) {
 		if (key == 'time') continue;
@@ -350,7 +350,7 @@ module.exports.toDerivedEvent = function (val) {
 	}
 	
 	var event = {
-		timestamp: val.time.getTime(),
+		timestamp: timestamp,
 		componentId: 'Enricher',
 		eventName: 'EnrichedEvent',
 		eventProperties: props
