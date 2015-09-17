@@ -478,6 +478,8 @@ function initTriggers() {
 					if (opts.onValue != null)
 						opts.onValue(val);
 					
+					//==========================================================
+//					// TODO remove
 					
 					if (nProcessed % 10 == 0) {
 						if (log.debug())
@@ -497,10 +499,7 @@ function initTriggers() {
 						broker.send(broker.PREDICTION_PRODUCER_TOPIC, JSON.stringify(msg1));
 					}
 					
-//					//==========================================================
-//					// TODO remove
-//					broker.send(broker.PREDICTION_PRODUCER_TOPIC, JSON.stringify({type: 'anomaly', content: 'Hello world'}));
-//					//==========================================================
+					//==========================================================
 				} catch (e) {
 					log.error(e, 'Exception while printing statistics of the resampled store!');
 				}
