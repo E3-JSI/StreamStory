@@ -219,6 +219,8 @@ function initStreamStoryHandlers(model, enable) {
 				type: 'outlier',
 				content: ftrV
 			}));
+			var brokerMsg = transform.genExpPrediction(100.1, 'minute', new Date().getTime);
+			broker.send(broker.PREDICTION_PRODUCER_TOPIC, JSON.stringify(brokerMsg));
 		});
 		
 		log.info('Registering prediction callback ...');
