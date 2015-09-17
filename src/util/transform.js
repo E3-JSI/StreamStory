@@ -356,8 +356,5 @@ module.exports.toDerivedEvent = function (timestamp, val) {
 		eventProperties: props
 	}
 	
-	if (log.debug())
-		log.debug('Derived event: %s', JSON.stringify(event));
-	
 	return event;
 }
