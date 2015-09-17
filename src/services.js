@@ -40,7 +40,6 @@ var counts = {};
 var storeLastTm = {};
 var totalCounts = 0;
 
-var lastCepTime = 0;
 var lastRawTime = 0;
 
 var intensConfig = {};
@@ -181,29 +180,6 @@ function addRawMeasurement(val) {
 		storeLastTm[storeNm] = timestamp;
 		lastRawTime = timestamp;
 	}
-}
-
-function addCepAnnotated(val) {
-	var timestamp = val.timestamp;
-	var componentId = val.componentId;
-	var eventName = val.eventName;
-	var props = val.eventProperties;
-	
-	if (isNaN(timestamp)) {
-		log.warn('CEP sent NaN time %s', JSON.stringify(val));
-		return;
-	} 
-	else if (timestamp <= lastCepTime) {
-		log.warn('CEP sent invalid time %d <= %d: %s', timestamp, lastCepTime, JSON.stringify(val));
-		return;
-	}
-	
-	var insertVal = props;
-	
-	insertVal.time = utils.dateToQmDate(new Date(timestamp));
-	base.store(fields.OA_IN_STORE).push(insertVal);
-	
-	lastCepTime = timestamp;
 }
 
 function initStreamStoryHandlers(model, enable) {
@@ -1398,6 +1374,8 @@ function initBroker() {
 	var imported = 0;
 	var printInterval = 100;
 	
+	var lastCepTime = 0;
+	
 	broker.onMessage(function (msg) {		
 		if (msg.type == 'raw') {
 			if (++imported % printInterval == 0 && log.trace())
@@ -1408,7 +1386,20 @@ function initBroker() {
 			if (log.trace())
 				log.trace('received CEP message: %s', JSON.stringify(msg));
 			
-			addCepAnnotated(msg.payload);
+			var event = msg.payload;			
+			var val = transform.parseDerivedEvent(event);
+
+			if (isNaN(event.timestamp)) {
+				log.warn('CEP sent NaN time %s', JSON.stringify(val));
+				return;
+			} 
+			else if (event.timestamp <= lastCepTime) {
+				log.warn('CEP sent invalid time %d <= %d: %s', timestamp, lastCepTime, JSON.stringify(val));
+				return;
+			}
+						
+			base.store(fields.OA_IN_STORE).push(val);
+			lastCepTime = timestamp;
 		} else {
 			log.warn('Invalid message type: %s', msg.type);
 		}

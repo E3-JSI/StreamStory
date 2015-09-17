@@ -358,3 +358,15 @@ module.exports.toDerivedEvent = function (timestamp, val) {
 	
 	return event;
 }
+
+module.exports.parseDerivedEvent = function (event) {
+	var timestamp = event.timestamp;
+	var componentId = event.componentId;
+	var eventName = event.eventName;
+	var props = event.eventProperties;
+	
+	var val = utils.clone(props);
+	val.time = utils.dateToQmDate(new Date(timestamp));
+	
+	return val;
+}
