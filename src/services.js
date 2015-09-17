@@ -1413,7 +1413,7 @@ function initBroker() {
 			}
 			
 			base.store(fields.OA_IN_STORE).push(val);
-			lastCepTime = timestamp;
+			lastCepTime = event.timestamp;
 		} else {
 			log.warn('Invalid message type: %s', msg.type);
 		}
