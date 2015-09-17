@@ -3,7 +3,7 @@
 		"path": "../qminer/",
 		"mode": "createClean",
 		"createPipeline": true,
-		"initializeZeros": false
+		"initializeZeros": true
 	},
 	"models": {
 		"StreamStoryParams": {
