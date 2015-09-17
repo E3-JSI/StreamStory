@@ -249,7 +249,7 @@ function initStreamStoryHandlers(model, enable) {
 					currState + ' to ' + targetState,
 					timeV,
 					probV,
-					model.getTimeUnit
+					model.getModel().getTimeUnit()
 				);
 				
 				broker.send(broker.PREDICTION_PRODUCER_TOPIC, JSON.stringify(brokerMsg));

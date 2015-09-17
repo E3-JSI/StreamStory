@@ -122,7 +122,7 @@ var UI;
 				}
 				else if (msg.type == 'statePrediction') {
 					var content = msg.content;
-					var msgStr = 'Prediction, current: ' + content.currState + ' target: ' + content.targetState + ', prob: ' + content.probability;
+					var msgStr = 'Prediction, current: ' + content.currState + ' target: ' + content.targetState + ', prob: ' + content.probability.toFixed(2);
 					drawMsg(msgStr, function (event) {
 						// draw a histogram of the PDF
 						var timeV = content.pdf.timeV;

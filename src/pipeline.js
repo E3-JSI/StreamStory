@@ -1,4 +1,3 @@
-//var broker = require('./broker.js');
 var math = require('mathjs');
 
 var fields = require('../fields.js');
