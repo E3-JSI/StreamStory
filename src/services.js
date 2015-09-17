@@ -183,21 +183,26 @@ function addRawMeasurement(val) {
 	}
 }
 
-function addCepAnnotated(val) {	
-	var time = val.time;
+function addCepAnnotated(val) {
+	var timestamp = val.timestamp;
+	var componentId = val.componentId;
+	var eventName = val.eventName;
+	var props = val.eventProperties;
 	
-	if (isNaN(time)) {
+	if (isNaN(timestamp)) {
 		log.warn('CEP sent NaN time %s', JSON.stringify(val));
 	} 
-	else if (time <= lastCepTime) {
-		log.warn('CEP sent invalid time %d <= %d: %s', time, lastCepTime, JSON.stringify(val));
+	else if (timestamp <= lastCepTime) {
+		log.warn('CEP sent invalid time %d <= %d: %s', timestamp, lastCepTime, JSON.stringify(val));
 		return;
 	}
 	
-	val.time = utils.dateToQmDate(new Date(val.time));
-	base.store(fields.OA_IN_STORE).push(val);
+	var insertVal = props;
 	
-	lastCepTime = time;
+	insertVal.time = utils.dateToQmDate(new Date(timestamp));
+	base.store(fields.OA_IN_STORE).push(insertVal);
+	
+	lastCepTime = timestamp;
 }
 
 function initStreamStoryHandlers(model, enable) {
