@@ -893,10 +893,13 @@ function initDataUploadApi() {
 							
 							// create the configuration
 							try {
+								var modelParams = utils.clone(config.STREAM_STORY_PARAMS);
+								modelParams.transitions.timeUnit = timeUnit;
+								
 								// create the model
 								var model = qm.analytics.StreamStory({
 									base: userBase,
-									config: config.STREAM_STORY_PARAMS,
+									config: modelParams,
 									obsFtrSpace: obsFtrSpace,
 									controlFtrSpace: controlFtrSpace
 								});
@@ -1335,22 +1338,24 @@ function initPipelineHandlers() {
 			pipeline.onCoefficient(function (opts) {
 				var pdf = null;
 				
-				if (math.abs(opts.zScore) >= 5) {
+				var zscore = opts.zScore;
+				
+				if (zscore >= 5) {
 					pdf = {
 						type: 'exponential',
 						lambda: intensConfig.deviation_extreme_lambda		// degradation occurs once per month
 					};
-				} else if (math.abs(opts.zScore) >= 4) {					// major deviation
+				} else if (zscore >= 4) {					// major deviation
 					pdf = {
 						type: 'exponential',
 						lambda: intensConfig.deviation_major_lambda			// degradation occurs once per two months
 					};
-				} else if (math.abs(opts.zScore) >= 3) {					// significant deviation
+				} else if (zscore >= 3) {					// significant deviation
 					pdf = {
 						type: 'exponential',
 						lambda: intensConfig.deviation_significant_lambda	// degradation occurs once per year
 					};
-				} else if (math.abs(opts.zScore) >= 2) {					// minor deviation
+				} else if (zscore >= 2) {					// minor deviation
 					pdf = {
 						type: 'exponential',
 						lambda: intensConfig.deviation_minor_lambda			// degradation occurs once per two years

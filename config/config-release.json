@@ -40,7 +40,7 @@
 			"rawData": 100000,
 			"streamStory": 10000,
 			"stores": 100000,
-			"broker": 10,
+			"broker": 1000,
 			"coeff": 1000
 		}
 	},
