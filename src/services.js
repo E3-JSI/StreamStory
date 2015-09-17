@@ -191,6 +191,7 @@ function addCepAnnotated(val) {
 	
 	if (isNaN(timestamp)) {
 		log.warn('CEP sent NaN time %s', JSON.stringify(val));
+		return;
 	} 
 	else if (timestamp <= lastCepTime) {
 		log.warn('CEP sent invalid time %d <= %d: %s', timestamp, lastCepTime, JSON.stringify(val));
