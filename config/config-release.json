@@ -47,7 +47,8 @@
 	"database": {
 		"host": "localhost",
 		"user": "StreamStory",
-		"password": "StreamStory"
+		"password": "StreamStory",
+		"database": "hella"
 	},
 	"integration": {
 		"type": "broker",
