@@ -226,24 +226,35 @@ function initStreamStoryHandlers(model, enable) {
 			if (log.info())
 				log.info('Sending prediction, with PDF length: %d', probV.length);
 			
-			var msg = {
-				type: 'statePrediction',
-				content: {
-					time: date.getTime(),
-					currState: currState,
-					targetState: targetState,
-					probability: prob,
-					pdf: {
-						type: 'histogram',
-						probV: probV,
-						timeV: timeV
+			try {
+				var uiMsg = {
+					type: 'statePrediction',
+					content: {
+						time: date.getTime(),
+						currState: currState,
+						targetState: targetState,
+						probability: prob,
+						pdf: {
+							type: 'histogram',
+							probV: probV,
+							timeV: timeV
+						}
 					}
-				}
-			};
-			
-			var msgStr = JSON.stringify(msg);
-			broker.send(broker.PREDICTION_PRODUCER_TOPIC, msgStr);
-			modelStore.sendMsg(model.getId(), msgStr);
+				};
+				
+				var brokerMsg = transform.genHistPrediction(
+					date.getTime(),
+					currState + ' to ' + targetState,
+					timeV,
+					probV,
+					model.getTimeUnit
+				);
+				
+				broker.send(broker.PREDICTION_PRODUCER_TOPIC, JSON.stringify(brokerMsg));
+				modelStore.sendMsg(model.getId(), JSON.stringify(uiMsg));
+			} catch (e) {
+				log.error(e, 'Failed to send target state prediction!');
+			}
 		});
 	} else {
 		log.debug('Removing StreamStory handlers for model %s ...', model.getId());
@@ -1350,7 +1361,7 @@ function initPipelineHandlers() {
 				}));
 				
 				if (pdf != null) {
-					var msg = msg = {
+					var msg = {
 						type: 'prediction',
 						content: {
 							time: opts.time,
@@ -1360,7 +1371,9 @@ function initPipelineHandlers() {
 					};
 					
 					var msgStr = JSON.stringify(msg);
-					broker.send(broker.PREDICTION_PRODUCER_TOPIC, msgStr);
+					
+					var brokerMsg = transform.genExpPrediction(pdf.lambda, 'month', opts.time);
+					broker.send(broker.PREDICTION_PRODUCER_TOPIC, JSON.stringify(brokerMsg));
 					modelStore.distributeMsg(msgStr);
 				}
 			});
@@ -1380,7 +1393,6 @@ function initBroker() {
 		if (msg.type == 'raw') {
 			if (++imported % printInterval == 0 && log.trace())
 				log.trace('Imported %d values ...', imported);
-			
 			addRawMeasurement(msg.payload);
 		} else if (msg.type == 'cep') {
 			if (log.trace())
@@ -1397,7 +1409,7 @@ function initBroker() {
 				log.warn('CEP sent invalid time %d <= %d: %s', timestamp, lastCepTime, JSON.stringify(val));
 				return;
 			}
-						
+			
 			base.store(fields.OA_IN_STORE).push(val);
 			lastCepTime = timestamp;
 		} else {

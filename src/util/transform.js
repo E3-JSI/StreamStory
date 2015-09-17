@@ -352,7 +352,7 @@ module.exports.toDerivedEvent = function (timestamp, val) {
 	var event = {
 		timestamp: timestamp,
 		componentId: 'enricher',
-		eventName: 'EnrichedEvent',
+		eventName: config.USE_CASE == config.USE_CASE_MHWIRTH ? 'mhwirth' : 'hella',
 		eventProperties: props
 	}
 	
@@ -369,4 +369,46 @@ module.exports.parseDerivedEvent = function (event) {
 	val.time = utils.dateToQmDate(new Date(timestamp));
 	
 	return val;
+}
+
+module.exports.genExpPrediction = function (lambda, timeUnit, timestamp) {
+	var msg = {
+		timestamp: timestamp,
+		eventName: 'prediction',
+		params: [lambda],
+		eventProperties: { timeUnit: timeUnit },
+		pdfType: 'exponential'
+	};
+	
+	return msg;
+}
+
+module.exports.genHistPrediction = function (timestamp, eventName, timeV, valV, timeUnit) {
+	var tu;
+	if (timeUnit == 'second')
+		tu = 1000;
+	else if (timeUnit == 'minute')
+		tu = 1000*60;
+	else if (timeUnit == 'hour')
+		tu = 1000*60*60;
+	else if (timeUnit == 'day')
+		tu = 1000*60*60*24;
+	else if (timeUnit == 'month')
+		tu = 1000*60*60*24*30;
+	else
+		throw new Error('Invalid time unit: ' + timeUnit);
+	
+	var timestampV = [];
+	for (var i = 0; i < timeV.length; i++) {
+		timestampV.push(timestamp + Math.floor(timeV[i]*tu));
+	}
+	
+	return {
+		timestamp: timestamp,
+		eventName: eventName,
+		params: valV,
+		eventProperties: {},
+		pdfType: 'histogram',
+		timestamps: timestampV
+	}
 }
