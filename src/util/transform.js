@@ -341,3 +341,18 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 		}
 	}
 }
+
+module.exports.toDerivedEvent = function (val) {
+	var props = {};
+	for (var key in val) {
+		if (key == 'time') continue;
+		props[key] = val[key];
+	}
+	
+	var event = {
+		timestamp: val.time.getTime(),
+		componentId: 'Enricher',
+		eventName: 'EnrichedEvent',
+		eventProperties: props
+	}
+}
