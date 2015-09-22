@@ -45,6 +45,10 @@ function initConsumer() {
 	});
 	
 	consumer.on('offsetOutOfRange', function (e) {
+		log.error(e, 'Offset out of range!');
+	});
+	
+	consumer.on('offsetOutOfRange', function (e) {
 		log.error(e, 'Consumer offset out of range!');
 	});
 	
