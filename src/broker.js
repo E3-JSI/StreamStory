@@ -27,6 +27,8 @@ var consumer;
 function initConsumer() {
 	log.info('Initializing consumer ...');
 	
+	var offset = new kafka.Offset(client);
+	
 	consumer = new kafka.Consumer(
 			client, 
 			[
@@ -52,11 +54,11 @@ function initConsumer() {
 		var partition = e.partition;
 		
 		log.info('Fetching new offset ...');
-		var offset = new kafka.Offset(client);
+		
 	    offset.fetch([
 	        { topic: topic, partition: partition, time: Date.now(), maxNum: 1 }
 	    ], function (err, data) {
-	    	if (e != null) {
+	    	if (err != null) {
 	    		log.error(e, 'Failed to fetch offset!');
 	    		consumer.resume();
 	    		return;
