@@ -71,10 +71,6 @@ function initConsumer() {
 	    });
 	});
 	
-	consumer.on('offsetOutOfRange', function (e) {
-		log.error(e, 'Consumer offset out of range!');
-	});
-	
 	{
 		var nReceivedRaw = 0;
 		var nReceivedCep = 0;
