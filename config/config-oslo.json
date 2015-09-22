@@ -24,7 +24,7 @@
 		}
 	},
 	"server": {
-		"port": 80,
+		"port": 8787,
 		"pingInterval": 10000
 	},
 	"log": {
