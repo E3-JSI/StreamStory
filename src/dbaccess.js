@@ -30,7 +30,6 @@ module.exports = function () {
 			
 			pool.getConnection(function (e1, conn) {
 				if (e1 != null) {
-					conn.release();	// TODO should release be here?
 					callback(e1);
 					return;
 				}
@@ -54,7 +53,6 @@ module.exports = function () {
 			
 			pool.getConnection(function (e, conn) {
 				if (e != null) {
-					conn.release();
 					callback(e);
 					return;
 				}
@@ -62,7 +60,6 @@ module.exports = function () {
 				// check if the user already exists
 				conn.query("SELECT EXISTS(SELECT 1 FROM user WHERE email = ?) as isRegistered", [email], function (e1, results) {
 					if (e1 != null) {
-						conn.release();
 						callback(e1);
 						return;
 					}
@@ -130,7 +127,6 @@ module.exports = function () {
 				
 				pool.getConnection(function (e1, conn) {
 					if (e1 != null) {
-						conn.release();	// TODO should release be here?
 						callback(e1);
 						return;
 					}
@@ -159,7 +155,6 @@ module.exports = function () {
 				
 				pool.getConnection(function (e1, conn) {
 					if (e1 != null) {
-						conn.release();	// TODO should release be here?
 						callback(e1);
 						return;
 					}
@@ -174,7 +169,6 @@ module.exports = function () {
 		fetchModel: function (modelId, callback) {
 			pool.getConnection(function (e, conn) {
 				if (e != null) {
-					conn.release();		// TODO should this be here?
 					callback(e);
 					return;
 				}
@@ -227,7 +221,6 @@ module.exports = function () {
 		fetchActiveModels: function (callback) {
 			pool.getConnection(function (e, conn) {
 				if (e != null) {
-					conn.release();		// TODO should this be here?
 					callback(e);
 					return;
 				}
@@ -255,7 +248,6 @@ module.exports = function () {
 		activateModel: function (opts, callback) {
 			pool.getConnection(function (e, conn) {
 				if (e != null) {
-					conn.release();		// TODO should this be here?
 					callback(e);
 					return;
 				}
@@ -293,7 +285,6 @@ module.exports = function () {
 		getConfig: function (property, callback) {
 			pool.getConnection(function (e, conn) {
 				if (e != null) {
-					conn.release();
 					callback(e);
 					return;
 				}

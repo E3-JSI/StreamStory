@@ -3,7 +3,7 @@
 		"path": "../qminer/",
 		"mode": "createClean",
 		"createPipeline": true,
-		"initializeZeros": false
+		"initializeZeros": true
 	},
 	"models": {
 		"StreamStoryParams": {
@@ -58,5 +58,5 @@
 	},
 	"useCase": "mhwirth",
 	"interpolation": "current",
-	"dataPath": "/mnt/raidM2T/project-data/StreamStory/StreamStory-mhwirth/"
+	"dataPath": "/media/lstopar/HDD/project-data/StreamStory-mhwirth/"
 }
