@@ -1,0 +1,62 @@
+{
+	"qminer": {
+		"path": "../qminer/",
+		"mode": "createClean",
+		"createPipeline": true,
+		"initializeZeros": true
+	},
+	"models": {
+		"StreamStoryParams": {
+			"transitions": {
+				"type": "continuous",
+				"timeUnit": "hour"
+			},
+			"clustering": {
+				"type": "dpmeans",
+				"lambda": 0.7,
+				"minClusts": 10,
+				"rndseed": 1,
+				"sample": 1,
+				"histogramBins": 20
+			},
+			"pastStates": 2,
+			"verbose": true
+		}
+	},
+	"server": {
+		"port": 8787,
+		"pingInterval": 10000
+	},
+	"log": {
+		"logger": {
+			"level": "trace",
+			"outputMode": "short",
+			"stream": {
+				"type": "stdout",
+				"file": "log.log"
+			}
+		},
+		"print": {
+			"rawData": 100000,
+			"streamStory": 10000,
+			"stores": 100000,
+			"broker": 1000,
+			"coeff": 1000
+		}
+	},
+	"database": {
+		"host": "localhost",
+		"user": "StreamStory",
+		"password": "StreamStory",
+		"database": "StreamStory"
+	},
+	"integration": {
+		"type": "broker",
+		"brokerUrl": "192.168.1.39",
+		"zookeperPort": 2181,
+		"producerPort": 8090
+	},
+	"useCase": "mhwirth",
+	"interpolation": "current",
+	"dataPath": "../StreamStory-db/"
+}
