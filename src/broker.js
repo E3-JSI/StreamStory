@@ -27,7 +27,7 @@ var consumer;
 function initConsumer() {
 	log.info('Initializing consumer ...');
 	
-	var consumerPaused = false;
+	var pauseCount = 0;
 	
 	var offset = new kafka.Offset(client);
 	
@@ -41,16 +41,16 @@ function initConsumer() {
 	);
 	
 	function pauseConsumer() {
-		if (!consumerPaused) {
+		if (pauseCount++ == 0) {
 			consumer.pause();
-			consumerPaused = true;
+			log.info('Consumer paused ...');
 		}
 	}
 	
 	function resumeConsumer() {
-		if (consumerPaused) {
+		if (--pauseCount == 0) {
 			consumer.resume();
-			consumerPaused = false;
+			log.info('Consumer resumed!');
 		}
 	}
 	
@@ -81,7 +81,7 @@ function initConsumer() {
 	    	
 	    	var offset = data[topic][partition][0];
 	    	
-	    	log.info('Got new offset %d, resuming consumer ...', offset);
+	    	log.info('Got new offset %d for topic %s ...', offset, topic);
 	    	consumer.setOffset(topic, partition, offset);
 	    	
 	    	resumeConsumer();
