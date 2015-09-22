@@ -26,7 +26,7 @@ var consumer;
 
 function initConsumer() {
 	log.info('Initializing consumer ...');
-	
+		
 	var offset = new kafka.Offset(client);
 	
 	consumer = new kafka.Consumer(
@@ -48,10 +48,12 @@ function initConsumer() {
 	
 	consumer.on('offsetOutOfRange', function (e) {
 		log.error(e, 'Offset out of range for topic %s! Pausing consumer ...', JSON.stringify(e));
-		consumer.pause();
 		
 		var topic = e.topic;
 		var partition = e.partition;
+		var topicOpts = {topic: topic, partition: partition};
+		
+		consumer.pauseTopics([topicOpts]);
 		
 		log.info('Fetching new offset ...');
 		
@@ -59,15 +61,16 @@ function initConsumer() {
 	    offset.fetch(offsetOpts, function (e1, data) {
 	    	if (e1 != null) {
 	    		log.error(e1, 'Failed to fetch offset! Resuming consumer anyway!');
-	    		consumer.resume();
+	    		consumer.resumeTopics([topicOpts]);
 	    		return;
 	    	}
 	    	
 	    	var offset = data[topic][partition][0];
 	    	
-	    	log.info('Got new offset %d, resuming consumer ...', offset);
+	    	log.info('Got new offset %d for topic %s, resuming consumer ...', offset, topic);
 	    	consumer.setOffset(topic, partition, offset);
-	    	consumer.resume();
+	    	
+	    	consumer.resumeTopics([topicOpts]);
 	    });
 	});
 	
