@@ -139,7 +139,7 @@ exports.send = function (topic, msg) {
 	if (nsent++ % config.BROKER_PRINT_INTERVAL == 0 && log.debug())
 		log.debug('Sent %d messages: %s',nsent, JSON.stringify(msg));
 	
-	producer.send([{ topic: topic, messages: [msg] }], function (e, data) {
+	producer.send([{ topic: topic, messages: [msg], partition: 0 }], function (e, data) {
 		if (e != null) {
 			log.error(e, 'Failed to send message: %s', msg);
 			return;
