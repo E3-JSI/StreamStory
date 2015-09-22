@@ -73,7 +73,7 @@ function initConsumer() {
 					}
 				}
 			} catch (e) {
-				log.error(e, 'Exception while reveiving message!');
+				log.error(e, 'Exception while receiving message!');
 			}
 		});
 	}

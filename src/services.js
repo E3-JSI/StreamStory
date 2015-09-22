@@ -1532,6 +1532,7 @@ function initServer(sessionStore, parseCookie) {
 	log.info('Server running at http://localhost:%d', config.SERVER_PORT);
 	log.info('Serving UI at: %s', UI_PATH);
 	log.info('Serving API at: %s', API_PATH);
+	log.info('Data API: %s', DATA_PATH);
 	log.info('Web socket listening at: %s', WS_PATH);
 	log.info('================================================');
 	
