@@ -45,7 +45,12 @@ function initConsumer() {
 	});
 	
 	consumer.on('offsetOutOfRange', function (e) {
-		log.error(e, 'Offset out of range!');
+		log.error(e, 'Offset out of range for topic %s!', JSON.stringify(e));
+		consumer.pause();
+		
+		consumer.setOffset()
+		
+		consumer.resume();
 	});
 	
 	consumer.on('offsetOutOfRange', function (e) {
