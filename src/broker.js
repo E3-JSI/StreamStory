@@ -17,9 +17,6 @@ var topics = {
 	PREDICTION_PRODUCER_TOPIC: 'si.ijs.internal.oa_output'
 };
 
-// comsumer port: 2181
-// producer port: 9092
-
 var client;
 var producer;
 var consumer;
@@ -124,7 +121,7 @@ function initConsumer() {
 function initClient() {
 	log.info('Initializing Kafka client ...');
 	
-	client = new kafka.Client(BROKER_URL + ':' + ZOOKEPER_PORT, 'AO_JSI');
+	client = new kafka.Client(BROKER_URL + ':' + ZOOKEPER_PORT, 'StreamStory');
 	producer = new kafka.Producer(client);
 	
 	log.info('Initilizing producer ...');

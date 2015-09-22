@@ -56,7 +56,6 @@ exports.INTERPOLATION = config.interpolation;
 // SERVER
 //================================================================
 exports.SERVER_PORT = config.server.port;
-exports.WWW_DIR = '../ui';
 exports.PING_INTERVAL = config.server.pingInterval;
 
 //================================================================

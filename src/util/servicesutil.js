@@ -6,6 +6,8 @@ var config = require('../../config.js');
 //=============================================================
 
 exports.RealTimeModelStore = function (opts) {
+	log.info('Initializing model store ...');
+	
 	var store = {};
 	
 	var ws = opts.ws;

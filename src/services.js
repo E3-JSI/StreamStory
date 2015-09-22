@@ -272,7 +272,7 @@ function initStreamStoryHandlers(model, enable) {
 }
 
 function initStreamStoryRestApi() {
-	log.info('Registering REST services ...');
+	log.info('Initializing StreamStory REST services ...');
 	
 	{
 		log.info('Registering save service ...');
@@ -693,6 +693,8 @@ function initStreamStoryRestApi() {
 }
 
 function initDataUploadApi() {
+	log.info('Initializing data upload API ...');
+	
 	var upload = multer({
 		storage: multer.memoryStorage(),				// will have file.buffer
 		fileFilter: function (req, file, callback) {	// only accept csv files
@@ -1244,6 +1246,8 @@ function initServerApi() {
 }
 
 function initConfigRestApi() {
+	log.info('Initializing configuration REST API ...');
+	
 	app.get(API_PATH + '/config', function (req, resp) {
 		try {
 			var properties = req.query.properties;
@@ -1303,6 +1307,8 @@ function initConfigRestApi() {
 }
 
 function initPipelineHandlers() {
+	log.info('Initializing pipeline callbacks ...');
+	
 	pipeline.onValue(function (val) {
 		if (log.trace())
 			log.trace('Inserting value into StreamStories ...');
@@ -1394,6 +1400,8 @@ function initPipelineHandlers() {
 
 function initBroker() {
 	broker.init();
+	
+	log.info('Initializing broker callbacks ...');
 	
 	var imported = 0;
 	var printInterval = 100;
@@ -1523,7 +1531,7 @@ function initServer(sessionStore, parseCookie) {
 	initDataUploadApi();
 	
 	// serve static directories on the UI path
-	app.use(UI_PATH, express.static(path.join(__dirname, config.WWW_DIR)));
+	app.use(UI_PATH, express.static(path.join(__dirname, '../ui')));
 	
 	// start server
 	var server = app.listen(config.SERVER_PORT);
