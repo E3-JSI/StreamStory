@@ -129,6 +129,10 @@ function initClient() {
 			}
 		});
 	});
+	
+	producer.on('error', function (e) {
+		log.error(e, 'Exception in the producer!');
+	})
 }
 
 var nsent = 0;
