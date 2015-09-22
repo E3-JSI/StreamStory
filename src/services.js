@@ -171,9 +171,9 @@ function addRawMeasurement(val) {
 		if (totalCounts++ % config.RAW_PRINT_INTERVAL == 0 && log.debug())
 			log.debug('Time: %s, Counts: %s', new Date(timestamp).toString(), JSON.stringify(counts));
 		if (timestamp <= prevTimestamp)
-			throw 'Invalid time for a single measurement! Current: ' + timestamp + ', prev: ' + prevTimestamp;
+			throw new Error('Invalid time for a single measurement: ' + timestamp + ' <= ' + prevTimestamp);
 		if (timestamp < lastRawTime)
-			throw 'Invalid time! Current: ' + timestamp + ', prev: ' + lastRawTime;
+			throw new Error('Invalid time! Current: ' + timestamp + ', prev: ' + lastRawTime);
 		
 		var insertVal = transformed.value;
 		pipeline.insertRaw(storeNm, insertVal);
