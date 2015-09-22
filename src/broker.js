@@ -133,7 +133,7 @@ function initClient() {
 		
 		var createTopics = [];
 		for (var topic in topics) {
-			createTopics.push(topics[topic]);
+			createTopics.push({topic: topics[topic], partition: 0});
 		}
 		
 		producer.createTopics(createTopics, false, function (e, data) {
