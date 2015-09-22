@@ -140,8 +140,7 @@ function initClient() {
 			if (e != null) {
 				log.error(e, 'Failed to create producer topics!');
 			} else {
-				log.info('Producer topics ready!');
-				log.info(data);
+				log.info('Producer topics ready: %s!', JSON.stringify(data));
 				initConsumer();
 			}
 		});
