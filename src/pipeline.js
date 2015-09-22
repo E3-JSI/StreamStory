@@ -15,7 +15,8 @@ var resamplerInitialized = false;
 
 var opts = { 
 	calcCoeff: false,
-	coefficientCb: null
+	coefficientCb: null,
+	onValue: null
 };
 
 function initResampler() {
