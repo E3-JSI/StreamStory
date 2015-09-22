@@ -26,7 +26,9 @@ var consumer;
 
 function initConsumer() {
 	log.info('Initializing consumer ...');
-		
+	
+	var consumerPaused = false;
+	
 	var offset = new kafka.Offset(client);
 	
 	consumer = new kafka.Consumer(
@@ -38,6 +40,20 @@ function initConsumer() {
 			{autoCommit: true}
 	);
 	
+	function pauseConsumer() {
+		if (!consumerPaused) {
+			consumer.pause();
+			consumerPaused = true;
+		}
+	}
+	
+	function resumeConsumer() {
+		if (consumerPaused) {
+			consumer.resume();
+			consumerPaused = false;
+		}
+	}
+	
 	consumer.on('ready', function () {
 		log.info('Consumer initialized!');
 	})
@@ -48,32 +64,28 @@ function initConsumer() {
 	
 	consumer.on('offsetOutOfRange', function (e) {
 		log.error(e, 'Offset out of range for topic %s! Pausing consumer ...', JSON.stringify(e));
+		pauseConsumer();
 		
-		(function () {
-			var topic = e.topic;
-			var partition = e.partition;
-			var topicOpts = {topic: topic, partition: partition};
-			
-			consumer.pauseTopics([topicOpts]);
-			
-			log.info('Fetching new offset ...');
-			
-			var offsetOpts = [{ topic: topic, partition: partition, time: Date.now(), maxNum: 1 }];
-		    offset.fetch(offsetOpts, function (e1, data) {
-		    	if (e1 != null) {
-		    		log.error(e1, 'Failed to fetch offset! Resuming consumer anyway!');
-		    		consumer.setOffset(topic, partition, 0);
-		    		consumer.resumeTopics([topicOpts]);
-		    		return;
-		    	}
-		    	
-		    	var offset = data[topic][partition][0];
-		    	
-		    	log.info('Got new offset %d for topic %s, resuming consumer ...', offset, topic);
-		    	consumer.setOffset(topic, partition, offset);
-		    	consumer.resumeTopics([topicOpts]);
-		    });
-		})()
+		var topic = e.topic;
+		var partition = e.partition;
+		
+		log.info('Fetching new offset ...');
+		
+		var offsetOpts = [{ topic: topic, partition: partition, time: Date.now(), maxNum: 1 }];
+	    offset.fetch(offsetOpts, function (e1, data) {
+	    	if (e1 != null) {
+	    		log.error(e1, 'Failed to fetch offset! Resuming consumer anyway!');
+	    		resumeConsumer();
+	    		return;
+	    	}
+	    	
+	    	var offset = data[topic][partition][0];
+	    	
+	    	log.info('Got new offset %d, resuming consumer ...', offset);
+	    	consumer.setOffset(topic, partition, offset);
+	    	
+	    	resumeConsumer();
+	    });
 	});
 	
 	{
