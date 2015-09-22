@@ -36,7 +36,7 @@ module.exports = function () {
 				
 				conn.query('INSERT INTO model SET ?', opts, function (e2, result) {
 					conn.release();
-					callback(e2 != null ? undefined : e2, result);
+					callback(e2, result);
 				});
 			});
 		});

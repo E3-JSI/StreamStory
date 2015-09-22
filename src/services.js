@@ -1037,7 +1037,7 @@ function initDataUploadApi() {
 						return;
 					}
 					initBase(req, res);
-				})
+				});
 			}
 		});
 	});
