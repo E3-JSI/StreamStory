@@ -48,9 +48,26 @@ function initConsumer() {
 		log.error(e, 'Offset out of range for topic %s!', JSON.stringify(e));
 		consumer.pause();
 		
-		consumer.setOffset()
+		var topic = e.topic;
+		var partition = e.partition;
 		
-		consumer.resume();
+		log.info('Fetching new offset ...');
+		var offset = new kafka.Offset(client);
+	    offset.fetch([
+	        { topic: topic, partition: partition, time: Date.now(), maxNum: 1 }
+	    ], function (err, data) {
+	    	if (e != null) {
+	    		log.error(e, 'Failed to fetch offset!');
+	    		consumer.resume();
+	    		return;
+	    	}
+	    	
+	        log.info('Received offset data: %s', JSON.stringify(data));
+	    	var offset = data[topic][partition][0];
+	    	log.info('Got new offset %d', offset);
+	    	consumer.setOffset(topic, partition, offset);
+	    	consumer.resume();
+	    });
 	});
 	
 	consumer.on('offsetOutOfRange', function (e) {
