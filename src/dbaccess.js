@@ -91,7 +91,6 @@ module.exports = function () {
 				
 				pool.getConnection(function (e1, conn) {
 					if (e1 != null) {
-						conn.release();
 						callback(e1);
 						return;
 					}
@@ -196,7 +195,6 @@ module.exports = function () {
 		countActiveModels: function (callback) {
 			pool.getConnection(function (e, conn) {
 				if (e != null) {
-					conn.release();
 					callback(e);
 					return;
 				}
@@ -267,7 +265,6 @@ module.exports = function () {
 		getMultipleConfig: function (opts, callback) {
 			pool.getConnection(function (e, conn) {
 				if (e != null) {
-					conn.release();
 					callback(e);
 					return;
 				}
@@ -312,7 +309,6 @@ module.exports = function () {
 			
 			pool.getConnection(function (e, conn) {
 				if (e != null) {
-					conn.release();
 					callback(e);
 					return;
 				}
