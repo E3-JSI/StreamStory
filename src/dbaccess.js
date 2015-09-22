@@ -160,7 +160,7 @@ module.exports = function () {
 					
 					conn.query('INSERT INTO offline_model SET ?', { mid: modelId, base_dir: baseDir }, function (e2, result) {
 						conn.release();
-						callback(e2 != null ? undefined : e2);
+						callback(e2);
 					});
 				});
 			});
