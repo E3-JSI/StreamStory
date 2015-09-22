@@ -61,6 +61,7 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 		transform: function (val) {
 			if (log.trace())
 				log.trace('Transforming event: %s', JSON.stringify(val));
+			
 			var storeNm = storeFromTag(val.sensorId);
 			var timestamp = val.timestamp;
 			var value = val.eventProperties.value;
