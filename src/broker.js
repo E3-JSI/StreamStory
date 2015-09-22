@@ -61,6 +61,7 @@ function initConsumer() {
 	    offset.fetch(offsetOpts, function (e1, data) {
 	    	if (e1 != null) {
 	    		log.error(e1, 'Failed to fetch offset! Resuming consumer anyway!');
+	    		consumer.setOffset(topic, partition, 0);
 	    		consumer.resumeTopics([topicOpts]);
 	    		return;
 	    	}
@@ -69,7 +70,6 @@ function initConsumer() {
 	    	
 	    	log.info('Got new offset %d for topic %s, resuming consumer ...', offset, topic);
 	    	consumer.setOffset(topic, partition, offset);
-	    	
 	    	consumer.resumeTopics([topicOpts]);
 	    });
 	});
