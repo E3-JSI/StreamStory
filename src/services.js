@@ -1307,7 +1307,7 @@ function initPipelineHandlers() {
 		if (log.trace())
 			log.trace('Inserting value into StreamStories ...');
 		
-		if (config.USE_CASE == config.USE_CASE_MHWIRTH && val.temp_ambient == null) {
+		if (config.USE_CASE == config.USE_CASE_MHWIRTH && val.temp_ambient == null) {	// TODO remove this
 			log.warn('Not sending ambient temperature!');
 			throw new Error('Not sending ambient temperature!');
 		}
