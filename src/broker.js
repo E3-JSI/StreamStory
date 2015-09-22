@@ -47,7 +47,7 @@ function initConsumer() {
 	});
 	
 	consumer.on('offsetOutOfRange', function (e) {
-		log.error(e, 'Offset out of range for topic %s!', JSON.stringify(e));
+		log.error(e, 'Offset out of range for topic %s! Pausing consumer ...', JSON.stringify(e));
 		consumer.pause();
 		
 		var topic = e.topic;
@@ -55,18 +55,17 @@ function initConsumer() {
 		
 		log.info('Fetching new offset ...');
 		
-	    offset.fetch([
-	        { topic: topic, partition: partition, time: Date.now(), maxNum: 1 }
-	    ], function (err, data) {
-	    	if (err != null) {
-	    		log.error(e, 'Failed to fetch offset!');
+		var offsetOpts = [{ topic: topic, partition: partition, time: Date.now(), maxNum: 1 }];
+	    offset.fetch(offsetOpts, function (e1, data) {
+	    	if (e1 != null) {
+	    		log.error(e1, 'Failed to fetch offset! Resuming consumer anyway!');
 	    		consumer.resume();
 	    		return;
 	    	}
 	    	
-	        log.info('Received offset data: %s', JSON.stringify(data));
 	    	var offset = data[topic][partition][0];
-	    	log.info('Got new offset %d', offset);
+	    	
+	    	log.info('Got new offset %d, resuming consumer ...', offset);
 	    	consumer.setOffset(topic, partition, offset);
 	    	consumer.resume();
 	    });
