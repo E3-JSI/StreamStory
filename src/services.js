@@ -265,7 +265,7 @@ function initStreamStoryHandlers(model, enable) {
 				
 				var brokerMsg = transform.genHistPrediction(
 					date.getTime(),
-					currState + ' to ' + targetState,
+					currState == targetState ? ('Arrived in ' + currState) : (currState + ' to ' + targetState),
 					timeV,
 					probV,
 					model.getModel().getTimeUnit(),
