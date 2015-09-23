@@ -229,12 +229,20 @@ function initStreamStoryHandlers(model, enable) {
 				log.info('Sending prediction, with PDF length: %d', probV.length);
 			
 			try {
+				var _model = model.getModel();
+				
+				var currStateNm = _model.getStateName(currState);
+				var targetStateNm = _model.getStateName(targetState);
+				
+				if (currStateNm == null || currStateNm.length == 0) currStateNm = currState;
+				if (targetStateNm == null || targetStateNm.length == 0) targetStateNm = targetState;
+				
 				var uiMsg = {
 					type: 'statePrediction',
 					content: {
 						time: date.getTime(),
-						currState: currState,
-						targetState: targetState,
+						currState: currStateNm,
+						targetState: targetStateNm,
 						probability: prob,
 						pdf: {
 							type: 'histogram',
@@ -244,7 +252,6 @@ function initStreamStoryHandlers(model, enable) {
 					}
 				};
 				
-				var _model = model.getModel();
 				var currStateIds = _model.currState();
 				var stateId = currStateIds[0].id;
 				var level = currStateIds[0].height;
@@ -262,12 +269,6 @@ function initStreamStoryHandlers(model, enable) {
 					var ftr = contr[i];
 					metadata[ftr.name] = ftr.value;
 				}
-				
-				var currStateNm = _model.getStateName(currState);
-				var targetStateNm = _model.getStateName(targetState);
-				
-				if (currStateNm == null || currStateNm.length == 0) currStateNm = currState;
-				if (targetStateNm == null || targetStateNm.length == 0) targetStateNm = targetState;
 				
 				var brokerMsg = transform.genHistPrediction(
 					date.getTime(),
