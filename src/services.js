@@ -244,12 +244,32 @@ function initStreamStoryHandlers(model, enable) {
 					}
 				};
 				
+				var _model = model.getModel();
+				var currStateIds = _model.currState();
+				var stateId = currStateIds[0].id;
+				var level = currStateIds[0].height;
+				
+				var details = model.stateDetails(stateId, level);
+				var metadata = {};
+				
+				var obs = details.features.observations;
+				var contr = details.features.controls;
+				for (var i = 0; i < obs.length; i++) {
+					var ftr = obs[i];
+					metadata[ftr.name] = ftr.value;
+				}
+				for (var i = 0; i < contr.length; i++) {
+					var ftr = contr[i];
+					metadata[ftr.name] = ftr.value;
+				}
+				
 				var brokerMsg = transform.genHistPrediction(
 					date.getTime(),
 					currState + ' to ' + targetState,
 					timeV,
 					probV,
-					model.getModel().getTimeUnit()
+					model.getModel().getTimeUnit(),
+					metadata
 				);
 				
 				broker.send(broker.PREDICTION_PRODUCER_TOPIC, JSON.stringify(brokerMsg));

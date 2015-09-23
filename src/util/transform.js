@@ -386,7 +386,7 @@ module.exports.genExpPrediction = function (lambda, timeUnit, timestamp) {
 	return msg;
 }
 
-module.exports.genHistPrediction = function (timestamp, eventName, timeV, valV, timeUnit) {
+module.exports.genHistPrediction = function (timestamp, eventName, timeV, valV, timeUnit, metadata) {
 	var tu;
 	if (timeUnit == 'second')
 		tu = 1000;
@@ -410,7 +410,7 @@ module.exports.genHistPrediction = function (timestamp, eventName, timeV, valV, 
 		timestamp: timestamp,
 		eventName: eventName,
 		params: valV,
-		eventProperties: {},
+		eventProperties: metadata != null ? metadata : {},
 		pdfType: 'histogram',
 		timestamps: timestampV
 	}
