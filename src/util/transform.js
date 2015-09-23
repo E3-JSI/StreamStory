@@ -82,10 +82,14 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 } else {
 	log.info('Using Hella use case ...');
 	
+	var LACQUERING_TIME = 1000*60*15;
+	
+	var queues = {};
+	var lacqueringLine = [];
+	
 	var montracFields = fields.getMontracStores();
 	
 	log.info('Initializing queues ...');
-	var queues = {};
 	var prevQueueLengths = {};
 	for (var i = 0; i < montracFields.length; i++) {
 		var queueId = montracFields[i];
@@ -133,6 +137,25 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 		}
 		
 		queues[queueId].push({shuttleId: shuttleId, left: left, right: right});
+	}
+	
+	function addToLacquering(timestamp, left, right) {
+		lacqueringLine.push({timestamp: timestamp, left: left, right: right});
+	}
+	
+	function cleanLacqueringLine(timestamp) {
+		while (lacqueringLine.length > 0 && timestamp - lacqueringLine[0].timestamp > LACQUERING_TIME) {
+			lacqueringLine.shift();
+		}
+	}
+	
+	function countLacqueredParts() {
+		var count = 0;
+		for (var i = 0; i < lacqueringLine.length; i++) {
+			if (lacqueringLine[i].left) count++;
+			if (lacqueringLine[i].right) count++;
+		}
+		return count;
 	}
 	
 	var prevTimestamp = 0;
@@ -304,15 +327,17 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 				
 				// lacquering lines
 				else if (location == 'PM1') {
-					if (isEventWorkDone(event))
+					if (isEventWorkDone(event)) {
 						moveToQ('MAIN', shuttleId, left, right);
-					else
+						addToLacquering(timestamp, left, right);
+					} else
 						log.warn('Unknown event: %s for location %s', event, location);
 				}
 				else if (location == 'PM2') {
-					if (isEventWorkDone(event))
+					if (isEventWorkDone(event)) {
 						moveToQ('MAIN', shuttleId, left, right);
-					else
+						addToLacquering(timestamp, left, right);
+					} else
 						log.warn('Unknown event: %s for location %s', event, location);
 				}
 			}
@@ -336,6 +361,18 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 						prevQueueLengths[queueId] = length;
 					}
 				}
+				
+				// lacquering
+				cleanLacqueringLine(timestamp);
+				vals.push({
+					store: 'LACQUERING',
+					timestamp: timestamp,
+					value: {
+						time_ms: timestamp,
+			    		time: utils.dateToQmDate(new Date(timestamp)),
+			    		value: countLacqueredParts()
+					}
+				})
 				
 				prevTimestamp = timestamp;
 			}
