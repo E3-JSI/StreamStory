@@ -263,9 +263,15 @@ function initStreamStoryHandlers(model, enable) {
 					metadata[ftr.name] = ftr.value;
 				}
 				
+				var currStateNm = _model.getStateName(currState);
+				var targetStateNm = _model.getStateName(targetState);
+				
+				if (currStateNm == null) currStateNm = currState;
+				if (targetStateNm == null) targetStateNm = targetState;
+				
 				var brokerMsg = transform.genHistPrediction(
 					date.getTime(),
-					currState == targetState ? ('Arrived in ' + currState) : (currState + ' to ' + targetState),
+					currState == targetState ? ('Arrived in ' + currStateNm) : (currStateNm + ' to ' + targetStateNm),
 					timeV,
 					probV,
 					model.getModel().getTimeUnit(),
