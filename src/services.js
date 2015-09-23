@@ -266,8 +266,8 @@ function initStreamStoryHandlers(model, enable) {
 				var currStateNm = _model.getStateName(currState);
 				var targetStateNm = _model.getStateName(targetState);
 				
-				if (currStateNm == null) currStateNm = currState;
-				if (targetStateNm == null) targetStateNm = targetState;
+				if (currStateNm == null || currStateNm.length == 0) currStateNm = currState;
+				if (targetStateNm == null || targetStateNm.length == 0) targetStateNm = targetState;
 				
 				var brokerMsg = transform.genHistPrediction(
 					date.getTime(),
