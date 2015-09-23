@@ -87,10 +87,12 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 	var queues = {};
 	var lacqueringLine = [];
 	
+	var prevQueueLengths = {};
+	var prevLLSize = -1;
+	
 	var montracFields = fields.getMontracStores();
 	
 	log.info('Initializing queues ...');
-	var prevQueueLengths = {};
 	for (var i = 0; i < montracFields.length; i++) {
 		var queueId = montracFields[i];
 		queues[queueId] = [];
@@ -139,8 +141,8 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 		queues[queueId].push({shuttleId: shuttleId, left: left, right: right});
 	}
 	
-	function addToLacquering(timestamp, left, right) {
-		lacqueringLine.push({timestamp: timestamp, left: left, right: right});
+	function addToLacquering(timestamp, shuttleId, left, right) {
+		lacqueringLine.push({timestamp: timestamp, shuttleId: shuttleId, left: left, right: right});
 	}
 	
 	function cleanLacqueringLine(timestamp) {
@@ -197,6 +199,9 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 			}
 			
 			if (event == 'Arrive') {
+				if (location == 'PM1' || location == 'PM2')
+					addToLacquering(timestamp, shuttleId, left, right);
+				
 				var modLoc = location.replace(/\s*\(MAIN\)|\s*\(OUT\)/g, '');
 				moveToQ(modLoc, shuttleId, left, right);
 			} else {
@@ -329,14 +334,12 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 				else if (location == 'PM1') {
 					if (isEventWorkDone(event)) {
 						moveToQ('MAIN', shuttleId, left, right);
-						addToLacquering(timestamp, left, right);
 					} else
 						log.warn('Unknown event: %s for location %s', event, location);
 				}
 				else if (location == 'PM2') {
 					if (isEventWorkDone(event)) {
 						moveToQ('MAIN', shuttleId, left, right);
-						addToLacquering(timestamp, left, right);
 					} else
 						log.warn('Unknown event: %s for location %s', event, location);
 				}
@@ -364,15 +367,20 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 				
 				// lacquering
 				cleanLacqueringLine(timestamp);
-				vals.push({
-					store: 'LACQUERING',
-					timestamp: timestamp,
-					value: {
-						time_ms: timestamp,
-			    		time: utils.dateToQmDate(new Date(timestamp)),
-			    		value: countLacqueredParts()
-					}
-				})
+				var llSize = countLacqueredParts();
+				
+				if (prevLLSize != llSize) {
+					vals.push({
+						store: 'LACQUERING',
+						timestamp: timestamp,
+						value: {
+							time_ms: timestamp,
+				    		time: utils.dateToQmDate(new Date(timestamp)),
+				    		value: llSize
+						}
+					});
+					prevLLSize = llSize;
+				}
 				
 				prevTimestamp = timestamp;
 			}
