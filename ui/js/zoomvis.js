@@ -276,7 +276,8 @@ var zoomVis = function (opts) {
 						value: val.toFixed(3)
 					},
 					css: {
-						'control-point-step-size': 250,//150,
+						'haystack-radius': 0,
+						'control-point-step-size': 100,//250,//150,
 						'text-valign': 'top',
 						'control-point-weight': 0.5,
 						'border-style': 'solid',
@@ -680,6 +681,13 @@ var zoomVis = function (opts) {
 		// notify the handler
 		callbacks.stateSelected(stateId, height);
 		emphasizeEdges(node);
+	});
+	
+	cy.on('click', 'edge', function (event) {
+		var edge = event.cyTarget;
+		var sourceId = edge.source().id();
+		var targetId = edge.target().id();
+		console.log('Edge clicked, from ' + sourceId + ' to ' + targetId + '!');
 	});
 	
 	cy.on('mouseover', 'node', function (event) {
