@@ -20,8 +20,7 @@ var zoomVis = function (opts) {
 	var FOREGROUND_Z_INDEX = 20;
 	
 	// size
-	var MIN_NODE_DIAMETER = 30;
-	var NODE_SCALE_FACTOR = 200;
+	var MIN_NODE_DIAMETER = 40;
 	
 	var TARGET_NODE_CSS = {
 		'background-image': 'img/target.png',
@@ -89,17 +88,9 @@ var zoomVis = function (opts) {
 	function getNodeLabel(node) {
 		return (node.name != null ? node.name : (node.id + '')) + '\ntime: ' + node.holdingTime.toPrecision(2);
 	}
-	
-	function scaleNode(size) {
-		return Math.sqrt(size / uiConfig.levelMaxNodeSize[currentLevel]);//.maxNodeSize);
-	}
-	
-	function sizeFromProb(prob) {
+
+	function colorFromProb(prob) {
 		return Math.sqrt(prob);
-	}
-	
-	function calculateNodeRadius(area) {
-		return Math.max(2*Math.sqrt(scaleNode(area)/Math.PI) * NODE_SCALE_FACTOR,  MIN_NODE_DIAMETER);
 	}
 	
 	function minAndMaxCoords() {
@@ -119,10 +110,23 @@ var zoomVis = function (opts) {
 		}
 	}
 	
-	function cyPosition(x, y) {
+	function cyPosition(node) {
 		return {
-		    x: visWidth * (xOffset + (1 - xOffset) * (minX + x) / (maxX - minX)),
-		    y: visHeight * (yOffset + (1 - yOffset) * (minY + y) / (maxY - minY))
+		    x: visWidth * (xOffset + (1 - xOffset) * (minX + node.x) / (maxX - minX)),
+		    y: visHeight * (yOffset + (1 - yOffset) * (minY + node.y) / (maxY - minY))
+		};
+	}
+	
+	function cySize(radius) {
+		var scaleX = (1 - 2*xOffset)*visWidth / (maxX - minX);
+		var scaleY = (1 - 2*yOffset)*visHeight / (maxY - minY);
+		var scale = Math.min(scaleX, scaleY);
+		
+		var diameter = 2*radius;
+		
+		return {
+			width: Math.max(scale * diameter, MIN_NODE_DIAMETER),
+			height: Math.max(scale * diameter, MIN_NODE_DIAMETER)
 		};
 	}
 	
@@ -198,13 +202,13 @@ var zoomVis = function (opts) {
 		for (var i = 0; i < levelInfo.length; i++) {
 			var node = levelInfo[i];
 			var dispNode;
-			var position = cyPosition(levelInfo[i].x, levelInfo[i].y);		//[x, y]
-			var nodeSize = calculateNodeRadius(levelInfo[i].size);
+			var position = cyPosition(node);		//[x, y]
+			var nodeSize = cySize(levelInfo[i].radius);
 						
 			var style = {
 				'background-color': DEFAULT_NODE_COLOR,
-				'width': nodeSize,
-				'height': nodeSize,
+				'width': nodeSize.width,
+				'height': nodeSize.height,
 				'border-width': DEFAULT_BORDER_WIDTH,
 				'border-color': DEFAULT_BORDER_COLOR,
 				'label': node.name != null ? node.name : node.id,
@@ -315,9 +319,9 @@ var zoomVis = function (opts) {
 				
 				levelNodeMap[i][node.id] = node;
 				
-				var size = node.size;
+				var size = node.raduis;
 				if (size > uiConfig.maxNodeSize)
-					uiConfig.maxNodeSize = states[j].size;
+					uiConfig.maxNodeSize = states[j].raduis;
 				if (size > uiConfig.levelMaxNodeSize[i])
 					uiConfig.levelMaxNodeSize[i] = size;
 			}
@@ -369,7 +373,7 @@ var zoomVis = function (opts) {
 		if (modeConfig.mode.type == MODE_PROBS) {
 			var config = modeConfig.mode.config;
 			var probs = config.probs;
-			var color = 'hsla(' + VIZ_NODE_COLOR + ',' + Math.floor(100*sizeFromProb(probs[nodeId])) + '%, 55%, 1)';
+			var color = 'hsla(' + VIZ_NODE_COLOR + ',' + Math.floor(100*colorFromProb(probs[nodeId])) + '%, 55%, 1)';
 			node.css('backgroundColor', color);
 		} 
 		else if (modeConfig.mode.type == MODE_TARGET_FTR) {
@@ -382,10 +386,10 @@ var zoomVis = function (opts) {
 			var color;
 			if (ftrVal >= middleVal) {
 				var val = 2*(ftrVal - middleVal) / ftrRange;
-				color = 'hsla(' + VIZ_NODE_FTR_POS_COLOR + ',' + Math.floor(100*sizeFromProb(val)) + '%, 55%, 1)';
+				color = 'hsla(' + VIZ_NODE_FTR_POS_COLOR + ',' + Math.floor(100*colorFromProb(val)) + '%, 55%, 1)';
 			} else {
 				var val = 2*(middleVal - ftrVal) / ftrRange;
-				color = 'hsla(' + VIZ_NODE_FTR_NEG_COLOR + ',' + Math.floor(100*sizeFromProb(val)) + '%, 55%, 1)';
+				color = 'hsla(' + VIZ_NODE_FTR_NEG_COLOR + ',' + Math.floor(100*colorFromProb(val)) + '%, 55%, 1)';
 			}
 						
 			node.css('backgroundColor', color);
@@ -393,7 +397,7 @@ var zoomVis = function (opts) {
 		else if (nodeId in modeConfig.future) {
 			var baseColor = 216;//nodeId in specialStates.probs ? 307 : ;
 			
-			var prob = sizeFromProb(modeConfig.future[nodeId]);
+			var prob = colorFromProb(modeConfig.future[nodeId]);
 			var color = 'hsla(' + baseColor + ',' + (15 + Math.floor((100-15)*prob)) + '%, 55%, 1)';
 			node.css('backgroundColor', color);
 		}
