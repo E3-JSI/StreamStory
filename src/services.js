@@ -171,9 +171,9 @@ function addRawMeasurement(val) {
 		if (totalCounts++ % config.RAW_PRINT_INTERVAL == 0 && log.debug())
 			log.debug('Time: %s, Counts: %s', new Date(timestamp).toString(), JSON.stringify(counts));
 		if (timestamp <= prevTimestamp)
-			throw 'Invalid time for a single measurement! Current: ' + timestamp + ', prev: ' + prevTimestamp;
+			throw new Error('Invalid time for a single measurement: ' + timestamp + ' <= ' + prevTimestamp);
 		if (timestamp < lastRawTime)
-			throw 'Invalid time! Current: ' + timestamp + ', prev: ' + lastRawTime;
+			throw new Error('Invalid time! Current: ' + timestamp + ', prev: ' + lastRawTime);
 		
 		var insertVal = transformed.value;
 		pipeline.insertRaw(storeNm, insertVal);
@@ -229,12 +229,20 @@ function initStreamStoryHandlers(model, enable) {
 				log.info('Sending prediction, with PDF length: %d', probV.length);
 			
 			try {
+				var _model = model.getModel();
+				
+				var currStateNm = _model.getStateName(currState);
+				var targetStateNm = _model.getStateName(targetState);
+				
+				if (currStateNm == null || currStateNm.length == 0) currStateNm = currState;
+				if (targetStateNm == null || targetStateNm.length == 0) targetStateNm = targetState;
+				
 				var uiMsg = {
 					type: 'statePrediction',
 					content: {
 						time: date.getTime(),
-						currState: currState,
-						targetState: targetState,
+						currState: currStateNm,
+						targetState: targetStateNm,
 						probability: prob,
 						pdf: {
 							type: 'histogram',
@@ -244,12 +252,31 @@ function initStreamStoryHandlers(model, enable) {
 					}
 				};
 				
+				var currStateIds = _model.currState();
+				var stateId = currStateIds[0].id;
+				var level = currStateIds[0].height;
+				
+				var details = model.stateDetails(stateId, level);
+				var metadata = {};
+				
+				var obs = details.features.observations;
+				var contr = details.features.controls;
+				for (var i = 0; i < obs.length; i++) {
+					var ftr = obs[i];
+					metadata[ftr.name] = ftr.value;
+				}
+				for (var i = 0; i < contr.length; i++) {
+					var ftr = contr[i];
+					metadata[ftr.name] = ftr.value;
+				}
+				
 				var brokerMsg = transform.genHistPrediction(
 					date.getTime(),
-					currState + ' to ' + targetState,
+					currState == targetState ? ('Arrived in ' + currStateNm) : (currStateNm + ' to ' + targetStateNm),
 					timeV,
 					probV,
-					model.getModel().getTimeUnit()
+					model.getModel().getTimeUnit(),
+					metadata
 				);
 				
 				broker.send(broker.PREDICTION_PRODUCER_TOPIC, JSON.stringify(brokerMsg));
@@ -272,7 +299,7 @@ function initStreamStoryHandlers(model, enable) {
 }
 
 function initStreamStoryRestApi() {
-	log.info('Registering REST services ...');
+	log.info('Initializing StreamStory REST services ...');
 	
 	{
 		log.info('Registering save service ...');
@@ -693,6 +720,8 @@ function initStreamStoryRestApi() {
 }
 
 function initDataUploadApi() {
+	log.info('Initializing data upload API ...');
+	
 	var upload = multer({
 		storage: multer.memoryStorage(),				// will have file.buffer
 		fileFilter: function (req, file, callback) {	// only accept csv files
@@ -1035,7 +1064,7 @@ function initDataUploadApi() {
 						return;
 					}
 					initBase(req, res);
-				})
+				});
 			}
 		});
 	});
@@ -1244,6 +1273,8 @@ function initServerApi() {
 }
 
 function initConfigRestApi() {
+	log.info('Initializing configuration REST API ...');
+	
 	app.get(API_PATH + '/config', function (req, resp) {
 		try {
 			var properties = req.query.properties;
@@ -1303,10 +1334,16 @@ function initConfigRestApi() {
 }
 
 function initPipelineHandlers() {
+	log.info('Initializing pipeline callbacks ...');
+	
 	pipeline.onValue(function (val) {
 		if (log.trace())
 			log.trace('Inserting value into StreamStories ...');
 		
+		if (config.USE_CASE == config.USE_CASE_MHWIRTH && val.temp_ambient == null) {	// TODO remove this
+			log.warn('Not sending ambient temperature!');
+			throw new Error('Not sending ambient temperature!');
+		}
 		modelStore.updateModels(val);
 	});
 	
@@ -1390,6 +1427,8 @@ function initPipelineHandlers() {
 
 function initBroker() {
 	broker.init();
+	
+	log.info('Initializing broker callbacks ...');
 	
 	var imported = 0;
 	var printInterval = 100;
@@ -1519,7 +1558,7 @@ function initServer(sessionStore, parseCookie) {
 	initDataUploadApi();
 	
 	// serve static directories on the UI path
-	app.use(UI_PATH, express.static(path.join(__dirname, config.WWW_DIR)));
+	app.use(UI_PATH, express.static(path.join(__dirname, '../ui')));
 	
 	// start server
 	var server = app.listen(config.SERVER_PORT);
@@ -1528,6 +1567,7 @@ function initServer(sessionStore, parseCookie) {
 	log.info('Server running at http://localhost:%d', config.SERVER_PORT);
 	log.info('Serving UI at: %s', UI_PATH);
 	log.info('Serving API at: %s', API_PATH);
+	log.info('Data API: %s', DATA_PATH);
 	log.info('Web socket listening at: %s', WS_PATH);
 	log.info('================================================');
 	

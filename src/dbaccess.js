@@ -30,14 +30,13 @@ module.exports = function () {
 			
 			pool.getConnection(function (e1, conn) {
 				if (e1 != null) {
-					conn.release();	// TODO should release be here?
 					callback(e1);
 					return;
 				}
 				
 				conn.query('INSERT INTO model SET ?', opts, function (e2, result) {
 					conn.release();
-					callback(e2 != null ? undefined : e2, result);
+					callback(e2, result);
 				});
 			});
 		});
@@ -54,7 +53,6 @@ module.exports = function () {
 			
 			pool.getConnection(function (e, conn) {
 				if (e != null) {
-					conn.release();
 					callback(e);
 					return;
 				}
@@ -62,7 +60,6 @@ module.exports = function () {
 				// check if the user already exists
 				conn.query("SELECT EXISTS(SELECT 1 FROM user WHERE email = ?) as isRegistered", [email], function (e1, results) {
 					if (e1 != null) {
-						conn.release();
 						callback(e1);
 						return;
 					}
@@ -94,7 +91,6 @@ module.exports = function () {
 				
 				pool.getConnection(function (e1, conn) {
 					if (e1 != null) {
-						conn.release();
 						callback(e1);
 						return;
 					}
@@ -130,7 +126,6 @@ module.exports = function () {
 				
 				pool.getConnection(function (e1, conn) {
 					if (e1 != null) {
-						conn.release();	// TODO should release be here?
 						callback(e1);
 						return;
 					}
@@ -159,14 +154,13 @@ module.exports = function () {
 				
 				pool.getConnection(function (e1, conn) {
 					if (e1 != null) {
-						conn.release();	// TODO should release be here?
 						callback(e1);
 						return;
 					}
 					
 					conn.query('INSERT INTO offline_model SET ?', { mid: modelId, base_dir: baseDir }, function (e2, result) {
 						conn.release();
-						callback(e2 != null ? undefined : e2);
+						callback(e2);
 					});
 				});
 			});
@@ -174,7 +168,6 @@ module.exports = function () {
 		fetchModel: function (modelId, callback) {
 			pool.getConnection(function (e, conn) {
 				if (e != null) {
-					conn.release();		// TODO should this be here?
 					callback(e);
 					return;
 				}
@@ -202,7 +195,6 @@ module.exports = function () {
 		countActiveModels: function (callback) {
 			pool.getConnection(function (e, conn) {
 				if (e != null) {
-					conn.release();
 					callback(e);
 					return;
 				}
@@ -227,7 +219,6 @@ module.exports = function () {
 		fetchActiveModels: function (callback) {
 			pool.getConnection(function (e, conn) {
 				if (e != null) {
-					conn.release();		// TODO should this be here?
 					callback(e);
 					return;
 				}
@@ -255,7 +246,6 @@ module.exports = function () {
 		activateModel: function (opts, callback) {
 			pool.getConnection(function (e, conn) {
 				if (e != null) {
-					conn.release();		// TODO should this be here?
 					callback(e);
 					return;
 				}
@@ -275,7 +265,6 @@ module.exports = function () {
 		getMultipleConfig: function (opts, callback) {
 			pool.getConnection(function (e, conn) {
 				if (e != null) {
-					conn.release();
 					callback(e);
 					return;
 				}
@@ -293,7 +282,6 @@ module.exports = function () {
 		getConfig: function (property, callback) {
 			pool.getConnection(function (e, conn) {
 				if (e != null) {
-					conn.release();
 					callback(e);
 					return;
 				}
@@ -321,7 +309,6 @@ module.exports = function () {
 			
 			pool.getConnection(function (e, conn) {
 				if (e != null) {
-					conn.release();
 					callback(e);
 					return;
 				}

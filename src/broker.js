@@ -17,15 +17,16 @@ var topics = {
 	PREDICTION_PRODUCER_TOPIC: 'si.ijs.internal.oa_output'
 };
 
-// comsumer port: 2181
-// producer port: 9092
-
 var client;
 var producer;
 var consumer;
 
 function initConsumer() {
 	log.info('Initializing consumer ...');
+	
+	var pauseCount = 0;
+	
+	var offset = new kafka.Offset(client);
 	
 	consumer = new kafka.Consumer(
 			client, 
@@ -36,6 +37,20 @@ function initConsumer() {
 			{autoCommit: true}
 	);
 	
+	function pauseConsumer() {
+		if (pauseCount++ == 0) {
+			consumer.pause();
+			log.info('Consumer paused ...');
+		}
+	}
+	
+	function resumeConsumer() {
+		if (--pauseCount == 0) {
+			consumer.resume();
+			log.info('Consumer resumed!');
+		}
+	}
+	
 	consumer.on('ready', function () {
 		log.info('Consumer initialized!');
 	})
@@ -45,7 +60,29 @@ function initConsumer() {
 	});
 	
 	consumer.on('offsetOutOfRange', function (e) {
-		log.error(e, 'Consumer offset out of range!');
+		log.error(e, 'Offset out of range for topic %s!', JSON.stringify(e));
+		pauseConsumer();
+		
+		var topic = e.topic;
+		var partition = e.partition;
+		
+		log.info('Fetching new offset ...');
+		
+		var offsetOpts = [{ topic: topic, partition: partition, time: Date.now(), maxNum: 1 }];
+	    offset.fetch(offsetOpts, function (e1, data) {
+	    	if (e1 != null) {
+	    		log.error(e1, 'Failed to fetch offset! Resuming consumer anyway!');
+	    		resumeConsumer();
+	    		return;
+	    	}
+	    	
+	    	var offset = data[topic][partition][0];
+	    	
+	    	log.info('Got new offset %d for topic %s ...', offset, topic);
+	    	consumer.setOffset(topic, partition, offset);
+	    	
+	    	resumeConsumer();
+	    });
 	});
 	
 	{
@@ -73,7 +110,7 @@ function initConsumer() {
 					}
 				}
 			} catch (e) {
-				log.error(e, 'Exception while reveiving message!');
+				log.error(e, 'Exception while receiving message!');
 			}
 		});
 	}
@@ -84,7 +121,7 @@ function initConsumer() {
 function initClient() {
 	log.info('Initializing Kafka client ...');
 	
-	client = new kafka.Client(BROKER_URL + ':' + ZOOKEPER_PORT, 'AO_JSI');
+	client = new kafka.Client(BROKER_URL + ':' + ZOOKEPER_PORT, 'StreamStory');
 	producer = new kafka.Producer(client);
 	
 	log.info('Initilizing producer ...');
@@ -100,12 +137,15 @@ function initClient() {
 			if (e != null) {
 				log.error(e, 'Failed to create producer topics!');
 			} else {
-				log.info('Producer topics ready!');
-				log.info(data);
+				log.info('Producer topics ready: %s!', JSON.stringify(data));
 				initConsumer();
 			}
 		});
 	});
+	
+	producer.on('error', function (e) {
+		log.error(e, 'Exception in the producer!');
+	})
 }
 
 var nsent = 0;
@@ -116,9 +156,9 @@ exports.send = function (topic, msg) {
 	if (nsent++ % config.BROKER_PRINT_INTERVAL == 0 && log.debug())
 		log.debug('Sent %d messages: %s',nsent, JSON.stringify(msg));
 	
-	producer.send([{ topic: topic, messages: [msg] }], function (e, data) {
-		if (e != null) {
-			log.error(e, 'Failed to send message: %s', msg);
+	producer.send([{ topic: topic, messages: [msg], partition: 0 }], function (e1, data) {
+		if (e1 != null) {
+			log.error(e1, 'Failed to send message: %s', msg);
 			return;
 		}
 	});

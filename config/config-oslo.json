@@ -29,7 +29,7 @@
 	},
 	"log": {
 		"logger": {
-			"level": "trace",
+			"level": "debug",
 			"outputMode": "short",
 			"stream": {
 				"type": "stdout",
@@ -37,10 +37,10 @@
 			}
 		},
 		"print": {
-			"rawData": 100000,
-			"streamStory": 10000,
+			"rawData": 10,
+			"streamStory": 10,
 			"stores": 100000,
-			"broker": 1000,
+			"broker": 10000,
 			"coeff": 1000
 		}
 	},
@@ -56,7 +56,7 @@
 		"zookeperPort": 2181,
 		"producerPort": 8090
 	},
-	"useCase": "mhwirth",
+	"useCase": "hella",
 	"interpolation": "current",
 	"dataPath": "../StreamStory-db/"
 }

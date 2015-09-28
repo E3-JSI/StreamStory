@@ -59,6 +59,9 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 	
 	module.exports = {
 		transform: function (val) {
+			if (log.trace())
+				log.trace('Transforming event: %s', JSON.stringify(val));
+			
 			var storeNm = storeFromTag(val.sensorId);
 			var timestamp = val.timestamp;
 			var value = val.eventProperties.value;
@@ -79,11 +82,17 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 } else {
 	log.info('Using Hella use case ...');
 	
+	var LACQUERING_TIME = 1000*60*15;
+	
+	var queues = {};
+	var lacqueringLine = [];
+	
+	var prevQueueLengths = {};
+	var prevLLSize = -1;
+	
 	var montracFields = fields.getMontracStores();
 	
 	log.info('Initializing queues ...');
-	var queues = {};
-	var prevQueueLengths = {};
 	for (var i = 0; i < montracFields.length; i++) {
 		var queueId = montracFields[i];
 		queues[queueId] = [];
@@ -132,6 +141,25 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 		queues[queueId].push({shuttleId: shuttleId, left: left, right: right});
 	}
 	
+	function addToLacquering(timestamp, shuttleId, left, right) {
+		lacqueringLine.push({timestamp: timestamp, shuttleId: shuttleId, left: left, right: right});
+	}
+	
+	function cleanLacqueringLine(timestamp) {
+		while (lacqueringLine.length > 0 && timestamp - lacqueringLine[0].timestamp > LACQUERING_TIME) {
+			lacqueringLine.shift();
+		}
+	}
+	
+	function countLacqueredParts() {
+		var count = 0;
+		for (var i = 0; i < lacqueringLine.length; i++) {
+			if (lacqueringLine[i].left) count++;
+			if (lacqueringLine[i].right) count++;
+		}
+		return count;
+	}
+	
 	var prevTimestamp = 0;
 	
 	module.exports = {
@@ -171,6 +199,9 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 			}
 			
 			if (event == 'Arrive') {
+				if (location == 'PM1' || location == 'PM2')
+					addToLacquering(timestamp, shuttleId, left, right);
+				
 				var modLoc = location.replace(/\s*\(MAIN\)|\s*\(OUT\)/g, '');
 				moveToQ(modLoc, shuttleId, left, right);
 			} else {
@@ -301,15 +332,15 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 				
 				// lacquering lines
 				else if (location == 'PM1') {
-					if (isEventWorkDone(event))
+					if (isEventWorkDone(event)) {
 						moveToQ('MAIN', shuttleId, left, right);
-					else
+					} else
 						log.warn('Unknown event: %s for location %s', event, location);
 				}
 				else if (location == 'PM2') {
-					if (isEventWorkDone(event))
+					if (isEventWorkDone(event)) {
 						moveToQ('MAIN', shuttleId, left, right);
-					else
+					} else
 						log.warn('Unknown event: %s for location %s', event, location);
 				}
 			}
@@ -332,6 +363,23 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 						});
 						prevQueueLengths[queueId] = length;
 					}
+				}
+				
+				// lacquering
+				cleanLacqueringLine(timestamp);
+				var llSize = countLacqueredParts();
+				
+				if (prevLLSize != llSize) {
+					vals.push({
+						store: 'LACQUERING',
+						timestamp: timestamp,
+						value: {
+							time_ms: timestamp,
+				    		time: utils.dateToQmDate(new Date(timestamp)),
+				    		value: llSize
+						}
+					});
+					prevLLSize = llSize;
 				}
 				
 				prevTimestamp = timestamp;
@@ -383,7 +431,7 @@ module.exports.genExpPrediction = function (lambda, timeUnit, timestamp) {
 	return msg;
 }
 
-module.exports.genHistPrediction = function (timestamp, eventName, timeV, valV, timeUnit) {
+module.exports.genHistPrediction = function (timestamp, eventName, timeV, valV, timeUnit, metadata) {
 	var tu;
 	if (timeUnit == 'second')
 		tu = 1000;
@@ -407,7 +455,7 @@ module.exports.genHistPrediction = function (timestamp, eventName, timeV, valV, 
 		timestamp: timestamp,
 		eventName: eventName,
 		params: valV,
-		eventProperties: {},
+		eventProperties: metadata != null ? metadata : {},
 		pdfType: 'histogram',
 		timestamps: timestampV
 	}

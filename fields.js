@@ -332,7 +332,14 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 		'SW9_PM2'               
 	];
 	
-	var rawStores = [];
+	var rawStores = [{
+		name: 'LACQUERING',
+		fields: [
+		    {name: 'time_ms', type: 'uint64'},
+		    {name: "time", type: "datetime"},
+ 			{name: "value", type: "float"}
+		]
+	}];
 	for (var i = 0; i < montracFields.length; i++) {
 		rawStores.push({
 			name: montracFields[i],

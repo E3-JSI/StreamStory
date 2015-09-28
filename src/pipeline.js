@@ -15,7 +15,8 @@ var resamplerInitialized = false;
 
 var opts = { 
 	calcCoeff: false,
-	coefficientCb: null
+	coefficientCb: null,
+	onValue: null
 };
 
 function initResampler() {
@@ -441,7 +442,7 @@ function initTriggers() {
 					var currTime = val.time.getTime();
 					
 					if (currTime < prevTime)
-						throw 'enricherOutStore.addTrigger: Current time lower than previous time: ' + utils.dateToQmDate(new Date(currTime)) + ' < ' + utils.dateToQmDate(new Date(prevTime));
+						throw new Error('enricherOutStore.addTrigger: Current time lower than previous time: ' + utils.dateToQmDate(new Date(currTime)) + ' < ' + utils.dateToQmDate(new Date(prevTime)));
 					
 					if (resamplerInitialized) {
 						if (config.USE_BROKER) {
