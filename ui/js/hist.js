@@ -26,6 +26,9 @@ function drawHistogram(opts) {
 	    yAxis: {
 	    	title: {
 	    		enabled: false
+	    	},
+	    	labels: {
+	    		enabled: opts.showY != null ? opts.showY : true
 	    	}
 	    },
 	    plotOptions: {

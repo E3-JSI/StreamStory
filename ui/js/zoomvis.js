@@ -47,6 +47,7 @@ var zoomVis = function (opts) {
 	
 	var callbacks = {
 		stateSelected: function (stateId) {},
+		edgeSelected: function (sourceId, targetId) {},
 		zoomChanged: function (zoom) {}
 	}
 	
@@ -683,13 +684,6 @@ var zoomVis = function (opts) {
 		emphasizeEdges(node);
 	});
 	
-	cy.on('click', 'edge', function (event) {
-		var edge = event.cyTarget;
-		var sourceId = edge.source().id();
-		var targetId = edge.target().id();
-		console.log('Edge clicked, from ' + sourceId + ' to ' + targetId + '!');
-	});
-	
 	cy.on('mouseover', 'node', function (event) {
 		var node = event.cyTarget;
 		
@@ -731,6 +725,13 @@ var zoomVis = function (opts) {
 		node.y = serverPos.y;
 		
 		console.log('Stopped dragging node ' + id + ', pos: ' + JSON.stringify(pos));
+	});
+	
+	cy.on('click', 'edge', function (event) {
+		var edge = event.cyTarget;
+		var sourceId = edge.source().id();
+		var targetId = edge.target().id();
+		callbacks.edgeSelected(parseInt(sourceId), parseInt(targetId));
 	});
 	
 	function setMode(mode, config) {
@@ -877,6 +878,10 @@ var zoomVis = function (opts) {
 		// callbacks
 		onStateSelected: function (callback) {
 			callbacks.stateSelected = callback;
+		},
+		
+		onEdgeSelected: function (callback) {
+			callbacks.edgeSelected = callback;
 		},
 		
 		onZoomChanged: function (callback) {

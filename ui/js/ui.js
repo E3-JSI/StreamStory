@@ -1,36 +1,36 @@
 var UI;
 
 {
-	// private functions
-	function getWsUrl() {
-		var result;
-		var loc = window.location;
-		
-		if (loc.protocol === "https:") {
-		    result = "wss:";
-		} else {
-		    result = "ws:";
-		}
-		
-		var path = loc.pathname;
-		path = path.substring(0, path.lastIndexOf('/')) + '/ws';
-		
-		result += "//" + loc.host + path;
-		return result;
-	}
-	
-	// public stuff
-	var UI = function (opts) {
-		var viz = zoomVis({
-			visContainer: 'vis_container',
-			currentHeightContainer: 'span-zoom-val'
-		});
+	var WebSocketWrapper = function () {
+		var nNotifications = 0;
+		var msgQ = [];
 		
 		function drawMsg(msg, handler) {
 			$('#list-msg').append('<li class="list-group-item li-msg">' + msg + '</li>');
 			if (handler != null) {
 				$('#list-msg li').last().addClass('clickable');
 				$('#list-msg li').last().click(handler);
+			}
+			
+			msgQ.push(msg);
+			while (msgQ.length > 2)
+				msgQ.shift();
+			
+			$('#span-num-msgs').html(++nNotifications + '');
+						
+			for (var i = 0; i < msgQ.length; i++) {
+				var id = 'div-msg-' + i;
+				$('#' + id).alert('close');
+				
+				var wrapper = $('#div-msg-' + i + '-wrapper');
+				var alertDiv = $('<div />').appendTo(wrapper);
+				
+				alertDiv.addClass('alert');
+				alertDiv.addClass('alert-info');
+				alertDiv.addClass('alert-dismissible');
+				alertDiv.attr('role', 'alert');
+				alertDiv.attr('id', id);
+				alertDiv.html(msgQ[i]);
 			}
 		}
 		
@@ -71,22 +71,23 @@ var UI;
 			
 			return drawStr;
 		}
+		
+		function getWsUrl() {
+			var result;
+			var loc = window.location;
 			
-		var that = {
-			fetchHistogram: function (stateId, ftrId, openWindow, insertDiv) {
-				if (openWindow)
-					window.open('popups/histogram.html?s=' + stateId + '&f=' + ftrId);
-				else {
-					$.ajax('api/histogram', {
-						dataType: 'json',
-						data: { stateId: stateId, feature: ftrId },
-						success: function (hist) {
-							drawHistogram({data: hist, container: insertDiv != null ? insertDiv : 'hist-wrapper'});
-						}
-					});
-				}
-			},
-		};
+			if (loc.protocol === "https:") {
+			    result = "wss:";
+			} else {
+			    result = "ws:";
+			}
+			
+			var path = loc.pathname;
+			path = path.substring(0, path.lastIndexOf('/')) + '/ws';
+			
+			result += "//" + loc.host + path;
+			return result;
+		}
 		
 		function initWs() {
 			var address = getWsUrl();
@@ -174,6 +175,59 @@ var UI;
 			};
 		}
 		
+		initWs();
+		return {};
+	}
+	
+	// public stuff
+	var UI = function (opts) {
+		var featureInfo = null;
+		
+		var viz = zoomVis({
+			visContainer: 'vis_container',
+			currentHeightContainer: 'span-zoom-val'
+		});
+		
+		function privateFetchHistogram(opts) {
+			var container = opts.insertDiv != null ? opts.insertDiv : 'hist-wrapper';
+			
+			if (opts.type == 'state') {
+				if (opts.openWindow)
+					window.open('popups/histogram.html?s=' + opts.stateId + '&f=' + opts.ftrId);
+				else {
+					$.ajax('api/histogram', {
+						dataType: 'json',
+						data: { stateId: opts.stateId, feature: opts.ftrId },
+						success: function (hist) {
+							drawHistogram({
+								data: hist,
+								container: container,
+								showY: opts.showY
+							});
+						},
+						error: function (jqXHR, status) {
+							alert(status);
+						}
+					});
+				}
+			} else {	// transition
+				$.ajax('api/transitionHistogram', {
+					dataType: 'json',
+					data: { sourceId: opts.sourceId, targetId: opts.targetId, feature: opts.ftrId },
+					success: function (hist) {
+						drawHistogram({
+							data: hist,
+							container: container,
+							showY: opts.showY
+						});
+					},
+					error: function (jqXHR, status) {
+						alert(status);
+					}
+				});
+			}
+		}
+		
 		function populateUI() {
 			function changeControlVal(stateId, ftrIdx, val) {
 				var data = { ftrIdx: ftrIdx, val: val };
@@ -213,6 +267,8 @@ var UI;
 			$.ajax('api/features', {
 				dataType: 'json',
 				success: function (ftrs) {
+					featureInfo = ftrs.observation.concat(ftrs.control);
+					
 					var observList = $('#ul-ftrs-obs');
 					var controlDiv = $('#div-ftrs-control');
 					
@@ -304,39 +360,6 @@ var UI;
 							viz.setTargetFtr(null);
 						}
 					});
-				},
-				error: function (jqXHR, status) {
-					alert(status);
-				}
-			});
-			
-			$.ajax('api/param', {
-				dataType: 'json',
-				data: { paramName: 'predictionThreshold' },
-				success: function (paramObj) {
-					$('#range-pred-threshold').slider("value", paramObj.value);
-				},
-				error: function (jqXHR, status) {
-					alert(status);
-				}
-			});
-			
-			$.ajax('api/param', {
-				dataType: 'json',
-				data: { paramName: 'timeHorizon' },
-				success: function (paramObj) {
-					$('#range-time-horizon').slider("value", paramObj.value);
-				},
-				error: function (jqXHR, status) {
-					alert(status);
-				}
-			});
-			
-			$.ajax('api/param', {
-				dataType: 'json',
-				data: { paramName: 'pdfBins' },
-				success: function (paramObj) {
-					$('#range-pdf-bins').slider("value", paramObj.value);
 				},
 				error: function (jqXHR, status) {
 					alert(status);
@@ -444,23 +467,25 @@ var UI;
 		
 		viz.onStateSelected(function (stateId, height) {
 			// fetch state details
-			$.ajax('api/details', {
+			$.ajax('api/stateDetails', {
 				dataType: 'json',
 				data: { stateId: stateId, level: height },
 				success: function (data) {
+					$('#wrapper-transition-details').hide();
+					$('#wrapper-state-details').show();
+					
+					$('#txt-name').off('change');
+					
 					// clear the panel
-					$('#txt-name').val('');
-					$('#state-id').html('');
+					$('#txt-name').val(data.id);
 					$('#chk-target').removeAttr('checked');
 					$('#div-attrs').html('');
 					$('#div-future').html('');
 					$('#div-past').html('');
-					$('#wrapper-details').css('display', 'block');
 					
 					// populate
 					// basic info
 					if (data.name != null) $('#txt-name').val(data.name);
-					$('#state-id').html(data.id);
 					
 					$('#chk-target').off('change');	// remove the previous handlers
 					$('#chk-target').prop('checked', data.isTarget != null && data.isTarget);
@@ -496,20 +521,22 @@ var UI;
 					
 					// fetch histograms
 					$.each(data.features.observations, function (idx, val) {
+						var histContainerId = 'container-hist-' + idx;
+						
 						var color;
 						if (ftrWgts[idx] > 0)
 							color = 'rgb(0,' + Math.floor(255*ftrWgts[idx] / maxWgt) + ',0)';
 						else
 							color = 'rgb(' + Math.floor(255*ftrWgts[idx] / minWgt) + ',0,0)';
-					
-						var thumbnail = $('#div-thumbnail').find('.thumb-col').clone();
-						thumbnail.find('.attr-name').html(val.name);
-						thumbnail.find('.attr-val').html(val.value.toPrecision(3));
-						thumbnail.find('.attr-val').css('color', color);
-						thumbnail.find('.container-hist').attr('id', 'container-hist-' + idx);
+												
+						var thumbnail = ui.createThumbnail({
+							name: val.name,
+							value: val.value,
+							valueColor: color,
+							histogramContainer: histContainerId
+						});
 						$('#div-attrs').append(thumbnail);
-						
-						ui.fetchHistogram(stateId, idx, false, 'container-hist-' + idx);
+						ui.fetchHistogram(stateId, idx, false, histContainerId, false);
 					});
 					
 					var nObsFtrs = data.features.observations.length;
@@ -518,65 +545,41 @@ var UI;
 						var ftrVal = val.value;
 						var bounds = val.bounds;
 						var ftrId = nObsFtrs + idx;
-						
-						var thumbnail = $('#div-thumbnail').find('.thumb-col').clone();
-						thumbnail.find('.attr-name').html(val.name);
-						thumbnail.find('.attr-val').html(ftrVal.toPrecision(3));
-						thumbnail.find('.container-hist').attr('id', 'container-hist-' + (nObsFtrs + idx));
-						
-						if (data.isLeaf) {
-							thumbnail.find('.div-ftr-range').show();
-							
-							var range = thumbnail.find('.range-contr-val');
-							range.attr('id', 'range-contr-' + ftrId);
-							
-							(function () {
-								var localFtrId = ftrId;
-								var localStateId = stateId;
-								var valField = thumbnail.find('.attr-val');
-								
-								range.slider({
-									value: ftrVal,
-									min: bounds.min,
-									max: bounds.max,
-									step: (bounds.max - bounds.min) / 100,
-									animate: true,
-									change: function (event, ui) {
-										var val = ui.value;
-										
-										$.ajax('api/setControl', {
-											dataType: 'json',
-											method: 'POST',
-											data: { stateId: localStateId, ftrIdx: localFtrId, val: val },
-											success: function (data) {
-												$('#btn-reset-sim').removeClass('hidden');
-												valField.html(parseFloat(val).toPrecision(3));
-												viz.setModel(data);
-											},
-											error: function (xhr, status) {
-												alert(status);
-											}
-										});
-									}
-								});
-							})()
-						}
+						var histContainerId = 'container-hist-' + (nObsFtrs + idx);
+												
+						var thumbnail = ui.createThumbnail({
+							name: val.name,
+							value: ftrVal,
+							histogramContainer: histContainerId,
+							valueColor: null,
+							isLeaf: true,
+							ftrId: ftrId,
+							min: bounds.min,
+							max: bounds.max,
+							stateId: stateId
+						});
 						
 						$('#div-attrs').append(thumbnail);
 						
-						ui.fetchHistogram(stateId, nObsFtrs + idx, false, 'container-hist-' + (nObsFtrs + idx));
+						ui.fetchHistogram(stateId, nObsFtrs + idx, false, 'container-hist-' + (nObsFtrs + idx), false);
 					});
 										
 					// add handlers
-					$('#txt-name').off('change');
 					$('#txt-name').change(function (event) {
 						var name = $('#txt-name').val();
+						var data = { id: stateId, name: name };
+						
+						var shouldClear = name == '' || name == stateId;
+						if (shouldClear) {	// clear the state name
+							delete data.name;
+						}
+						
 						$.ajax('api/stateName', {
 							dataType: 'json',
 						    type: 'POST',
-						    data: { id: stateId, name: name },
+						    data: data,
 						    success: function () {
-						    	viz.setStateName(stateId, name);
+						    	viz.setStateName(stateId, shouldClear ? stateId : name);
 						    },
 						    error: function () {
 						    	alert('Failed to set name!');
@@ -591,55 +594,28 @@ var UI;
 			});
 		});
 		
-		function postParam(paramName, paramVal) {
-			$.ajax('api/param', {
-				dataType: 'json',
-				data: { paramName: paramName, paramVal: paramVal },
-				method: 'POST',
-				error: function (jqXHR, status) {
-					alert('Failed to set parameter value: ' + status);
-				}
-			});
-		}
-		
-		// setup the configuration sliders
-		$('#range-pred-threshold').slider({
-			value: .5,
-			min: 0,
-			max: 1,
-			step: .05,
-			animate: true,
-			change: function (event, ui) {
-				var val = ui.value;
-				$('#span-pred-threshold').html(val);
-				postParam('predictionThreshold', val);
+		viz.onEdgeSelected(function (sourceId, targetId) {
+			//reset the values
+			$('#div-trans-ftrs').html('');
+			
+			$('#span-transition-name').html(sourceId + ' -> ' + targetId);
+			
+			for (var ftrId = 0; ftrId < featureInfo.length; ftrId++) {
+				var ftr = featureInfo[ftrId];
+				var containerId = 'container-transition-hist-' + ftrId;
+				
+				$('#div-trans-ftrs').append(ui.createThumbnail({
+					name: ftr.name,
+					value: null,
+					valueColor: null,
+					histogramContainer: containerId
+				}));
+				
+				ui.fetchTransitionHistogram(sourceId, targetId, ftrId, containerId);
 			}
-		});
-		
-		$('#range-time-horizon').slider({
-			value: 1,
-			min: 0,
-			max: 10,
-			step: .1,
-			animate: true,
-			change: function (event, ui) {
-				var val = ui.value;
-				$('#span-time-horizon').html(val);
-				postParam('timeHorizon', val);
-			}
-		});
-		
-		$('#range-pdf-bins').slider({
-			value: 100,
-			min: 100,
-			max: 10000,
-			step: 10,
-			animate: true,
-			change: function (event, ui) {
-				var val = ui.value;
-				$('#span-pdf-bins').html(val);
-				postParam('pdfBins', val);
-			}
+			
+			$('#wrapper-state-details').hide();
+			$('#wrapper-transition-details').show();
 		});
 		
 		// buttons
@@ -674,8 +650,75 @@ var UI;
 			}
 		});
 		
+		var that = {
+			fetchHistogram: function (stateId, ftrId, openWindow, insertDiv, showY) {
+				privateFetchHistogram({ 
+					type: 'state',
+					stateId: stateId,
+					ftrId: ftrId,
+					insertDiv: insertDiv,
+					openWindow: openWindow,
+					showY: showY
+				});
+			},
+			fetchTransitionHistogram: function (sourceId, targetId, ftrId, insertDiv) {
+				privateFetchHistogram({
+					type: 'transition',
+					sourceId: sourceId,
+					targetId: targetId,
+					ftrId: ftrId,
+					insertDiv: insertDiv,
+					openWindow: false
+				});
+			},
+			createThumbnail: function (opts) {
+				var thumbnail = $('#div-thumbnail').find('.thumb-col').clone();
+											
+				thumbnail.find('.attr-name').html(opts.name);
+				thumbnail.find('.container-hist').attr('id', opts.histogramContainer);
+				
+				if (opts.value != null)
+					thumbnail.find('.attr-val').html(opts.value.toPrecision(3));
+				if (opts.valueColor != null) 
+					thumbnail.find('.attr-val').css('color', opts.valueColor);
+				if (opts.isLeaf) {
+					thumbnail.find('.div-ftr-range').show();
+					
+					var range = thumbnail.find('.range-contr-val');
+					range.attr('id', 'range-contr-' + opts.ftrId);
+					
+					range.slider({
+						value: opts.value,
+						min: opts.min,
+						max: opts.max,
+						step: (opts.max - opts.min) / 100,
+						animate: true,
+						change: function (event, ui) {
+							var val = ui.value;
+							
+							$.ajax('api/setControl', {
+								dataType: 'json',
+								method: 'POST',
+								data: { stateId: opts.stateId, ftrIdx: opts.ftrId, val: val },
+								success: function (data) {
+									$('#btn-reset-sim').removeClass('hidden');
+									valField.html(parseFloat(val).toPrecision(3));
+									viz.setModel(data);
+								},
+								error: function (xhr, status) {
+									alert(status);
+								}
+							});
+						}
+					});
+				}
+				
+				return thumbnail;
+			}
+		};
+		
 		viz.refresh();
-		initWs();
+		WebSocketWrapper();
 		populateUI();
 		
 		return that;

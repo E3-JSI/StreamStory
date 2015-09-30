@@ -1,8 +1,19 @@
-.nopadding {
-   padding: 0 !important;
+#content-options {
+	top: 32px !important;
+	right: -95px !important;
+	left: auto !important;
 }
 
-#vis-wrapper {
+#div-messages {
+	height: 400px;
+	overflow: auto;
+}
+
+/*===============================================================
+ 	LAYOUT
+===============================================================*/
+
+#vis-wrapper, #div-details {
 	height: calc(100% - 40px);
 }
 
@@ -11,10 +22,8 @@
 	width: 100%;
 }
 
-#content-options {
-	top: 32px !important;
-	right: -95px !important;
-	left: auto !important;
+.main-vis {
+	height: 600px;
 }
 
 .component-title-additional {
@@ -22,31 +31,26 @@
 	color: gray;
 }
 
-#container-details {
-	min-height: 200px;
-}
-
-#parent_container {
-	height: 600px;
-}
-
-#div-messages {
-	height: 400px;
-	overflow: auto;
-}
-
 #div-config {
 	min-height: 600px;
 }
 
-#slider_container {
-	height: 100%;
-	width: 40px;
+/*===============================================================
+ 	DETAILS PANEL
+===============================================================*/
+
+.container-hist {
+	height: 150px;
 }
+
+/*===============================================================
+ 	VISUALIZATION PANEL
+===============================================================*/
 
 #slider_container {
 	float: left;
 	width: 23px;
+	height: 100%;
 }
 
 #slider_item_div {
@@ -83,16 +87,29 @@
   	width: 80%;
 }
 
-.popover-centered {
-	width: 600px !important;
-	max-width: none !important;
-	height: 370px !important;
-	position: absolute !important;
-	top: 50% !important;
-	left: 50% !important;
-	margin-top: -300px !important;
-	margin-left: -185px !important;
+
+/*===============================================================
+ 	HELPERS
+===============================================================*/
+
+.nopadding {
+   padding: 0 !important;
 }
+
+.clickable:HOVER {
+	cursor: pointer;
+	background-color: lightgray;
+}
+
+.scrollable {
+	overflow-y: auto;
+	overflow-x: hidden;
+	height: 100%;
+}
+
+/*===============================================================
+ 	HACKS
+===============================================================*/
 
 .btn-close {
 	cursor: pointer !important;
@@ -102,7 +119,13 @@
 	z-index: 10 !important;
 }
 
-.clickable:HOVER {
-	cursor: pointer;
-	background-color: lightgray;
+.popover-centered {
+	width: 600px !important;
+	max-width: none !important;
+	height: 370px !important;
+	position: absolute !important;
+	top: 50% !important;
+	left: 50% !important;
+	margin-top: -300px !important;
+	margin-left: -185px !important;
 }

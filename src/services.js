@@ -340,6 +340,9 @@ function initStreamStoryRestApi() {
 				var paramName = req.body.paramName;
 				var paramVal = parseFloat(req.body.paramVal);
 				
+				if (log.debug())
+					log.debug('Setting parameter %s to value %d ...', paramName, paramVal);
+				
 				var model = getModel(req.sessionID, req.session);
 				
 				var paramObj = {};
@@ -551,7 +554,7 @@ function initStreamStoryRestApi() {
 		log.info('Registering state details service ...');
 		
 		// state details
-		app.get(API_PATH + '/details', function (req, res) {
+		app.get(API_PATH + '/stateDetails', function (req, res) {
 			try {
 				var stateId = parseInt(req.query.stateId);
 				var height = parseFloat(req.query.level);
@@ -570,7 +573,7 @@ function initStreamStoryRestApi() {
 			res.end();
 		});
 		
-		// multilevel analysis
+		// histograms
 		app.get(API_PATH + '/histogram', function (req, res) {
 			try {
 				var stateId = parseInt(req.query.stateId);
@@ -583,7 +586,27 @@ function initStreamStoryRestApi() {
 				
 				res.send(model.histogram(stateId, ftrIdx));
 			} catch (e) {
-				log.error(e, 'Failed to query state details!');
+				log.error(e, 'Failed to query histogram!');
+				res.status(500);	// internal server error
+			}
+			
+			res.end();
+		});
+		
+		app.get(API_PATH + '/transitionHistogram', function (req, res) {
+			try {
+				var sourceId = parseInt(req.query.sourceId);
+				var targetId = parseInt(req.query.targetId);
+				var ftrId = parseInt(req.query.feature);
+				
+				var model = getModel(req.sessionID, req.session);
+				
+				if (log.debug())
+					log.debug('Fetching transition histogram for transition %d -> %d, feature %d ...', sourceId, targetId, ftrId);
+				
+				res.send(model.transitionHistogram(sourceId, targetId, ftrId));
+			} catch (e) {
+				log.error(e, 'Failed to query histogram!');
 				res.status(500);	// internal server error
 			}
 			
@@ -602,7 +625,7 @@ function initStreamStoryRestApi() {
 				
 				res.send(model.getFtrDist(height, ftrIdx));
 			} catch (e) {
-				log.error(e, 'Failed to query state details!');
+				log.error(e, 'Failed to fetch the distribution of a feature!');
 				res.status(500);	// internal server error
 			}
 			
@@ -613,15 +636,23 @@ function initStreamStoryRestApi() {
 			var stateId, stateNm;
 			
 			try {
+				var model = getModel(req.sessionID, req.session);
+				
 				stateId = parseInt(req.body.id);
 				stateNm = req.body.name;
 				
-				var model = getModel(req.sessionID, req.session);
-				
-				if (log.info()) 
-					log.info('Setting name of state %d to %s ...', stateId, stateNm);
-				
-				model.getModel().setStateName(stateId, stateNm);
+				if (stateNm != null) {
+					if (log.debug()) 
+						log.debug('Setting name of state %d to %s ...', stateId, stateNm);
+					
+					model.getModel().setStateName(stateId, stateNm);
+				} 
+				else {
+					if (log.debug()) 
+						log.debug('Clearing name of state %d ...', stateId);
+					
+					model.getModel().clearStateName(stateId);
+				}
 				res.status(204);	// no content
 			} catch (e) {
 				log.error(e, 'Failed to set name of state %d to %s', stateId, stateNm);
@@ -710,7 +741,7 @@ function initStreamStoryRestApi() {
 				
 				res.send({ active: model.getModel().isAnyControlFtrSet() });
 			} catch (e) {
-				log.error(e, 'Failed to query state details!');
+				log.error(e, 'Failed to query the state of control features!');
 				res.status(500);	// internal server error
 			}
 			
@@ -1295,7 +1326,7 @@ function initConfigRestApi() {
        			resp.end();
        		});
 		} catch (e) {
-			log.error(e, 'Failed to query state details!');
+			log.error(e, 'Failed to query configuration!');
 			resp.status(500);	// internal server error
 			resp.end();
 		}
@@ -1326,7 +1357,7 @@ function initConfigRestApi() {
        			res.end();
        		});
 		} catch (e) {
-			log.error(e, 'Failed to query state details!');
+			log.error(e, 'Failed to set configuration!');
 			res.status(500);	// internal server error
 			res.end();
 		}
