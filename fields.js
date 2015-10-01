@@ -328,7 +328,8 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 		'QC3_SW4',
 		'QC4_SW5',
 		'QC5_SW11',
-		'SW8_PM1orSW9',
+		'SW8_SW9',
+		'SW8_PM1',
 		'SW9_PM2'               
 	];
 	

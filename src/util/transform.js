@@ -80,7 +80,66 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 		}
 	}
 } else {
+	var MinTimeCalculator = function () {
+		var shuttleTimeH = {};
+		var minTimeH = {};
+		
+		return {
+			onShuttleStarted: function (timestamp, shuttleId, lacqueringId) {
+				shuttleTimeH[shuttleId] = { timestamp: timestamp, lacqueringId: lacqueringId };
+			},
+			onShuttleArrived: function (timestamp, shuttleId, mouldingId) {
+				if (shuttleId in shuttleTimeH) {
+					var start = shuttleTimeH[shuttleId].timestamp;
+					var lacqueringId = shuttleTimeH[shuttleId].lacqueringId;
+					delete shuttleTimeH[shuttleId];
+					
+					var end = timestamp;
+					var time = end - start;
+					
+					if (!(lacqueringId in minTimeH))
+						minTimeH[lacqueringId] = {};
+					if (!(mouldingId in minTimeH[lacqueringId]) || time < minTimeH[lacqueringId][mouldingId]) {
+						minTimeH[lacqueringId][mouldingId] = time;
+						log.info('Min shuttle time updated: %s', JSON.stringify(minTimeH));
+					}
+				}
+			}
+		}
+	}
+	
+	var ShuttleConfigTracker = function () {
+		var shuttleH = {};
+		
+		function handleEmpty(shuttleId) {
+			if (!(shuttleId in shuttleH))
+				shuttleH[shuttleId] = {};
+		}
+		
+		return {
+			onFinishedLacquering: function (shuttleId, lacqueringId) {
+				handleEmpty(shuttleId);
+				shuttleH[shuttleId].lacqueringId = lacqueringId;
+			},
+			onArrivedMoulding: function (shuttleId, mouldingId) {
+				handleEmpty(shuttleId);
+				shuttleH[shuttleId].mouldingId = mouldingId;
+			},
+			getShuttleLacqueringId: function (shuttleId) {
+				handleEmpty(shuttleId);
+				return shuttleH[shuttleId].lacqueringId;
+			},
+			getShuttleMouldingId: function (shuttleId) {
+				handleEmpty(shuttleId);
+				return shuttleH[shuttleId].mouldingId;
+			}
+		}
+	}
+	
 	log.info('Using Hella use case ...');
+	
+	var timeCalculator = MinTimeCalculator();
+	var shuttleConfig = ShuttleConfigTracker();
 	
 	var LACQUERING_TIME = 1000*60*15;
 	
@@ -160,6 +219,41 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 		return count;
 	}
 	
+	function isEventWorkDone(event) {
+		return event == 'WorkDone (Automatic)' || event == 'WorkDone (Manual)' ||
+			event == 'WorkDone(Automatic)' || event == 'WorkDone(Manual)';
+	}
+	
+	function isEventTimeElapsed(event) {
+		return event == 'CoolingTimeElapsed' || event == 'WorkDone (ManualControl)' ||
+			event == 'WorkDone(ManualControl)';
+	}
+	
+	function isLocationSw(location, switchNum) {
+		return location == 'SW' + switchNum + ' (OUT)' || 
+			location == 'SW' + switchNum + ' (MAIN)' ||
+			location == 'SW' + switchNum + '(OUT)' || 
+			location == 'SW' + switchNum + '(MAIN)'
+	}
+	
+	function isLocationMM(location) {
+		return location == 'IMM1' || 
+			location == 'IMM2' || 
+			location == 'IMM3' ||
+			location == 'IMM4' || 
+			location == 'IMM5';
+	}
+	
+	function onArrivedMoulding(timestamp, shuttleId, location) {
+		timeCalculator.onShuttleArrived(timestamp, shuttleId, location);
+		shuttleConfig.onArrivedMoulding(shuttleId, location);
+	}
+	
+	function onFinishedLacquering(timestamp, shuttleId, location) {
+		timeCalculator.onShuttleStarted(timestamp, shuttleId, location);
+		shuttleConfig.onFinishedLacquering(shuttleId, location);
+	}
+	
 	var prevTimestamp = 0;
 	
 	module.exports = {
@@ -171,6 +265,8 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 				return [];
 			}
 			
+			// TODO handle SW1
+			
 			var timestamp = val.timestamp;
 			
 			var props = val.eventProperties;
@@ -181,26 +277,14 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 			var left = props.leftPiece;
 			var right = props.rightPiece;
 			
-			function isEventWorkDone(event) {
-				return event == 'WorkDone (Automatic)' || event == 'WorkDone (Manual)' ||
-					event == 'WorkDone(Automatic)' || event == 'WorkDone(Manual)';
-			}
-			
-			function isEventTimeElapsed(event) {
-				return event == 'CoolingTimeElapsed' || event == 'WorkDone (ManualControl)' ||
-					event == 'WorkDone(ManualControl)';
-			}
-			
-			function isLocationSw(location, switchNum) {
-				return location == 'SW' + switchNum + ' (OUT)' || 
-					location == 'SW' + switchNum + ' (MAIN)' ||
-					location == 'SW' + switchNum + '(OUT)' || 
-					location == 'SW' + switchNum + '(MAIN)'
-			}
-			
 			if (event == 'Arrive') {
-				if (location == 'PM1' || location == 'PM2')
+				if (location == 'PM1' || location == 'PM2') {
 					addToLacquering(timestamp, shuttleId, left, right);
+				}
+				
+				if (isLocationMM(location)) {
+					onArrivedMoulding(timestamp, shuttleId, location);
+				}
 				
 				var modLoc = location.replace(/\s*\(MAIN\)|\s*\(OUT\)/g, '');
 				moveToQ(modLoc, shuttleId, left, right);
@@ -318,8 +402,15 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 						log.warn('Unknown event: %s for location %s', event, location);
 				}
 				else if (location == 'SW8') {
-					if (event == 'Start')
-						moveToQ('SW8_PM1orSW9', shuttleId, left, right);
+					if (event == 'Start') {
+						var lacqueringId = shuttleConfig.getShuttleLacqueringId(shuttleId);
+						if (lacqueringId == 'PM1' && (left == true || right == true)) {
+							moveToQ('SW8_PM1', shuttleId, left, right);
+						} else {
+							moveToQ('SW8_SW9', shuttleId, left, right);
+						}
+						
+					}
 					else
 						log.warn('Unknown event: %s for location %s', event, location);
 				}
@@ -331,15 +422,10 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 				}
 				
 				// lacquering lines
-				else if (location == 'PM1') {
+				else if (location == 'PM1' || location == 'PM2') {
 					if (isEventWorkDone(event)) {
 						moveToQ('MAIN', shuttleId, left, right);
-					} else
-						log.warn('Unknown event: %s for location %s', event, location);
-				}
-				else if (location == 'PM2') {
-					if (isEventWorkDone(event)) {
-						moveToQ('MAIN', shuttleId, left, right);
+						onFinishedLacquering(timestamp, shuttleId, location)
 					} else
 						log.warn('Unknown event: %s for location %s', event, location);
 				}
