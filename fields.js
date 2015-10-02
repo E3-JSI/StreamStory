@@ -227,6 +227,16 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 		return rawStores;
 	}
 	
+	exports.getInitZeroFields = function () {
+		var flds = [];
+		if (config.INITIALIZE_ZERO) {
+			for (var i = 0; i < rawStores.length; i++) {
+				flds.push(rawStores[i].name);
+			}
+		}
+		return flds;
+	};
+	
 	exports.getQmSchema = function () {
 		var enrichedStore = JSON.parse(JSON.stringify(realTimeStores));
 	    var oaInStore = JSON.parse(JSON.stringify(onlineAnalyticsStores));
@@ -299,38 +309,34 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 	console.log('Initializing fields for Hella ...');
 	
 	var montracFields = [
-		'MAIN',
-		'IMM1',
-		'IMM2',
-		'IMM3',
-		'IMM4',
-		'IMM5',
-		'SW1',
-		'SW2',
-		'SW3',
-		'SW4',
-		'SW5',
-		'SW11',
-		'QC1',
-		'QC2',
-		'QC3',
-		'QC4',
-		'QC5',
-		'PM1',
-		'PM2',
-		'IMM1_QC1',
-		'IMM2_QC2',
-		'IMM3_QC3',
-		'IMM4_QC4',
-		'IMM5_QC5',
-		'QC1_SW2',
-		'QC2_SW3',
-		'QC3_SW4',
-		'QC4_SW5',
-		'QC5_SW11',
-		'SW8_SW9',
-		'SW8_PM1',
-		'SW9_PM2'               
+	    'SW1_SW2',
+	    'SW2_SW3',
+        'SW3_SW8',
+	    'SW3_SW4',
+	    'SW4_SW5',
+	    'SW5_SW11',
+	    'SW11_SW8',
+	    
+	    'SW8_PM1',
+	    'SW8_SW9',
+        'SW9_PM2',
+        
+        'PM1_IMM1',
+        'PM1_IMM2',
+        'PM1_IMM3',
+        'PM1_IMM4',
+        'PM1_IMM5',
+        'PM2_IMM1',
+        'PM2_IMM2',
+        'PM2_IMM3',
+        'PM2_IMM4',
+        'PM2_IMM5',
+        
+        'IMM1_SW2',
+        'IMM2_SW3',
+        'IMM3_SW4',
+        'IMM4_SW5',
+        'IMM5_SW11'
 	];
 	
 	var rawStores = [{
@@ -361,6 +367,19 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 		
 		return realTimeFields;
 	}
+	
+	exports.getInitZeroFields = function () {
+		if (config.INITIALIZE_ZERO)
+			return montracFields;
+		else {
+			var flds = ['SW1_SW2'];
+			for (var i = 0; i < montracFields.length; i++) {
+				if (montracFields[i].startsWith('PM'))
+					flds.push(montracFields[i]);
+			}
+			return flds;
+		}
+	};
 	
 	exports.getMontracStores = function () {
 		return montracFields;

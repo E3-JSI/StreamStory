@@ -119,20 +119,56 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 		return {
 			onFinishedLacquering: function (shuttleId, lacqueringId) {
 				handleEmpty(shuttleId);
+				
+				if (shuttleH[shuttleId].lacqueringId != lacqueringId)
+					log.debug('Shuttle %d changed lacquering line to %s ...', shuttleId, lacqueringId);
+				
 				shuttleH[shuttleId].lacqueringId = lacqueringId;
 			},
 			onArrivedMoulding: function (shuttleId, mouldingId) {
 				handleEmpty(shuttleId);
+				
+				if (shuttleH[shuttleId].mouldingId != mouldingId)
+					log.debug('Shuttle %d changed moulding machine to %s ...', shuttleId, mouldingId);
+				
 				shuttleH[shuttleId].mouldingId = mouldingId;
 			},
-			getShuttleLacqueringId: function (shuttleId) {
+			getLacqueringId: function (shuttleId) {
 				handleEmpty(shuttleId);
+				
+				if (shuttleH[shuttleId].lacqueringId == null)
+					log.warn('Shuttle %d doesn\'t have a LL yet!', shuttleId);
+				
 				return shuttleH[shuttleId].lacqueringId;
 			},
-			getShuttleMouldingId: function (shuttleId) {
+			getMouldingId: function (shuttleId) {
 				handleEmpty(shuttleId);
+				
+				if (shuttleH[shuttleId].mouldingId == null)
+					log.warn('Shuttle %d doesn\'t have a MM yet!', shuttleId);
+				
 				return shuttleH[shuttleId].mouldingId;
 			}
+		}
+	}
+	
+	var upperSwitchRules = {
+		'SW2': {
+			'MAIN': 'SW2_SW3',
+			'OUT': 'SW2_SW3'
+		},
+		'SW3': {},	// no direct rules
+		'SW4': {
+			'MAIN': 'SW4_SW5',
+			'OUT': 'SW4_SW5'
+		},
+		'SW5': {
+			'MAIN': 'SW5_SW11',
+			'OUT': 'SW5_SW11'
+		},
+		'SW11': {
+			'MAIN': 'SW11_SW8',
+			'OUT': 'SW11_SW8'
 		}
 	}
 	
@@ -148,6 +184,7 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 	
 	var prevQueueLengths = {};
 	var prevLLSize = -1;
+	var prevTimestamp = 0;
 	
 	var montracFields = fields.getMontracStores();
 	
@@ -180,10 +217,7 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 			log.warn('Queue %s still contains shuttle %d after removing it!')
 	}
 	
-	function moveToQ(queueId, shuttleId, left, right) {
-		if (!(queueId in queues))
-			log.warn('Unknown queue: %s', queueId);
-		
+	function removeFromQueues(shuttleId) {
 		var prevQId = null;
 		for (var key in queues) {
 			if (containsShuttle(key, shuttleId))
@@ -191,12 +225,18 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 				
 			removeFromQueue(key, shuttleId);
 		}
-		
-		if (prevQId != null) {
-			if (prevQId == 'SW9' && queueId != 'PM2')
-				log.warn('WTF!? Went from SW9 to %s', queueId);
+	}
+	
+	function moveToQ(queueId, shuttleId, left, right) {
+		removeFromQueues(shuttleId);
+		if (queueId == null) {
+			log.debug('Unknown queue for shuttle %d!', shuttleId);
+			return;
 		}
 		
+		if (!(queueId in queues))
+			log.warn('Unknown queue: %s', queueId);
+
 		queues[queueId].push({shuttleId: shuttleId, left: left, right: right});
 	}
 	
@@ -219,29 +259,93 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 		return count;
 	}
 	
-	function isEventWorkDone(event) {
-		return event == 'WorkDone (Automatic)' || event == 'WorkDone (Manual)' ||
-			event == 'WorkDone(Automatic)' || event == 'WorkDone(Manual)';
+	function isUpperSwitch(sw) {
+		return sw in upperSwitchRules;
 	}
 	
-	function isEventTimeElapsed(event) {
-		return event == 'CoolingTimeElapsed' || event == 'WorkDone (ManualControl)' ||
-			event == 'WorkDone(ManualControl)';
+	function isLacquering(location) {
+		return location.startsWith('PM');
 	}
 	
-	function isLocationSw(location, switchNum) {
-		return location == 'SW' + switchNum + ' (OUT)' || 
-			location == 'SW' + switchNum + ' (MAIN)' ||
-			location == 'SW' + switchNum + '(OUT)' || 
-			location == 'SW' + switchNum + '(MAIN)'
+	function isSwitch(location) {
+		return location.startsWith('SW');
 	}
 	
-	function isLocationMM(location) {
-		return location == 'IMM1' || 
-			location == 'IMM2' || 
-			location == 'IMM3' ||
-			location == 'IMM4' || 
-			location == 'IMM5';
+	function isMouldingMachine(location) {
+		return location.startsWith('IMM');
+	}
+	
+	function isQC(location) {
+		return location.startsWith('QC');
+	}
+
+	function getSwitchId(location) {
+		var match = location.match('SW\\d+');
+		return match != null && match.length > 0 ? match[0] : null;
+	}
+	
+	function getSwitchConfig(location) {
+		var match = location.match('\\([a-zA-Z]+\\)');
+		return match != null && match.length > 0 ? match[0].replace(/\(|\)/g,'') : null;
+	}
+	
+	function calcNextQueue(shuttleId, location) {
+		if (isSwitch(location)) {
+			var sw = getSwitchId(location);
+			var switchConfig = getSwitchConfig(location);
+			if (isUpperSwitch(sw)) {
+				if (sw != 'SW3')
+					return upperSwitchRules[sw][switchConfig];
+				else {	// SW3
+					var mm = shuttleConfig.getMouldingId(shuttleId);
+					
+					if (mm == null) return null;	// TODO return null??
+					
+					if (mm == 'IMM1' || mm == 'IMM2') {
+						return 'SW3_SW8';
+					} else {
+						return 'SW3_SW4';
+					}
+				}
+			} else if (sw == 'SW1') {
+				// lower switch, special rules
+				return 'SW1_SW2';
+			} else {	// SW8,9
+				if (sw == 'SW8') {
+					var lacqueringId = shuttleConfig.getLacqueringId(shuttleId);
+					if (lacqueringId == null) return null;
+					return lacqueringId == 'PM1' ? 'SW8_PM1' : 'SW8_SW9';
+				} else if (sw == 'SW9') {
+					return 'SW9_PM2';
+				} else {
+					log.warn('WTF!? Shuttle %d, location %s', shuttleId, location);
+				}
+			}
+		}
+		else if (isLacquering(location)) {
+			var mouldingId = shuttleConfig.getMouldingId(shuttleId);
+			if (mouldingId == null) return null;
+			return location + '_' + mouldingId;
+		}
+		else if (isMouldingMachine(location)) {	// IMM
+			switch (location) {
+			case 'IMM1':
+				return 'IMM1_SW2';
+			case 'IMM2':
+				return 'IMM2_SW3';
+			case 'IMM3':
+				return 'IMM3_SW4';
+			case 'IMM4':
+				return 'IMM4_SW5';
+			case 'IMM5':
+				return 'IMM5_SW11';
+			default:
+				log.warn('Strange moulding machine location: %s', location);
+				return null;
+			}
+		} else {
+			log.warn('Strange location %s', location);
+		}
 	}
 	
 	function onArrivedMoulding(timestamp, shuttleId, location) {
@@ -249,12 +353,27 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 		shuttleConfig.onArrivedMoulding(shuttleId, location);
 	}
 	
-	function onFinishedLacquering(timestamp, shuttleId, location) {
+	function onFinishedLacquering(timestamp, shuttleId, location, left, right) {
+		addToLacquering(timestamp, shuttleId, left, right);
 		timeCalculator.onShuttleStarted(timestamp, shuttleId, location);
 		shuttleConfig.onFinishedLacquering(shuttleId, location);
 	}
 	
-	var prevTimestamp = 0;
+	function onArrived(timestamp, location, shuttleId) {
+		if (isMouldingMachine(location)) {
+			onArrivedMoulding(timestamp, shuttleId, location);
+		}
+	}
+	
+	function onFinished(timestamp, shuttleId, location, left, right) {
+		if (!isQC(location)) {
+			var nextQ = calcNextQueue(shuttleId, location);
+			moveToQ(nextQ, shuttleId, left, right);
+			if (location == 'PM1' || location == 'PM2') {
+				onFinishedLacquering(timestamp, shuttleId, location, left, right);
+			}
+		}
+	}
 	
 	module.exports = {
 		transform: function (val) {
@@ -264,9 +383,7 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 				log.warn('Unknown sensorId: %s', sensorId);
 				return [];
 			}
-			
-			// TODO handle SW1
-			
+						
 			var timestamp = val.timestamp;
 			
 			var props = val.eventProperties;
@@ -277,159 +394,10 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 			var left = props.leftPiece;
 			var right = props.rightPiece;
 			
-			if (event == 'Arrive') {
-				if (location == 'PM1' || location == 'PM2') {
-					addToLacquering(timestamp, shuttleId, left, right);
-				}
-				
-				if (isLocationMM(location)) {
-					onArrivedMoulding(timestamp, shuttleId, location);
-				}
-				
-				var modLoc = location.replace(/\s*\(MAIN\)|\s*\(OUT\)/g, '');
-				moveToQ(modLoc, shuttleId, left, right);
-			} else {
-				// moulding machines
-				if (location == 'IMM1') {
-					if (isEventWorkDone(event))
-						moveToQ('IMM1_QC1', shuttleId, left, right);
-					else
-						log.warn('Unknown event: %s for location %s', event, location);
-				}
-				else if (location == 'IMM2') {
-					if (isEventWorkDone(event))
-						moveToQ('IMM2_QC2', shuttleId, left, right);
-					else
-						log.warn('Unknown event: %s for location %s', event, location);
-				}
-				else if (location == 'IMM3') {
-					if (isEventWorkDone(event))
-						moveToQ('IMM3_QC3', shuttleId, left, right);
-					else
-						log.warn('Unknown event: %s for location %s', event, location);
-				}
-				else if (location == 'IMM4') {
-					if (isEventWorkDone(event))
-						moveToQ('IMM4_QC4', shuttleId, left, right);
-					else
-						log.warn('Unknown event: %s for location %s', event, location);
-				}
-				else if (location == 'IMM5') {
-					if (isEventWorkDone(event))
-						moveToQ('IMM5_QC5', shuttleId, left, right);
-					else
-						log.warn('Unknown event: %s for location %s', event, location);
-				}
-				
-				// cooling
-				else if (location == 'QC1') {
-					if (isEventTimeElapsed(event)) {
-						moveToQ('QC1_SW2', shuttleId, left, right);
-					} else
-						log.warn('Unknown event: %s for location %s', event, location);
-				}
-				else if (location == 'QC2') {
-					if (isEventTimeElapsed(event)) {
-						moveToQ('QC2_SW3', shuttleId, left, right);
-					} else
-						log.warn('Unknown event: %s for location %s', event, location);
-				}
-				else if (location == 'QC3') {
-					if (isEventTimeElapsed(event)) {
-						moveToQ('QC3_SW4', shuttleId, left, right);
-					} else
-						log.warn('Unknown event: %s for location %s', event, location);
-				}
-				else if (location == 'QC4') {
-					if (isEventTimeElapsed(event)) {
-						moveToQ('QC4_SW5', shuttleId, left, right);
-					} else
-						log.warn('Unknown event: %s for location %s', event, location);
-				}
-				else if (location == 'QC5') {
-					if (isEventTimeElapsed(event)) {
-						moveToQ('QC5_SW11', shuttleId, left, right);
-					} else
-						log.warn('Unknown event: %s for location %s', event, location);
-				}
-				
-				// upper switches
-				else if (isLocationSw(location, 2)) {
-					// if the location is MAIN, then the shuttle was already on MAIN
-					// and we have nothing to worry about
-					if (event == 'Start')
-						moveToQ('MAIN', shuttleId, left, right);
-					else
-						log.warn('Unknown event: %s for location %s', event, location);
-				}
-				else if (isLocationSw(location, 3)) {
-					// if the location is MAIN, then the shuttle was already on MAIN
-					// and we have nothing to worry about
-					if (event == 'Start')
-						moveToQ('MAIN', shuttleId, left, right);
-					else
-						log.warn('Unknown event: %s for location %s', event, location);
-				}
-				else if (isLocationSw(location, 4)) {
-					// if the location is MAIN, then the shuttle was already on MAIN
-					// and we have nothing to worry about
-					if (event == 'Start')
-						moveToQ('MAIN', shuttleId, left, right);
-					else
-						log.warn('Unknown event: %s for location %s', event, location);
-				}
-				else if (isLocationSw(location, 5)) {	// TODO SW5 (OUT)
-					if (event == 'Start')
-						moveToQ('MAIN', shuttleId, left, right);
-					else
-						log.warn('Unknown event: %s for location %s', event, location);
-				}
-				else if (isLocationSw(location, 11)) {
-					if (event == 'Start')
-						moveToQ('MAIN', shuttleId, left, right);
-					else
-						log.warn('Unknown event: %s for location %s', event, location);
-				}
-				
-				// lower switches
-				else if (location == 'SW1 (OUT)' || location == 'SW1(OUT)') {
-					log.warn('Received SW1 (OUT) not sure how to handle!');
-				}
-				else if (isLocationSw(location, 1)) {
-					if (event == 'Start')
-						moveToQ('MAIN', shuttleId, left, right);
-					else
-						log.warn('Unknown event: %s for location %s', event, location);
-				}
-				else if (location == 'SW8') {
-					if (event == 'Start') {
-						var lacqueringId = shuttleConfig.getShuttleLacqueringId(shuttleId);
-						if (lacqueringId == 'PM1' && (left == true || right == true)) {
-							moveToQ('SW8_PM1', shuttleId, left, right);
-						} else {
-							moveToQ('SW8_SW9', shuttleId, left, right);
-						}
-						
-					}
-					else
-						log.warn('Unknown event: %s for location %s', event, location);
-				}
-				else if (location == 'SW9') {
-					if (event == 'Start')
-						moveToQ('SW9_PM2', shuttleId, left, right);
-					else
-						log.warn('Unknown event: %s for location %s', event, location);
-				}
-				
-				// lacquering lines
-				else if (location == 'PM1' || location == 'PM2') {
-					if (isEventWorkDone(event)) {
-						moveToQ('MAIN', shuttleId, left, right);
-						onFinishedLacquering(timestamp, shuttleId, location)
-					} else
-						log.warn('Unknown event: %s for location %s', event, location);
-				}
-			}
+			if (event == 'Arrive')
+				onArrived(timestamp, location, shuttleId);
+			else
+				onFinished(timestamp, shuttleId, location, left, right);
 			
 			var vals = [];
 			

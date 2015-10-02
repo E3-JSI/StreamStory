@@ -5,7 +5,7 @@ var fields = require('./fields.js');
 var base;
 
 if (process.argv.length < 4)
-	throw new Error('Missing last argument!')
+	throw new Error('Missing last argument \'fname\'!')
 
 try {
 	var fname = process.argv[3];

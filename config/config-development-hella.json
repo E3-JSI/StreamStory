@@ -13,7 +13,7 @@
 			},
 			"clustering": {
 				"type": "dpmeans",
-				"lambda": 0.7,
+				"lambda": 0.75,
 				"minClusts": 10,
 				"rndseed": 1,
 				"sample": 1,

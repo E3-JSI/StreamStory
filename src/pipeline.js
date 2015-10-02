@@ -40,6 +40,7 @@ function initResampler() {
 function initStreamAggregates() {
 	// create fields
 	var flds = fields.getStreamAggrFields();
+	var zeroFlds = fields.getInitZeroFields();
 	
 	// create the merger used for enrichment
 	var mergerConfig = {
@@ -58,30 +59,25 @@ function initStreamAggregates() {
 	new qm.StreamAggr(base, mergerConfig);
 	
 	// insert zeros now, so they won't get resampled
-	if (config.INITIALIZE_ZERO) {
-		var startTm = 100000;
+	var startTm = 100000;
+	for (var i = 0; i < zeroFlds.length; i++) {
+		var name = zeroFlds[i];
 		
-		log.info('Initializing default values ...');
-		var stores = fields.getRawStores();
+		log.info('Initializing default value for store %s ...', name);
+							
+		var val = {
+			time_ms: startTm,
+			time: utils.dateToQmDate(new Date(startTm)),
+			value: 0
+		};
 		
-		for (var i = 0; i < stores.length; i++) {
-			var storeConf = stores[i];
-			var name = storeConf.name;
-			
-			if (name == 'hook_load') continue;
-			
-			var val = {
-				time_ms: startTm,
-				time: utils.dateToQmDate(new Date(startTm)),
-				value: 0
-			};
-			
-			log.info('Initializing store %s ...', name);
-			log.info('Inserting value %s ...', JSON.stringify(val));
-			
-			base.store(name).push(val);
-		}
-	} else {
+		log.info('Initializing store %s ...', name);
+		log.info('Inserting value %s ...', JSON.stringify(val));
+		
+		base.store(name).push(val);
+	} 
+	
+	if (zeroFlds.length == 0) {
 		// if we initialize all stores with zeros, then the resampler should be
 		// initialized only after at least a single value has gone through the merger
 		// otherwise, the resampler will resample from 1970
