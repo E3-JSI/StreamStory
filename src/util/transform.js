@@ -137,7 +137,7 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 				handleEmpty(shuttleId);
 				
 				if (shuttleH[shuttleId].lacqueringId == null)
-					log.warn('Shuttle %d doesn\'t have a LL yet!', shuttleId);
+					log.debug('Shuttle %d doesn\'t have a LL yet!', shuttleId);
 				
 				return shuttleH[shuttleId].lacqueringId;
 			},
@@ -145,7 +145,7 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 				handleEmpty(shuttleId);
 				
 				if (shuttleH[shuttleId].mouldingId == null)
-					log.warn('Shuttle %d doesn\'t have a MM yet!', shuttleId);
+					log.debug('Shuttle %d doesn\'t have a MM yet!', shuttleId);
 				
 				return shuttleH[shuttleId].mouldingId;
 			}
