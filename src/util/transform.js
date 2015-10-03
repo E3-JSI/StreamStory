@@ -354,14 +354,15 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 	}
 	
 	function onFinishedLacquering(timestamp, shuttleId, location, left, right) {
-		addToLacquering(timestamp, shuttleId, left, right);
 		timeCalculator.onShuttleStarted(timestamp, shuttleId, location);
 		shuttleConfig.onFinishedLacquering(shuttleId, location);
 	}
 	
-	function onArrived(timestamp, location, shuttleId) {
+	function onArrived(timestamp, location, shuttleId, left, right) {
 		if (isMouldingMachine(location)) {
 			onArrivedMoulding(timestamp, shuttleId, location);
+		} else if (isLacquering(location)) {
+			addToLacquering(timestamp, shuttleId, left, right);
 		}
 	}
 	
@@ -395,7 +396,7 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 			var right = props.rightPiece;
 			
 			if (event == 'Arrive')
-				onArrived(timestamp, location, shuttleId);
+				onArrived(timestamp, location, shuttleId, left, right);
 			else
 				onFinished(timestamp, shuttleId, location, left, right);
 			
