@@ -923,7 +923,7 @@ function initDataUploadApi() {
 					qm.fs.readCsvLines(fileBuff, {
 						skipLines: 1,
 						onLine: function (lineArr) {
-							if (++lineN % 1000 == 0 && log.debug())
+							if (++lineN % 10000 == 0 && log.debug())
 								log.debug('Read %d lines ...', lineN);
 							
 							var recJson = {};
