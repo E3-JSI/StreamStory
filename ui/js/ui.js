@@ -552,7 +552,7 @@ var UI;
 							value: ftrVal,
 							histogramContainer: histContainerId,
 							valueColor: null,
-							isLeaf: true,
+							isLeaf: data.isLeaf,
 							ftrId: ftrId,
 							min: bounds.min,
 							max: bounds.max,
@@ -673,12 +673,13 @@ var UI;
 			},
 			createThumbnail: function (opts) {
 				var thumbnail = $('#div-thumbnail').find('.thumb-col').clone();
-											
+				var valField = thumbnail.find('.attr-val');
+				
 				thumbnail.find('.attr-name').html(opts.name);
 				thumbnail.find('.container-hist').attr('id', opts.histogramContainer);
 				
 				if (opts.value != null)
-					thumbnail.find('.attr-val').html(opts.value.toPrecision(3));
+					valField.html(opts.value.toPrecision(3));
 				if (opts.valueColor != null) 
 					thumbnail.find('.attr-val').css('color', opts.valueColor);
 				if (opts.isLeaf) {
@@ -702,8 +703,8 @@ var UI;
 								data: { stateId: opts.stateId, ftrIdx: opts.ftrId, val: val },
 								success: function (data) {
 									$('#btn-reset-sim').removeClass('hidden');
-									valField.html(parseFloat(val).toPrecision(3));
 									viz.setModel(data);
+									valField.html(parseFloat(val).toPrecision(3));
 								},
 								error: function (xhr, status) {
 									alert(status);

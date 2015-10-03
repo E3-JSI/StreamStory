@@ -696,8 +696,8 @@ function initStreamStoryRestApi() {
 				
 				var model = getModel(req.sessionID, req.session);
 				
-				if (log.info()) 
-					log.info('Changing control %d to value %d ...', ftrId, val);
+				if (log.debug()) 
+					log.debug('Changing control %d to value %d ...', ftrId, val);
 				
 				model.setControlVal({ ftrId: ftrId, val: val, stateId: stateId});
 				res.send(model.getVizState());
