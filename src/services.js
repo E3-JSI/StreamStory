@@ -84,23 +84,38 @@ function deactivateModel(model) {
 }
 
 function loadModel(modelBase, fname) {
+	if (log.debug())
+		log.debug('Loading model from file %s ...', fname);
+	
 	var model = new qm.analytics.StreamStory({ 
 		base: modelBase, 
 		fname: fname
 	});
+	
 	model.setId(fname);
 	return model;
 }
 
 function loadOfflineModel(baseDir) {
-	log.info('Opening new base: %s', baseDir);
+	if (log.debug())
+		log.debug('Loading offline model from base: %s', baseDir);
 	
 	try {
+		var dbDir = getDbDir(baseDir);
+		var modelFName = getModelFName(baseDir);
+		
+		if (log.debug())
+			log.debug('Opening new base: %s', dbDir);
+		
 		var userBase = new qm.Base({
 			mode: 'openReadOnly',
 			dbPath: getDbDir(baseDir)
 		});
-		var model = loadModel(userBase, getModelFName(baseDir));
+		
+		if (log.debug())
+			log.debug('Loading model from file: %s', modelFName)
+		
+		var model = loadModel(userBase, modelFName);
 		
 		return {base: userBase, model: model};
 	} catch (e) {
@@ -121,36 +136,61 @@ function getModelFile(session) {
 	return session.modelFile;
 }
 
-function saveToSession(sessionId, session, username, userBase, model, modelId) {
-	log.debug('Saving new data to session %s ...', sessionId);
-	if (session.base != null)
-		cleanUpSession(sessionId, session);
-	session.username = username;
-	session.base = userBase;
-	session.model = model;
-	session.modelId = modelId;
-	session.modelFile = modelId;	// TODO maybe in the future set modelId to something else
+function closeBase(session) {
+	if (session.base == null)
+		return;
+	
+	if (log.debug())
+		log.debug('Closing base ...');
+	
+	if (session.base != null) {
+		if (session.base == base) {
+			log.debug('Will not close base as it is the real-time base ...');
+		} else {
+			if (log.debug())
+				log.debug('Closing base for user %s ...', session.username);
+			
+			if (!session.base.isClosed()) {
+				session.base.close();
+				log.debug('Base closed!');
+			} else {
+				log.debug('Base already closed, no need to close again!');
+			}
+		}
+	}
 }
 
 function cleanUpSession(sessionId, session) {
 	if (log.debug())
 		log.debug('Cleaning up session %s ...', sessionId);
 	
-	if (session.base != null) {
-		if (session.base == base) {
-			log.debug('Will not close base as it is the real-time base ...');
-		} else {
-			log.debug('Closing base for user %s ...', session.username);
-			session.base.close();
-			log.debug('Base closed!');
-		}
-	}
+	closeBase(session);
 	
 	delete session.username;
 	delete session.base;
 	delete session.model;
 	delete session.modelId;
 	delete session.modelFile;
+}
+
+function saveToSession(sessionId, session, username, userBase, model, modelId) {
+	if (session.base != null)
+		cleanUpSession(sessionId, session);
+	
+	if (log.debug())
+		log.debug('Saving new data to session %s ...', sessionId);
+	
+	if (userBase.isClosed())
+		throw new Error('Tried to save a closed base to session!');
+	
+	session.username = username;
+	session.base = userBase;
+	session.model = model;
+	session.modelId = modelId;
+	session.modelFile = modelId;	// TODO maybe in the future set modelId to something else
+	
+	if (log.debug())
+		log.debug('Saved to session!');
 }
 
 function addRawMeasurement(val) {
@@ -1152,6 +1192,7 @@ function initDataUploadApi() {
 						saveToSession(sessionId, session, username, base, model, modelId);
 					}
 				} else {
+					closeBase(session);		// bug in qminer, have to do this before opening a new base
 					var baseConfig = loadOfflineModel(modelConfig.base_dir);
 					saveToSession(sessionId, session, username, baseConfig.base, baseConfig.model, modelId);
 				}

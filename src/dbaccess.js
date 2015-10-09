@@ -96,7 +96,7 @@ module.exports = function () {
 					}
 					
 					conn.query('SELECT * FROM model m LEFT JOIN offline_model ofm ON m.mid = ofm.mid LEFT JOIN online_model onm ON m.mid = onm.mid ' + 
-									'WHERE m.username = ?', [username], function (e2, result) {
+									'WHERE m.username = ? OR m.is_public = 1', [username], function (e2, result) {
 						conn.release();
 						
 						if (e2 != null) {

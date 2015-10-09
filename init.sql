@@ -16,6 +16,7 @@ CREATE TABLE model (
 	dataset VARCHAR(255) NOT NULL,
 	is_realtime BOOLEAN NOT NULL DEFAULT 0,
 	date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	is_public BOOLEAN NOT NULL DEFAULT 0,
 	FOREIGN KEY (username) REFERENCES user(email)
 );
 
