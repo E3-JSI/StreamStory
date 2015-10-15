@@ -1525,7 +1525,9 @@ function initBroker() {
 					leftPiece: msg.payload.leftPiece,
 					rightPiece: msg.payload.rightPiece
 				}
-			}/
+			};
+			
+			log.debug('Converted to %s', JSON.stringify(payload));
 //			{"shuttle":405,"rightPiece":false,"variable_timestamp":1441847832000,"variable_type":"montrac","location":"SW2 (MAIN)","event":"Start","leftPiece":false}
 			//========================================================
 			
