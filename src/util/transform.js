@@ -173,7 +173,7 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 	for (var i = 0; i < montracFields.length; i++) {
 		var queueId = montracFields[i];
 		queues[queueId] = [];
-		prevQueueLengths[queueId] = 0;
+		prevQueueLengths[queueId] = -1;
 	}
 	
 	function containsShuttle(queueId, shuttleId) {
