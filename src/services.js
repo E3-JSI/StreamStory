@@ -1515,7 +1515,7 @@ function initBroker() {
 			
 			//========================================================
 			// TODO remove this
-			log.debug('Received mesage: %s', JSON.stringify(payload));
+//			log.debug('Received mesage: %s', JSON.stringify(payload));
 			payload = {
 				sensorId: 'montrac',
 				eventProperties: {
@@ -1527,7 +1527,7 @@ function initBroker() {
 				}
 			};
 			
-			log.debug('Converted to %s', JSON.stringify(payload));
+//			log.debug('Converted to %s', JSON.stringify(payload));
 //			{"shuttle":405,"rightPiece":false,"variable_timestamp":1441847832000,"variable_type":"montrac","location":"SW2 (MAIN)","event":"Start","leftPiece":false}
 			//========================================================
 			
