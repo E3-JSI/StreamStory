@@ -1515,6 +1515,7 @@ function initBroker() {
 			
 			//========================================================
 			// TODO remove this
+			log.debug('Received mesage: %s', JSON.stringify(payload));
 			payload = {
 				sensorId: 'montrac',
 				eventProperties: {
