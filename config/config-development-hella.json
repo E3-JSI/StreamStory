@@ -15,16 +15,16 @@
 				"type": "dpmeans",
 				"lambda": 0.75,
 				"minClusts": 10,
-				"rndseed": 1,
 				"sample": 1,
 				"histogramBins": 20
 			},
+			"rndseed": 1,
 			"pastStates": 2,
 			"verbose": true
 		}
 	},
 	"server": {
-		"port": 8787,
+		"port": 8585,
 		"pingInterval": 10000
 	},
 	"log": {

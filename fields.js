@@ -309,6 +309,7 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 	console.log('Initializing fields for Hella ...');
 	
 	var montracFields = [
+	    // main circle
 	    'SW1_SW2',
 	    'SW2_SW3',
         'SW3_SW8',
@@ -316,22 +317,21 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 	    'SW4_SW5',
 	    'SW5_SW11',
 	    'SW11_SW8',
-	    
-	    'SW8_PM1',
 	    'SW8_SW9',
+	    'SW9_SW1',
+	    // lacquering lines
+	    'SW8_PM1',
         'SW9_PM2',
-        
-        'PM1_IMM1',
-        'PM1_IMM2',
-        'PM1_IMM3',
-        'PM1_IMM4',
-        'PM1_IMM5',
-        'PM2_IMM1',
-        'PM2_IMM2',
-        'PM2_IMM3',
-        'PM2_IMM4',
-        'PM2_IMM5',
-        
+        // after lacquering
+        'PM1_SW1',
+        'PM2_SW1',
+        // moulding machine lines
+        'SW1_IMM1',
+        'SW2_IMM2',
+        'SW3_IMM3',
+        'SW4_IMM4',
+        'SW5_IMM5',
+        // cooling lines
         'IMM1_SW2',
         'IMM2_SW3',
         'IMM3_SW4',
@@ -372,12 +372,7 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 		if (config.INITIALIZE_ZERO)
 			return montracFields;
 		else {
-			var flds = ['SW1_SW2'];
-			for (var i = 0; i < montracFields.length; i++) {
-				if (montracFields[i].startsWith('PM'))
-					flds.push(montracFields[i]);
-			}
-			return flds;
+			return ['SW1_SW2', 'SW8_SW9', 'SW9_SW1'];
 		}
 	};
 	

@@ -152,39 +152,20 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 		}
 	}
 	
-	var upperSwitchRules = {
-		'SW2': {
-			'MAIN': 'SW2_SW3',
-			'OUT': 'SW2_SW3'
-		},
-		'SW3': {},	// no direct rules
-		'SW4': {
-			'MAIN': 'SW4_SW5',
-			'OUT': 'SW4_SW5'
-		},
-		'SW5': {
-			'MAIN': 'SW5_SW11',
-			'OUT': 'SW5_SW11'
-		},
-		'SW11': {
-			'MAIN': 'SW11_SW8',
-			'OUT': 'SW11_SW8'
-		}
-	}
-	
 	log.info('Using Hella use case ...');
 	
 	var timeCalculator = MinTimeCalculator();
 	var shuttleConfig = ShuttleConfigTracker();
 	
 	var LACQUERING_TIME = 1000*60*15;
+	var MAX_MOULDING_QUEUE_SIZE = 3;
 	
 	var queues = {};
 	var lacqueringLine = [];
 	
 	var prevQueueLengths = {};
 	var prevLLSize = -1;
-	var prevTimestamp = 0;
+	var prevTimestamp = 0;	
 	
 	var montracFields = fields.getMontracStores();
 	
@@ -204,8 +185,28 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 		return false;
 	}
 	
+	function getQueueSize(queueId) {
+		return queues[queueId].length;
+	}
+	
 	function removeFromQueue(queueId, shuttleId) {
 		var queue = queues[queueId];
+		
+//		if (!containsShuttle(queueId, shuttleId))
+//			return;
+//		
+//		while (queue.length > 0) {
+//			var removedId = queue.shift().shuttleId;
+//			
+//			if (removedId == shuttleId)
+//				break;
+//			else if (log.debug())
+//				log.debug('Shuttle %d removed from the montrac!', removedId);
+//			
+//			if (removedId != shuttleId && log.debug()) {
+//				
+//			}
+//		}
 		for (var i = 0; i < queue.length; i++) {
 			if (queue[i].shuttleId == shuttleId) {
 				queue.splice(i, 1);
@@ -214,7 +215,7 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 		}
 		
 		if (containsShuttle(queueId, shuttleId))
-			log.warn('Queue %s still contains shuttle %d after removing it!')
+			log.warn('Queue %s still contains shuttle %d after removing it!', queueId, shuttleId)
 	}
 	
 	function removeFromQueues(shuttleId) {
@@ -228,6 +229,9 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 	}
 	
 	function moveToQ(queueId, shuttleId, left, right) {
+		if (log.trace())
+			log.trace('Moving shuttle %d to queue %s, isFull ' + (left || right), shuttleId, queueId);
+		
 		removeFromQueues(shuttleId);
 		if (queueId == null) {
 			log.debug('Unknown queue for shuttle %d!', shuttleId);
@@ -260,7 +264,7 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 	}
 	
 	function isUpperSwitch(sw) {
-		return sw in upperSwitchRules;
+		return sw == 'SW1' || sw == 'SW2' || sw == 'SW3' || sw == 'SW4' || sw == 'SW5' || sw == 'SW11';
 	}
 	
 	function isLacquering(location) {
@@ -289,68 +293,222 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 		return match != null && match.length > 0 ? match[0].replace(/\(|\)/g,'') : null;
 	}
 	
-	function calcNextQueue(shuttleId, location) {
+	function printIncorrectQueue(shuttleId, queueId, location, isFull, ll) {
+		var llSize = getQueueSize(ll =='PM1' ? 'SW8_PM1' : 'SW9_PM2');
+		log.debug('Shuttle %d should be in queue %s (size %d), but is at %s, full: ' + isFull + ', lacquering line %s, ll size: %d', shuttleId, queueId, getQueueSize(queueId), location, ll, llSize);
+	}
+	
+	function handleQueueCorrections(shuttleId, location, left, right) {
+		if (isQC(location)) {
+			var nextQ = null;
+			
+			switch (location) {
+			case 'QC1':
+				if (!containsShuttle('IMM1_SW2', shuttleId)) {
+					nextQ = 'IMM1_SW2';
+				}
+				break;
+			case 'QC2':
+				if (!containsShuttle('IMM2_SW3', shuttleId)) {
+					nextQ = 'IMM2_SW3';
+				}
+				break;
+			case 'QC3':
+				if (!containsShuttle('IMM3_SW4', shuttleId)) {
+					nextQ = 'IMM3_SW4';
+				}
+				break;
+			case 'QC4':
+				if (!containsShuttle('IMM4_SW5', shuttleId)) {
+					nextQ = 'IMM4_SW5';
+				}
+				break;
+			case 'QC5':
+				if (!containsShuttle('IMM5_SW11', shuttleId)) {
+					nextQ = 'IMM5_SW11';
+				}
+				break;
+			}
+			
+			if (nextQ != null) {
+				if (log.debug())
+					log.debug('Correcting the position of shuttle %s. Placing it in queue %s ...', shuttleId, nextQ);
+				moveToQ(nextQ, shuttleId, left, right);
+			}
+		}
+	}
+	
+	function calcNextQueue(shuttleId, location, left, right) {
+		var mm = shuttleConfig.getMouldingId(shuttleId);
+		var ll = shuttleConfig.getLacqueringId(shuttleId);
+		
 		if (isSwitch(location)) {
 			var sw = getSwitchId(location);
 			var switchConfig = getSwitchConfig(location);
-			if (isUpperSwitch(sw)) {
-				if (sw != 'SW3')
-					return upperSwitchRules[sw][switchConfig];
-				else {	// SW3
-					var mm = shuttleConfig.getMouldingId(shuttleId);
-					
-					if (mm == null) return null;	// TODO return null??
-					
-					if (mm == 'IMM1' || mm == 'IMM2') {
+			
+			if (sw == 'SW1') {
+				if (left || right || mm != 'IMM1' || 
+						getQueueSize('SW1_IMM1') >= MAX_MOULDING_QUEUE_SIZE) {
+					return 'SW1_SW2';
+				} else {
+					return 'SW1_IMM1';
+				}
+			}
+			if (sw == 'SW2') {
+				if (containsShuttle('SW1_IMM1', shuttleId)) {
+					printIncorrectQueue(shuttleId, 'SW1_IMM1', sw, left || right, ll);
+				}
+				
+				if (left || right || mm != 'IMM2' || 
+						getQueueSize('SW2_IMM2') >= MAX_MOULDING_QUEUE_SIZE) {
+					return 'SW2_SW3';
+				} else {
+					return 'SW2_IMM2';
+				}
+			}
+			else if (sw == 'SW3') {					
+				if (mm == null) return null;	// TODO return null??
+				
+				if (containsShuttle('SW2_IMM2', shuttleId)) {
+					printIncorrectQueue(shuttleId, 'SW2_IMM2', sw, left || right, ll);
+				}
+				
+				if (mm == 'IMM3') {
+					if (left || right || 
+							getQueueSize('SW3_IMM3') >= MAX_MOULDING_QUEUE_SIZE) {
+						return 'SW3_SW4';
+					} else {
+						return 'SW3_IMM3';
+					}
+				} else if (mm == 'IMM1' || mm == 'IMM2') {
+					// TODO check if this is correct
+					if (left || right) {
 						return 'SW3_SW8';
 					} else {
 						return 'SW3_SW4';
 					}
+				} else {
+					return 'SW3_SW4';
 				}
-			} else if (sw == 'SW1') {
-				// lower switch, special rules
-				return 'SW1_SW2';
-			} else {	// SW8,9
-				if (sw == 'SW8') {
-					var lacqueringId = shuttleConfig.getLacqueringId(shuttleId);
-					if (lacqueringId == null) return null;
-					return lacqueringId == 'PM1' ? 'SW8_PM1' : 'SW8_SW9';
-				} else if (sw == 'SW9') {
+			}
+			else if (sw == 'SW4') {
+				if (containsShuttle('SW3_IMM3', shuttleId)) {
+					printIncorrectQueue(shuttleId, 'SW3_IMM3', sw, left || right, ll);
+				}
+				if (containsShuttle('SW3_SW8', shuttleId)) {
+					printIncorrectQueue(shuttleId, 'SW3_SW8', sw, left || right, ll);
+				}
+				
+				if (left || right || mm != 'IMM4' || 
+						getQueueSize('SW4_IMM4') >= MAX_MOULDING_QUEUE_SIZE) {
+					return 'SW4_SW5';
+				} else {
+					return 'SW4_IMM4';
+				}
+			} else if (sw == 'SW5') {
+				if (containsShuttle('SW4_IMM4', shuttleId)) {
+					printIncorrectQueue(shuttleId, 'SW4_IMM4', sw, left || right, ll);
+				}
+				
+				if (left || right || mm != 'IMM5' || 
+						getQueueSize('SW5_IMM5') >= MAX_MOULDING_QUEUE_SIZE) {
+					return 'SW5_SW11';
+				} else {
+					return 'SW5_IMM5';
+				}
+			} else if (sw == 'SW11') {
+				if (containsShuttle('SW5_IMM5', shuttleId)) {
+					printIncorrectQueue(shuttleId, 'SW5_IMM5', sw, left || right, ll);
+				}
+				
+				return 'SW11_SW8';
+			} 
+			else if (sw == 'SW8') {
+				if ((left || right) && ll == 'PM1') {
+					return 'SW8_PM1';
+				} else {
+					return 'SW8_SW9';
+				}
+			} else if (sw == 'SW9') {
+				if (containsShuttle('SW8_PM1', shuttleId)) {
+					printIncorrectQueue(shuttleId, 'SW8_PM1', sw, left || right, ll);
+				}
+				
+				if ((left || right) && ll == 'PM2') {
 					return 'SW9_PM2';
 				} else {
-					log.warn('WTF!? Shuttle %d, location %s', shuttleId, location);
+					return 'SW9_SW1';
 				}
+			} else {
+				log.warn('WTF!? Shuttle %d, location %s', shuttleId, location);
 			}
 		}
 		else if (isLacquering(location)) {
-			var mouldingId = shuttleConfig.getMouldingId(shuttleId);
-			if (mouldingId == null) return null;
-			return location + '_' + mouldingId;
+			if (location.startsWith('PM2')) {
+				if (containsShuttle('SW9_SW1', shuttleId)) {
+					printIncorrectQueue(shuttleId, 'SW8_SW9', location, left || right, ll);
+				}
+				
+				return 'PM2_SW1';
+			} else {
+				if (containsShuttle('SW8_SW9', shuttleId)) {
+					printIncorrectQueue(shuttleId, 'SW8_SW9', location, left || right, ll);
+				}
+				
+				return 'PM1_SW1';
+			}
 		}
 		else if (isMouldingMachine(location)) {	// IMM
 			switch (location) {
 			case 'IMM1':
+				if (containsShuttle('SW1_SW2', shuttleId)) {
+					printIncorrectQueue(shuttleId, 'SW1_SW2', location, left || right, ll);
+				}
+				
 				return 'IMM1_SW2';
 			case 'IMM2':
+				if (containsShuttle('SW2_SW3', shuttleId)) {
+					printIncorrectQueue(shuttleId, 'SW2_SW3', location, left || right, ll);
+				}
+				
 				return 'IMM2_SW3';
 			case 'IMM3':
+				if (containsShuttle('SW3_SW8', shuttleId)) {
+					printIncorrectQueue(shuttleId, 'SW3_SW8', location, left || right, ll);
+				}
+				if (containsShuttle('SW3_SW4', shuttleId)) {
+					printIncorrectQueue(shuttleId, 'SW3_SW4', location, left || right, ll);
+				}
 				return 'IMM3_SW4';
 			case 'IMM4':
+				if (containsShuttle('SW4_SW5', shuttleId)) {
+					printIncorrectQueue(shuttleId, 'SW4_SW5', location, left || right, ll);
+				}
+				
 				return 'IMM4_SW5';
 			case 'IMM5':
+				if (containsShuttle('SW5_SW11', shuttleId)) {
+					printIncorrectQueue(shuttleId, 'SW5_SW11', location, left || right, ll);
+				}
+				
 				return 'IMM5_SW11';
 			default:
 				log.warn('Strange moulding machine location: %s', location);
 				return null;
 			}
-		} else {
+		} 
+		else {
 			log.warn('Strange location %s', location);
 		}
 	}
 	
-	function onArrivedMoulding(timestamp, shuttleId, location) {
+	function onArrivedMoulding(timestamp, shuttleId, location, left, right) {
+		if (log.trace())
+			log.trace('Shuttle %d arrived to moulding machine %s', shuttleId, location);
+		
 		timeCalculator.onShuttleArrived(timestamp, shuttleId, location);
 		shuttleConfig.onArrivedMoulding(shuttleId, location);
+		moveToQ(calcNextQueue(shuttleId, location, left, right), shuttleId, left, right);
 	}
 	
 	function onFinishedLacquering(timestamp, shuttleId, location, left, right) {
@@ -360,19 +518,23 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 	
 	function onArrived(timestamp, location, shuttleId, left, right) {
 		if (isMouldingMachine(location)) {
-			onArrivedMoulding(timestamp, shuttleId, location);
+			onArrivedMoulding(timestamp, shuttleId, location, left, right);
 		} else if (isLacquering(location)) {
 			addToLacquering(timestamp, shuttleId, left, right);
+		} else if (isQC(location)) {
+			handleQueueCorrections(shuttleId, location, left, right)
 		}
 	}
 	
 	function onFinished(timestamp, shuttleId, location, left, right) {
 		if (!isQC(location)) {
-			var nextQ = calcNextQueue(shuttleId, location);
+			var nextQ = calcNextQueue(shuttleId, location, left, right);
 			moveToQ(nextQ, shuttleId, left, right);
 			if (location == 'PM1' || location == 'PM2') {
 				onFinishedLacquering(timestamp, shuttleId, location, left, right);
 			}
+		} else {
+			handleQueueCorrections(shuttleId, location, left, right)
 		}
 	}
 	
@@ -402,9 +564,18 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 			
 			var vals = [];
 			
+			function getQueueSizes() {
+				var result = {};
+				for (var queueId in queues) {
+					var size = getQueueSize(queueId);
+					result[queueId] = size;
+				}
+				return result;
+			}
+			
 			if (timestamp > prevTimestamp) {
 				for (var queueId in queues) {
-					var length = queues[queueId].length;
+					var length = getQueueSize(queueId);
 					
 					if (length != prevQueueLengths[queueId]) {
 						vals.push({

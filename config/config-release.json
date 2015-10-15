@@ -15,10 +15,10 @@
 				"type": "dpmeans",
 				"lambda": 0.7,
 				"minClusts": 10,
-				"rndseed": 1,
 				"sample": 1,
 				"histogramBins": 20
 			},
+			"rndseed": 1,
 			"pastStates": 2,
 			"verbose": true
 		}
