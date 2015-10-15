@@ -129,4 +129,6 @@ log.info('Mode: ' + config.qminer.mode);
 log.info('StreamStory params: %s', JSON.stringify(exports.STREAM_STORY_PARAMS));
 log.info('Data path: %s', dataPath);
 log.info('Use-case: %s', config.useCase);
+if (exports.USE_BROKER)
+	log.info('Broker URL: %s', config.integration.brokerUrl);
 log.info('================================================');
