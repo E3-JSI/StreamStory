@@ -608,6 +608,8 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 					prevLLSize = llSize;
 				}
 				
+				log.info('Created feature vector: %s', JSON.stringify(vals));
+				
 				prevTimestamp = timestamp;
 			}
 			
