@@ -51,8 +51,8 @@
 		"database": "hella"
 	},
 	"integration": {
-		"type": "http",
-		"brokerUrl": "10.172.67.55",
+		"type": "borker",
+		"brokerUrl": "192.168.84.39",
 		"zookeperPort": 2181,
 		"producerPort": 8090
 	},
