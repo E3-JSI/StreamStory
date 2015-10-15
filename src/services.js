@@ -1516,7 +1516,7 @@ function initBroker() {
 			//========================================================
 			// TODO remove this
 			payload = {
-				sensorId: msg.payload.shuttle,
+				sensorId: 'montrac',
 				eventProperties: {
 					location: msg.payload.location,
 					event: msg.payload.event,
