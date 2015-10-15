@@ -13,7 +13,7 @@
 			},
 			"clustering": {
 				"type": "dpmeans",
-				"lambda": 0.75,
+				"lambda": 0.8,
 				"minClusts": 10,
 				"sample": 1,
 				"histogramBins": 20
