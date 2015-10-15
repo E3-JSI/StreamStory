@@ -1511,7 +1511,24 @@ function initBroker() {
 		if (msg.type == 'raw') {
 			if (++imported % printInterval == 0 && log.trace())
 				log.trace('Imported %d values ...', imported);
-			addRawMeasurement(msg.payload);
+			var payload = msg.payload;
+			
+			//========================================================
+			// TODO remove this
+			payload = {
+				sensorId: msg.payload.shuttle,
+				eventProperties: {
+					location: msg.payload.location,
+					event: msg.payload.event,
+					shuttleId: msg.payload.shuttle,
+					leftPiece: msg.payload.leftPiece,
+					rightPiece: msg.payload.rightPiece
+				}
+			}/
+//			{"shuttle":405,"rightPiece":false,"variable_timestamp":1441847832000,"variable_type":"montrac","location":"SW2 (MAIN)","event":"Start","leftPiece":false}
+			//========================================================
+			
+			addRawMeasurement(payload);
 		} else if (msg.type == 'cep') {
 			if (log.trace())
 				log.trace('received CEP message: %s', JSON.stringify(msg));
