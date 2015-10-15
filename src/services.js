@@ -1521,7 +1521,7 @@ function initBroker() {
 				eventProperties: {
 					location: msg.payload.location,
 					event: msg.payload.event,
-					shuttleId: msg.payload.shuttle,
+					shuttle: msg.payload.shuttle,
 					leftPiece: msg.payload.leftPiece,
 					rightPiece: msg.payload.rightPiece
 				}
