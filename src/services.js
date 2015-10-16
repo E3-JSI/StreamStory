@@ -1538,22 +1538,8 @@ function initBroker() {
 				log.trace('Received raw measurement: %s', JSON.stringify(payload));
 			
 			//========================================================
-			// TODO remove this
-//			log.debug('Received mesage: %s', JSON.stringify(payload));
-			payload = {
-				sensorId: 'montrac',
-				timestamp: msg.payload.variable_timestamp,
-				eventProperties: {
-					location: msg.payload.location,
-					event: msg.payload.event,
-					shuttle: msg.payload.shuttle,
-					leftPiece: msg.payload.leftPiece,
-					rightPiece: msg.payload.rightPiece
-				}
-			};
-			
-//			log.debug('Converted to %s', JSON.stringify(payload));
-//			{"shuttle":405,"rightPiece":false,"variable_timestamp":1441847832000,"variable_type":"montrac","location":"SW2 (MAIN)","event":"Start","leftPiece":false}
+			// TODO remove this			
+			payload = transform.parseDominiksRawEvent(msg);
 			//========================================================
 			
 			addRawMeasurement(payload);
@@ -1561,7 +1547,13 @@ function initBroker() {
 			if (log.trace())
 				log.trace('Received CEP message: %s', JSON.stringify(msg));
 			
-			var event = msg.payload;			
+			var event = msg.payload;	
+			
+			//========================================================
+			// TODO remove this			
+			event = transform.parseDominiksDerivedEvent(msg);
+			//========================================================
+			
 			var val = transform.parseDerivedEvent(event);
 
 			var timestamp = event.timestamp;

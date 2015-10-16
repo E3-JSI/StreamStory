@@ -648,6 +648,34 @@ module.exports.parseDerivedEvent = function (event) {
 	return val;
 }
 
+module.exports.parseDominiksRawEvent = function (msg) {
+	return {
+		sensorId: 'montrac',
+		timestamp: msg.payload.variable_timestamp,
+		eventProperties: {
+			location: msg.payload.location,
+			event: msg.payload.event,
+			shuttle: msg.payload.shuttle,
+			leftPiece: msg.payload.leftPiece,
+			rightPiece: msg.payload.rightPiece
+		}
+	};
+}
+
+module.exports.parseDominiksDerivedEvent = function (event) {
+	var val = utils.clone(event);
+	
+	delete val.pipelineId;
+	delete val.time;
+	
+	return {
+		timestamp: event.time,
+		componentId: 'cep',
+		eventName: event.pipelineId,
+		eventProperties: val
+	}
+}
+
 module.exports.genExpPrediction = function (lambda, timeUnit, timestamp) {
 	var msg = {
 		timestamp: timestamp,
