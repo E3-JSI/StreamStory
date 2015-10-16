@@ -271,15 +271,15 @@ var zoomVis = function (opts) {
 				var val = levelJumps[level][i][edges[j]];
 				
 				var lineStyle = 'solid';
-				var color = '#707070';	// dark gray
+				var color = '#606060';	// dark gray
 				if (val != maxVal) {
 					if (val < .2)  {
 						lineStyle = 'dotted';
-						color = '#A8A8A8';	// light gray
+						color = '#C0C0C0';	// light gray
 					}
 					else if (val < .4) {
 						lineStyle = 'dashed';
-						color = '#888888';	// medium gray
+						color = '#A8A8A8';	// medium gray
 					}
 				}
 				
