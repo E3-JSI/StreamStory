@@ -1425,6 +1425,14 @@ function initConfigRestApi() {
 	});
 }
 
+function sendPrediction(msg) {
+	var msgStr = JSON.stringify(msg);
+	
+	var brokerMsg = transform.genExpPrediction(pdf.lambda, 'month', opts.time);
+	broker.send(broker.PREDICTION_PRODUCER_TOPIC, JSON.stringify(brokerMsg));
+	modelStore.distributeMsg(msgStr);
+}
+
 function initPipelineHandlers() {
 	log.info('Initializing pipeline callbacks ...');
 	
@@ -1506,11 +1514,7 @@ function initPipelineHandlers() {
 						}
 					};
 					
-					var msgStr = JSON.stringify(msg);
-					
-					var brokerMsg = transform.genExpPrediction(pdf.lambda, 'month', opts.time);
-					broker.send(broker.PREDICTION_PRODUCER_TOPIC, JSON.stringify(brokerMsg));
-					modelStore.distributeMsg(msgStr);
+					sendPrediction(msg);
 				}
 			});
 		});
@@ -1567,7 +1571,25 @@ function initBroker() {
 				return;
 			}
 			
-			base.store(fields.OA_IN_STORE).push(val);
+			if (eventName == 'TODO something') {
+				base.store(fields.OA_IN_STORE).push(val);
+			} else {
+				// send prediction directly
+				var msg = {
+					type: 'prediction',
+					content: {
+						time: opts.time,
+						eventId: opts.eventId,
+						pdf: {
+							type: 'exponential',
+							lambda: 1
+						}
+					}
+				};
+				
+				sendPrediction(msg);
+			}
+			
 			lastCepTime = timestamp;
 		} else {
 			log.warn('Invalid message type: %s', msg.type);
