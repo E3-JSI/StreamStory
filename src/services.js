@@ -1549,8 +1549,8 @@ function initBroker() {
 				
 				addRawMeasurement(payload);
 			} else if (msg.type == 'cep') {
-				if (log.trace())
-					log.trace('Received CEP message: %s', JSON.stringify(msg));
+				if (log.debug())
+					log.debug('Received CEP message: %s', JSON.stringify(msg));
 				
 				var event = msg.payload;	
 				
