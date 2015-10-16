@@ -222,6 +222,11 @@ function addRawMeasurement(val) {
 			throw new Error('Invalid time! Current: ' + timestamp + ', prev: ' + lastRawTime);
 		
 		var insertVal = transformed.value;
+		
+
+		if (log.debug())
+			log.debug('Inserting raw measurement %s', JSON.stringify(insertVal));
+		
 		pipeline.insertRaw(storeNm, insertVal);
 		storeLastTm[storeNm] = timestamp;
 		lastRawTime = timestamp;
