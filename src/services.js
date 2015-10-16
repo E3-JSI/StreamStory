@@ -117,6 +117,8 @@ function loadOfflineModel(baseDir) {
 		
 		var model = loadModel(userBase, modelFName);
 		
+		model.setOnline(false);
+		
 		return {base: userBase, model: model};
 	} catch (e) {
 		log.error(e, 'Failed to open base!');
@@ -125,7 +127,11 @@ function loadOfflineModel(baseDir) {
 }
 
 function loadOnlineModel(fname) {
-	return loadModel(base, fname);
+	var model = loadModel(base, fname);
+	
+	model.setOnline(true);
+	
+	return model;
 }
 
 function getModel(sessionId, session) {
@@ -1602,6 +1608,18 @@ function getHackedSessionStore() {
 	return store;
 }
 
+function prepPage(page) {
+	return function (req, res) {
+		var session = req.session;
+		
+		var opts = {
+			isOnline: session.model.isOnline()
+		};
+		
+		res.render(page, opts);
+	}
+}
+
 function initServer(sessionStore, parseCookie) {
 	log.info('Initializing web server ...');
 
@@ -1631,6 +1649,7 @@ function initServer(sessionStore, parseCookie) {
 		}
 	}
 	
+	app.set('view engine', 'ejs');
 	app.use(parseCookie);
 	app.use(excludeDir(DATA_PATH, sess));
 	// automatically parse body on the API path
@@ -1654,6 +1673,8 @@ function initServer(sessionStore, parseCookie) {
 	initStreamStoryRestApi();
 	initConfigRestApi();
 	initDataUploadApi();
+	
+//	app.get('/ui.html', prepPage('ui'));
 	
 	// serve static directories on the UI path
 	app.use(UI_PATH, express.static(path.join(__dirname, '../ui')));
