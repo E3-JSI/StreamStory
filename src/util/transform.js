@@ -141,16 +141,16 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 			getLacqueringId: function (shuttleId) {
 				handleEmpty(shuttleId);
 				
-				if (shuttleH[shuttleId].lacqueringId == null)
-					log.debug('Shuttle %d doesn\'t have a LL yet!', shuttleId);
+				if (shuttleH[shuttleId].lacqueringId == null && log.trace())
+					log.trace('Shuttle %d doesn\'t have a LL yet!', shuttleId);
 				
 				return shuttleH[shuttleId].lacqueringId;
 			},
 			getMouldingId: function (shuttleId) {
 				handleEmpty(shuttleId);
 				
-				if (shuttleH[shuttleId].mouldingId == null)
-					log.debug('Shuttle %d doesn\'t have a MM yet!', shuttleId);
+				if (shuttleH[shuttleId].mouldingId == null && log.trace())
+					log.trace('Shuttle %d doesn\'t have a MM yet!', shuttleId);
 				
 				return shuttleH[shuttleId].mouldingId;
 			}
