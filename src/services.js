@@ -1587,7 +1587,7 @@ function initBroker() {
 					var shuttleId = val.shuttleId;
 					var deltaTm = val.timeDifference;
 					
-					var minTime = transform.getMinTime(ll, mm);
+					var minTime = transform.getMinShuttleTime(ll, mm);
 					
 					if (log.debug())
 						log.debug('Got %s event, minTime: %s ...', eventName, minTime);
