@@ -867,6 +867,7 @@ function initDataUploadApi() {
 			
 			var timeAttr = req.body.time;
 			var username = req.body.username;
+			var modelName = req.body.name;
 			var timeUnit = req.body.timeUnit;
 			var attrs = req.body.attrs;
 			var controlAttrs = req.body.controlAttrs;
@@ -1043,6 +1044,7 @@ function initDataUploadApi() {
 										username: username,
 										model_file: fname,
 										dataset: datasetName,
+										name: modelName,
 										is_active: 1
 									}
 									
@@ -1086,7 +1088,8 @@ function initDataUploadApi() {
 										username: username,
 										base_dir: baseDir,
 										model_file: modelFile,
-										dataset: datasetName
+										dataset: datasetName,
+										name: modelName
 									}
 									
 									log.info('Storing a new offline model ...');
@@ -1690,7 +1693,8 @@ function prepPage(page) {
 		var session = req.session;
 		
 		var opts = {
-			isOnline: session.model.isOnline()
+			isOnlineModel: session.model.isOnline(),
+			useCase: config.USE_CASE_NAME
 		};
 		
 		res.render(page, opts);
@@ -1751,7 +1755,7 @@ function initServer(sessionStore, parseCookie) {
 	initConfigRestApi();
 	initDataUploadApi();
 	
-//	app.get('/ui.html', prepPage('ui'));
+	app.get('/ui.html', prepPage('ui'));
 	
 	// serve static directories on the UI path
 	app.use(UI_PATH, express.static(path.join(__dirname, '../ui')));

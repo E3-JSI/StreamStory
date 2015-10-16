@@ -165,6 +165,10 @@
 				                          	</label>
 				  						</div>
 				  					</div>
+				  					<div class="form-group">
+			                          	<label for="input-model-name">Model name</label>
+	  									<input id="input-model-name" type="text" class="form-control" placeholder="Model name" />
+				  					</div>
 				  					<div id="progress-build-model-wrapper" class="progress" style="display: none;">
 									  	<div id="progress-build-model" class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="min-width:0%; max-width:100%; width: 0%;"></div>
 									</div>
@@ -186,14 +190,15 @@
 					var hasEmail = $('#input-email').val() != '';
 					var hasTimeAttr = timeVal != null && timeVal != '';
 					var hasData = $('#input-choose-upload').val() != '';
+					var hasName = $('#input-model-name').val() != '';
 					
-					if (hasEmail && hasTimeAttr && hasData)
+					if (hasEmail && hasTimeAttr && hasData && hasName)
 						$('#btn-done').removeAttr('disabled');
 					else
 						$('#btn-done').attr('disabled', 'disabled');
 				}
 			
-				$('#input-choose-upload, #input-email').change(enableDisableSubmit);
+				$('#input-choose-upload, #input-email, #input-model-name').change(enableDisableSubmit);
 			
 				$('#input-choose-upload').change(function () {
 					$('#form-phase2').hide(0);
@@ -323,6 +328,7 @@
 					var attrs = $('#select-attrs').val();
 					var controlAttrs = $('#select-controls').val();
 					var isRealTime = $('#check-realtime').is(':checked');
+					var name = $('#input-model-name').val();
 					
 					var data = {
 						username: $('#input-email').val(),
@@ -330,7 +336,8 @@
 						timeUnit: $('#select-tu').val(),
 						attrs: attrs,
 						controlAttrs: controlAttrs != null ? controlAttrs : [],
-						isRealTime: isRealTime
+						isRealTime: isRealTime,
+						name: name
 					}
 					
 					var startTime = new Date().getTime();
@@ -412,7 +419,7 @@
 											var modelData = data[i];
 											
 											option.val(modelData.model_file);
-											option.html((modelData.is_realtime == 1 ? 'online: ' : 'offline: ') + modelData.dataset + ' (' + modelData.date_created + ')');
+											option.html(modelData.name + ' (' + modelData.date_created + ')' + (modelData.is_realtime == 1 ? ' (online)' : ' (offline)'));
 											if (i == 0) {
 												option.attr('selected', 'selected');
 											}

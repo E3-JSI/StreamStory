@@ -188,6 +188,8 @@ var UI;
 			currentHeightContainer: 'span-zoom-val'
 		});
 		
+		var wsWrapper = null;
+		
 		function privateFetchHistogram(opts) {
 			var container = opts.insertDiv != null ? opts.insertDiv : 'hist-wrapper';
 			
@@ -638,6 +640,11 @@ var UI;
 			});
 		});
 		
+		$('#chk-show-probs').change(function () {
+			var checked = $(this).is(":checked");
+			viz.setShowTransitionProbs(checked);
+		});
+		
 		$.ajax('api/controlsSet', {
 			dataType: 'json',
 			method: 'GET',
@@ -715,11 +722,13 @@ var UI;
 				}
 				
 				return thumbnail;
+			},
+			initWebSockets: function () {
+				wsWrapper = WebSocketWrapper();
 			}
 		};
 		
 		viz.refresh();
-		WebSocketWrapper();
 		populateUI();
 		
 		return that;

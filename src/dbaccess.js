@@ -13,6 +13,195 @@ module.exports = function () {
 		connectionLimit: 10
 	});
 	
+	function releaseConnection(conn, callback) {
+		return function (result) {
+			if (conn != null)
+				conn.release();
+			
+			if (log.trace())
+				log.trace('Connection released!');
+			
+			callback(undefined, result);
+		}
+	}
+	
+	function releaseConnectionErr(conn, callback) {
+		return function (e) {
+			log.error(e, 'Exception during a connection! Releasing connection and calling callback ...');
+			
+			if (conn != null)
+				conn.release();
+			
+			callback(e);
+		}
+	}
+	
+	function connection(opts) {
+		var callback = opts.callback;
+		var nextOp = opts.nextOp;
+		
+		if (callback == null) throw new Error('Callback is not defined while creating a connection!');
+		
+		if (log.trace())
+			log.trace('Inializing connection to MySQL database ...');
+		
+		pool.getConnection(function (e, conn) {
+			if (e != null) {
+				log.error(e, 'An exception while opening a connection!');
+				callback(e);
+				return;
+			}
+			
+			if (log.trace())
+				log.trace('Connection established ...');
+			
+			if (nextOp != null)
+				nextOp(conn, releaseConnection(conn, callback), releaseConnectionErr(conn, callback));
+			else
+				releaseConnection(conn, callback)();
+		});
+	}
+	
+	function _rollback(conn, e, onerror) {
+		if (log.trace())
+			log.trace('Rolling back ...');
+		
+		if (conn != null) {
+			conn.rollback(function () {
+				conn.release();
+				onerror(e);
+			});
+		} else {
+			onerror(e);
+		}
+	}
+
+	function rollback(conn, onsuccess, onerror) {
+		return function (e) {
+			_rollback(conn, e, onerror);
+		}
+	}
+
+	function commit(conn, onsuccess, onerror) {
+		return function (result) {
+			if (log.trace())
+				log.trace('Committing results ...');
+			
+			conn.commit(function (e) {
+				if (e != null) {
+					_rollback(conn, e, onerror);
+					return;
+				} else {
+					onsuccess(result);
+				}
+			});
+		}
+	}
+
+	function transaction(opts) {
+		var nextOp = opts.nextOp;
+		
+		return function (conn, onsuccess, onerror, data) {
+			if (log.trace())
+				log.trace('Starting transaction ...');
+			
+			conn.beginTransaction(function (e) {
+				if (e != null) {
+					onerror(e);
+					return;
+				}
+				nextOp(conn, commit(conn, onsuccess, onerror), rollback(conn, onsuccess, onerror), data);
+			});
+		}
+	}
+	
+	function unlockTable(conn, onsuccess, onerror) {
+		return function (result) {
+			if (log.trace())
+				log.trace('Unlocking tables ...');
+			
+			query({
+				sql: 'UNLOCK TABLES',
+				nextOp: function (conn, onsuccess, onerror) {
+					onsuccess(result);
+				}
+			})(conn, onsuccess, function (e) {
+				log.error(e, 'Critical, failed to unlock tables! This is very bad!');
+				onerror(e);
+			});
+		}
+	}
+	
+	function unlockTableErr(conn, onsuccess, onerror) {
+		return function (e)	 {
+			log.error(e, 'Exception while table locked!');
+			
+			query({
+				sql: 'UNLOCK TABLES',
+				nextOp: function (conn, onsuccess, onerror) {
+					onerror(e);
+				}
+			})(conn, onsuccess, function (e) {
+				log.error(e, 'Critical, failed to unlock tables! This is very bad!');
+				onerror(e);
+			})
+		}
+	}
+	
+	function lockTable(opts) {
+		var tables = opts.tables;
+		var nextOp = opts.nextOp;
+		
+		var sql = 'LOCK TABLE ';
+		for (var i = 0; i < tables.length; i++) {
+			sql += tables[i] + ' WRITE';
+			if (i < tables.length-1)
+				sql += ',';
+		}
+		
+		return function (conn, onsuccess, onerror, data) {
+			if (log.trace())
+				log.trace('Locking tables %s', JSON.stringify(tables));
+			
+			query({
+				sql: sql,
+				nextOp: function (conn, onsuccess, onerror) {
+					if (nextOp != null) {
+						nextOp(conn, unlockTable(conn, onsuccess, onerror), unlockTableErr(conn, onsuccess, onerror), data)
+					} else {
+						unlockTable(conn, onsuccess, onerror)(data);
+					}
+				}
+			})(conn, onsuccess, onerror);
+		}
+	}
+	
+	function query(opts) {
+		var sql = opts.sql;
+		var params = opts.params;
+		var nextOp = opts.nextOp;
+		
+		if (params == null) params = [];
+		
+		return function (conn, onsuccess, onerror) {
+			var q = conn.query(sql, params, function (e, result) {
+				if (e != null) {
+					onerror(e);
+					return;
+				}
+				
+				if (nextOp != null) {
+					nextOp(conn, onsuccess, onerror, result);
+				} else {
+					onsuccess(result);
+				}
+			});
+			
+			if (log.trace())
+				log.trace('Executed query: %s!', q.sql);
+		}
+	}
+	
 	log.info('MySql connection created!');
 	
 	//===============================================================
@@ -41,6 +230,53 @@ module.exports = function () {
 			});
 		});
 	};
+	
+	function storeGeneralModel(opts) {
+		var values = opts.values;
+		var nextOp = opts.nextOp;
+		
+		return query({
+			sql: 'INSERT INTO model SET ?',
+			params: values,
+			nextOp: function (conn, onsuccess, onerror, result) {
+				if (nextOp != null)
+					nextOp(conn, onsuccess, onerror, result.insertId);
+				else
+					onsuccess(undefined, result.insertId);
+			}
+		})
+	}
+	
+	function createUser(opts) {
+		var username = opts.username;
+		var nextOp = opts.nextOp;
+		
+		return query({
+			sql: 'SELECT EXISTS(SELECT 1 FROM user WHERE email = ?) as isRegistered',
+			params: [username],
+			nextOp: function (conn, onsuccess, onerror, result) {
+				var exists = result[0].isRegistered == 1;
+				
+				if (exists) {
+					if (nextOp != null)
+						nextOp(conn, onsuccess, onerror, username);
+					else
+						onsuccess(undefined, username);
+				} else {
+					query({
+						sql: 'INSERT INTO user SET ?',
+						params: {email: username},
+						nextOp: function (conn, onsuccess, onerror, result) {
+							if (nextOp != null)
+								nextOp(conn, onsuccess, onerror, result.insertId);
+							else
+								onsuccess(undefined, result.insertId)
+						}
+					})(conn, onsuccess, onerror);
+				}
+			}
+		})
+	}
 	
 	var that = {
 			
@@ -83,32 +319,21 @@ module.exports = function () {
 		//===============================================================
 		
 		fetchUserModels: function (username, callback) {
-			that.createUser(username, function (e) {
-				if (e != null) {
-					callback(e);
-					return;
-				}
-				
-				pool.getConnection(function (e1, conn) {
-					if (e1 != null) {
-						callback(e1);
-						return;
-					}
-					
-					conn.query('SELECT * FROM model m LEFT JOIN offline_model ofm ON m.mid = ofm.mid LEFT JOIN online_model onm ON m.mid = onm.mid ' + 
-									'WHERE m.username = ? OR m.is_public = 1', [username], function (e2, result) {
-						conn.release();
-						
-						if (e2 != null) {
-							callback(e2);
-							return;
-						}
-						
-						callback(undefined, result);
-					});
-				});
+			connection({
+				callback: callback,
+				nextOp: transaction({
+					nextOp: createUser({
+						username: username,
+						nextOp: query({
+							sql: 'SELECT * FROM model m LEFT JOIN offline_model ofm ON m.mid = ofm.mid LEFT JOIN online_model onm ON m.mid = onm.mid ' + 
+									'WHERE m.username = ? OR m.is_public = 1',
+							params: [username]
+						})
+					})
+				})
 			});
 		},
+		
 		storeOnlineModel: function (opts, callback) {
 			var is_active = opts.is_active;
 			
@@ -116,25 +341,19 @@ module.exports = function () {
 			onlineOpts.is_realtime = 1;
 			delete onlineOpts.is_active;
 			
-			storeModel(onlineOpts, function (e, result) {
-				if (e != null) {
-					callback(e);
-					return;
-				}
-				
-				var modelId = result.insertId;
-				
-				pool.getConnection(function (e1, conn) {
-					if (e1 != null) {
-						callback(e1);
-						return;
-					}
-					
-					conn.query('INSERT INTO online_model SET ?', { mid: modelId, is_active: is_active }, function (e2, result) {
-						conn.release();
-						callback(e2 != null ? undefined : e2);
-					});
-				});
+			connection({
+				callback: callback,
+				nextOp: transaction({
+					nextOp: storeGeneralModel({
+						values: onlineOpts,
+						nextOp: function (conn, onsuccess, onerror, modelId) {
+							query({
+								sql: 'INSERT INTO online_model SET ?',
+								params: { mid: modelId, is_active: is_active }
+							})(conn, onsuccess, onerror);
+						}
+					})
+				})
 			});
 		},
 		storeOfflineModel: function (opts, callback) {
@@ -144,25 +363,19 @@ module.exports = function () {
 			offlineOpts.is_realtime = 0;
 			delete offlineOpts.base_dir;
 			
-			storeModel(offlineOpts, function (e, result) {
-				if (e != null) {
-					callback(e);
-					return;
-				}
-				
-				var modelId = result.insertId;
-				
-				pool.getConnection(function (e1, conn) {
-					if (e1 != null) {
-						callback(e1);
-						return;
-					}
-					
-					conn.query('INSERT INTO offline_model SET ?', { mid: modelId, base_dir: baseDir }, function (e2, result) {
-						conn.release();
-						callback(e2);
-					});
-				});
+			connection({
+				callback: callback,
+				nextOp: transaction({
+					nextOp: storeGeneralModel({
+						values: offlineOpts,
+						nextOp: function (conn, onsuccess, onerror, modelId) {
+							query({
+								sql: 'INSERT INTO offline_model SET ?',
+								params: { mid: modelId, base_dir: baseDir }
+							})(conn, onsuccess, onerror);
+						}
+					})
+				})
 			});
 		},
 		fetchModel: function (modelId, callback) {

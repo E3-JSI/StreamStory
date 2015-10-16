@@ -40,6 +40,8 @@ var zoomVis = function (opts) {
 		mode: { type: MODE_NORMAL, config: {} },
 	};
 	
+	var drawEdgeVals = false;
+	
 	var uiConfig = {
 		maxNodeSize: 0,
 		levelMaxNodeSize: []
@@ -278,19 +280,24 @@ var zoomVis = function (opts) {
 						color = '#C0C0C0';	// light gray
 					}
 					else if (val < .4) {
-						lineStyle = 'dashed';
-						color = '#A8A8A8';	// medium gray
+//						lineStyle = 'dashed';
+						color = '#C0C0C0';//'#A8A8A8';	// medium gray
 					}
+				}
+				
+				var data = {
+					id: i + '-' + edges[j],
+					source: levelNodes[level][i].id,
+					target: levelNodes[level][edges[j]].id,
+				};
+				
+				if (drawEdgeVals) {
+					data.value = val.toFixed(2);
 				}
 				
 				edgeArray.push({
 					group: 'edges',
-					data: {
-						id: i + '-' + edges[j],
-						source: levelNodes[level][i].id,
-						target: levelNodes[level][edges[j]].id,
-						value: val.toFixed(3)
-					},
+					data: data,
 					css: {
 						'haystack-radius': 0,
 						'control-point-step-size': 100,//250,//150,
@@ -858,6 +865,12 @@ var zoomVis = function (opts) {
 			graphNode.css('label', name);
 			graphNode.data('label', getNodeLabel(node));
 			// TODO
+		},
+		
+		setShowTransitionProbs: function (show) {
+			drawEdgeVals = show;
+			redraw();
+			redrawSpecial();
 		},
 		
 		setZoom: function (value) {
