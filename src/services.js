@@ -1542,7 +1542,7 @@ function initBroker() {
 //			log.debug('Received mesage: %s', JSON.stringify(payload));
 			payload = {
 				sensorId: 'montrac',
-				timestamp: msg.payload.variable_timestamp
+				timestamp: msg.payload.variable_timestamp,
 				eventProperties: {
 					location: msg.payload.location,
 					event: msg.payload.event,
