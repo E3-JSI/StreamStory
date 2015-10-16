@@ -1215,7 +1215,7 @@ function initDataUploadApi() {
 						saveToSession(sessionId, session, username, base, model, modelId);
 					}
 				} else {
-//					closeBase(session);		// TODO bug in qminer, have to do this before opening a new base
+					closeBase(session);		// TODO bug in qminer, have to do this before opening a new base
 					var baseConfig = loadOfflineModel(modelConfig.base_dir);
 					saveToSession(sessionId, session, username, baseConfig.base, baseConfig.model, modelId);
 				}
