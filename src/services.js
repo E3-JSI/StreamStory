@@ -970,7 +970,10 @@ function initDataUploadApi() {
 							for (var i = 0; i < headers.length; i++) {
 								var attr = headers[i].name;
 								if (attr == timeAttr) {
-									recJson[attr] = utils.dateToQmDate(new Date(parseInt(lineArr[i])));
+									var date = utils.dateToQmDate(new Date(parseInt(lineArr[i])));
+									recJson[attr] = date;
+									if (log.trace())
+										log.trace('Parsed date: %s', date);
 								} else {
 									recJson[attr] = parseFloat(lineArr[i]);
 								}
@@ -995,6 +998,9 @@ function initDataUploadApi() {
 							try {
 								var modelParams = utils.clone(config.STREAM_STORY_PARAMS);
 								modelParams.transitions.timeUnit = timeUnit;
+								
+								if (log.info())
+									log.info('Creating a new model with params: %s', JSON.stringify(modelParams));
 								
 								// create the model
 								var model = qm.analytics.StreamStory({

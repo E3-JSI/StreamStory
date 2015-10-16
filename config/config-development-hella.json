@@ -13,7 +13,7 @@
 			},
 			"clustering": {
 				"type": "dpmeans",
-				"lambda": 0.8,
+				"lambda": 0.9,
 				"minClusts": 10,
 				"sample": 1,
 				"histogramBins": 20
@@ -29,7 +29,7 @@
 	},
 	"log": {
 		"logger": {
-			"level": "debug",
+			"level": "trace",
 			"outputMode": "short",
 			"stream": {
 				"type": "stdout",
