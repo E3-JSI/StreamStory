@@ -1573,8 +1573,42 @@ function initBroker() {
 			
 			if (eventName == 'TODO something') {
 				base.store(fields.OA_IN_STORE).push(val);
+			} else if (eventName == 'timeToMolding') {
+				var ll = val.lacqueringLineId;
+				var mm = val.mouldingMachineId;
+				var shuttleId = val.shuttleId;
+				var deltaTm = timeDifference;
+				
+				var minTime = transform.getMinTime(ll, mm);
+				
+				if (minTime != null) {
+					var timeRatio = deltaTm / minTime;
+					
+					if (log.info())
+						log.info('Calculated timeToMolding ratio: %d', timeRatio);
+					
+					if (timeRatio < 1.2) {
+						var msg = {
+							type: 'prediction',
+							content: {
+								time: opts.time,
+								eventId: 'Moulding line empty: ' + mm,
+								pdf: {
+									type: 'exponential',
+									lambda: 1000
+								}
+							}
+						};
+						
+						if (log.debug())
+							log.info('Sending prediction %s', JSON.stringify(msg));
+						
+						sendPrediction(msg);
+					}
+				}
 			} else {
 				// send prediction directly
+				
 				var msg = {
 					type: 'prediction',
 					content: {

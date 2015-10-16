@@ -82,7 +82,7 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 } else {
 	var MinTimeCalculator = function () {
 		var shuttleTimeH = {};
-		var minTimeH = {};
+		var minTimeH = {"PM1":{"IMM2":77000,"IMM1":55000},"PM2":{"IMM4":117000,"IMM3":91000,"IMM5":137000}};
 		
 		return {
 			onShuttleStarted: function (timestamp, shuttleId, lacqueringId) {
@@ -104,6 +104,11 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 						log.info('Min shuttle time updated: %s', JSON.stringify(minTimeH));
 					}
 				}
+			},
+			getMinTime: function (ll, mm) {
+				if (ll in minTimeH && mm in minTimeH[ll])
+					return minTimeH[ll][mm];
+				else return null;
 			}
 		}
 	}
@@ -192,21 +197,6 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 	function removeFromQueue(queueId, shuttleId) {
 		var queue = queues[queueId];
 		
-//		if (!containsShuttle(queueId, shuttleId))
-//			return;
-//		
-//		while (queue.length > 0) {
-//			var removedId = queue.shift().shuttleId;
-//			
-//			if (removedId == shuttleId)
-//				break;
-//			else if (log.debug())
-//				log.debug('Shuttle %d removed from the montrac!', removedId);
-//			
-//			if (removedId != shuttleId && log.debug()) {
-//				
-//			}
-//		}
 		for (var i = 0; i < queue.length; i++) {
 			if (queue[i].shuttleId == shuttleId) {
 				queue.splice(i, 1);
@@ -538,6 +528,10 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 		}
 	}
 	
+	module.exports.getMinShuttleTime = function (ll, mm) {
+		return timeCalculator.getMinTime(ll, mm);
+	}
+	
 	module.exports = {
 		transform: function (val) {
 			var sensorId = val.sensorId;
@@ -669,7 +663,7 @@ module.exports.parseDominiksDerivedEvent = function (event) {
 	delete val.time;
 	
 	return {
-		timestamp: event.time,
+		timestamp: event.time != null ? event.time : new Date().getTime(),
 		componentId: 'cep',
 		eventName: event.pipelineId,
 		eventProperties: val
