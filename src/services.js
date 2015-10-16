@@ -1531,106 +1531,110 @@ function initBroker() {
 	
 	var lastCepTime = 0;
 	
-	broker.onMessage(function (msg) {		
-		if (msg.type == 'raw') {
-			if (++imported % printInterval == 0 && log.trace())
-				log.trace('Imported %d values ...', imported);
-			var payload = msg.payload;
-			
-
-			if (log.trace())
-				log.trace('Received raw measurement: %s', JSON.stringify(payload));
-			
-			//========================================================
-			// TODO remove this			
-			payload = transform.parseDominiksRawEvent(msg);
-			//========================================================
-			
-			addRawMeasurement(payload);
-		} else if (msg.type == 'cep') {
-			if (log.trace())
-				log.trace('Received CEP message: %s', JSON.stringify(msg));
-			
-			var event = msg.payload;	
-			
-			//========================================================
-			// TODO remove this			
-			event = transform.parseDominiksDerivedEvent(msg);
-			//========================================================
-			
-			var val = transform.parseDerivedEvent(event);
-
-			var timestamp = event.timestamp;
-			var eventName = event.eventName;
-			
-			if (isNaN(timestamp)) {
-				log.warn('CEP sent NaN time %s', JSON.stringify(val));
-				return;
-			} 
-			else if (timestamp <= lastCepTime) {
-				log.warn('CEP sent invalid time %d <= %d: %s', timestamp, lastCepTime, JSON.stringify(val));
-				return;
-			}
-			
-			if (eventName == 'enriched') {
-				base.store(fields.OA_IN_STORE).push(val);
-			} else if (eventName == 'timeToMolding') {
-				var ll = val.lacqueringLineId;
-				var mm = val.mouldingMachineId;
-				var shuttleId = val.shuttleId;
-				var deltaTm = timeDifference;
+	broker.onMessage(function (msg) {
+		try {
+			if (msg.type == 'raw') {
+				if (++imported % printInterval == 0 && log.trace())
+					log.trace('Imported %d values ...', imported);
+				var payload = msg.payload;
 				
-				var minTime = transform.getMinTime(ll, mm);
+	
+				if (log.trace())
+					log.trace('Received raw measurement: %s', JSON.stringify(payload));
 				
-				if (log.debug())
-					log.debug('Got %s event, minTime: %s ...', eventName, minTime);
+				//========================================================
+				// TODO remove this			
+				payload = transform.parseDominiksRawEvent(msg);
+				//========================================================
 				
-				if (minTime != null) {
-					var timeRatio = deltaTm / minTime;
-					
-					if (log.info())
-						log.info('Calculated timeToMolding ratio: %d', timeRatio);
-					
-					if (timeRatio < 1.2) {
-						var msg = {
-							type: 'prediction',
-							content: {
-								time: opts.time,
-								eventId: 'Moulding line empty: ' + mm,
-								pdf: {
-									type: 'exponential',
-									lambda: 1000
-								}
-							}
-						};
-						
-						if (log.debug())
-							log.info('Sending prediction %s', JSON.stringify(msg));
-						
-						sendPrediction(msg, timestamp);
-					}
+				addRawMeasurement(payload);
+			} else if (msg.type == 'cep') {
+				if (log.trace())
+					log.trace('Received CEP message: %s', JSON.stringify(msg));
+				
+				var event = msg.payload;	
+				
+				//========================================================
+				// TODO remove this			
+				event = transform.parseDominiksDerivedEvent(msg);
+				//========================================================
+				
+				var val = transform.parseDerivedEvent(event);
+	
+				var timestamp = event.timestamp;
+				var eventName = event.eventName;
+				
+				if (isNaN(timestamp)) {
+					log.warn('CEP sent NaN time %s', JSON.stringify(val));
+					return;
+				} 
+				else if (timestamp <= lastCepTime) {
+					log.warn('CEP sent invalid time %d <= %d: %s', timestamp, lastCepTime, JSON.stringify(val));
+					return;
 				}
-			} else {
-				// send prediction directly
 				
-				var msg = {
-					type: 'prediction',
-					content: {
-						time: timestamp,
-						eventId: 'Some dummy prediction generated from a CEP event',
-						pdf: {
-							type: 'exponential',
-							lambda: 1
+				if (eventName == 'enriched') {
+					base.store(fields.OA_IN_STORE).push(val);
+				} else if (eventName == 'timeToMolding') {
+					var ll = val.lacqueringLineId;
+					var mm = val.mouldingMachineId;
+					var shuttleId = val.shuttleId;
+					var deltaTm = timeDifference;
+					
+					var minTime = transform.getMinTime(ll, mm);
+					
+					if (log.debug())
+						log.debug('Got %s event, minTime: %s ...', eventName, minTime);
+					
+					if (minTime != null) {
+						var timeRatio = deltaTm / minTime;
+						
+						if (log.info())
+							log.info('Calculated timeToMolding ratio: %d', timeRatio);
+						
+						if (timeRatio < 1.2) {
+							var msg = {
+								type: 'prediction',
+								content: {
+									time: opts.time,
+									eventId: 'Moulding line empty: ' + mm,
+									pdf: {
+										type: 'exponential',
+										lambda: 1000
+									}
+								}
+							};
+							
+							if (log.debug())
+								log.info('Sending prediction %s', JSON.stringify(msg));
+							
+							sendPrediction(msg, timestamp);
 						}
 					}
-				};
+				} else {
+					// send prediction directly
+					
+					var msg = {
+						type: 'prediction',
+						content: {
+							time: timestamp,
+							eventId: 'Some dummy prediction generated from a CEP event',
+							pdf: {
+								type: 'exponential',
+								lambda: 1
+							}
+						}
+					};
+					
+					sendPrediction(msg, timestamp);
+				}
 				
-				sendPrediction(msg, timestamp);
+				lastCepTime = timestamp;
+			} else {
+				log.warn('Invalid message type: %s', msg.type);
 			}
-			
-			lastCepTime = timestamp;
-		} else {
-			log.warn('Invalid message type: %s', msg.type);
+		} catch (e) {
+			log.error(e, 'Exception while processing broker message!');
 		}
 	});
 }
