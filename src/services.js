@@ -1582,7 +1582,7 @@ function initBroker() {
 					var ll = val.lacqueringLineId;
 					var mm = val.mouldingMachineId;
 					var shuttleId = val.shuttleId;
-					var deltaTm = timeDifference;
+					var deltaTm = val.timeDifference;
 					
 					var minTime = transform.getMinTime(ll, mm);
 					
