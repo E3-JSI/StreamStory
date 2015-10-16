@@ -527,12 +527,11 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 			handleQueueCorrections(shuttleId, location, left, right)
 		}
 	}
-	
-	module.exports.getMinShuttleTime = function (ll, mm) {
-		return timeCalculator.getMinTime(ll, mm);
-	}
-	
+		
 	module.exports = {
+		getMinShuttleTime: function (ll, mm) {
+			return timeCalculator.getMinTime(ll, mm);
+		},
 		transform: function (val) {
 			var sensorId = val.sensorId;
 			
