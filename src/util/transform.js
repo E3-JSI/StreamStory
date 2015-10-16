@@ -613,6 +613,10 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 				prevTimestamp = timestamp;
 			}
 			
+			if (log.debug()) {
+				log.debug('Transform returning %d values ...', vals.length);
+			}
+			
 			return vals;
 		}
 	}
