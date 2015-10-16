@@ -1556,7 +1556,7 @@ function initBroker() {
 				
 				//========================================================
 				// TODO remove this			
-				event = transform.parseDominiksDerivedEvent(msg);
+				event = transform.parseDominiksDerivedEvent(event);
 				//========================================================
 				
 				var val = transform.parseDerivedEvent(event);
@@ -1574,6 +1574,9 @@ function initBroker() {
 				}
 				
 				if (eventName == 'enriched') {
+					if (log.debug())
+						log.debug('Got enriched event ...');
+					
 					base.store(fields.OA_IN_STORE).push(val);
 				} else if (eventName == 'timeToMolding') {
 					if (log.debug())
@@ -1615,6 +1618,8 @@ function initBroker() {
 						}
 					}
 				} else {
+					if (log.debug())
+						log.debug('Got unknown event, sending prediction ...');
 					// send prediction directly
 					
 					var msg = {
