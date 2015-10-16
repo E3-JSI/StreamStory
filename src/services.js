@@ -1572,7 +1572,7 @@ function initBroker() {
 				return;
 			}
 			
-			if (eventName == 'TODO something') {
+			if (eventName == 'enriched') {
 				base.store(fields.OA_IN_STORE).push(val);
 			} else if (eventName == 'timeToMolding') {
 				var ll = val.lacqueringLineId;
@@ -1581,6 +1581,9 @@ function initBroker() {
 				var deltaTm = timeDifference;
 				
 				var minTime = transform.getMinTime(ll, mm);
+				
+				if (log.debug())
+					log.debug('Got %s event, minTime: %s ...', eventName, minTime);
 				
 				if (minTime != null) {
 					var timeRatio = deltaTm / minTime;
