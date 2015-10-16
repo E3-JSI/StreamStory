@@ -1613,8 +1613,8 @@ function initBroker() {
 				var msg = {
 					type: 'prediction',
 					content: {
-						time: opts.time,
-						eventId: opts.eventId,
+						time: timestamp,
+						eventId: 'Some dummy prediction generated from a CEP event',
 						pdf: {
 							type: 'exponential',
 							lambda: 1
