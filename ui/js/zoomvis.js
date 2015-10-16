@@ -265,18 +265,22 @@ var zoomVis = function (opts) {
 				k++;
 			}
 			
+			var maxVal = probs[0].prob;
+			
 			for (var j = 0; j < edges.length; j++) {
 				var val = levelJumps[level][i][edges[j]];
 				
 				var lineStyle = 'solid';
 				var color = '#606060';	// dark gray
-				if (val < .25)  {
-					lineStyle = 'dotted';
-					color = '#C0C0C0';	// light gray
-				}
-				else if (val < .5) {
-					lineStyle = 'dashed';
-					color = '#888888';	// medium gray
+				if (val != maxVal) {
+					if (val < .2)  {
+						lineStyle = 'dotted';
+						color = '#C0C0C0';	// light gray
+					}
+					else if (val < .4) {
+						lineStyle = 'dashed';
+						color = '#888888';	// medium gray
+					}
 				}
 				
 				edgeArray.push({
