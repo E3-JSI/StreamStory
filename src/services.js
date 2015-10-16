@@ -1574,13 +1574,13 @@ function initBroker() {
 				}
 				
 				if (eventName == 'enriched') {
-					if (log.debug())
-						log.debug('Got enriched event ...');
+					if (log.trace())
+						log.trace('Got enriched event ...');
 					
 					base.store(fields.OA_IN_STORE).push(val);
 				} else if (eventName == 'timeToMolding') {
-					if (log.debug())
-						log.debug('Processing %s event ...', eventName);
+					if (log.trace())
+						log.trace('Processing %s event ...', eventName);
 					
 					var ll = val.lacqueringLineId;
 					var mm = val.mouldingMachineId;
@@ -1602,7 +1602,7 @@ function initBroker() {
 							var msg = {
 								type: 'prediction',
 								content: {
-									time: opts.time,
+									time: timestamp,
 									eventId: 'Moulding line empty: ' + mm,
 									pdf: {
 										type: 'exponential',
@@ -1618,8 +1618,8 @@ function initBroker() {
 						}
 					}
 				} else {
-					if (log.debug())
-						log.debug('Got unknown event, sending prediction ...');
+					if (log.info())
+						log.info('Got unknown event, sending prediction ...');
 					// send prediction directly
 					
 					var msg = {
