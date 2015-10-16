@@ -1576,6 +1576,9 @@ function initBroker() {
 				if (eventName == 'enriched') {
 					base.store(fields.OA_IN_STORE).push(val);
 				} else if (eventName == 'timeToMolding') {
+					if (log.debug())
+						log.debug('Processing %s event ...', eventName);
+					
 					var ll = val.lacqueringLineId;
 					var mm = val.mouldingMachineId;
 					var shuttleId = val.shuttleId;
