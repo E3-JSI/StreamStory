@@ -1533,11 +1533,16 @@ function initBroker() {
 				log.trace('Imported %d values ...', imported);
 			var payload = msg.payload;
 			
+
+			if (log.trace())
+				log.trace('Received raw measurement: %s', JSON.stringify(payload));
+			
 			//========================================================
 			// TODO remove this
 //			log.debug('Received mesage: %s', JSON.stringify(payload));
 			payload = {
 				sensorId: 'montrac',
+				timestamp: msg.payload.variable_timestamp
 				eventProperties: {
 					location: msg.payload.location,
 					event: msg.payload.event,
