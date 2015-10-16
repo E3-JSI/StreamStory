@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">	<!-- latest IE rendering mode -->
+	<meta name="viewport" content="width=device-width, initial-scale=1">	<!-- mobile devices -->
+	<title>StreamStory</title>
+	
+	<link rel="stylesheet" href="css/style.css">
+	<link rel="stylesheet" href="lib/jquer-ui.css">	
+	<link rel="stylesheet" href="lib/bootstrap/css/bootstrap.min.css">
+	<link rel="stylesheet" href="lib/bootstrap/css/bootstrap-theme.min.css">
+	
+	<script type="text/javascript" src="lib/jquery-1.11.1.min.js"></script>
+	<script type="text/javascript" src="lib/jquery-ui.min.js"></script>
+	<script src="lib/bootstrap/js/bootstrap.min.js"></script>
+	<script type="text/javascript" src="lib/cytoscape.js"></script>
+	<script type="text/javascript" src="lib/highcharts.js"></script>
+	<script type="text/javascript" src="js/zoomvis.js"></script>
+	<script type="text/javascript" src="js/hist.js"></script>
+	<script type="text/javascript" src="js/ui.js"></script>
+	
+	<style>
+		.dl-horizontal dt {
+		    white-space: normal;
+		    width: 200px;
+		    text-align: left;
+		}
+	</style>
+	<script type="text/javascript">
+		function postParam(paramName, paramVal) {
+			$.ajax('api/param', {
+				dataType: 'json',
+				data: { paramName: paramName, paramVal: paramVal },
+				method: 'POST',
+				error: function (jqXHR, status) {
+					alert('Failed to set parameter value: ' + status);
+				}
+			});
+		}
+	
+		function fetchFricConfig() {
+			$.ajax('api/config', {
+				dataType: 'json',
+				method: 'GET',
+				data: { properties: [
+					'calc_coeff',
+					'deviation_extreme_lambda',
+					'deviation_major_lambda',
+					'deviation_minor_lambda',
+					'deviation_significant_lambda'
+				] },
+				success: function (data) {
+					var props = {};
+					for (var i = 0; i < data.length; i++) {
+						props[data[i].property] = data[i].value;
+					}
+					
+					$('#check-calc-coeff').attr('checked', props.calc_coeff == 'true');
+					$('#input-extreme-lambda').val(props.deviation_extreme_lambda);
+					$('#input-major-lambda').val(props.deviation_major_lambda);
+					$('#input-significant-lambda').val(props.deviation_significant_lambda);
+					$('#input-minor-lambda').val(props.deviation_minor_lambda);
+					$('#btn-fric-cancel, #btn-fric-ok').attr('disabled', 'disabled');
+					
+					$('#check-calc-coeff').change();
+				},
+				error: function (jqXHR, status) {
+					alert(status);
+				}
+			});
+		}
+		
+		function fetchConfig() {
+			fetchFricConfig();
+			
+			$.ajax('api/param', {
+				dataType: 'json',
+				data: { paramName: 'predictionThreshold' },
+				success: function (paramObj) {
+					$('#range-pred-threshold').slider("value", paramObj.value);
+				},
+				error: function (jqXHR, status) {
+					alert(status);
+				}
+			});
+			
+			$.ajax('api/param', {
+				dataType: 'json',
+				data: { paramName: 'timeHorizon' },
+				success: function (paramObj) {
+					$('#range-time-horizon').slider("value", paramObj.value);
+				},
+				error: function (jqXHR, status) {
+					alert(status);
+				}
+			});
+			
+			$.ajax('api/param', {
+				dataType: 'json',
+				data: { paramName: 'pdfBins' },
+				success: function (paramObj) {
+					$('#range-pdf-bins').slider("value", paramObj.value);
+				},
+				error: function (jqXHR, status) {
+					alert(status);
+				}
+			});
+		}
+	
+		var ui;
+		$(document).ready(function () {
+			ui = UI();
+			fetchConfig();
+			
+			<% if (isOnlineModel) { %>
+			ui.initWebSockets();
+			<% } %>
+			
+			$.ajax('api/countActiveModels', {
+				dataType: 'json',
+				success: function (data) {
+					$('#span-no-active').html(data.count);
+				}
+			});
+		});
+	</script>
+	
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+</head>
+<body>
+	<nav class="navbar navbar-default">
+  		<div class="container-fluid">
+    		<!-- Brand and toggle get grouped for better mobile display -->
+    		<div class="navbar-header">
+      			<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+        			<span class="sr-only">Toggle navigation</span>
+        			<span class="icon-bar"></span>
+        			<span class="icon-bar"></span>
+        			<span class="icon-bar"></span>
+      			</button>
+      			<a class="navbar-brand" href=".">StreamStory</a>
+    		</div>
+
+    		<!-- Collect the nav links, forms, and other content for toggling -->
+    		<div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+      			<ul class="nav navbar-nav navbar-right">
+        			<% if (isOnlineModel) { %>
+        			<li>
+        				<a id="lnk-msgs" href="#" data-placement="bottom" data-toggle="popover" title="Popover Header" data-content="Some content inside the popover">
+        					(<span id="span-num-msgs">0</span>)&nbsp;<span class="glyphicon glyphicon-comment" aria-hidden="true"></span>
+        				</a>
+        				<div id="content-msgs" class="popover fade bottom in" style="max-width: 350px; width: 350px; left: -230px; top: 50px; display: none;">
+							<div class="arrow" style="left: 260px;"></div>
+							<div id="vis_options" class="container-fluid">
+								<div style="padding-top: 12px; padding-bottom: 12px;">
+									<div class="row">
+										<div id="div-messages" class="col-md-12">
+											<ul id="list-msg" class="list-group"></ul>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+        				<script type="text/javascript">
+	        				$('#lnk-msgs').click(function (event) {
+	       						event.preventDefault();
+	       						$('#content-msgs').slideToggle();
+	       					});
+       					</script>
+        			</li>
+        			<% } %>
+        			<li>
+        				<a id="lnk-config" href="#"><span class="glyphicon glyphicon-cog" aria-hidden="true"></span></a>
+        				<script type="text/javascript">
+        					$('#lnk-config').click(function (event) {
+        						event.preventDefault();
+        						$('#popup-config').modal({ show: true });
+        					});
+        				</script>
+        			</li>
+      			</ul>
+    		</div><!-- /.navbar-collapse -->
+  		</div><!-- /.container-fluid -->
+	</nav>
+	
+	<!-- Configuration popup -->
+	<div id="popup-config" class="modal fade" role="dialog" tabindex="-1">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+    				<button type="button" class="close" data-dismiss="modal">&times;</button>
+    				<h4 class="modal-title">Configuration</h4>
+  				</div>
+  				<div class="modal-body">
+  					<div id="div-config">
+  						<div>
+  							<div>
+  								<div class="checkbox">
+									<label>
+										<input id="chk-show-probs" type="checkbox"> Show transition probabilities
+									</label>
+								</div>
+  							</div>
+  						</div>
+						<div id="div-config-params" class="row">
+							<div class="col-md-12">
+								<label for="range-pred-threshold">Prediciton threshold: <span id="span-pred-threshold"></span></label>
+								<div id="range-pred-threshold"></div>
+							</div>
+						</div>
+						<div id="div-config-params" class="row">
+							<div class="col-md-12">
+								<label for="range-time-horizon">Time horizon: <span id="span-time-horizon"></span></label>
+								<div id="range-time-horizon"></div>
+							</div>
+						</div>
+						<div id="div-config-params" class="row">
+							<div class="col-md-12">
+								<label for="range-pdf-bins">PDF bins: <span id="span-pdf-bins"></span></label>
+								<div id="range-pdf-bins"></div>
+							</div>
+						</div>
+						<div style="outline: 1px solid orange;">
+							<div>
+								<div class="checkbox">
+    								<label>
+      									<input id="check-calc-coeff" type="checkbox" /> Calculate firction
+    								</label>
+  								</div>
+  								<script type="text/javascript">
+  									$('#check-calc-coeff').change(function () {
+  										var isChecked = $(this).is(':checked');
+  										if (isChecked) {
+  											// fetch the configuration from the db
+  											$('#div-configure-coeff').show();
+  										}
+  										else
+  											$('#div-configure-coeff').hide();
+  									});
+  								</script>
+							</div>
+							<div id="div-configure-coeff" style="display: none;">
+								<div class="form-group">
+							    	<label for="input-extreme-lambda">Extreme deviation intensity</label>
+							    	<input id="input-extreme-lambda" type="number" class="form-control" />
+							  	</div>
+							  	<div class="form-group">
+							    	<label for="input-major-lambda">Major deviation intensity</label>
+							    	<input id="input-major-lambda" type="number" class="form-control" />
+							  	</div>
+							  	<div class="form-group">
+							    	<label for="input-significant-lambda">Significant deviation intensity</label>
+							    	<input id="input-significant-lambda" type="number" class="form-control" />
+							  	</div>
+							  	<div class="form-group">
+							    	<label for="input-minor-lambda">Minor deviation intensity</label>
+							    	<input id="input-minor-lambda" type="number" class="form-control" />
+							  	</div>
+							</div>
+						</div>
+					</div>
+  				</div>
+  				<div class="modal-footer">
+  					<button id="config-cancel" type="button" class="btn btn-default">Cancel</button>
+    				<button id="config-done" type="button" class="btn btn-success">Done</button>
+    				<script type="text/javascript">
+			  			$('#config-done').click(function () {
+			  				var predThreshold = $('#range-pred-threshold').slider('value');
+			  				var timeHorizon = $('#range-time-horizon').slider('value');
+			  				var pdfBins = $('#range-pdf-bins').slider('value');
+			  				
+			  				postParam('predictionThreshold', predThreshold);
+			  				postParam('timeHorizon', timeHorizon);
+			  				postParam('pdfBins', pdfBins);
+			  						  			
+			  				$.ajax('api/config', {
+								method: 'POST',
+								data: {
+									calc_coeff: $('#check-calc-coeff').is(':checked'),
+									deviation_extreme_lambda: $('#input-extreme-lambda').val(),
+									deviation_major_lambda: $('#input-major-lambda').val(),
+									deviation_minor_lambda: $('#input-significant-lambda').val(),
+									deviation_significant_lambda: $('#input-minor-lambda').val()
+								},
+								error: function (jqXHR, status) {
+									alert(status);
+								}
+							});
+			  			});
+			  			
+			  			$('#config-cancel').click(function () {
+			  				fetchConfig();
+			  			});
+			  			
+			  			$('#config-cancel, #config-done').click(function () {
+			  				$('#popup-config').modal('hide');
+			  			});
+			  			
+			  			// setup the configuration sliders
+						$('#range-pred-threshold').slider({
+							value: .5,
+							min: 0,
+							max: 1,
+							step: .05,
+							animate: true,
+							change: function (event, ui) {
+								var val = ui.value;
+								$('#span-pred-threshold').html(val);
+							}
+						});
+						
+						$('#range-time-horizon').slider({
+							value: 1,
+							min: 0,
+							max: 10,
+							step: .1,
+							animate: true,
+							change: function (event, ui) {
+								var val = ui.value;
+								$('#span-time-horizon').html(val);
+							}
+						});
+						
+						$('#range-pdf-bins').slider({
+							value: 100,
+							min: 100,
+							max: 10000,
+							step: 10,
+							animate: true,
+							change: function (event, ui) {
+								var val = ui.value;
+								$('#span-pdf-bins').html(val);
+							}
+						});
+    				</script>
+  				</div>
+			</div>
+		</div>
+		<script type="text/javascript">
+			$('#popup-config').modal({ show: false });
+		</script>
+	</div>
+	
+	<!-- Central components -->
+	<div class="container-fluid">
+		<div class="row">
+			<div class="col-md-8">
+				<div id="parent_container" class="panel panel-default main-vis">
+					<div class="panel-heading clearfix">
+						<h4 class="panel-title pull-left">Visualization <span id="span-zoom" class="component-title-additional">&nbsp;(Zoom: <span id="span-zoom-val">0</span>%)</span></h4>
+						<!-- toggler for the visualization options -->
+						<button id="vis-toggler" class="btn btn-default btn-xs pull-right" style="padding: 0px 5px;" aria-label="Left Align">
+						  	<span class="glyphicon glyphicon-align-justify" aria-hidden="true"></span>
+						</button>
+						<span class="pull-right component-title-additional">
+							<span id="span-no-active"></span> online models, time unit:&nbsp;<span id="span-tu"></span>&nbsp;&nbsp;&nbsp;
+						</span>
+						<!-- options for the visualization component -->
+						<div id="content-options" class="popover fade bottom in">
+							<div class="arrow"></div>
+							<div id="vis_options" class="container-fluid">
+								<div style="padding-top: 12px; padding-bottom: 12px;">
+									<div class="row">
+										<div id="div-ftrs" class="col-md-12">
+											<div>
+												<h4>Show attribute</h4>
+												<ul id="ul-ftrs-obs"></ul>
+											</div>
+											<div>
+												<h4>Adjust control</h4>
+												<div class="checkbox">
+													<label><input id="chk-sim-inputs" type="checkbox" /> Simulate inputs</label>
+												</div>
+												<div id="div-ftrs-control"></div>
+											</div>
+										</div>
+									</div>
+									<div class="row">
+										<div  class="col-md-12">
+											<h4>View future</h4>
+											<input type="checkbox" id="chk-show-fut" />Show future
+											<div id="div-future-opts">
+												<input type="number" id="rng-time-probs" value="0" />
+												<input type="number" id="txt-fut-range" value="1" />
+												<div id="div-fut-time"></div>
+											</div>
+										</div>
+									</div>
+									<div class="row">
+										<div id="container-buttons" class="col-md-12" style="padding-top: 12px;">
+											<input type="button" id="btn-activate" value="Activate Model" class="btn btn-success btn-block hidden" />
+											<input type="button" id="btn-reset-sim" value="Reset Simulation" class="btn btn-default btn-block hidden" />
+											<input type="button" id="btn-png" value="Save as PNG" class="btn btn-default btn-block" />
+											<input type="button" id="btn-save" value="Save Model" class="btn btn-primary btn-block" />
+											<script type="text/javascript">
+												{
+													var isActive = false;
+													
+													$.ajax('api/modelMode', {
+														dataType: 'json',
+														success: function (data) {
+															if (!data.isRealtime)
+																return;
+																
+															isActive = data.isActive;
+															var btn = $('#btn-activate');
+															
+															btn.removeClass('hidden');
+															if (isActive) {
+																btn.val('Deactivate Model');
+																btn.removeClass('btn-success');
+																btn.addClass('btn-danger');
+															} else {
+																btn.val('Activate Model');
+																btn.removeClass('btn-danger');
+																btn.addClass('btn-success');
+															}
+														},
+														error: function (jqXHR, status) {
+															alert(status);
+														}
+													});
+													$('#btn-activate').click(function () {
+														$.ajax('api/activateModel', {
+															dataType: 'json',
+															method: 'POST',
+															data: { activate: !isActive },
+															success: function () {
+																window.location.reload();
+															},
+															error: function (jqXHR, status) {
+																alert(status);
+															}
+														});
+													});
+												}
+											</script>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+						<script type="application/javascript">
+							$('#vis-toggler').click(function () {
+								$('#content-options').slideToggle();
+							});
+						</script>
+					</div>
+					<div id="vis-wrapper" class="panel-body nopadding">
+						<div id="slider_container">
+							<div id="slider_item_div"></div>
+						</div>
+						<div id="vis_container" class="nopadding"></div>						
+						<div id="threshold_slider"></div>
+					</div>
+				</div>
+			</div>
+			<div class="col-md-4">
+				<div id="container-details" class="panel panel-default main-vis">
+					<div class="panel-heading">Details</div>
+					<div id="div-details" class="panel-body nopadding scrollable">
+						<div id="wrapper-state-details" class="container-fluid" style="display: none;">
+							<div class="row">
+								<div id="div-ftrs" class="col-md-12">
+									<div class="form-group">
+										<label for="txt-name">State name</label>
+										<input id="txt-name" type="text" class="form-control" />
+									</div>
+									<div class="checkbox">
+								    	<label>
+								      		<input id="chk-target" type="checkbox" /> Make target
+								    	</label>
+								  	</div>
+								</div>
+							</div>
+							<div class="row">
+								<div id="div-ftrs" class="col-md-12">
+									<h3>Attributes</h3>
+									<div class="row">
+										<div id="div-attrs" class="col-md-12"></div>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div id="wrapper-transition-details" class="container-fluid" style="display: none;">
+							<div class="row">
+								<div id="div-ftrs" class="col-md-12">
+									<span id="span-transition-name"></span>
+								</div>
+							</div>
+							<div class="row">
+								<div id="div-trans-ftrs" class="col-md-12"></div>
+							</div>
+						</div>
+						<!-- thumbnail with the histograms for attributes -->
+						<div id="div-thumbnail" style="display: none;">
+							<div class="col-md-6 thumb-col">
+								<div class="thumbnail">
+									<div class="container-hist"></div>
+							      	<div class="caption">
+							        	<h6 class="attr-name" style="word-wrap: break-word;"></h6>
+							        	<p>
+							        		<span class="attr-val"></span>
+						        			<span class="div-ftr-range" style="display: none;">
+									        	<div class="range-contr-val"></div>
+									      	</span>
+						        		</p>
+							      	</div>
+							    </div>
+						    </div>
+					    </div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="row">
+			<div id="div-msg-0-wrapper" class="col-md-4 col-md-offset-2"></div>
+		</div>
+		<div class="row">
+			<div id="div-msg-1-wrapper" class="col-md-4 col-md-offset-2"></div>
+		</div>
+		<script type="text/javascript">
+			$('#div-msg-0, #div-msg-1').alert();
+			//$('#div-msg-0, #div-msg-1').alert('close');
+		</script>
+	</div>
+
+	<!-- popover for the histogram of the PDF -->
+	<div id="popover-pdf-hist" class="popover fade bottom in popover-centered">
+		<a class="glyphicon glyphicon-remove btn-close" onclick="$('#popover-pdf-hist').slideUp();"></a>
+		<div id="hist-pdf" style="width: 100%; height: 100%;"></div>
+	</div>
+</body>
