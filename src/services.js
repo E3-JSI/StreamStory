@@ -1561,6 +1561,7 @@ function initBroker() {
 			var val = transform.parseDerivedEvent(event);
 
 			var timestamp = event.timestamp;
+			var eventName = event.eventName;
 			
 			if (isNaN(timestamp)) {
 				log.warn('CEP sent NaN time %s', JSON.stringify(val));
