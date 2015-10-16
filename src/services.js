@@ -1425,10 +1425,10 @@ function initConfigRestApi() {
 	});
 }
 
-function sendPrediction(msg) {
+function sendPrediction(msg, timestamp) {
 	var msgStr = JSON.stringify(msg);
 	
-	var brokerMsg = transform.genExpPrediction(pdf.lambda, 'month', opts.time);
+	var brokerMsg = transform.genExpPrediction(msg.content.pdf.lambda, 'month', timestamp);
 	broker.send(broker.PREDICTION_PRODUCER_TOPIC, JSON.stringify(brokerMsg));
 	modelStore.distributeMsg(msgStr);
 }
@@ -1514,7 +1514,7 @@ function initPipelineHandlers() {
 						}
 					};
 					
-					sendPrediction(msg);
+					sendPrediction(msg, opts.time);
 				}
 			});
 		});
@@ -1604,7 +1604,7 @@ function initBroker() {
 						if (log.debug())
 							log.info('Sending prediction %s', JSON.stringify(msg));
 						
-						sendPrediction(msg);
+						sendPrediction(msg, timestamp);
 					}
 				}
 			} else {
@@ -1622,7 +1622,7 @@ function initBroker() {
 					}
 				};
 				
-				sendPrediction(msg);
+				sendPrediction(msg, timestamp);
 			}
 			
 			lastCepTime = timestamp;
