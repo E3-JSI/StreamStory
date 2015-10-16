@@ -13,7 +13,7 @@ var topics = {
 	RAW_DATA_CONSUMER_TOPIC: 'eu.proasense.internal.sp.internal.outgoing.montrac',//'si.ijs.internal.raw',
 	CEP_DATA_CONSUMER_TOPIC: 'si.ijs.internal.cep',
 	// output topics
-	ENRICHED_DATA_PRODUCER_TOPIC: 'si.ijs.internal.enriched',
+	ENRICHED_DATA_PRODUCER_TOPIC: 'eu.proasense.internal.sp.internal.outgoing.hella-enriched',//'si.ijs.internal.enriched',
 	PREDICTION_PRODUCER_TOPIC: 'si.ijs.internal.oa_output'
 };
 
