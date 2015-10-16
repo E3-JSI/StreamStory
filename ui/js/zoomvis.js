@@ -268,6 +268,17 @@ var zoomVis = function (opts) {
 			for (var j = 0; j < edges.length; j++) {
 				var val = levelJumps[level][i][edges[j]];
 				
+				var lineStyle = 'solid';
+				var color = '#606060';	// dark gray
+				if (val < .25)  {
+					lineStyle = 'dotted';
+					color = '#C0C0C0';	// light gray
+				}
+				else if (val < .5) {
+					lineStyle = 'dashed';
+					color = '#888888';	// medium gray
+				}
+				
 				edgeArray.push({
 					group: 'edges',
 					data: {
@@ -281,7 +292,9 @@ var zoomVis = function (opts) {
 						'control-point-step-size': 100,//250,//150,
 						'text-valign': 'top',
 						'control-point-weight': 0.5,
-						'border-style': 'solid',
+						'line-style': lineStyle,
+						'line-color': color,
+						'target-arrow-color': color,
 						'width': Math.max(1, (val*10).toFixed()),
 						'z-index': 100
 					}
