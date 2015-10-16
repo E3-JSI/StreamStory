@@ -200,6 +200,9 @@ function saveToSession(sessionId, session, username, userBase, model, modelId) {
 }
 
 function addRawMeasurement(val) {
+	if (log.trace())
+		log.trace('Received raw measurememnt %s ...', JSON.stringify(val));
+	
 	var insertVals = transform.transform(val);
 	
 	for (var i = 0; i < insertVals.length; i++) {
@@ -224,8 +227,8 @@ function addRawMeasurement(val) {
 		var insertVal = transformed.value;
 		
 
-		if (log.debug())
-			log.debug('Inserting raw measurement %s', JSON.stringify(insertVal));
+		if (log.trace())
+			log.trace('Inserting raw measurement %s', JSON.stringify(insertVal));
 		
 		pipeline.insertRaw(storeNm, insertVal);
 		storeLastTm[storeNm] = timestamp;
