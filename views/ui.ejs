@@ -226,44 +226,44 @@
 								<div id="range-pdf-bins"></div>
 							</div>
 						</div>
-						<div style="outline: 1px solid orange;">
-							<div>
-								<div class="checkbox">
-    								<label>
-      									<input id="check-calc-coeff" type="checkbox" /> Calculate firction
-    								</label>
-  								</div>
-  								<script type="text/javascript">
-  									$('#check-calc-coeff').change(function () {
-  										var isChecked = $(this).is(':checked');
-  										if (isChecked) {
-  											// fetch the configuration from the db
-  											$('#div-configure-coeff').show();
-  										}
-  										else
-  											$('#div-configure-coeff').hide();
-  									});
-  								</script>
-							</div>
-							<div id="div-configure-coeff" style="display: none;">
-								<div class="form-group">
-							    	<label for="input-extreme-lambda">Extreme deviation intensity</label>
-							    	<input id="input-extreme-lambda" type="number" class="form-control" />
-							  	</div>
-							  	<div class="form-group">
-							    	<label for="input-major-lambda">Major deviation intensity</label>
-							    	<input id="input-major-lambda" type="number" class="form-control" />
-							  	</div>
-							  	<div class="form-group">
-							    	<label for="input-significant-lambda">Significant deviation intensity</label>
-							    	<input id="input-significant-lambda" type="number" class="form-control" />
-							  	</div>
-							  	<div class="form-group">
-							    	<label for="input-minor-lambda">Minor deviation intensity</label>
-							    	<input id="input-minor-lambda" type="number" class="form-control" />
-							  	</div>
-							</div>
+						<% if (useCase == 'mhwirth') { %>
+						<div>
+							<div class="checkbox">
+   								<label>
+     									<input id="check-calc-coeff" type="checkbox" /> Calculate firction
+   								</label>
+ 								</div>
+ 								<script type="text/javascript">
+ 									$('#check-calc-coeff').change(function () {
+ 										var isChecked = $(this).is(':checked');
+ 										if (isChecked) {
+ 											// fetch the configuration from the db
+ 											$('#div-configure-coeff').show();
+ 										}
+ 										else
+ 											$('#div-configure-coeff').hide();
+ 									});
+ 								</script>
 						</div>
+						<div id="div-configure-coeff" style="display: none;">
+							<div class="form-group">
+						    	<label for="input-extreme-lambda">Extreme deviation intensity</label>
+						    	<input id="input-extreme-lambda" type="number" class="form-control" />
+						  	</div>
+						  	<div class="form-group">
+						    	<label for="input-major-lambda">Major deviation intensity</label>
+						    	<input id="input-major-lambda" type="number" class="form-control" />
+						  	</div>
+						  	<div class="form-group">
+						    	<label for="input-significant-lambda">Significant deviation intensity</label>
+						    	<input id="input-significant-lambda" type="number" class="form-control" />
+						  	</div>
+						  	<div class="form-group">
+						    	<label for="input-minor-lambda">Minor deviation intensity</label>
+						    	<input id="input-minor-lambda" type="number" class="form-control" />
+						  	</div>
+						</div>
+						<% } %>
 					</div>
   				</div>
   				<div class="modal-footer">
@@ -359,7 +359,10 @@
 						  	<span class="glyphicon glyphicon-align-justify" aria-hidden="true"></span>
 						</button>
 						<span class="pull-right component-title-additional">
-							<span id="span-no-active"></span> online models, time unit:&nbsp;<span id="span-tu"></span>&nbsp;&nbsp;&nbsp;
+							<% if (isOnlineModel) { %>
+							<span id="span-no-active"></span> online models,
+							<% } %> 
+							time unit:&nbsp;<span id="span-tu"></span>&nbsp;&nbsp;&nbsp;
 						</span>
 						<!-- options for the visualization component -->
 						<div id="content-options" class="popover fade bottom in">
@@ -394,10 +397,8 @@
 									</div>
 									<div class="row">
 										<div id="container-buttons" class="col-md-12" style="padding-top: 12px;">
+											<% if (isOnlineModel) { %>
 											<input type="button" id="btn-activate" value="Activate Model" class="btn btn-success btn-block hidden" />
-											<input type="button" id="btn-reset-sim" value="Reset Simulation" class="btn btn-default btn-block hidden" />
-											<input type="button" id="btn-png" value="Save as PNG" class="btn btn-default btn-block" />
-											<input type="button" id="btn-save" value="Save Model" class="btn btn-primary btn-block" />
 											<script type="text/javascript">
 												{
 													var isActive = false;
@@ -441,6 +442,10 @@
 													});
 												}
 											</script>
+											<% } %>
+											<input type="button" id="btn-reset-sim" value="Reset Simulation" class="btn btn-default btn-block hidden" />
+											<input type="button" id="btn-png" value="Save as PNG" class="btn btn-default btn-block" />
+											<input type="button" id="btn-save" value="Save Model" class="btn btn-primary btn-block" />
 										</div>
 									</div>
 								</div>
