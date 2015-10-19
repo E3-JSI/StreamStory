@@ -555,20 +555,24 @@ var zoomVis = function (opts) {
 		if (addedEdges.length > 0) cy.add(addedEdges);
 	}
 	
-	function emphasizeEdges(node) {
-		cy.batch(function () {
-			var edges = cy.edges();
-			var nedges = edges.length;
-			for (var i = 0; i < nedges; i++) {
-				var edge = edges[i];
-				edge.css(edge.data().style);
-			}
-			
-			node.neighborhood("edge[source =" + node.id() + "]").css({
-				'line-color': 'green',
-				'target-arrow-color': 'green',
-			});
+	function emphasizeEdges(node, isInBatch) {
+		if (!isInBatch)
+			cy.startBatch();
+		
+		var edges = cy.edges();
+		var nedges = edges.length;
+		for (var i = 0; i < nedges; i++) {
+			var edge = edges[i];
+			edge.css(edge.data().style);
+		}
+		
+		node.edgesTo('').css({
+			'line-color': 'green',
+			'target-arrow-color': 'green',
 		});
+		
+		if (!isInBatch)
+			cy.endBatch();
 	}
 	
 	function redraw(opts) {
@@ -979,12 +983,12 @@ var zoomVis = function (opts) {
 		cy.batch(function () {
 			cy.nodes().css('shape', 'ellipse');
 			cy.nodes().css('border-width', DEFAULT_BORDER_WIDTH);
-			drawNode(stateId);
+			drawNode(stateId, true);
+			emphasizeEdges(node, true);
 		});
 		
 		// notify the handler
 		callbacks.stateSelected(stateId, height);
-		emphasizeEdges(node);
 	});
 	
 	cy.on('mouseover', 'node', function (event) {
