@@ -12,7 +12,7 @@ var zoomVis = function (opts) {
 	var VIZ_NODE_FTR_POS_COLOR = 117;
 	var CURRENT_NODE_COLOR = 'green';
 	var DEFAULT_BORDER_COLOR = 'black';
-	var FONT_SIZE = 10;
+	var FONT_SIZE = '12';
 	
 	var DEFAULT_BORDER_WIDTH = 5;
 	
@@ -90,7 +90,7 @@ var zoomVis = function (opts) {
 	//===============================================================
 	
 	function getNodeLabel(node) {
-		return (node.name != null ? node.name : (node.id + '')) + '\ntime: ' + node.holdingTime.toPrecision(2);
+		return (node.name != null ? node.name : (node.id + '')) + '\nt: ' + node.holdingTime.toPrecision(2);
 	}
 
 	function colorFromProb(prob) {
@@ -442,7 +442,7 @@ var zoomVis = function (opts) {
 			var cached = cache.getNode(id);
 			
 			if (cache.getNode(id) == null) {
-				var position = cyPosition(node);		//[x, y]
+				var position = cyPosition(node);
 				var nodeSize = cySize(levelInfo[i].radius);
 				var label = getNodeLabel(node);
 				
@@ -451,6 +451,7 @@ var zoomVis = function (opts) {
 					'text-transform': 'none',
 					'text-halign': 'center',
 					'text-valign': 'center',
+					'text-wrap': 'wrap',
 					'font-style': 'normal',
 					'font-size': FONT_SIZE,
 					'font-family': 'inherit',
@@ -586,6 +587,15 @@ var zoomVis = function (opts) {
 			cy.endBatch();
 	}
 	
+	function redrawAll() {
+		cy.startBatch();
+		
+		redraw({ isInBatch: true });
+		redrawSpecial(true);
+		
+		cy.endBatch();
+	}
+	
 	function constructLevels(data, isInit) {
 		clearStructures();
 		
@@ -612,8 +622,6 @@ var zoomVis = function (opts) {
 					uiConfig.levelMaxNodeSize[i] = size;
 			}
 		}
-		
-//		console.log(JSON.stringify(levelCurrentStates));
 		
 		if (isInit) {
 			maxHeight = levelHeights[levelHeights.length - 1];
@@ -929,7 +937,8 @@ var zoomVis = function (opts) {
 				css: {
 					'background-color': DEFAULT_NODE_COLOR,
 					'text-valign': 'center',
-					'min-zoomed-font-size': 3
+					'font-size': FONT_SIZE,
+//					'min-zoomed-font-size': 3
 				},
 			},
 			{
@@ -1062,10 +1071,7 @@ var zoomVis = function (opts) {
 		
 		setTransitionThreshold: function (threshold) {
 			transitionThreshold = Math.max(.5, Math.min(1, threshold));
-			cy.batch(function () {
-				redraw({ isInBatch: true });
-				redrawSpecial(true);
-			});
+			redrawAll();
 		},
 		
 		setProbDist: function (dist) {
@@ -1139,7 +1145,6 @@ var zoomVis = function (opts) {
 			var label = getNodeLabel(node);
 			graphNode.css('label', label);
 			graphNode.data('label', label);
-			// TODO
 		},
 		
 		setShowTransitionProbs: function (show) {
@@ -1151,8 +1156,6 @@ var zoomVis = function (opts) {
 					var prob = edge.data().prob;
 					edge.css({ content: show ? prob : '' });
 				}
-//				redraw({ isInBatch: true });
-//				redrawSpecial(true);
 			})
 		},
 		
