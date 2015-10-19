@@ -23,6 +23,31 @@ var zoomVis = function (opts) {
 	// size
 	var MIN_NODE_DIAMETER = 40;
 	
+	var QTIP_OPTS = {
+		content: function (event) { 
+			return 'Holding time ' + this.data().holdingTime.toPrecision(2)
+		},
+		position: {
+			my: 'bottom center',
+			at: 'top center'
+		},
+		style: {
+			classes: 'qtip-bootstrap',
+			tip: {
+				width: 16,
+				height: 8
+			}
+		},
+		show: {
+            solo: true,
+            event: 'mouseover',
+            delay: 9000
+        },
+        hide: {
+        	event: 'click mouseout'
+        }
+	}
+	
 	var TARGET_NODE_CSS = {
 		'background-image-opacity': .2,
 		'background-fit': 'cover',
@@ -90,7 +115,7 @@ var zoomVis = function (opts) {
 	//===============================================================
 	
 	function getNodeLabel(node) {
-		return (node.name != null ? node.name : (node.id + '')) + '\nt: ' + node.holdingTime.toPrecision(2);
+		return (node.name != null ? node.name : (node.id + ''));
 	}
 
 	function colorFromProb(prob) {
@@ -477,7 +502,8 @@ var zoomVis = function (opts) {
 					group: 'nodes',
 					data: {
 						id: '' + node.id,
-						style: style
+						style: style,
+						holdingTime: node.holdingTime
 					},
 					position: {
 						x: position.x,
@@ -551,7 +577,7 @@ var zoomVis = function (opts) {
 		// draw
 		if (removedEdgeSelector.length > 0) cy.remove(cy.edges(removedEdgeSelector));
 		if (removedNodeSelector.length > 0) cy.remove(cy.nodes(removedNodeSelector));
-		if (added.length > 0) cy.add(added);
+		if (added.length > 0) cy.add(added).qtip(QTIP_OPTS);
 		if (addedEdges.length > 0) cy.add(addedEdges);
 	}
 	
@@ -569,6 +595,7 @@ var zoomVis = function (opts) {
 		node.edgesTo('').css({
 			'line-color': 'green',
 			'target-arrow-color': 'green',
+			'line-style': 'solid'
 		});
 		
 		if (!isInBatch)
@@ -933,7 +960,7 @@ var zoomVis = function (opts) {
 		alert("your browser is unsupported");
 	}
 	
-	var cy = cytoscape({
+	var cy = window.cy = cytoscape({
 		container: document.getElementById(opts.visContainer),
 		style: [
 			{
