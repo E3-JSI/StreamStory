@@ -477,11 +477,13 @@
 										<label for="txt-name">State name</label>
 										<input id="txt-name" type="text" class="form-control" />
 									</div>
+									<% if (isOnlineModel) { %>
 									<div class="checkbox">
 								    	<label>
 								      		<input id="chk-target" type="checkbox" /> Make target
 								    	</label>
 								  	</div>
+								  	<% } %>
 								</div>
 							</div>
 							<div class="row">

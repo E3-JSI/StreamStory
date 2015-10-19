@@ -11281,10 +11281,9 @@ var cytoscape;
         //////////////////////////
 
         if( styleEnabled ){
-
           var style = ele._private.style;
           var rstyle = ele._private.rstyle;
-          var label = style['content'].strValue;
+          var label = 'content' in style ? style['content'].strValue : null;
           var fontSize = style['font-size'];
           var halign = style['text-halign'];
           var valign = style['text-valign'];
@@ -14537,6 +14536,7 @@ var cytoscape;
   };
 
   CanvasRenderer.prototype.recalculateEdgeLabelProjection = function( edge ){
+    if (!('content' in edge._private.style)) return;
     var content = edge._private.style['content'].strValue;
     if( !content || content.match(/^\s+$/) ){ return; }
 
