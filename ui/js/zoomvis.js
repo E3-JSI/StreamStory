@@ -110,119 +110,10 @@ var zoomVis = function (opts) {
 	
 	var transitionThreshold = 1;
 	
-	//===============================================================
-	// UTILITY FUNCTIONS
-	//===============================================================
-	
-	function getNodeLabel(node) {
-		return (node.name != null ? node.name : (node.id + ''));
+	var boundingBox = {
+		x: { min: Number.MAX_VALUE, max: Number.MIN_VALUE },
+		y: { min: Number.MAX_VALUE, max: Number.MIN_VALUE }
 	}
-
-	function colorFromProb(prob) {
-		return Math.sqrt(prob);
-	}
-	
-	function minAndMaxCoords() {
-		for (var i = 0; i < levelNodes.length; i++) {
-			for (var j = 0; j < levelNodes[i].length; j++) {
-				if (levelNodes[i][j].x < minX) {
-					minX = levelNodes[i][j].x;
-				} else if (levelNodes[i][j].x > maxX) {
-					maxX = levelNodes[i][j].x;
-				}
-				if (levelNodes[i][j].y < minY) {
-					minY = levelNodes[i][j].y;
-				} else if (levelNodes[i][j].y > maxY) {
-					maxY = levelNodes[i][j].y;
-				}
-			}
-		}
-	}
-	
-	function cyPosition(node) {
-		return {
-		    x: visWidth * (xOffset + (1 - xOffset) * (minX + node.x) / (maxX - minX)),
-		    y: visHeight * (yOffset + (1 - yOffset) * (minY + node.y) / (maxY - minY))
-		};
-	}
-	
-	function cySize(radius) {
-		var scaleX = (1 - 2*xOffset)*visWidth / (maxX - minX);
-		var scaleY = (1 - 2*yOffset)*visHeight / (maxY - minY);
-		var scale = Math.min(scaleX, scaleY);
-		
-		var diameter = 2*radius;
-		
-		return {
-			width: Math.max(scale * diameter, MIN_NODE_DIAMETER),
-			height: Math.max(scale * diameter, MIN_NODE_DIAMETER)
-		};
-	}
-	
-	function serverPosition(pos) {
-		return {
-			x: (pos.x/visWidth - xOffset)*(maxX - minX) / (1 - yOffset) - minX,
-			y: (pos.y/visHeight - yOffset)*(maxY - minY) / (1 - yOffset) - minY
-		}
-	}
-	
-	function calcCyPan(newZoom) {
-		if (newZoom < minCyZoom) newZoom = minCyZoom;
-		if (newZoom > maxCyZoom) newZoom = maxCyZoom;
-		
-		var width = cy.width();
-		var height = cy.height();
-		var pan = cy.pan();
-		var zoom = cy.zoom();
-		
-		var centerX = (width - 2*pan.x) / zoom;
-		var centerY = (height - 2*pan.y) / zoom;
-		
-		return {
-			x: (width - newZoom*centerX) / 2,
-			y: (height - newZoom*centerY) / 2
-		}
-	}
-	
-	function setZoom(newZoom, fireEvent) {
-		if (fireEvent == null) fireEvent = true;
-		
-		cy.viewport({zoom: newZoom, pan: calcCyPan(newZoom)});
-		if (fireEvent) {
-			callbacks.zoomChanged(newZoom);
-		}
-	}
-	
-	//===============================================================
-	// CLEAR FUNCTIONS
-	//===============================================================
-	
-	function clear(isInBatch) {
-		if (!isInBatch)
-			cy.startBatch();
-
-		cy.remove(cy.nodes());
-		cy.remove(cy.edges());
-		cache.clear();
-		
-		if (!isInBatch)
-			cy.endBatch();
-	}
-	
-	function clearStructures() {
-		uiConfig.maxNodeSize = 0;
-		uiConfig.levelMaxNodeSize = [];
-		
-		levelHeights = [];
-		levelJumps = [];
-		levelCurrentStates = [];
-		levelNodes = [];
-		levelNodeMap = {};
-	}
-	
-	//===============================================================
-	// DRAW FUNCTIONS
-	//===============================================================
 	
 	var ElementCache = function () {
 		var nodeCache = {};
@@ -322,6 +213,160 @@ var zoomVis = function (opts) {
 	}
 	
 	var cache = ElementCache();
+	
+	//===============================================================
+	// UTILITY FUNCTIONS
+	//===============================================================
+	
+	function getNodeLabel(node) {
+		return (node.name != null ? node.name : (node.id + ''));
+	}
+
+	function colorFromProb(prob) {
+		return Math.sqrt(prob);
+	}
+	
+	function minAndMaxCoords() {
+		// get the num and max of the server centers
+		for (var i = 0; i < levelNodes.length; i++) {
+			for (var j = 0; j < levelNodes[i].length; j++) {
+				var node = levelNodes[i][j];
+				var x = node.x, y = node.y;
+				if (x < minX) minX = x
+				if (x > maxX) maxX = x;
+				if (y < minY) minY = y;
+				if (y > maxY) maxY = y;
+			}
+		}
+		
+		// get the bounding box
+		for (var i = 0; i < levelNodes.length; i++) {
+			for (var j = 0; j < levelNodes[i].length; j++) {
+				var node = levelNodes[i][j];
+				var pos = cyPosition(node);
+				var size = cySize(node.radius);
+				var x = pos.x, y = pos.y;
+				
+				var halfW = size.width / 2;
+				var halfH = size.height / 2;
+				
+				if (x - halfW < boundingBox.x.min) boundingBox.x.min = x - halfW;
+				if (x + halfW > boundingBox.x.max) boundingBox.x.max = x + halfW;
+				if (y - halfH < boundingBox.y.min) boundingBox.y.min = y - halfH;
+				if (y + halfH > boundingBox.y.max) boundingBox.y.max = y + halfH;
+			}
+		}
+	}
+	
+	function cyPosition(node) {
+		return {
+		    x: cy.width() * (xOffset + (1 - 2*xOffset) * (node.x - minX) / (maxX - minX)),
+		    y: cy.height() * (yOffset + (1 - 2*yOffset) * (node.y - minY) / (maxY - minY))
+		};
+	}
+	
+	function cySize(radius) {
+		var scaleX = (1 - 2*xOffset)*cy.width() / (maxX - minX);
+		var scaleY = (1 - 2*yOffset)*cy.height() / (maxY - minY);
+		var scale = Math.min(scaleX, scaleY);
+		
+		var diameter = 2*radius;
+		
+		return {
+			width: Math.max(scale * diameter, MIN_NODE_DIAMETER),
+			height: Math.max(scale * diameter, MIN_NODE_DIAMETER)
+		};
+	}
+	
+	function serverPosition(pos) {
+		return {
+			x: (pos.x/visWidth - xOffset)*(maxX - minX) / (1 - yOffset) - minX,
+			y: (pos.y/visHeight - yOffset)*(maxY - minY) / (1 - yOffset) - minY
+		}
+	}
+	
+	function calcCyPan(newZoom) {
+		if (newZoom < minCyZoom) newZoom = minCyZoom;
+		if (newZoom > maxCyZoom) newZoom = maxCyZoom;
+		
+		var width = cy.width();
+		var height = cy.height();
+		var pan = cy.pan();
+		var zoom = cy.zoom();
+		
+		var centerX = (width - 2*pan.x) / zoom;
+		var centerY = (height - 2*pan.y) / zoom;
+		
+		return {
+			x: (width - newZoom*centerX) / 2,
+			y: (height - newZoom*centerY) / 2
+		}
+	}
+	
+	function setZoom(newZoom, fireEvent) {
+		if (fireEvent == null) fireEvent = true;
+		
+		cy.viewport({zoom: newZoom, pan: calcCyPan(newZoom)});
+		if (fireEvent) {
+			callbacks.zoomChanged(newZoom);
+		}
+	}
+	
+	function setViewport(bb, fireEvent) {
+		if (fireEvent == null) fireEvent = true;
+				
+		var cyWidth = cy.width();
+		var cyHeight = cy.height();
+		
+		var width = bb.x.max - bb.x.min;
+		var height = bb.y.max - bb.y.min;
+		
+		var paddingX = xOffset*cyWidth;
+		var paddingY = yOffset*cyHeight;
+		
+		var zoom = Math.min((cyWidth - 2*paddingX) / width, (cyHeight - 2*paddingY) / height);
+		var pan = { // now pan to middle
+			x: (cyWidth - zoom*(bb.x.min + bb.x.max))/2,
+			y: (cyHeight - zoom*(bb.y.min + bb.y.max))/2
+        };
+		
+		cy.viewport({zoom: zoom, pan: pan});
+
+		if (fireEvent) {
+			callbacks.zoomChanged(zoom);
+		}
+	}
+	
+	//===============================================================
+	// CLEAR FUNCTIONS
+	//===============================================================
+	
+	function clear(isInBatch) {
+		if (!isInBatch)
+			cy.startBatch();
+
+		cy.remove(cy.nodes());
+		cy.remove(cy.edges());
+		cache.clear();
+		
+		if (!isInBatch)
+			cy.endBatch();
+	}
+	
+	function clearStructures() {
+		uiConfig.maxNodeSize = 0;
+		uiConfig.levelMaxNodeSize = [];
+		
+		levelHeights = [];
+		levelJumps = [];
+		levelCurrentStates = [];
+		levelNodes = [];
+		levelNodeMap = {};
+	}
+	
+	//===============================================================
+	// DRAW FUNCTIONS
+	//===============================================================	
 	
 	function getEdgeConfig(sourceN, targetN, transitions, nodeInfo, maxVal) {
 		var sourceId = nodeInfo[sourceN].id;
@@ -463,9 +508,7 @@ var zoomVis = function (opts) {
 			var id = node.id;
 			
 			nodeIdxs[id] = i;
-			
-			var cached = cache.getNode(id);
-			
+						
 			if (cache.getNode(id) == null) {
 				var position = cyPosition(node);
 				var nodeSize = cySize(levelInfo[i].radius);
@@ -536,17 +579,17 @@ var zoomVis = function (opts) {
 			var nodeN = nodeIdxs[node.id];
 			
 			addedEdges = addedEdges.concat(getEdgesWithSource(nodeN, levelJumps[level][nodeN], levelInfo));
-			
-			for (var j = 0; j < addedEdges.length; j++) {
-				takenEdgeIds[addedEdges[i].data.id] = true;
-			}
+		}
+		
+		for (var i = 0; i < addedEdges.length; i++) {
+			takenEdgeIds[addedEdges[i].data.id] = true;
 		}
 		
 		for (var i = 0; i < added.length; i++) {
 			var node = added[i].data;
 			var nodeN = nodeIdxs[node.id];
 			
-			var edges = addedEdges.concat(getEdgesWithTarget(nodeN, levelJumps[level], levelInfo));
+			var edges = getEdgesWithTarget(nodeN, levelJumps[level], levelInfo);
 			
 			for (var j = 0; j < edges.length; j++) {
 				if (edges[j].data.id in takenEdgeIds) continue;
@@ -581,38 +624,15 @@ var zoomVis = function (opts) {
 		if (addedEdges.length > 0) cy.add(addedEdges);
 	}
 	
-	function emphasizeEdges(node, isInBatch) {
-		if (!isInBatch)
-			cy.startBatch();
-		
-		var edges = cy.edges();
-		var nedges = edges.length;
-		for (var i = 0; i < nedges; i++) {
-			var edge = edges[i];
-			edge.css(edge.data().style);
-		}
-		
-		node.edgesTo('').css({
-			'line-color': 'green',
-			'target-arrow-color': 'green',
-			'line-style': 'solid'
-		});
-		
-		if (!isInBatch)
-			cy.endBatch();
-	}
-	
 	function redraw(opts) {
+		if (opts == null) opts = {};
+		
 		if (!opts.isInBatch)
 			cy.startBatch();
 		
 		if (!opts.keepCached)
 			clear(true);
 		insertLevel(currentLevel, true);
-		
-		if (opts.isInit) {
-			cy.center();
-		}
 		
 		if (!opts.isInBatch)
 			cy.endBatch();
@@ -659,15 +679,16 @@ var zoomVis = function (opts) {
 			minHeight = levelHeights[0];
 			
 			heightStep = (maxHeight - minHeight) / ZOOM_STEPS;
-			setZoom(minCyZoom);
+		
+			minAndMaxCoords();
+
+			setViewport(boundingBox)
 			
 			currentHeight = maxHeight;
 			currentLevel = levelHeights.length - 1;
-		
-			minAndMaxCoords();
 		}
 		
-		redraw({ isInit: isInit });
+		redraw();
 	}
 	
 	function setCurrentLevel(levelIdx) {
@@ -675,7 +696,7 @@ var zoomVis = function (opts) {
 			fetchTargetFtr(modeConfig.mode.config.targetFtr);
 		}
 		
-		redraw({ isInit: false, keepCached: true });
+		redraw({ keepCached: true });
 		fetchCurrentState(hierarchy[levelIdx].height);
 	}
 	
@@ -918,10 +939,7 @@ var zoomVis = function (opts) {
 	//===============================================================
 	
 	function onMouseWheel(event) {
-		console.log(event.deltaY);
-		if (event.preventDefault) {
-			event.preventDefault();
-		}
+		if (event.preventDefault) event.preventDefault();
 		
 		if (event.deltaY > 0) {		// scroll out
 			currentHeight = Math.min(maxHeight, currentHeight + heightStep);
@@ -942,11 +960,11 @@ var zoomVis = function (opts) {
 			}
 		}
 				
-		var zoom = cy.zoom();
-		var factor = 1.01;
-		var newZoom = zoom * (event.deltaY > 0 ? 1 / factor : factor);
-		
-		setZoom(newZoom);
+//		var zoom = cy.zoom();
+//		var factor = 1.01;
+//		var newZoom = zoom * (event.deltaY > 0 ? 1 / factor : factor);
+//		
+//		setZoom(newZoom);
 		currentHeightContainer.innerHTML = (100*(1 - (hierarchy[currentLevel].height - minHeight) / (maxHeight - minHeight))).toFixed();	// set height text
 	}
 	
@@ -968,8 +986,7 @@ var zoomVis = function (opts) {
 				css: {
 					'background-color': DEFAULT_NODE_COLOR,
 					'text-valign': 'center',
-					'font-size': FONT_SIZE,
-//					'min-zoomed-font-size': 3
+					'font-size': FONT_SIZE
 				},
 			},
 			{
@@ -1008,10 +1025,22 @@ var zoomVis = function (opts) {
 		modeConfig.selected = stateId;
 		// redraw
 		cy.batch(function () {
-			cy.nodes().css('shape', 'ellipse');
 			cy.nodes().css('border-width', DEFAULT_BORDER_WIDTH);
 			drawNode(stateId, true);
-			emphasizeEdges(node, true);
+			
+			// emphasize edges
+			var edges = cy.edges();
+			var nedges = edges.length;
+			for (var i = 0; i < nedges; i++) {
+				var edge = edges[i];
+				edge.css(edge.data().style);
+			}
+			
+			node.edgesTo('').css({
+				'line-color': 'green',
+				'target-arrow-color': 'green',
+				'line-style': 'solid'
+			});
 		});
 		
 		// notify the handler
@@ -1125,7 +1154,7 @@ var zoomVis = function (opts) {
 			if (ftrIdx == null) {	// reset to normal mode
 				cy.batch(function () {
 					setMode(MODE_NORMAL, {});
-					redraw({ isInit: false, keepCached: true, isInBatch: true });
+					redraw({ keepCached: true, isInBatch: true });
 					redrawSpecial(true);
 				});
 			} else {

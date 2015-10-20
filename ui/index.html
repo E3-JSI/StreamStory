@@ -16,12 +16,9 @@
 	<script type="text/javascript" src="lib/jquery-1.11.1.min.js"></script>
 	<script type="text/javascript" src="lib/bootstrap/js/bootstrap.min.js"></script>
 	<script type="text/javascript" src="lib/jquery.bootstrap-duallistbox.js"></script>
-	
-	<script type="text/javascript">
-		function redirectToUI() {
-			window.location.replace('ui.html');
-		}
-	</script>
+	<script type="text/javascript" src="js/utils.js"></script>
+	<script type="text/javascript" src="js/index.js"></script>
+
 	<style>
 	.model-active {
 		background-color: #CCFFCC;
@@ -83,19 +80,9 @@
                         <ul class="list-inline intro-social-buttons">
                             <li>
    								<input id="input-upload" type="button" class="btn btn-default btn-primary" value="Upload Dataset" />
-   								<script type="text/javascript">
-   									$('#input-upload').click(function () {
-   										$('#popup-data-upload').modal('show');
-   									});
-   								</script>
                             </li>
                             <li>
    								<input id="input-select-source" type="button" class="btn btn-default btn-primary" value="Use Stored Dataset" />
-   								<script type="text/javascript">
-   									$('#input-select-source').click(function () {
-   										$('#popup-data-select').modal('show');
-   									});
-   								</script>
                             </li>
                         </ul>
                     </div>
@@ -153,6 +140,38 @@
 		  						</div>
 		  						<div id="form-phase4"  style="display: none;">
 		  							<div class="panel panel-default">
+		  								<div class="panel-heading">Configure States</div>
+			  							<div id="div-select-controls" class="panel-body">
+			  								<div class="form-group">
+												<label for="select-clust">Select Algorithm</label>
+											    <select id="select-clust" class="form-control">
+											    	<option value="kmeans" selected="selected">K-Means</option>
+											    	<option value="dpmeans">DP-Means</option>
+											    </select>
+											</div>
+											<div id="div-config-kmeans">
+												<div class="form-group">
+													<label for="input-kmeans-k">Number of States</label>
+													<input id="input-kmeans-k" type="number" class="form-control" value="12" min="5" max="50" step="1" />
+												</div>
+											</div>
+											<div id="div-config-dpmeans" class="hidden">
+												<div class="form-group">
+													<label for="input-dpmeans-minstates">Minimum Number of States</label>
+													<input id="input-dpmeans-minstates" type="number" class="form-control" value="10" min="3" max="20" step="1" />
+												</div>
+												<div class="form-group">
+													<label for="input-dpmeans-maxstates">Maximum Number of States</label>
+													<input id="input-dpmeans-maxstates" type="number" class="form-control" value="30" min="10" max="100" step="1" />
+												</div>
+												<div class="form-group">
+													<label for="input-dpmeans-lambda">State Radius</label>
+													<input id="input-dpmeans-lambda" type="number" class="form-control" value="0.8" min="0.1" max="2" step="0.01" />
+												</div>
+											</div>
+										</div>
+		  							</div>
+		  							<div class="panel panel-default">
 			  							<div class="panel-heading">Organize Attributes</div>
 			  							<div id="div-select-controls" class="panel-body">
 										    <select id="select-controls" multiple="multiple"></select>
@@ -181,201 +200,6 @@
     				<button id="btn-done" type="button" class="btn btn-success" disabled="disabled">Done</button>
   				</div>
 			</div>
-			<script type="application/javascript">
-				function enableDisableSubmit() {
-					var radio = $('#radio-time');
-					var timeVal = radio.find('input:radio').val();
-					
-					// check if all the values are there
-					var hasEmail = $('#input-email').val() != '';
-					var hasTimeAttr = timeVal != null && timeVal != '';
-					var hasData = $('#input-choose-upload').val() != '';
-					var hasName = $('#input-model-name').val() != '';
-					
-					if (hasEmail && hasTimeAttr && hasData && hasName)
-						$('#btn-done').removeAttr('disabled');
-					else
-						$('#btn-done').attr('disabled', 'disabled');
-				}
-			
-				$('#input-choose-upload, #input-email, #input-model-name').change(enableDisableSubmit);
-			
-				$('#input-choose-upload').change(function () {
-					$('#form-phase2').hide(0);
-					$('#form-phase3').hide(0);
-					$('#form-phase4').hide(0);
-					$('#progress-build-model-wrapper').hide(0);
-			
-					var hasData = $('#input-choose-upload').val() != '';
-					
-					if (!hasData) return;
-			
-					console.log('Uploading the file ...');
-					
-					var form = $('#form-upload');
-					var formData = new FormData(form[0]);
-					
-					var action = form.attr('action');
-					var enctype = form.attr('enctype');
-					var method = form.attr('method');
-			
-					$('#progress-file-upload').css('width', '0%');
-					$('#progress-file-upload').html('0%');
-			
-					$.ajax(action, {
-						contentType: false,
-						enctype: enctype,
-						data: formData,
-						method: method,
-						processData: false,
-						xhr: function () {
-							var myXhr = $.ajaxSettings.xhr();
-							if (myXhr.upload) { // Check if upload property exists
-				                myXhr.upload.addEventListener('progress', function (event) {
-				                	if (event.lengthComputable) {
-				                		var prog = (100*(event.loaded / event.total)).toFixed(0);
-				                		$('#progress-file-upload').css('width', prog + '%');
-										$('#progress-file-upload').html(prog + '%');
-				                		console.log('progress: ' + prog);
-				                	}
-				                }, false); // For handling the progress of the upload
-				            }
-				            return myXhr;
-						},
-						success: function (fields, status, xhr) {
-							var select = $('#select-attrs');
-								
-							// clear the attributes
-							select.html('');
-							for (var i = 0; i < fields.length; i++) {
-								var attr = fields[i].name;												
-								select.append('<option value="' + attr + '">' + attr + '</option>');
-							}
-							
-							select.bootstrapDualListbox({
-								showFilterInputs: true,
-								selectedListLabel: 'Selected Attributes',
-								nonSelectedListLabel: 'Ignored Attributes'
-							});
-							select.bootstrapDualListbox('refresh');
-						
-							select.change(function () {
-								$('#form-phase3').hide(0);
-									$('#form-phase4').hide(0);
-							
-								var selectedAttrs = select.val();
-								
-								if (selectedAttrs == null) return;
-								
-								// set the time radio selector
-								var timeRadio = $('#radio-time');
-								timeRadio.html('');	// clear the element
-								
-								for (var i = 0; i < selectedAttrs.length; i++) {
-									var div = $('<div class="radio" />') 
-									var label = $('<label />');
-									var input = $('<input />');
-									
-									input.attr('type', 'radio');
-									input.attr('name', 'attr-time');
-									input.val(selectedAttrs[i]);
-									
-									label.append(input);
-									label.append(selectedAttrs[i]);
-									div.append(label);
-									timeRadio.append(div);
-								}
-								
-								timeRadio.find('input:radio').change(function () {
-									var timeAttr = $(this).val();
-									var select = $('#select-controls');
-									
-									// clear the attributes
-									select.html('');
-									for (var i = 0; i < selectedAttrs.length; i++) {
-										var attr = selectedAttrs[i];
-										if (attr != timeAttr)
-											select.append('<option value="' + attr + '">' + attr + '</option>');
-									}
-									
-									$('#select-controls').bootstrapDualListbox({
-										showFilterInputs: false,
-										selectedListLabel: 'Control Atrtibutes',
-										nonSelectedListLabel: 'Observation Attributes'
-									});
-									$('#select-controls').bootstrapDualListbox('refresh');
-									
-									// show the attribute selection
-									$('#form-phase4').show();
-								});
-								
-								timeRadio.find('input:radio').change(enableDisableSubmit);
-								
-								$('#form-phase3').show(0);
-							});
-							
-							$('#form-phase2').show();
-						},
-						error: function (xhr, status) {
-							alert('Failed to upload file: ' + status + '!');
-						}
-					});
-				});
-				
-				$('#btn-done').click(function () {
-					$('#progress-build-model-wrapper').show(0);
-				
-					var attrs = $('#select-attrs').val();
-					var controlAttrs = $('#select-controls').val();
-					var isRealTime = $('#check-realtime').is(':checked');
-					var name = $('#input-model-name').val();
-					
-					var data = {
-						username: $('#input-email').val(),
-						time: $('#radio-time').find('input:radio').val(),
-						timeUnit: $('#select-tu').val(),
-						attrs: attrs,
-						controlAttrs: controlAttrs != null ? controlAttrs : [],
-						isRealTime: isRealTime,
-						name: name
-					}
-					
-					var startTime = new Date().getTime();
-					
-					var currProgress = 0;
-					var prevProgress = 0;
-					var intervalId = setInterval(function () {
-						var time = (new Date().getTime() - startTime) / 1000;
-						currProgress = Math.floor((1 - Math.exp(-time/(60*2))) * 100);
-						
-						if (currProgress != prevProgress) {
-							$('#progress-build-model').css('width', currProgress + '%');
-							$('#progress-build-model').html(currProgress + '%');
-							prevProgress = currProgress;
-						}
-					}, 500);
-					
-					$.ajax('api/configureModel', {
-						method: 'POST',
-						contentType: 'application/json',
-						data: JSON.stringify(data),
-						timeout: 1000*60*60*24,	// 1 day
-						success: function (data) {
-							redirectToUI();
-						},
-						error: function (xhr, status) {
-							$('#input-choose-upload').val('');
-							$('#input-choose-upload').change();
-							alert(status);
-						},
-						complete: function () {
-							clearInterval(intervalId);
-						}
-					});
-					
-					$('#btn-done').attr('disabled', 'disabled');
-				});
-			</script>
 		</div>
 	</div>
 	<div id="popup-data-select" class="modal fade" role="dialog" tabindex="-1">
@@ -389,57 +213,6 @@
 					<div class="form-group">
 	  					<label for="input-email-select">Email address</label>
 	  					<input id="input-email-select" type="email" class="form-control" placeholder="Email" />
-  						<script type="text/javascript">
-  							function enableDisableSelect() {
-  								var emailPresent = $('#input-email-select').val() != '';
-  								var datasetPresent = $('#select-dataset option[selected="selected"]').val() != null &&
-  									$('#select-dataset option[selected="selected"]').val() != '';
-  							
-  								if (emailPresent && datasetPresent) {
-  									$('#btn-upload-done').removeAttr('disabled');
-  								} else {
-  									$('#btn-upload-done').attr('disabled', 'disabled');
-  								}
-  							}
-  							$('#input-email-select').change(enableDisableSelect);
-  						
-  							$('#input-email-select').change(function () {
-  								var email = $(this).val();
-  								$.ajax('api/selectDataset', {
-  									contentType: false,
-									data: { email: email },
-									method: 'GET',
-									success: function (data, status, xhr) {									
-										var select = $('#select-dataset');
-										select.html('');
-										
-										for (var i = 0; i < data.length; i++) {
-											var option = $('<option />');
-											
-											var modelData = data[i];
-											
-											option.val(modelData.model_file);
-											option.html(modelData.name + ' (' + modelData.date_created + ')' + (modelData.is_realtime == 1 ? ' (online)' : ' (offline)'));
-											if (i == 0) {
-												option.attr('selected', 'selected');
-											}
-											if (modelData.is_active == 1) {
-												option.addClass('model-active');
-											}
-											
-											select.append(option);
-										}
-										
-										$('#select-dataset').off('change');
-										$('#select-dataset').change(enableDisableSelect);
-										$('#select-dataset option[selected="selected"]').change();
-									},
-									error: function (xhr, status) {
-										alert('Failed to upload file: ' + status + '!');
-									}
-  								});
-  							});
-  						</script>
   					</div>
   					<div class="form-group">
                       	<label for="select-dataset">Choose dataset</label>
@@ -448,31 +221,10 @@
   				</div>
   				<div class="modal-footer">
     				<button id="btn-upload-done" type="button" class="btn btn-success" disabled="disabled">Done</button>
-  					<script type="text/javascript">
-  						$('#btn-upload-done').click(function () {
-  							var modelId = $('#select-dataset').val();
-  							
-  							$.ajax('api/selectDataset', {
-  								method: 'POST',
-  								contentType: 'application/json',
-								data: JSON.stringify({ modelId: modelId }),
-								success: function (data, status, xhr) {
-									redirectToUI();
-								},
-								error: function (xhr, status) {
-									alert('Failed to select dataset: ' + status + '!');
-								}
- 							});
-  						});
-  					</script>
   				</div>
 			</div>
 		</div>
 	</div>
-	<script type="text/javascript">
-		$('#popup-data-upload').modal({ show: false });
-		$('#popup-data-select').modal({ show: false });
-	</script>
 
     <!-- Page Content -->
 
@@ -488,7 +240,7 @@
                     	Visualize your data as a hierarchical state machine. Explore the distribution of states and transitions. Offers prediction and anomaly detection services.
                 </div>
                 <div class="col-lg-5 col-lg-offset-2 col-sm-6">
-                    <img class="img-responsive" src="img/landing/ui-circle.png" alt="">
+                    <img class="img-responsive" src="img/landing/ss.png" alt="">
                 </div>
             </div>
 

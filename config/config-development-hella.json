@@ -5,24 +5,6 @@
 		"createPipeline": true,
 		"initializeZeros": true
 	},
-	"models": {
-		"StreamStoryParams": {
-			"transitions": {
-				"type": "continuous",
-				"timeUnit": "hour"
-			},
-			"clustering": {
-				"type": "dpmeans",
-				"lambda": 0.9,
-				"minClusts": 10,
-				"sample": 1,
-				"histogramBins": 20
-			},
-			"rndseed": 1,
-			"pastStates": 2,
-			"verbose": true
-		}
-	},
 	"server": {
 		"port": 8585,
 		"pingInterval": 10000

@@ -87,7 +87,14 @@ exports.database = config.database;
 //================================================================
 // STREAM STORY
 //================================================================
-exports.STREAM_STORY_PARAMS = config.models.StreamStoryParams;
+exports.STREAM_STORY_PARAMS = {
+	transitions: {
+		type: 'continuous'
+	},
+	rndseed: 1,
+	pastStates: 2,
+	verbose: true
+}
 
 //================================================================
 // INTEGRATION

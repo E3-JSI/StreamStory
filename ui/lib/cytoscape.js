@@ -22,7 +22,7 @@ var cytoscape;
 
 function _getTextSize(node) {
   var nodeW = node._private.style['width'].pxValue;
-  var fontH = (nodeW / 6).toFixed();
+  var fontH = (nodeW / 4).toFixed();
   if (fontH < 10) fontH = 10;
   return fontH;
 }

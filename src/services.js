@@ -858,7 +858,7 @@ function initDataUploadApi() {
 		});
 	});
 	
-	function initBase(req, res) {
+	function createModel(req, res) {
 		try {
 			req.connection.setTimeout(LONG_REQUEST_TIMEOUT);	// set long timeout since the processing can take quite long
 			
@@ -872,6 +872,7 @@ function initDataUploadApi() {
 			var attrs = req.body.attrs;
 			var controlAttrs = req.body.controlAttrs;
 			var isRealTime = req.body.isRealTime;
+			var clustConfig = req.body.clust;
 			
 			var fileBuff = fileBuffH[sessionId];
 			var datasetName = session.datasetName;
@@ -1012,6 +1013,7 @@ function initDataUploadApi() {
 							// create the configuration
 							try {
 								var modelParams = utils.clone(config.STREAM_STORY_PARAMS);
+								modelParams.clustering = clustConfig;
 								modelParams.transitions.timeUnit = timeUnit;
 								
 								if (log.info())
@@ -1148,7 +1150,7 @@ function initDataUploadApi() {
 		fs.exists(userDirNm, function (exists) {
 			if (exists) {
 				log.debug('Reusing directory %s ...', userDirNm);
-				initBase(req, res);
+				createModel(req, res);
 			} else {
 				fs.mkdir(userDirNm, function (e) {
 					if (e != null) {
@@ -1157,7 +1159,7 @@ function initDataUploadApi() {
 						res.end();
 						return;
 					}
-					initBase(req, res);
+					createModel(req, res);
 				});
 			}
 		});

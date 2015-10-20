@@ -380,17 +380,33 @@ var UI;
 			});
 		}
 		
-		$("#threshold_slider").slider({
-			value: 1,
-			min: .5,
-			max: 1,
-			step: 0.01,
-			animate:"slow",
-			orientation: "hotizontal",
-			slide: function (event, ui) {
-				viz.setTransitionThreshold(ui.value);
-			}
-		});
+		(function () {
+			var prevVal = 1;
+			
+			$("#threshold_slider").slider({
+				value: prevVal,
+				min: .5,
+				max: 1,
+				step: 0.01,
+				animate:"slow",
+				orientation: "hotizontal",
+				change: function (event, ui) {
+					var val = ui.value;
+					if (val != prevVal) {
+						prevVal = val;
+						viz.setTransitionThreshold(val);
+					}
+				},
+				slide: function (event, ui) {
+					var val = ui.value;
+					
+					if (Math.abs(val - prevVal) > .15) {
+						prevVal = val;
+						viz.setTransitionThreshold(val);
+					}
+				},
+			});
+		})()
 	
 		$("#slider_item_div").slider({
 			value: viz.getZoom(),
@@ -399,7 +415,6 @@ var UI;
 			step: 0.01,
 			animate:"slow",
 			orientation: "vertical",
-			//change: sliderChanged						//change: function( event, ui ) {}
 			slide: function (event, ui) {
 				viz.setZoom(ui.value);
 			}
