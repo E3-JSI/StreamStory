@@ -23,7 +23,11 @@ var zoomVis = function (opts) {
 	// size
 	var MIN_NODE_DIAMETER = 40;
 	
-	var QTIP_OPTS = {
+	//====================================================
+	// TOOLTIPS
+	//====================================================
+	
+	var DEFAULT_QTIP_OPTS = {
 		content: function (event) { 
 			return 'Holding time ' + this.data().holdingTime.toPrecision(2)
 		},
@@ -40,13 +44,28 @@ var zoomVis = function (opts) {
 		},
 		show: {
             solo: true,
-            event: 'mouseover',
-            delay: 9000
+            event: 'mouseover'
         },
         hide: {
-        	event: 'click mouseout'
+        	event: 'click mouseout',
+        	fixed: true
         }
 	}
+	
+	var nodeQtipOpts = clone(DEFAULT_QTIP_OPTS);
+	var edgeQtipOpts = clone(DEFAULT_QTIP_OPTS);
+	
+	nodeQtipOpts.content = function (event) { 
+		return 'Holding time ' + this.data().holdingTime.toPrecision(2)
+	};
+	
+	edgeQtipOpts.content = function (event) { 
+		return 'Probability ' + this.data().prob.toPrecision(2)
+	};
+	edgeQtipOpts.show.event = 'hover';
+	edgeQtipOpts.hide.event = 'hovercancel';
+	
+	
 	
 	var TARGET_NODE_CSS = {
 		'background-image-opacity': .2,
@@ -419,7 +438,7 @@ var zoomVis = function (opts) {
 				source: sourceId,
 				target: targetId,
 				style: css,
-				prob: val.toFixed(2)
+				prob: val
 			};
 			
 			edgeConfig = {
@@ -620,8 +639,8 @@ var zoomVis = function (opts) {
 		// draw
 		if (removedEdgeSelector.length > 0) cy.remove(cy.edges(removedEdgeSelector));
 		if (removedNodeSelector.length > 0) cy.remove(cy.nodes(removedNodeSelector));
-		if (added.length > 0) cy.add(added).qtip(QTIP_OPTS);
-		if (addedEdges.length > 0) cy.add(addedEdges);
+		if (added.length > 0) cy.add(added).qtip(nodeQtipOpts);
+		if (addedEdges.length > 0) cy.add(addedEdges).qtip(edgeQtipOpts);
 	}
 	
 	function redraw(opts) {
@@ -1096,6 +1115,37 @@ var zoomVis = function (opts) {
 		var targetId = edge.target().id();
 		callbacks.edgeSelected(parseInt(sourceId), parseInt(targetId));
 	});
+	
+	(function () {	// fix for the non-working qtip delay
+		var hoverTimeout;
+		var edge = cy.collection();
+		var isShown = false;
+		
+		function cancelHover() {
+			clearTimeout(hoverTimeout);
+			edge.trigger('hovercancel');
+			isShown = false;
+		}
+		
+		cy.on('mousemove', 'edge', function (event) {
+			edge = this;
+			if (!isShown) {
+				var offset = $(cy.container()).offset();
+				var api = edge.qtip('api');
+				api.set('position.adjust.x', event.cyRenderedPosition.x + offset.left);
+				api.set('position.adjust.y', event.cyRenderedPosition.y + offset.top);
+				clearTimeout(hoverTimeout); 
+				hoverTimeout = setTimeout(function () {
+					edge.trigger('hover');
+					isShown = true;
+				}, 1000);
+			} else {
+				cancelHover();
+			}
+		}).on('mouseout', 'edge', function (event) {
+			cancelHover();
+		});
+	})();
 	
 	function setMode(mode, config) {
 		modeConfig.mode.type = mode;
