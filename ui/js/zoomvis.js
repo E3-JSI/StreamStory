@@ -276,8 +276,6 @@ var zoomVis = function (opts) {
 				if (y + halfH > boundingBox.y.max) boundingBox.y.max = y + halfH;
 			}
 		}
-		
-		console.log('Bounding box: ' + JSON.stringify(boundingBox));
 	}
 	
 	function cyPosition(node) {
@@ -1165,7 +1163,6 @@ var zoomVis = function (opts) {
 	//===============================================================
 	
 	var that = {
-		refresh: fetchUI,
 		
 		/*
 		 * Sets a new model which is visualized. Zoom and other properties are not
