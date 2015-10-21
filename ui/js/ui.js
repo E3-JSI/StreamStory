@@ -1,6 +1,10 @@
 var UI;
 
-{
+(function () {
+	//=======================================================
+	// WEB SOCKETS
+	//=======================================================
+	
 	var WebSocketWrapper = function () {
 		var nNotifications = 0;
 		var msgQ = [];
@@ -180,7 +184,7 @@ var UI;
 	}
 	
 	// public stuff
-	var UI = function (opts) {
+	UI = function (opts) {
 		var featureInfo = null;
 		
 		var viz = zoomVis({
@@ -380,49 +384,9 @@ var UI;
 			});
 		}
 		
-		(function () {
-			var prevVal = 1;
-			
-			$("#threshold_slider").slider({
-				value: prevVal,
-				min: .5,
-				max: 1,
-				step: 0.01,
-				animate:"slow",
-				orientation: "hotizontal",
-				change: function (event, ui) {
-					var val = ui.value;
-					if (val != prevVal) {
-						prevVal = val;
-						viz.setTransitionThreshold(val);
-					}
-				},
-				slide: function (event, ui) {
-					var val = ui.value;
-					
-					if (Math.abs(val - prevVal) > .15) {
-						prevVal = val;
-						viz.setTransitionThreshold(val);
-					}
-				},
-			});
-		})()
-	
-		$("#slider_item_div").slider({
-			value: viz.getZoom(),
-			min: viz.getMinZoom(),
-			max: viz.getMaxZoom(),
-			step: 0.01,
-			animate:"slow",
-			orientation: "vertical",
-			slide: function (event, ui) {
-				viz.setZoom(ui.value);
-			}
-		});
-		
-		viz.onZoomChanged(function (zoom) {
-			$("#slider_item_div").slider('value', zoom);
-		});
+		//=======================================================
+		// CONFIGURATION PANEL
+		//=======================================================
 		
 		$('#chk-show-fut').change(function () {
 			var checked = this.checked;
@@ -480,6 +444,79 @@ var UI;
 			} else {
 				// TODO
 			}
+		});
+		
+		// buttons
+		$('#btn-reset-sim').click(function () {
+			$('#btn-reset-sim').addClass('hidden');
+			$('#chk-sim-inputs').attr('checked', false);
+			$('#chk-sim-inputs').change();
+		});
+		
+		$('#btn-png').click(function () {
+			var png = viz.getPNG();
+			//console.log("PNG: " + png);
+			window.open(png, '_newtab');
+		});
+		
+		$('#btn-save').click(function () {
+			var rq = $.get('api/save');
+			rq.fail(function () {
+				alert('Failed to save!');
+			});
+		});
+		
+		$('#chk-show-probs').change(function () {
+			var checked = $(this).is(":checked");
+			viz.setShowTransitionProbs(checked);
+		});
+		
+		//=======================================================
+		// VISUALIZATION HANDLERS
+		//=======================================================
+		
+		(function () {
+			var prevVal = 1;
+			
+			$("#threshold_slider").slider({
+				value: prevVal,
+				min: .5,
+				max: 1,
+				step: 0.01,
+				animate:"slow",
+				orientation: "hotizontal",
+				change: function (event, ui) {
+					var val = ui.value;
+					if (val != prevVal) {
+						prevVal = val;
+						viz.setTransitionThreshold(val);
+					}
+				},
+				slide: function (event, ui) {
+					var val = ui.value;
+					
+					if (Math.abs(val - prevVal) > .15) {
+						prevVal = val;
+						viz.setTransitionThreshold(val);
+					}
+				},
+			});
+		})()
+	
+		$("#slider_item_div").slider({
+			value: viz.getZoom(),
+			min: viz.getMinZoom(),
+			max: viz.getMaxZoom(),
+			step: 0.01,
+			animate:"slow",
+			orientation: "vertical",
+			slide: function (event, ui) {
+				viz.setZoom(ui.value);
+			}
+		});
+		
+		viz.onZoomChanged(function (zoom) {
+			$("#slider_item_div").slider('value', zoom);
 		});
 		
 		viz.onStateSelected(function (stateId, height) {
@@ -635,31 +672,6 @@ var UI;
 			$('#wrapper-transition-details').show();
 		});
 		
-		// buttons
-		$('#btn-reset-sim').click(function () {
-			$('#btn-reset-sim').addClass('hidden');
-			$('#chk-sim-inputs').attr('checked', false);
-			$('#chk-sim-inputs').change();
-		});
-		
-		$('#btn-png').click(function () {
-			var png = viz.getPNG();
-			//console.log("PNG: " + png);
-			window.open(png, '_newtab');
-		});
-		
-		$('#btn-save').click(function () {
-			var rq = $.get('api/save');
-			rq.fail(function () {
-				alert('Failed to save!');
-			});
-		});
-		
-		$('#chk-show-probs').change(function () {
-			var checked = $(this).is(":checked");
-			viz.setShowTransitionProbs(checked);
-		});
-		
 		$.ajax('api/controlsSet', {
 			dataType: 'json',
 			method: 'GET',
@@ -748,4 +760,4 @@ var UI;
 		
 		return that;
 	}
-}
+})()
