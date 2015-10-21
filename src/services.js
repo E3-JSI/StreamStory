@@ -134,14 +134,6 @@ function loadOnlineModel(fname) {
 	return model;
 }
 
-function getModel(sessionId, session) {
-	return session.model;
-}
-
-function getModelFile(session) {
-	return session.modelFile;
-}
-
 function closeBase(session) {
 	if (session.base == null)
 		return;
@@ -164,6 +156,18 @@ function closeBase(session) {
 			}
 		}
 	}
+}
+
+//=====================================================
+// SESSION
+//=====================================================
+
+function getModel(sessionId, session) {
+	return session.model;
+}
+
+function getModelFile(session) {
+	return session.modelFile;
 }
 
 function cleanUpSession(sessionId, session) {
@@ -197,6 +201,41 @@ function saveToSession(sessionId, session, username, userBase, model, modelId) {
 	
 	if (log.debug())
 		log.debug('Saved to session!');
+}
+
+//=====================================================
+// NON-SUCCESSFUL RESPONSES
+//=====================================================
+
+function handleNoPermission(req, res) {
+	if (log.debug())
+		log.debug('No permission, blocking page!');
+	
+	res.status(404);	// not found
+	res.send('Cannot GET ' + req.path);
+	res.end();
+}
+
+function handleBadRequest(req, res, msg) {
+	if (log.debug())
+		log.debug('Bad request, blocking page!');
+	
+	res.status(404);	// bad request
+	res.send(msg != null ? msg : ('Bad request ' + req.path));
+	res.end();
+}
+
+function handleServerError(e, req, res) {
+	log.error(e, 'Exception while processing request!');
+	res.status(500);	// internal server error
+	res.send(e.message);
+	res.end();
+}
+
+function handleBadInput(res, msg) {
+	res.status(400);	// bad request
+	res.send(msg);
+	res.end();
 }
 
 function addRawMeasurement(val) {
@@ -894,244 +933,248 @@ function initDataUploadApi() {
 			var baseDir = getBaseDir(username, new Date().getTime());
 			var dbDir = getDbDir(baseDir);
 			
-			mkdirp(dbDir, function (e) {
+			db.createUser(username, function (e) {
 				if (e != null) {
-					log.error(e, 'Failed to create base directory!');
-					res.status(500);	// internal server error
+					handleServerError(e, req, res);
 					return;
 				}
 				
-				try {
-					// create the store and base, depending on wether the model will be 
-					// applied in real-time
-					var storeNm;
-					var userBase;
-					var store;
+				mkdirp(dbDir, function (e) {
+					if (e != null) {
+						log.error(e, 'Failed to create base directory!');
+						res.status(500);	// internal server error
+						return;
+					}
 					
-					if (isRealTime) {
-						log.debug('Using real-time base and store ...');
-						storeNm = fields.STREAM_STORY_STORE;
-						userBase = base;
-						store = base.store(storeNm);
-					} else {	// not real-time => create a new base and store
-						if (log.debug())
-							log.debug('Creating new base and store ...');
+					try {
+						// create the store and base, depending on wether the model will be 
+						// applied in real-time
+						var storeNm;
+						var userBase;
+						var store;
 						
-						var storeFields = [];
-						for (var i = 0; i < headers.length; i++) {
-							var attr = headers[i].name;
-							storeFields.push({
-								name: attr,
-								type: attr == timeAttr ? 'datetime' : 'float',
-								'null': false
+						if (isRealTime) {
+							log.debug('Using real-time base and store ...');
+							storeNm = fields.STREAM_STORY_STORE;
+							userBase = base;
+							store = base.store(storeNm);
+						} else {	// not real-time => create a new base and store
+							if (log.debug())
+								log.debug('Creating new base and store ...');
+							
+							var storeFields = [];
+							for (var i = 0; i < headers.length; i++) {
+								var attr = headers[i].name;
+								storeFields.push({
+									name: attr,
+									type: attr == timeAttr ? 'datetime' : 'float',
+									'null': false
+								});
+							}
+							
+							storeNm = config.QM_USER_DEFAULT_STORE_NAME;
+							userBase = new qm.Base({
+								mode: 'create',
+								dbPath: dbDir
+							});
+							
+							log.debug('Creating default store ...');
+							store = userBase.createStore({
+								name: storeNm,
+								fields: storeFields
 							});
 						}
 						
-						storeNm = config.QM_USER_DEFAULT_STORE_NAME;
-						userBase = new qm.Base({
-							mode: 'create',
-							dbPath: dbDir
-						});
+						// initialize the feature spaces
+			    		var obsFields = [];
+						var contrFields = [];
 						
-						log.debug('Creating default store ...');
-						store = userBase.createStore({
-							name: storeNm,
-							fields: storeFields
-						});
-					}
-					
-					// initialize the feature spaces
-		    		var obsFields = [];
-					var contrFields = [];
-					
-					var usedFields = {};
-					for (var i = 0; i < controlAttrs.length; i++) {
-						var fieldNm = controlAttrs[i];
-						contrFields.push({
-							field: fieldNm,
-							source: storeNm,
-							type: 'numeric',
-							normalize: true
-						});
-						usedFields[fieldNm] = true;
-					}
-					
-					for (var i = 0; i < attrs.length; i++) {
-						var fieldNm = attrs[i];
-						if (fieldNm in usedFields || fieldNm == timeAttr) continue;
-											
-						obsFields.push({
-							field: fieldNm,
-							source: storeNm,
-							type: 'numeric',
-							normalize: true
-						});
-					}
-					
-					var obsFtrSpace = new qm.FeatureSpace(userBase, obsFields);
-		    		var controlFtrSpace = new qm.FeatureSpace(userBase, contrFields);
-					
-		    		var recs = [];
-		    		
-					// fill the store
-					log.debug('Processing CSV file ...');
-					var lineN = 0;
-					qm.fs.readCsvLines(fileBuff, {
-						skipLines: 1,
-						onLine: function (lineArr) {
-							if (++lineN % 10000 == 0 && log.debug())
-								log.debug('Read %d lines ...', lineN);
-							
-							var recJson = {};
-							for (var i = 0; i < headers.length; i++) {
-								var attr = headers[i].name;
-								if (attr == timeAttr) {
-									var date = utils.dateToQmDate(new Date(parseInt(lineArr[i])));
-									recJson[attr] = date;
-									if (log.trace())
-										log.trace('Parsed date: %s', date);
-								} else {
-									recJson[attr] = parseFloat(lineArr[i]);
-								}
-							}
-							
-							if (log.trace())
-								log.trace('Inserting value: %s', JSON.stringify(recJson));
-							
-							// create the actual record and update the feature spaces						
-							recs.push(store.newRecord(recJson));
-						},
-						onEnd: function (err) {
-							if (err != null) {
-								log.error(err, 'Exception while parsing the uploaded CSV file!');
-								res.status(500);	// internal server error
-								return;
-							}
-							
-							log.info('Building StreamStory model ...');
-							
-							// create the configuration
-							try {
-								var modelParams = utils.clone(config.STREAM_STORY_PARAMS);
-								modelParams.clustering = clustConfig;
-								modelParams.transitions.timeUnit = timeUnit;
-								
-								if (log.info())
-									log.info('Creating a new model with params: %s', JSON.stringify(modelParams));
-								
-								// create the model
-								var model = qm.analytics.StreamStory({
-									base: userBase,
-									config: modelParams,
-									obsFtrSpace: obsFtrSpace,
-									controlFtrSpace: controlFtrSpace
-								});
-								
-								// fit the model
-								// first create a matrix out of the records
-								model.fit({
-									recV: recs,
-									timeField: timeAttr,
-									batchEndV: null
-								});
-								
-								if (isRealTime) {
-									var fname = config.REAL_TIME_MODELS_PATH + new Date().getTime() + '.bin';
-									var modelId = fname;
-									
-									log.info('Saving model ...');
-									model.save(fname);
-									
-									var dbOpts = {
-										username: username,
-										model_file: fname,
-										dataset: datasetName,
-										name: modelName,
-										is_active: 1
-									}
-									
-									log.info('Storing a new online model ...');
-									db.storeOnlineModel(dbOpts, function (e) {
-										if (e != null) {
-											log.error(e, 'Failed to store offline model to DB!');
-											res.status(500);	// internal server error
-											res.end();
-											return;
-										}
-										
-										try {
-											if (log.debug())
-												log.debug('Online model stored!');
-											
-											model.setId(modelId);
-											activateModel(model);
-											saveToSession(sessionId, session, username, userBase, model, modelId);
-											
-											// end request
-											res.status(204);	// no content
-											res.end();
-										} catch (e1) {
-											log.error(e1, 'Failed to open base!');
-											res.status(500);	// internal server error
-											res.end();
-										}
-									});
-								}
-								else {
-									var modelFile = getModelFName(baseDir);
-									var modelId = modelFile;
-									
-									log.info('Saving model and base ...');
-									model.save(modelFile);
-									userBase.close();
-									log.info('Saved!');
-									
-									var dbOpts = {
-										username: username,
-										base_dir: baseDir,
-										model_file: modelFile,
-										dataset: datasetName,
-										name: modelName
-									}
-									
-									log.info('Storing a new offline model ...');
-									db.storeOfflineModel(dbOpts, function (e) {
-										if (e != null) {
-											log.error(e, 'Failed to store offline model to DB!');
-											res.status(500);	// internal server error
-											res.end();
-											return;
-										}
-										
-										try {
-											if (log.debug())
-												log.debug('Offline model stored!');
-											
-											var baseConfig = loadOfflineModel(baseDir);
-											saveToSession(sessionId, session, username, baseConfig.base, baseConfig.model, modelId);
-											
-											// end request
-											res.status(204);	// no content
-											res.end();
-										} catch (e1) {
-											log.error(e1, 'Failed to open base!');
-											res.status(500);	// internal server error
-											res.end();
-										}
-									})
-								}
-							} catch (e) {
-								log.error(e, 'Failed to create the store!');
-								res.status(500);	// internal server error
-								res.end();
-							}
+						var usedFields = {};
+						for (var i = 0; i < controlAttrs.length; i++) {
+							var fieldNm = controlAttrs[i];
+							contrFields.push({
+								field: fieldNm,
+								source: storeNm,
+								type: 'numeric',
+								normalize: true
+							});
+							usedFields[fieldNm] = true;
 						}
-					});
-				} catch (e) {
-					log.error(e, 'Exception while uploading a new dataset!');
-					res.status(500);	// internal server error
-					res.end();
-				}
+						
+						for (var i = 0; i < attrs.length; i++) {
+							var fieldNm = attrs[i];
+							if (fieldNm in usedFields || fieldNm == timeAttr) continue;
+												
+							obsFields.push({
+								field: fieldNm,
+								source: storeNm,
+								type: 'numeric',
+								normalize: true
+							});
+						}
+						
+						var obsFtrSpace = new qm.FeatureSpace(userBase, obsFields);
+			    		var controlFtrSpace = new qm.FeatureSpace(userBase, contrFields);
+						
+			    		var recs = [];
+			    		
+						// fill the store
+						log.debug('Processing CSV file ...');
+						var lineN = 0;
+						qm.fs.readCsvLines(fileBuff, {
+							skipLines: 1,
+							onLine: function (lineArr) {
+								if (++lineN % 10000 == 0 && log.debug())
+									log.debug('Read %d lines ...', lineN);
+								
+								var recJson = {};
+								for (var i = 0; i < headers.length; i++) {
+									var attr = headers[i].name;
+									if (attr == timeAttr) {
+										var date = utils.dateToQmDate(new Date(parseInt(lineArr[i])));
+										recJson[attr] = date;
+										if (log.trace())
+											log.trace('Parsed date: %s', date);
+									} else {
+										recJson[attr] = parseFloat(lineArr[i]);
+									}
+								}
+								
+								if (log.trace())
+									log.trace('Inserting value: %s', JSON.stringify(recJson));
+								
+								// create the actual record and update the feature spaces						
+								recs.push(store.newRecord(recJson));
+							},
+							onEnd: function (err) {
+								if (err != null) {
+									log.error(err, 'Exception while parsing the uploaded CSV file!');
+									res.status(500);	// internal server error
+									return;
+								}
+								
+								log.info('Building StreamStory model ...');
+								
+								// create the configuration
+								try {
+									var modelParams = utils.clone(config.STREAM_STORY_PARAMS);
+									modelParams.clustering = clustConfig;
+									modelParams.transitions.timeUnit = timeUnit;
+									
+									if (log.info())
+										log.info('Creating a new model with params: %s', JSON.stringify(modelParams));
+									
+									// create the model
+									var model = qm.analytics.StreamStory({
+										base: userBase,
+										config: modelParams,
+										obsFtrSpace: obsFtrSpace,
+										controlFtrSpace: controlFtrSpace
+									});
+									
+									// fit the model
+									// first create a matrix out of the records
+									model.fit({
+										recV: recs,
+										timeField: timeAttr,
+										batchEndV: null
+									});
+									
+									if (isRealTime) {
+										var fname = config.REAL_TIME_MODELS_PATH + new Date().getTime() + '.bin';
+										var modelId = fname;
+										
+										log.info('Saving model ...');
+										model.save(fname);
+										
+										var dbOpts = {
+											username: username,
+											model_file: fname,
+											dataset: datasetName,
+											name: modelName,
+											is_active: 1
+										}
+										
+										log.info('Storing a new online model ...');
+										db.storeOnlineModel(dbOpts, function (e) {
+											if (e != null) {
+												log.error(e, 'Failed to store offline model to DB!');
+												res.status(500);	// internal server error
+												res.end();
+												return;
+											}
+											
+											try {
+												if (log.debug())
+													log.debug('Online model stored!');
+												
+												model.setId(modelId);
+												activateModel(model);
+												saveToSession(sessionId, session, username, userBase, model, modelId);
+												
+												// end request
+												res.status(204);	// no content
+												res.end();
+											} catch (e1) {
+												log.error(e1, 'Failed to open base!');
+												res.status(500);	// internal server error
+												res.end();
+											}
+										});
+									}
+									else {
+										var modelFile = getModelFName(baseDir);
+										var modelId = modelFile;
+										
+										log.info('Saving model and base ...');
+										model.save(modelFile);
+										userBase.close();
+										log.info('Saved!');
+										
+										var dbOpts = {
+											username: username,
+											base_dir: baseDir,
+											model_file: modelFile,
+											dataset: datasetName,
+											name: modelName
+										}
+										
+										log.info('Storing a new offline model ...');
+										db.storeOfflineModel(dbOpts, function (e) {
+											if (e != null) {
+												log.error(e, 'Failed to store offline model to DB!');
+												res.status(500);	// internal server error
+												res.end();
+												return;
+											}
+											
+											try {
+												if (log.debug())
+													log.debug('Offline model stored!');
+												
+												var baseConfig = loadOfflineModel(baseDir);
+												saveToSession(sessionId, session, username, baseConfig.base, baseConfig.model, modelId);
+												
+												// end request
+												res.status(204);	// no content
+												res.end();
+											} catch (e1) {
+												log.error(e1, 'Failed to open base!');
+												handleServerError(e, req, res);
+											}
+										})
+									}
+								} catch (e) {
+									log.error(e, 'Failed to create the store!');
+									handleServerError(e, req, res);
+								}
+							}
+						});
+					} catch (e) {
+						log.error(e, 'Exception while uploading a new dataset!');
+						handleServerError(e, req, res);
+					}
+				});
 			});
 		} catch (e) {
 			log.error(e, 'Exception while building model!');

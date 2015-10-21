@@ -68,7 +68,6 @@ module.exports = function () {
 		
 		if (conn != null) {
 			conn.rollback(function () {
-				conn.release();
 				onerror(e);
 			});
 		} else {
@@ -285,32 +284,13 @@ module.exports = function () {
 		//===============================================================
 			
 		createUser: function (email, callback) {
-			log.debug('Fetching user by email: %s', email);
+			log.debug('Creating user with username: %s', email);
 			
-			pool.getConnection(function (e, conn) {
-				if (e != null) {
-					callback(e);
-					return;
-				}
-				
-				// check if the user already exists
-				conn.query("SELECT EXISTS(SELECT 1 FROM user WHERE email = ?) as isRegistered", [email], function (e1, results) {
-					if (e1 != null) {
-						callback(e1);
-						return;
-					}
-					
-					if (results[0].isRegistered == 1) {
-						conn.release();
-						callback();
-					} else {
-						// create the user
-						conn.query('INSERT INTO user SET ?', {email: email}, function (e2, result) {
-							conn.release();
-							callback(e2 != null ? undefined : e2);
-						});
-					}
-				});
+			connection({
+				callback: callback,
+				nextOp: createUser({
+					username: email
+				})
 			});
 		},
 		

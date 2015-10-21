@@ -119,7 +119,7 @@
 				
 					select.change(function () {
 						$('#form-phase3').hide(0);
-							$('#form-phase4').hide(0);
+						$('#form-phase4').hide(0);
 					
 						var selectedAttrs = select.val();
 						
