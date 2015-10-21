@@ -10,12 +10,12 @@
 	<link rel="stylesheet" href="lib/jquer-ui.css">	
 	<link rel="stylesheet" href="lib/bootstrap/css/bootstrap.min.css">
 	<link rel="stylesheet" href="lib/bootstrap/css/bootstrap-theme.min.css">
-	<link rel="stylesheet" type="text/css" href="http://cdnjs.cloudflare.com/ajax/libs/qtip2/2.2.0/jquery.qtip.css">
+	<link rel="stylesheet" href="lib/jquery.qtip.min.css">
 	
 	<script type="text/javascript" src="lib/jquery-1.11.1.min.js"></script>
 	<script type="text/javascript" src="lib/jquery-ui.min.js"></script>
-	<script src="http://cdnjs.cloudflare.com/ajax/libs/qtip2/2.2.0/jquery.qtip.js"></script>
-	<script src="lib/bootstrap/js/bootstrap.min.js"></script>
+	<script type="text/javascript" src="lib/jquery.qtip.min.js"></script>
+	<script type="text/javascript" src="lib/bootstrap/js/bootstrap.min.js"></script>
 	<script type="text/javascript" src="lib/cytoscape.js"></script>
 	<script type="text/javascript" src="lib/cytoscape-qtip.js"></script>
 	<script type="text/javascript" src="lib/highcharts.js"></script>
@@ -24,6 +24,13 @@
 	<script type="text/javascript" src="js/utils.js"></script>
 	<script type="text/javascript" src="js/ui.js"></script>
 	
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
 	<style>
 		.dl-horizontal dt {
 		    white-space: normal;
@@ -31,7 +38,8 @@
 		    text-align: left;
 		}
 	</style>
-	<script type="text/javascript">
+    
+    <script type="text/javascript">
 		function postParam(paramName, paramVal) {
 			$.ajax('api/param', {
 				dataType: 'json',
@@ -128,13 +136,6 @@
 			});
 		});
 	</script>
-	
-    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
-    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
-    <!--[if lt IE 9]>
-        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
-        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
-    <![endif]-->
 </head>
 <body>
 	<nav class="navbar navbar-default">
@@ -207,6 +208,11 @@
   								<div class="checkbox">
 									<label>
 										<input id="chk-show-probs" type="checkbox"> Show transition probabilities
+									</label>
+								</div>
+								<div class="checkbox">
+									<label>
+										<input id="chk-wheel-scroll" type="checkbox"> Enable wheel scrolling
 									</label>
 								</div>
   							</div>

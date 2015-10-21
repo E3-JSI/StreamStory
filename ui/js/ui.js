@@ -186,12 +186,6 @@ var UI;
 	// public stuff
 	UI = function (opts) {
 		var featureInfo = null;
-		
-		var viz = zoomVis({
-			visContainer: 'vis_container',
-			currentHeightContainer: 'span-zoom-val'
-		});
-		
 		var wsWrapper = null;
 		
 		function privateFetchHistogram(opts) {
@@ -471,9 +465,18 @@ var UI;
 			viz.setShowTransitionProbs(checked);
 		});
 		
+		$('#chk-wheel-scroll').change(function () {
+			var checked = $(this).is(":checked");
+			viz.setWheelScroll(checked);
+		});
+		
 		//=======================================================
 		// VISUALIZATION HANDLERS
 		//=======================================================
+		
+		var viz = zoomVis({
+			visContainer: 'vis_container'
+		});
 		
 		(function () {
 			var prevVal = 1;
@@ -672,16 +675,8 @@ var UI;
 			$('#wrapper-transition-details').show();
 		});
 		
-		$.ajax('api/controlsSet', {
-			dataType: 'json',
-			method: 'GET',
-			success: function (data) {
-				if (data.active)
-					$('#btn-reset-sim').removeClass('hidden');
-			},
-			error: function (jqXHR, status) {
-				alert('Faield to fetch simulation status: ' + status);
-			}
+		viz.onHeightChanged(function (height) {
+			$('#span-zoom-val').html((100*height).toFixed());
 		});
 		
 		var that = {
@@ -755,7 +750,18 @@ var UI;
 			}
 		};
 		
-		viz.refresh();
+		$.ajax('api/controlsSet', {
+			dataType: 'json',
+			method: 'GET',
+			success: function (data) {
+				if (data.active)
+					$('#btn-reset-sim').removeClass('hidden');
+			},
+			error: function (jqXHR, status) {
+				alert('Faield to fetch simulation status: ' + status);
+			}
+		});
+		
 		populateUI();
 		
 		return that;

@@ -74,7 +74,6 @@ var zoomVis = function (opts) {
 	}
 	
 	var visContainer = document.getElementById(opts.visContainer);
-	var currentHeightContainer = document.getElementById(opts.currentHeightContainer);
 	
 	var hierarchy = null;
 	var modeConfig = {
@@ -86,6 +85,7 @@ var zoomVis = function (opts) {
 	};
 	
 	var drawEdgeVals = false;
+	var scrollZoomEnabled = false;
 	
 	var uiConfig = {
 		maxNodeSize: 0,
@@ -95,7 +95,8 @@ var zoomVis = function (opts) {
 	var callbacks = {
 		stateSelected: function (stateId) {},
 		edgeSelected: function (sourceId, targetId) {},
-		zoomChanged: function (zoom) {}
+		zoomChanged: function (zoom) {},
+		heightChanged: function (height) {}
 	}
 	
 	var maxNodeSize = 0;
@@ -275,6 +276,8 @@ var zoomVis = function (opts) {
 				if (y + halfH > boundingBox.y.max) boundingBox.y.max = y + halfH;
 			}
 		}
+		
+		console.log('Bounding box: ' + JSON.stringify(boundingBox));
 	}
 	
 	function cyPosition(node) {
@@ -978,13 +981,16 @@ var zoomVis = function (opts) {
 				}
 			}
 		}
-				
-//		var zoom = cy.zoom();
-//		var factor = 1.01;
-//		var newZoom = zoom * (event.deltaY > 0 ? 1 / factor : factor);
-//		
-//		setZoom(newZoom);
-		currentHeightContainer.innerHTML = (100*(1 - (hierarchy[currentLevel].height - minHeight) / (maxHeight - minHeight))).toFixed();	// set height text
+		
+		if (scrollZoomEnabled) {
+			var zoom = cy.zoom();
+			var factor = 1.01;
+			var newZoom = zoom * (event.deltaY > 0 ? 1 / factor : factor);
+			
+			setZoom(newZoom);
+		}
+		
+		callbacks.heightChanged((1 - (currentHeight - minHeight) / (maxHeight - minHeight)));
 	}
 	
 	// adding mouse wheel listener
@@ -1018,7 +1024,121 @@ var zoomVis = function (opts) {
 			}
 		],
 		
-		ready: function() { console.log('ready'); },
+		ready: function() {
+			fetchUI();
+			
+			cy.on('click', 'node', function (event) {
+				var node = event.cyTarget;
+				var stateId = parseInt(node.id());
+				var height = hierarchy[currentLevel].height;
+				
+				// set selected state
+				modeConfig.selected = stateId;
+				// redraw
+				cy.batch(function () {
+					cy.nodes().css('border-width', DEFAULT_BORDER_WIDTH);
+					drawNode(stateId, true);
+					
+					// emphasize edges
+					var edges = cy.edges();
+					var nedges = edges.length;
+					for (var i = 0; i < nedges; i++) {
+						var edge = edges[i];
+						edge.css(edge.data().style);
+					}
+					
+					node.edgesTo('').css({
+						'line-color': 'green',
+						'target-arrow-color': 'green',
+						'line-style': 'solid'
+					});
+				});
+				
+				// notify the handler
+				callbacks.stateSelected(stateId, height);
+			});
+			
+			cy.on('mouseover', 'node', function (event) {
+				var node = event.cyTarget;
+				
+				if (parseInt(node.id()) != modeConfig.selected) {
+					node.css('z-index', MIDDLEGROUND_Z_INDEX);
+				}
+			});
+			
+			cy.on('mouseout', 'node', function (event) {
+				var node = event.cyTarget;
+				
+				if (parseInt(node.id()) != modeConfig.selected) {
+					node.css('z-index', BACKGROUND_Z_INDEX);
+				}		
+			});
+			
+			cy.on('grab', 'node', function (event) {
+				var cyNode = event.cyTarget;
+				var id = parseInt(cyNode.id());
+				var pos = cyNode.position();
+				
+				var level = currentLevel;
+				var node = levelNodeMap[level][id];
+				
+				console.log('Started dragging node ' + id + ', pos' + JSON.stringify({x: node.x, y: node.y}) + ', cyPos: ' + JSON.stringify(pos));
+			})
+			
+			// fired when a node is moved
+			cy.on('free', 'node', function (event) {
+				var cyNode = event.cyTarget;
+				var id = parseInt(cyNode.id());
+				var pos = cyNode.position();
+				
+				var level = currentLevel;
+				var node = levelNodeMap[level][id];
+				
+				var serverPos = serverPosition(pos);
+				node.x = serverPos.x;
+				node.y = serverPos.y;
+				
+				console.log('Stopped dragging node ' + id + ', pos: ' + JSON.stringify(pos));
+			});
+			
+			cy.on('click', 'edge', function (event) {
+				var edge = event.cyTarget;
+				var sourceId = edge.source().id();
+				var targetId = edge.target().id();
+				callbacks.edgeSelected(parseInt(sourceId), parseInt(targetId));
+			});
+			
+			(function () {	// fix for the non-working qtip delay
+				var hoverTimeout;
+				var edge = cy.collection();
+				var isShown = false;
+				
+				function cancelHover() {
+					clearTimeout(hoverTimeout);
+					edge.trigger('hovercancel');
+					isShown = false;
+				}
+				
+				cy.on('mousemove', 'edge', function (event) {
+					edge = this;
+					if (!isShown) {
+						var offset = $(cy.container()).offset();
+						var api = edge.qtip('api');
+						api.set('position.adjust.x', event.cyRenderedPosition.x + offset.left);
+						api.set('position.adjust.y', event.cyRenderedPosition.y + offset.top);
+						clearTimeout(hoverTimeout); 
+						hoverTimeout = setTimeout(function () {
+							edge.trigger('hover');
+							isShown = true;
+						}, 1000);
+					} else {
+						cancelHover();
+					}
+				}).on('mouseout', 'edge', function (event) {
+					cancelHover();
+				});
+			})();
+		},
 		motionBlur: false,
 		fit: false,
 		userZoomingEnabled: false,
@@ -1034,118 +1154,6 @@ var zoomVis = function (opts) {
 		minZoom: minCyZoom,
 		maxZoom: maxCyZoom
 	});
-	
-	cy.on('click', 'node', function (event) {
-		var node = event.cyTarget;
-		var stateId = parseInt(node.id());
-		var height = hierarchy[currentLevel].height;
-		
-		// set selected state
-		modeConfig.selected = stateId;
-		// redraw
-		cy.batch(function () {
-			cy.nodes().css('border-width', DEFAULT_BORDER_WIDTH);
-			drawNode(stateId, true);
-			
-			// emphasize edges
-			var edges = cy.edges();
-			var nedges = edges.length;
-			for (var i = 0; i < nedges; i++) {
-				var edge = edges[i];
-				edge.css(edge.data().style);
-			}
-			
-			node.edgesTo('').css({
-				'line-color': 'green',
-				'target-arrow-color': 'green',
-				'line-style': 'solid'
-			});
-		});
-		
-		// notify the handler
-		callbacks.stateSelected(stateId, height);
-	});
-	
-	cy.on('mouseover', 'node', function (event) {
-		var node = event.cyTarget;
-		
-		if (parseInt(node.id()) != modeConfig.selected) {
-			node.css('z-index', MIDDLEGROUND_Z_INDEX);
-		}
-	});
-	
-	cy.on('mouseout', 'node', function (event) {
-		var node = event.cyTarget;
-		
-		if (parseInt(node.id()) != modeConfig.selected) {
-			node.css('z-index', BACKGROUND_Z_INDEX);
-		}		
-	});
-	
-	cy.on('grab', 'node', function (event) {
-		var cyNode = event.cyTarget;
-		var id = parseInt(cyNode.id());
-		var pos = cyNode.position();
-		
-		var level = currentLevel;
-		var node = levelNodeMap[level][id];
-		
-		console.log('Started dragging node ' + id + ', pos' + JSON.stringify({x: node.x, y: node.y}) + ', cyPos: ' + JSON.stringify(pos));
-	})
-	
-	// fired when a node is moved
-	cy.on('free', 'node', function (event) {
-		var cyNode = event.cyTarget;
-		var id = parseInt(cyNode.id());
-		var pos = cyNode.position();
-		
-		var level = currentLevel;
-		var node = levelNodeMap[level][id];
-		
-		var serverPos = serverPosition(pos);
-		node.x = serverPos.x;
-		node.y = serverPos.y;
-		
-		console.log('Stopped dragging node ' + id + ', pos: ' + JSON.stringify(pos));
-	});
-	
-	cy.on('click', 'edge', function (event) {
-		var edge = event.cyTarget;
-		var sourceId = edge.source().id();
-		var targetId = edge.target().id();
-		callbacks.edgeSelected(parseInt(sourceId), parseInt(targetId));
-	});
-	
-	(function () {	// fix for the non-working qtip delay
-		var hoverTimeout;
-		var edge = cy.collection();
-		var isShown = false;
-		
-		function cancelHover() {
-			clearTimeout(hoverTimeout);
-			edge.trigger('hovercancel');
-			isShown = false;
-		}
-		
-		cy.on('mousemove', 'edge', function (event) {
-			edge = this;
-			if (!isShown) {
-				var offset = $(cy.container()).offset();
-				var api = edge.qtip('api');
-				api.set('position.adjust.x', event.cyRenderedPosition.x + offset.left);
-				api.set('position.adjust.y', event.cyRenderedPosition.y + offset.top);
-				clearTimeout(hoverTimeout); 
-				hoverTimeout = setTimeout(function () {
-					edge.trigger('hover');
-					isShown = true;
-				}, 1000);
-			} else {
-				cancelHover();
-			}
-		}).on('mouseout', 'edge', function (event) {
-			cancelHover();
-		});
-	})();
 	
 	function setMode(mode, config) {
 		modeConfig.mode.type = mode;
@@ -1269,6 +1277,10 @@ var zoomVis = function (opts) {
 			})
 		},
 		
+		setWheelScroll: function (scroll) {
+			scrollZoomEnabled = scroll;
+		},
+		
 		setZoom: function (value) {
 			setZoom(value, false);
 		},
@@ -1312,6 +1324,10 @@ var zoomVis = function (opts) {
 		
 		onZoomChanged: function (callback) {
 			callbacks.zoomChanged = callback;
+		},
+		
+		onHeightChanged: function (callback) {
+			callbacks.heightChanged = callback;
 		}
 	}
 	
