@@ -73,7 +73,7 @@ h6 {
 	filter: blur(3px);
 	z-index:-1;
 	
-	background: url(../img/hella-factory.jpg) no-repeat center center;
+	background: url(../img/landing/factory.jpg) no-repeat center center;
     background-size: cover;
     -webkit-filter: blur(10px);
     -moz-filter: blur(10px);
