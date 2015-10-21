@@ -593,6 +593,7 @@ var zoomVis = function (opts) {
 		
 		// recolor the edges
 		if (addedEdges.length > 0 || removedEdgeSelector.length > 0) {
+			// recompute the probabilities
 			for (var i = 0; i < addedEdges.length; i++) {
 				var edge = addedEdges[i];
 				var node = edge.source();
@@ -606,6 +607,7 @@ var zoomVis = function (opts) {
 				node.data().maxProb = maxProb;
 			}
 			
+			// recolor the most and middle probable edges
 			var middle = cy.edges().filter(function () {
 				var data = this.data();
 				return data.prob > .2 || data.prob == this.source().data().maxProb;
@@ -615,6 +617,11 @@ var zoomVis = function (opts) {
 				return data.prob > .4 || data.prob == this.source().data().maxProb;
 			});
 			
+			middle.css('line-style', 'solid');
+			bold.css('line-color', '#505050');
+			bold.css('target-arrow-color', '#505050');
+			
+			// remember for later
 			for (var i = 0; i < middle.length; i++) {
 				middle[i].data().style['line-style'] = 'solid';
 			}
@@ -622,9 +629,6 @@ var zoomVis = function (opts) {
 				bold[i].data().style['line-color'] = '#505050';
 				bold[i].data().style['target-arrow-color'] = '#505050';
 			}
-			middle.css('line-style', 'solid');
-			bold.css('line-color', '#505050');
-			bold.css('target-arrow-color', '#505050');
 		}
 	}
 	
@@ -985,6 +989,53 @@ var zoomVis = function (opts) {
 		alert("your browser is unsupported");
 	}
 	
+	function setSelectedState(node) {	// TODO move this somewhere
+		var prevStateId = modeConfig.selected;
+		
+		if (node == null) {
+			modeConfig.selected = null;
+			
+			cy.batch(function () {
+				cy.nodes().css('border-width', DEFAULT_BORDER_WIDTH);
+				
+				// emphasize edges
+				var edges = cy.edges();
+				var nedges = edges.length;
+				for (var i = 0; i < nedges; i++) {
+					var edge = edges[i];
+					edge.css(edge.data().style);
+				}
+			});
+		} else {
+			var stateId = parseInt(node.id());
+			// set selected state
+			modeConfig.selected = stateId;
+			// redraw
+			cy.batch(function () {
+				cy.nodes().css('border-width', DEFAULT_BORDER_WIDTH);
+				drawNode(stateId, true);
+				
+				// emphasize edges
+				var edges = cy.edges();
+				var nedges = edges.length;
+				for (var i = 0; i < nedges; i++) {
+					var edge = edges[i];
+					edge.css(edge.data().style);
+				}
+				
+				node.edgesTo('').css({
+					'line-color': 'green',
+					'target-arrow-color': 'green',
+					'line-style': 'solid'
+				});
+			});
+		}
+		
+		// notify the handler
+		if (prevStateId != modeConfig.selected)
+			callbacks.stateSelected(stateId, hierarchy[currentLevel].height);
+	}
+	
 	var cy = window.cy = cytoscape({
 		container: document.getElementById(opts.visContainer),
 		style: [
@@ -1006,39 +1057,22 @@ var zoomVis = function (opts) {
 			}
 		],
 		
+		
+		
 		ready: function() {
 			fetchUI();
 			
 			cy.on('click', 'node', function (event) {
 				var node = event.cyTarget;
-				var stateId = parseInt(node.id());
-				var height = hierarchy[currentLevel].height;
-				
-				// set selected state
-				modeConfig.selected = stateId;
-				// redraw
-				cy.batch(function () {
-					cy.nodes().css('border-width', DEFAULT_BORDER_WIDTH);
-					drawNode(stateId, true);
-					
-					// emphasize edges
-					var edges = cy.edges();
-					var nedges = edges.length;
-					for (var i = 0; i < nedges; i++) {
-						var edge = edges[i];
-						edge.css(edge.data().style);
-					}
-					
-					node.edgesTo('').css({
-						'line-color': 'green',
-						'target-arrow-color': 'green',
-						'line-style': 'solid'
-					});
-				});
-				
-				// notify the handler
-				callbacks.stateSelected(stateId, height);
+				setSelectedState(node);
 			});
+			
+			cy.on('click', function (event) {
+				var target = event.cyTarget;
+				if (target === cy) {
+					setSelectedState(null);
+				}
+			})
 			
 			cy.on('mouseover', 'node', function (event) {
 				var node = event.cyTarget;

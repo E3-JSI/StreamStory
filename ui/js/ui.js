@@ -523,14 +523,17 @@ var UI;
 		});
 		
 		viz.onStateSelected(function (stateId, height) {
+			$('#wrapper-transition-details').hide();
+			$('#wrapper-state-details').hide();
+			
+			if (stateId == null) return;
+			
 			// fetch state details
 			$.ajax('api/stateDetails', {
 				dataType: 'json',
 				data: { stateId: stateId, level: height },
 				success: function (data) {
-					$('#wrapper-transition-details').hide();
 					$('#wrapper-state-details').show();
-					
 					$('#txt-name').off('change');
 					
 					// clear the panel
