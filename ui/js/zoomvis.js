@@ -135,17 +135,16 @@ var zoomVis = function (opts) {
 		y: { min: Number.MAX_VALUE, max: Number.MIN_VALUE }
 	}
 	
+	//===============================================================
+	// UTILITY FUNCTIONS
+	//===============================================================
+	
 	var ElementCache = function () {
 		var nodeCache = {};
-		var edgeCache = {};
 		
 		var prevLevelNodeCache = {};
 		var currLevelNodeCache = {};
 		var addedNodes = [];
-		
-		var prevLevelEdgeCache = {};
-		var currLevelEdgeCache = {};
-		var addedEdges = [];
 		
 		var that = {
 			addNode: function (id, level, nodeConfig) {
@@ -154,22 +153,10 @@ var zoomVis = function (opts) {
 			getNode: function (id) {
 				return nodeCache[id];
 			},
-			addEdge: function (level, edge) {
-				var id = edge.data.id;
-				edgeCache[id] = edge;
-			},
-			getEdge: function (id) {
-				return edgeCache[id];
-			},
 			startNewNodeLevel: function () {
 				addedNodes = [];
 				prevLevelNodeCache = currLevelNodeCache;
 				currLevelNodeCache = {};
-			},
-			startNewEdgeLevel: function () {
-				addedEdges = [];
-				prevLevelEdgeCache = currLevelEdgeCache;
-				currLevelEdgeCache = {};
 			},
 			updateLevelNode: function (id) {
 				if (!(id in currLevelNodeCache)) {
@@ -179,16 +166,6 @@ var zoomVis = function (opts) {
 						addedNodes.push(nodeCache[id]);
 					else
 						delete prevLevelNodeCache[id];
-				}
-			},
-			updateLevelEdge: function (id) {
-				if (!(id in currLevelEdgeCache)) {
-					currLevelEdgeCache[id] = true;
-					
-					if (!(id in prevLevelEdgeCache))
-						addedEdges.push(edgeCache[id]);
-					else
-						delete prevLevelEdgeCache[id];
 				}
 			},
 			getModifiedNodes: function () {
@@ -203,29 +180,11 @@ var zoomVis = function (opts) {
 					removed: removed
 				}
 			},
-			getModifiedEdges: function () {
-				var removed = [];
-				
-				for (var id in prevLevelEdgeCache) {
-					removed.push(id);
-				}
-				
-				return {
-					added: addedEdges,
-					removed: removed
-				}
-			},
 			clear: function () {
 				nodeCache = {};
-				edgeCache = {};
-				
 				prevLevelNodeCache = {};
 				currLevelNodeCache = {};
 				addedNodes = [];
-				
-				prevLevelEdgeCache = {};
-				currLevelEdgeCache = {};
-				addedEdges = [];
 			}
 		};
 		
@@ -243,6 +202,10 @@ var zoomVis = function (opts) {
 	}
 
 	function colorFromProb(prob) {
+		return prob*prob;
+	}
+	
+	function futureColorFromProb(prob) {
 		return Math.sqrt(prob);
 	}
 	
@@ -388,71 +351,57 @@ var zoomVis = function (opts) {
 	// DRAW FUNCTIONS
 	//===============================================================	
 	
-	function getEdgeConfig(sourceN, targetN, transitions, nodeInfo, maxVal) {
+	function getEdgeConfig(sourceN, targetN, transitions, nodeInfo, cumProb, maxProb) {
 		var sourceId = nodeInfo[sourceN].id;
 		var targetId = nodeInfo[targetN].id;
 		
 		var id = sourceId + '-' + targetId;
 		var val = transitions[targetN];
 		
-		var edgeConfig = cache.getEdge(id);
+		var css = {
+			'text-transform': 'none',
+			'text-halign': 'center',
+			'text-valign': 'center',
+			'font-style': 'normal',
+			'font-size': FONT_SIZE,
+			'font-family': 'inherit',
+			'font-weight': 'normal',
+			'target-arrow-shape': 'triangle',
+			'source-arrow-shape': 'none',
+			'display': 'element',
+			'haystack-radius': 0,
+			'curve-style': 'bezier',
+			'control-point-step-size': 100,
+			'text-valign': 'top',
+			'control-point-weight': 0.5,
+			'line-style': 'dotted',
+			'line-color': '#C0C0C0',	// light gray
+			'target-arrow-color': '#C0C0C0',
+			'width': Math.max(1, (val*10).toFixed()),
+			'z-index': 100,
+			'content': ''
+		};
 		
-		if (edgeConfig == null) {
-			var lineStyle = 'solid';
-			var color = '#505050';	// dark gray
-			if (val != maxVal) {
-				if (val < .2)  {
-					lineStyle = 'dotted';
-					color = '#C0C0C0';	// light gray
-				}
-				else if (val < .4) {
-					color = '#C0C0C0';//'#A8A8A8';	// medium gray
-				}
-			}
+		var data = {
+			id: id,
+			source: sourceId,
+			target: targetId,
+			style: css,
+			prob: val,
+			cumProb: cumProb,
+			maxProb: maxProb
+		};
 			
-			var css = {
-				'text-transform': 'none',
-				'text-halign': 'center',
-				'text-valign': 'center',
-				'font-style': 'normal',
-				'font-size': FONT_SIZE,
-				'font-family': 'inherit',
-				'font-weight': 'normal',
-				'target-arrow-shape': 'triangle',
-				'source-arrow-shape': 'none',
-				'display': 'element',
-				'haystack-radius': 0,
-				'curve-style': 'bezier',
-				'control-point-step-size': 100,
-				'text-valign': 'top',
-				'control-point-weight': 0.5,
-				'line-style': lineStyle,
-				'line-color': color,
-				'target-arrow-color': color,
-				'width': Math.max(1, (val*10).toFixed()),
-				'z-index': 100,
-				'content': ''
-			};
-			
-			var data = {
-				id: id,
-				source: sourceId,
-				target: targetId,
-				style: css,
-				prob: val
-			};
-			
-			edgeConfig = {
-				group: 'edges',
-				data: data,
-				css: css
-			};
-		}
-		return edgeConfig;
+		return {
+			group: 'edges',
+			data: data,
+			css: css
+		};;
 	}
 	
 	function getEdgesAboveThreshold(transitions) {
 		var edges = [];
+		var cumProbs = [];
 		var probs = [];
 		for (var k = 0; k < transitions.length; k++) {
 			probs.push({prob: transitions[k], idx: k});
@@ -462,17 +411,19 @@ var zoomVis = function (opts) {
 			return b.prob - a.prob;
 		})
 		
-		var sum = 0;
+		var cumProb = 0;
 		var k = 0;
-		while (k < probs.length && probs[k].prob > 0 && sum <= transitionThreshold) {
+		while (k < probs.length && probs[k].prob > 0 && cumProb <= transitionThreshold) {
 			edges.push(probs[k].idx);
-			sum += probs[k].prob;
+			cumProbs.push(1 - cumProb);
+			cumProb += probs[k].prob;
 			k++;
 		}
 		
 		return {
 			maxProb: probs[0].prob,
-			edges: edges
+			edges: edges,
+			cumProbs: cumProbs
 		}
 	}
 	
@@ -482,16 +433,11 @@ var zoomVis = function (opts) {
 		var aboveThreshold = getEdgesAboveThreshold(transitions);
 		var maxVal = aboveThreshold.maxProb;
 		var edges = aboveThreshold.edges;
+		var cumProbs = aboveThreshold.cumProbs;
 		
 		for (var i = 0; i < edges.length; i++) {
 			var targetN = edges[i];
-			
-			var sourceId = nodeInfo[sourceN].id;
-			var targetId = nodeInfo[targetN].id;
-			
-			var id = sourceId + '-' + targetId
-			
-			result.push(getEdgeConfig(sourceN, targetN, transitions, nodeInfo, maxVal));
+			result.push(getEdgeConfig(sourceN, targetN, transitions, nodeInfo, cumProbs[i], maxVal));
 		}
 		
 		return result;
@@ -506,9 +452,11 @@ var zoomVis = function (opts) {
 			var aboveThreshold = getEdgesAboveThreshold(transitionMat[sourceN]);
 			var maxVal = aboveThreshold.maxProb;
 			var edges = aboveThreshold.edges;
+			var cumProbs = aboveThreshold.cumProbs;
 			
-			if (edges.indexOf(targetN) >= 0) {
-				result.push(getEdgeConfig(sourceN, targetN, transitionMat[sourceN], nodeInfo, maxVal));
+			var idx;
+			if ((idx = edges.indexOf(targetN)) >= 0) {
+				result.push(getEdgeConfig(sourceN, targetN, transitionMat[sourceN], nodeInfo, cumProbs[idx], maxVal));
 			}
 		}
 		
@@ -641,7 +589,43 @@ var zoomVis = function (opts) {
 		if (removedEdgeSelector.length > 0) cy.remove(cy.edges(removedEdgeSelector));
 		if (removedNodeSelector.length > 0) cy.remove(cy.nodes(removedNodeSelector));
 		if (added.length > 0) cy.add(added).qtip(nodeQtipOpts);
-		if (addedEdges.length > 0) cy.add(addedEdges).qtip(edgeQtipOpts);
+		if (addedEdges.length > 0) addedEdges = cy.add(addedEdges).qtip(edgeQtipOpts);
+		
+		// recolor the edges
+		if (addedEdges.length > 0 || removedEdgeSelector.length > 0) {
+			for (var i = 0; i < addedEdges.length; i++) {
+				var edge = addedEdges[i];
+				var node = edge.source();
+				var outEdges = node.edgesTo('');
+				
+				var maxProb = 0;
+				for (var j = 0; j < outEdges.length; j++) {
+					if (outEdges[j].data().prob > maxProb)
+						maxProb = outEdges[j].data().prob;
+				}
+				node.data().maxProb = maxProb;
+			}
+			
+			var middle = cy.edges().filter(function () {
+				var data = this.data();
+				return data.prob > .2 || data.prob == this.source().data().maxProb;
+			});
+			var bold = middle.filter(function () {
+				var data = this.data();
+				return data.prob > .4 || data.prob == this.source().data().maxProb;
+			});
+			
+			for (var i = 0; i < middle.length; i++) {
+				middle[i].data().style['line-style'] = 'solid';
+			}
+			for (var i = 0; i < bold.length; i++) {
+				bold[i].data().style['line-color'] = '#505050';
+				bold[i].data().style['target-arrow-color'] = '#505050';
+			}
+			middle.css('line-style', 'solid');
+			bold.css('line-color', '#505050');
+			bold.css('target-arrow-color', '#505050');
+		}
 	}
 	
 	function redraw(opts) {
@@ -766,7 +750,7 @@ var zoomVis = function (opts) {
 		else if (nodeId in modeConfig.future) {
 			var baseColor = 216;//nodeId in specialStates.probs ? 307 : ;
 			
-			var prob = colorFromProb(modeConfig.future[nodeId]);
+			var prob = futureColorFromProb(modeConfig.future[nodeId]);
 			var color = 'hsla(' + baseColor + ',' + (15 + Math.floor((100-15)*prob)) + '%, 55%, 1)';
 			node.css('backgroundColor', color);
 		}
