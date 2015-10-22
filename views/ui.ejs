@@ -376,17 +376,17 @@
 							time unit:&nbsp;<span id="span-tu"></span>&nbsp;&nbsp;&nbsp;
 						</span>
 						<!-- options for the visualization component -->
-						<div id="content-options" class="popover fade bottom in">
+						<div id="content-options" class="popover fade bottom in" style="width: 280px;">
 							<div class="arrow"></div>
 							<div id="vis_options" class="container-fluid">
 								<div style="padding-top: 12px; padding-bottom: 12px;">
 									<div class="row">
 										<div id="div-ftrs" class="col-md-12">
-											<div>
+											<div class="form-group">
 												<h4>Show attribute</h4>
 												<ul id="ul-ftrs-obs"></ul>
 											</div>
-											<div>
+											<div class="form-group">
 												<h4>Adjust control</h4>
 												<div class="checkbox">
 													<label><input id="chk-sim-inputs" type="checkbox" /> Simulate inputs</label>
@@ -397,12 +397,13 @@
 									</div>
 									<div class="row">
 										<div  class="col-md-12">
-											<h4>View future</h4>
-											<input type="checkbox" id="chk-show-fut" />Show future
-											<div id="div-future-opts">
-												<input type="number" id="rng-time-probs" value="0" />
-												<input type="number" id="txt-fut-range" value="1" />
-												<div id="div-fut-time"></div>
+											<div class="form-group">
+												<h4>View future</h4>
+												<input type="checkbox" id="chk-show-fut" />Show future
+												<div id="div-future-opts" class="hidden">
+													<div id="rng-time-probs"></div>
+													<div id="div-fut-time"></div>
+												</div>
 											</div>
 										</div>
 									</div>
@@ -509,11 +510,14 @@
 						<div id="wrapper-transition-details" class="container-fluid" style="display: none;">
 							<div class="row">
 								<div id="div-ftrs" class="col-md-12">
-									<span id="span-transition-name"></span>
+									<h3>Transition from state <span id="span-trans-source"></span> to state <span id="span-trans-target"></span></h3>
 								</div>
 							</div>
 							<div class="row">
-								<div id="div-trans-ftrs" class="col-md-12"></div>
+								<div class="col-md-12">
+									<h3>Attributes</h3>
+									<div id="div-trans-ftrs" class="col-md-12"></div>
+								</div>
 							</div>
 						</div>
 						<!-- thumbnail with the histograms for attributes -->

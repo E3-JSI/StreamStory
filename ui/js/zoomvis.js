@@ -730,7 +730,12 @@ var zoomVis = function (opts) {
 		if (modeConfig.mode.type == MODE_PROBS) {
 			var config = modeConfig.mode.config;
 			var probs = config.probs;
-			var color = 'hsla(' + VIZ_NODE_COLOR + ',' + Math.floor(100*colorFromProb(probs[nodeId])) + '%, 55%, 1)';
+			var prob = probs[nodeId];
+			var intens = 100*prob;//*futureColorFromProb(prob);
+			
+			console.log('Drawing future node ' + nodeId + ', prob: ' + prob + ', color: ' + intens);	// TODO remove
+			
+			var color = 'hsla(' + VIZ_NODE_COLOR + ',' + Math.ceil(intens) + '%, 55%, 1)';
 			node.css('backgroundColor', color);
 		} 
 		else if (modeConfig.mode.type == MODE_TARGET_FTR) {
@@ -1176,6 +1181,14 @@ var zoomVis = function (opts) {
 		modeConfig.mode.config = config;
 	}
 	
+	function resetMode() {
+		cy.batch(function () {
+			setMode(MODE_NORMAL, {});
+			redraw({ keepCached: true, isInBatch: true });
+			redrawSpecial(true);
+		});
+	}
+	
 	//===============================================================
 	// OBJECT
 	//===============================================================
@@ -1223,13 +1236,15 @@ var zoomVis = function (opts) {
 			redrawSpecial();
 		},
 		
+		getMode: function () {
+			return modeConfig.mode.type;
+		},
+		
+		resetMode: resetMode,
+		
 		setTargetFtr: function (ftrIdx) {
 			if (ftrIdx == null) {	// reset to normal mode
-				cy.batch(function () {
-					setMode(MODE_NORMAL, {});
-					redraw({ keepCached: true, isInBatch: true });
-					redrawSpecial(true);
-				});
+				resetMode();
 			} else {
 				fetchTargetFtr(ftrIdx);
 			}

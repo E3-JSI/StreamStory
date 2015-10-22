@@ -608,15 +608,16 @@ function initStreamStoryRestApi() {
 		
 		app.get(API_PATH + '/timeDist', function (req, res) {
 			try {
-				var state = parseInt(req.query.state);
-				var startTm = parseFloat(req.query.start);
-				var endTm = parseFloat(req.query.end);
-				var deltaTm = parseFloat(req.query.deltaTm);
+				var stateId = parseInt(req.query.stateId);
+				var time = parseFloat(req.query.time);
 				var height = parseFloat(req.query.level);
 				
 				var model = getModel(req.sessionID, req.session);
 				
-				res.send(model.getModel().probsOverTime(height, state, startTm, endTm, deltaTm));
+				if (log.debug())
+					log.debug('Fetching probability distribution of states at height %d from state %d at time %d ...', height, stateId, time);
+				
+				res.send(model.getModel().probsAtTime(stateId, height, time));
 			} catch (e) {
 				log.error(e, 'Failed to query MHWirth multilevel visualization!');
 				res.status(500);	// internal server error

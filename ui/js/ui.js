@@ -384,61 +384,60 @@ var UI;
 		// CONFIGURATION PANEL
 		//=======================================================
 		
-		$('#chk-show-fut').change(function () {
-			var checked = this.checked;
-			var time = parseFloat($('#txt-fut-range').val());
-			var deltaTm = .001;
-			var level = viz.getCurrentHeight();
+		function fetchStateProbDist(time) {
 			var stateId = viz.getSelectedState();
+			var level = viz.getCurrentHeight();
 			
 			if (stateId == null) {
 				alert('No state selected!');
-				return;
+				$('#div-future-opts').addClass('hidden');
+				$('#chk-show-fut').attr('checked', false);
+				$('#chk-show-fut').change();
+				return false;
 			}
 			
-			if (checked) {
-				$.ajax('api/timeDist', {
-					dataType: 'json',
-					data: { state: stateId, start: -time, end: time, deltaTm: deltaTm, level: level },
-					success: function (data) {
-						var range = (data[data.length-1].time - data[0].time);
-						
-						// find the index at which time is 0
-						var idx = 0;
-						for (var i = 0; i < data.length; i++) {
-							if (Math.abs(data[i].time) < deltaTm/5) {
-								idx = i;
-								break;
-							}
-						}
-						
-						var range = data.length;
-						var nPast = idx;
-						var nFuture = range - idx - 1;
-						
-						var maxPast = -nPast * deltaTm;
-						var maxFut = nFuture * deltaTm;
-			
-						$('#rng-time-probs').off('change');
-						$('#rng-time-probs').attr('min', maxPast);
-						$('#rng-time-probs').attr('max', maxFut);
-						$('#rng-time-probs').attr('step', deltaTm);
-						$('#rng-time-probs').val(0);
-						$('#rng-time-probs').change(function () {
-							var currentVal = parseFloat($('#rng-time-probs').val());
-							
-							$('#div-fut-time').html(currentVal);
-							
-							// find the probabilities
-							var idx = Math.round((currentVal - maxPast) / deltaTm);
-							var probs = data[idx].probs;
-							viz.setProbDist(probs);
-						});
-						$('#rng-time-probs').change();
-					}
-				});
+			$.ajax('api/timeDist', {
+				dataType: 'json',
+				data: { stateId: stateId, time: time, level: level },
+				success: function (data) {					
+					viz.setProbDist(data);
+					$('#div-fut-time').html(time);
+				},
+				error: function (xhr, status, err) {
+					alert(xhr.responseText);
+				}
+			});
+		}
+		
+		$("#rng-time-probs").slider({
+			value: 0,
+			min: -10,
+			max: 10,
+			step: 0.01,
+			disabled: true,
+			animate:"slow",
+			orientation: "hotizontal",
+			change: function (event, ui) {
+				if ($('#chk-show-fut').is(':checked')) {
+					var val = ui.value;
+					fetchStateProbDist(val);
+				}
+			},
+			slide: function (event, ui) {
+				$('#div-fut-time').html(ui.value);
+			},
+		});
+		$('#chk-show-fut').change(function () {
+			if (this.checked) {
+				$('#rng-time-probs').slider('enable');
+				$('#div-future-opts').removeClass('hidden');
+				fetchStateProbDist(0);
 			} else {
-				// TODO
+				$('#div-future-opts').addClass('hidden');
+				$('#rng-time-probs').slider('disable');
+				$('#rng-time-probs').slider('value', 0);
+				if (viz.getMode() == 'probs')
+					viz.resetMode();
 			}
 		});
 		
@@ -527,6 +526,10 @@ var UI;
 		viz.onStateSelected(function (stateId, height) {
 			$('#wrapper-transition-details').hide();
 			$('#wrapper-state-details').hide();
+			if ($('#chk-show-fut').is(':checked')) {
+				$('#chk-show-fut').attr('checked', false);
+				$('#chk-show-fut').change();
+			}
 			
 			if (stateId == null) return;
 			
@@ -660,7 +663,8 @@ var UI;
 			//reset the values
 			$('#div-trans-ftrs').html('');
 			
-			$('#span-transition-name').html(sourceId + ' -> ' + targetId);
+			$('#span-trans-source').html(sourceId);
+			$('#span-trans-target').html(targetId);
 			
 			for (var ftrId = 0; ftrId < featureInfo.length; ftrId++) {
 				var ftr = featureInfo[ftrId];
@@ -682,6 +686,10 @@ var UI;
 		
 		viz.onHeightChanged(function (height) {
 			$('#span-zoom-val').html((100*height).toFixed());
+			if ($('#chk-show-fut').is(':checked')) {
+				$('#chk-show-fut').attr('checked', false);
+				$('#chk-show-fut').change();
+			}
 		});
 		
 		var that = {
