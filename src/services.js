@@ -1110,6 +1110,7 @@ function initDataUploadApi() {
 												
 												model.setId(modelId);
 												activateModel(model);
+												model.setOnline(true);
 												saveToSession(sessionId, session, username, userBase, model, modelId);
 												
 												// end request
@@ -1590,10 +1591,10 @@ function initBroker() {
 				if (log.trace())
 					log.trace('Received raw measurement: %s', JSON.stringify(payload));
 				
-				//========================================================
-				// TODO remove this			
-				payload = transform.parseDominiksRawEvent(msg);
-				//========================================================
+//				//========================================================
+//				// TODO remove this			
+//				payload = transform.parseDominiksRawEvent(msg);
+//				//========================================================
 				
 				addRawMeasurement(payload);
 			} else if (msg.type == 'cep') {
@@ -1602,10 +1603,10 @@ function initBroker() {
 				
 				var event = msg.payload;	
 				
-				//========================================================
-				// TODO remove this			
-				event = transform.parseDominiksDerivedEvent(event);
-				//========================================================
+//				//========================================================
+//				// TODO remove this			
+//				event = transform.parseDominiksDerivedEvent(event);
+//				//========================================================
 				
 				var val = transform.parseDerivedEvent(event);
 	

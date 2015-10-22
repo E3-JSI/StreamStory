@@ -33,7 +33,7 @@
 		"database": "hella"
 	},
 	"integration": {
-		"type": "broker",
+		"type": "http",
 		"brokerUrl": "127.0.0.1",
 		"zookeperPort": 2181,
 		"producerPort": 8090

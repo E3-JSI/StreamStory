@@ -1,6 +1,8 @@
 var UI;
 
 (function () {
+	var viz;
+	
 	//=======================================================
 	// WEB SOCKETS
 	//=======================================================
@@ -474,7 +476,7 @@ var UI;
 		// VISUALIZATION HANDLERS
 		//=======================================================
 		
-		var viz = zoomVis({
+		viz = zoomVis({
 			visContainer: 'vis_container'
 		});
 		
