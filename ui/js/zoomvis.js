@@ -28,9 +28,6 @@ var zoomVis = function (opts) {
 	//====================================================
 	
 	var DEFAULT_QTIP_OPTS = {
-		content: function (event) { 
-			return 'Holding time ' + this.data().holdingTime.toPrecision(2)
-		},
 		position: {
 			my: 'bottom center',
 			at: 'top center'
@@ -56,7 +53,12 @@ var zoomVis = function (opts) {
 	var edgeQtipOpts = clone(DEFAULT_QTIP_OPTS);
 	
 	nodeQtipOpts.content = function (event) { 
-		return 'Holding time ' + this.data().holdingTime.toPrecision(2)
+		var data = this.data();
+		var name = data.name;
+		var txt = '';
+		if (name != null) txt += '<h3>' + name + '</h3>';
+		txt += 'Holding time ' + data.holdingTime.toPrecision(2)
+		return txt;
 	};
 	
 	edgeQtipOpts.content = function (event) { 
@@ -483,7 +485,7 @@ var zoomVis = function (opts) {
 				var label = getNodeLabel(node);
 				
 				var style = {
-					'content': label,
+					'content': node.id,
 					'text-transform': 'none',
 					'text-halign': 'center',
 					'text-valign': 'center',
@@ -499,7 +501,7 @@ var zoomVis = function (opts) {
 					'height': nodeSize.height,
 					'border-width': DEFAULT_BORDER_WIDTH,
 					'border-color': DEFAULT_BORDER_COLOR,
-					'label': node.name != null ? node.name : node.id,
+					'label': node.id,
 					'z-index': BACKGROUND_Z_INDEX					
 				}
 				
@@ -514,7 +516,8 @@ var zoomVis = function (opts) {
 					data: {
 						id: '' + node.id,
 						style: style,
-						holdingTime: node.holdingTime
+						holdingTime: node.holdingTime,
+						name: node.name
 					},
 					position: {
 						x: position.x,
@@ -1290,9 +1293,10 @@ var zoomVis = function (opts) {
 			if (node == null) return;
 			
 			var graphNode = cy.nodes('#' + stateId);
-			var label = getNodeLabel(node);
-			graphNode.css('label', label);
-			graphNode.data('label', label);
+			graphNode.data().name = name;
+//			var label = getNodeLabel(node);
+//			graphNode.css('label', label);
+//			graphNode.data('label', label);
 		},
 		
 		setShowTransitionProbs: function (show) {

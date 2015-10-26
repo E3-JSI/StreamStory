@@ -87,7 +87,7 @@ function loadModel(modelBase, fname) {
 	if (log.debug())
 		log.debug('Loading model from file %s ...', fname);
 	
-	var model = new qm.analytics.StreamStory({ 
+	var model = qm.analytics.StreamStory({ 
 		base: modelBase, 
 		fname: fname
 	});
@@ -1262,7 +1262,7 @@ function initDataUploadApi() {
 						saveToSession(sessionId, session, username, base, model, modelId);
 					}
 				} else {
-					closeBase(session);		// TODO bug in qminer, have to do this before opening a new base
+//					closeBase(session);		// TODO bug in qminer, have to do this before opening a new base
 					var baseConfig = loadOfflineModel(modelConfig.base_dir);
 					saveToSession(sessionId, session, username, baseConfig.base, baseConfig.model, modelId);
 				}
@@ -1755,7 +1755,7 @@ function initServer(sessionStore, parseCookie) {
 		unset: 'destroy',
 		store: sessionStore,
 		cookie: { maxAge: 1000*60*60*24 },	// the cookie will last for 1 day
-		resave: false,
+		resave: true,
 		saveUninitialized: true
 	});
 	

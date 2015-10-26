@@ -118,6 +118,11 @@ exports.COEFF_PRINT_INTERVAL = config.log.print.coeff;
 
 // set the global qm object
 global.qm = require(QM_MODULE_PATH);
+// configure qminer log level
+var verbosity = 0;
+if (config.log.logger.level == 'debug') verbosity = 1;
+else if (config.log.logger.level == 'trace') verbosity = 2;
+global.qm.verbosity(verbosity);
 
 //create the directories if they don't exist
 try {
@@ -134,6 +139,7 @@ log.info('================================================');
 log.info('Working directory: %s', process.cwd());
 log.info('Module path: %s', QM_MODULE_PATH);
 log.info('Mode: ' + config.qminer.mode);
+log.info('QMiner verbosity: %d', verbosity);
 log.info('StreamStory params: %s', JSON.stringify(exports.STREAM_STORY_PARAMS));
 log.info('Data path: %s', dataPath);
 log.info('Use-case: %s', config.useCase);
