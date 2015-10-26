@@ -1740,7 +1740,8 @@ function prepPage(page) {
 		var session = req.session;
 		
 		var opts = {
-			isOnlineModel: session.model.isOnline(),
+			//isOnlineModel: session.model.isOnline(),
+			model: session.model,
 			useCase: config.USE_CASE_NAME
 		};
 		

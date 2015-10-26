@@ -126,7 +126,7 @@
 			ui = UI();
 			fetchConfig();
 			
-			<% if (isOnlineModel) { %>
+			<% if (model.isOnline()) { %>
 			ui.initWebSockets();
 			<% } %>
 			
@@ -156,7 +156,7 @@
     		<!-- Collect the nav links, forms, and other content for toggling -->
     		<div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
       			<ul class="nav navbar-nav navbar-right">
-        			<% if (isOnlineModel) { %>
+        			<% if (model.isOnline()) { %>
         			<li>
         				<a id="lnk-msgs" href="#" data-placement="bottom" data-toggle="popover" title="Popover Header" data-content="Some content inside the popover">
         					(<span id="span-num-msgs">0</span>)&nbsp;<span class="glyphicon glyphicon-comment" aria-hidden="true"></span>
@@ -370,10 +370,10 @@
 						  	<span class="glyphicon glyphicon-align-justify" aria-hidden="true"></span>
 						</button>
 						<span class="pull-right component-title-additional">
-							<% if (isOnlineModel) { %>
+							<% if (model.isOnline()) { %>
 							<span id="span-no-active"></span> online models,
 							<% } %> 
-							time unit:&nbsp;<span id="span-tu"></span>&nbsp;&nbsp;&nbsp;
+							time unit:&nbsp;<span id="span-tu"><%= model.getModel().getTimeUnit() %></span>&nbsp;&nbsp;&nbsp;
 						</span>
 						<!-- options for the visualization component -->
 						<div id="content-options" class="popover fade bottom in" style="width: 280px;">
@@ -382,17 +382,57 @@
 								<div style="padding-top: 12px; padding-bottom: 12px;">
 									<div class="row">
 										<div id="div-ftrs" class="col-md-12">
+											<%
+											var ftrDesc = model.getFtrDesc();
+											var observations = ftrDesc.observation;
+											var controls = ftrDesc.control;
+											var featureInfo = observations.concat(controls);
+											%>
 											<div class="form-group">
 												<h4>Show attribute</h4>
-												<ul id="ul-ftrs-obs"></ul>
+												<ul id="ul-ftrs-obs">
+												<% for (var ftrN = 0; ftrN < featureInfo.length; ftrN++) { %>
+													<li><input type="checkbox" value="<%= ftrN %>" /> <%= featureInfo[ftrN].name %></li>
+												<% } %>
+												</ul>
 											</div>
+											<% if (controls.length > 0) { %>
 											<div class="form-group">
 												<h4>Adjust control</h4>
 												<div class="checkbox">
 													<label><input id="chk-sim-inputs" type="checkbox" /> Simulate inputs</label>
 												</div>
-												<div id="div-ftrs-control"></div>
+												<div id="div-ftrs-control">
+												<% for (var controlN = 0; controlN < controls.length; controlN++) { 
+													var bounds = controls[controlN].bounds;
+													var ftrId = observations.length + controlN; %>
+													<div class="form-group">
+														<label for="<%= ftrId %>"><%= controls[controlN].name + ' (' + bounds.min.toFixed(2) + ' to ' + bounds.max.toFixed(2) + ')' %></label>
+														<div id="<%= ftrId %>" class="slider-contr"></div>
+													</div>
+													<script type="text/javascript">
+														$('#<%= ftrId %>').slider({
+															value: <%= (bounds.min + bounds.max) / 2 %>,
+															min: <%= bounds.min %>,
+															max: <%= bounds.max %>,
+															step: <%= (bounds.max - bounds.min) / 100 %>,
+															animate:"slow",
+															orientation: "hotizontal",
+															disabled: true,
+															change: function (event, ui) {
+																var shouldFire = $('#chk-sim-inputs').is(':checked');
+																if (shouldFire) {
+																	var val = $(this).slider('value');//ui.value;
+																	var ftrId = $(this).attr('id');
+																	changeControlVal(null, ftrId, val);
+																}
+															}
+														});
+													</script>
+												<% } %>
+												</div>
 											</div>
+											<% } %>
 										</div>
 									</div>
 									<div class="row">
@@ -409,7 +449,7 @@
 									</div>
 									<div class="row">
 										<div id="container-buttons" class="col-md-12" style="padding-top: 12px;">
-											<% if (isOnlineModel) { %>
+											<% if (model.isOnline()) { %>
 											<input type="button" id="btn-activate" value="Activate Model" class="btn btn-success btn-block hidden" />
 											<script type="text/javascript">
 												{
@@ -489,7 +529,7 @@
 										<label for="txt-name">State name</label>
 										<input id="txt-name" type="text" class="form-control" />
 									</div>
-									<% if (isOnlineModel) { %>
+									<% if (model.isOnline()) { %>
 									<div class="checkbox">
 								    	<label>
 								      		<input id="chk-target" type="checkbox" /> Make target

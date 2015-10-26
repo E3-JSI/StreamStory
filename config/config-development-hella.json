@@ -11,7 +11,7 @@
 	},
 	"log": {
 		"logger": {
-			"level": "trace",
+			"level": "debug",
 			"outputMode": "short",
 			"stream": {
 				"type": "stdout",

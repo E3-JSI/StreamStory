@@ -1,7 +1,24 @@
 var UI;
+var viz;
+
+function changeControlVal(stateId, ftrIdx, val) {
+	var data = { ftrIdx: ftrIdx, val: val };
+	if (stateId != null) data.stateId = stateId;
+	
+	$.ajax('api/setControl', {
+		dataType: 'json',
+		data: data,
+		method: 'POST',
+		success: function (data) {
+			viz.setModel(data);
+		},
+		error: function (jqXHR, status) {
+			alert(status);
+		}
+	});
+}
 
 (function () {
-	var viz;
 	
 	//=======================================================
 	// WEB SOCKETS
@@ -230,159 +247,27 @@ var UI;
 			}
 		}
 		
-		function populateUI() {
-			function changeControlVal(stateId, ftrIdx, val) {
-				var data = { ftrIdx: ftrIdx, val: val };
-				if (stateId != null) data.stateId = stateId;
-				
-				$.ajax('api/setControl', {
-					dataType: 'json',
-					data: data,
-					method: 'POST',
-					success: function (data) {
-						viz.setModel(data);
-					},
-					error: function (jqXHR, status) {
-						alert(status);
-					}
-				});
-			}
+		//=======================================================
+		// CONFIGURATION PANEL
+		//=======================================================
+		
+		function resetControlVal(stateId, ftrId) {
+			var data = {};
+			if (stateId != null) data.stateId = stateId;
+			if (ftrId != null) data.ftrIdx = ftrId;
 			
-			function resetControlVal(stateId, ftrId) {
-				var data = {};
-				if (stateId != null) data.stateId = stateId;
-				if (ftrId != null) data.ftrIdx = ftrId;
-				
-				$.ajax('api/resetControl', {
-					dataType: 'json',
-					data: data,
-					method: 'POST',
-					success: function (data) {
-						viz.setModel(data);
-					},
-					error: function (jqXHR, status) {
-						alert(status);
-					}
-				});
-			}
-			
-			$.ajax('api/features', {
+			$.ajax('api/resetControl', {
 				dataType: 'json',
-				success: function (ftrs) {
-					featureInfo = ftrs.observation.concat(ftrs.control);
-					
-					var observList = $('#ul-ftrs-obs');
-					var controlDiv = $('#div-ftrs-control');
-					
-					var simInputs = $('#chk-sim-inputs');
-					
-					simInputs.off('checked');
-					simInputs.off('change');
-					simInputs.prop('checked', false);
-					
-					$.each(ftrs.observation.concat(ftrs.control), function (idx, desc) {
-						var li = $('<li />').appendTo(observList);
-						li.html('<input type="checkbox" value="' + idx + '" />' + desc.name + '<br />');
-					});
-					
-					$.each(ftrs.control, function (idx, desc) {
-						(function () {
-							var bounds = desc.bounds;
-							var ftrId = idx + ftrs.observation.length;
-							var controlId = 'control-' + (idx + ftrs.observation.length);
-							
-							var div = $('<div />').appendTo(controlDiv);
-							var label = $('<label />').appendTo(div);
-							var slider = $('<div />').appendTo(div);
-													
-							div.addClass('form-group');
-							
-							slider.attr('id', controlId);
-							
-							label.attr('for', controlId);
-							label.html(desc.name + ' (' + bounds.min.toFixed(2) + ' to ' + bounds.max.toFixed(2) + ')');
-							
-							var defaultVal = (bounds.max + bounds.min) / 2;
-							
-							var shouldFireSlideChange = true;	// fix, strange behaviour of the slider
-							
-							slider.slider({
-								value: defaultVal,
-								min: bounds.min,
-								max: bounds.max,
-								step: (bounds.max - bounds.min) / 100,
-								animate:"slow",
-								orientation: "hotizontal",
-								change: function (event, ui) {
-									if (shouldFireSlideChange) {
-										var val = $('#' + controlId).slider('value');//ui.value;
-										changeControlVal(null, ftrId, val);
-									}
-								}
-							});
-							
-							// enable / disable handlers
-							slider.slider('disable');
-							simInputs.change(function (event) {
-								slider.slider(event.target.checked ? 'enable' : 'disable');
-								if (!event.target.checked) {
-									shouldFireSlideChange = false;
-//									slider.off('change');
-									slider.slider('value', defaultVal);
-								} else {
-									shouldFireSlideChange = true;
-									slider.slider('option', 'change').call(slider);
-								}
-							});
-						}());
-					});
-					
-					simInputs.change(function (event) {
-						if (event.target.checked) {
-							$('#btn-reset-sim').removeClass('hidden');
-						}
-						else {
-							resetControlVal();
-							$('#btn-reset-sim').addClass('hidden');
-						}
-					});
-					
-					observList.find('input[type=checkbox]').change(function (event) {
-						var el = $(event.target);
-						var checked = el.prop('checked');
-						
-						if (checked) {
-							// uncheck the other elements
-							observList.find('input[type=checkbox]').removeAttr('checked');
-							el.prop('checked', true);
-							
-							var ftrIdx = el.val();
-							viz.setTargetFtr(ftrIdx);
-						} else {
-							viz.setTargetFtr(null);
-						}
-					});
-				},
-				error: function (jqXHR, status) {
-					alert(status);
-				}
-			});
-			
-			$.ajax('api/timeUnit', {
-				dataType: 'json',
-				data: { paramName: 'pdfBins' },
-				success: function (result) {
-					$('#span-tu').html(result.value);
+				data: data,
+				method: 'POST',
+				success: function (data) {
+					viz.setModel(data);
 				},
 				error: function (jqXHR, status) {
 					alert(status);
 				}
 			});
 		}
-		
-		//=======================================================
-		// CONFIGURATION PANEL
-		//=======================================================
 		
 		function fetchStateProbDist(time) {
 			var stateId = viz.getSelectedState();
@@ -409,6 +294,35 @@ var UI;
 			});
 		}
 		
+		$('#ul-ftrs-obs').find('input[type=checkbox]').change(function (event) {
+			var ul = $('#ul-ftrs-obs');
+			var el = $(event.target);
+			var checked = el.prop('checked');
+			
+			if (checked) {
+				// uncheck the other elements
+				ul.find('input[type=checkbox]').removeAttr('checked');
+				el.prop('checked', true);
+				
+				var ftrIdx = el.val();
+				viz.setTargetFtr(ftrIdx);
+			} else {
+				viz.setTargetFtr(null);
+			}
+		});
+		
+		$('#chk-sim-inputs').change(function (event) {
+			if (event.target.checked) {
+				$('#btn-reset-sim').removeClass('hidden');
+				$('#div-ftrs-control').find('.slider-contr').slider('enable');
+			}
+			else {
+				$('#div-ftrs-control').find('.slider-contr').slider('disable');
+				resetControlVal();
+				$('#btn-reset-sim').addClass('hidden');
+			}
+		});
+		
 		$("#rng-time-probs").slider({
 			value: 0,
 			min: -10,
@@ -427,6 +341,7 @@ var UI;
 				$('#div-fut-time').html(ui.value);
 			},
 		});
+		
 		$('#chk-show-fut').change(function () {
 			if (this.checked) {
 				$('#rng-time-probs').slider('enable');
@@ -774,9 +689,7 @@ var UI;
 				alert('Faield to fetch simulation status: ' + status);
 			}
 		});
-		
-		populateUI();
-		
+				
 		return that;
 	}
 })()
