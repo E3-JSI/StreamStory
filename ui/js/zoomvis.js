@@ -250,6 +250,15 @@ var zoomVis = function (opts) {
 		};
 	}
 	
+	function serverPosition(pos) {
+		var w = cy.width();
+		var h = cy.height();
+		return {
+			x: minX + (pos.x - w*xOffset)*(maxX - minX) / (w*(1 - 2*xOffset)),
+			y: minY + (pos.y - h*yOffset)*(maxY - minY) / (h*(1 - 2*yOffset))
+		}
+	}
+	
 	function cySize(radius) {
 		var scaleX = (1 - 2*xOffset)*cy.width() / (maxX - minX);
 		var scaleY = (1 - 2*yOffset)*cy.height() / (maxY - minY);
@@ -261,13 +270,6 @@ var zoomVis = function (opts) {
 			width: Math.max(scale * diameter, MIN_NODE_DIAMETER),
 			height: Math.max(scale * diameter, MIN_NODE_DIAMETER)
 		};
-	}
-	
-	function serverPosition(pos) {
-		return {
-			x: (pos.x/visWidth - xOffset)*(maxX - minX) / (1 - yOffset) - minX,
-			y: (pos.y/visHeight - yOffset)*(maxY - minY) / (1 - yOffset) - minY
-		}
 	}
 	
 	function calcCyPan(newZoom) {
@@ -643,7 +645,7 @@ var zoomVis = function (opts) {
 		
 		if (!opts.keepCached)
 			clear(true);
-		insertLevel(currentLevel, true);
+		insertLevel(currentLevel);
 		
 		if (!opts.isInBatch)
 			cy.endBatch();
