@@ -44,22 +44,6 @@ var lastRawTime = 0;
 
 var intensConfig = {};
 
-function getUserDir(username) {
-	return config.USER_BASES_PATH + username;
-}
-
-function getBaseDir(username, timestamp) {
-	return getUserDir(username) + '/' + timestamp;
-}
-
-function getDbDir(baseDir) {
-	return baseDir + '/db';
-}
-
-function getModelFName(baseDir) {
-	return baseDir + '/StreamStory.bin';
-}
-
 function activateModel(model) {
 	try {
 		log.info('Activating an online model ...');
@@ -81,57 +65,6 @@ function deactivateModel(model) {
 	} catch (e) {
 		log.error(e, 'Failed to deactivate a model!');
 	}
-}
-
-function loadModel(modelBase, fname) {
-	if (log.debug())
-		log.debug('Loading model from file %s ...', fname);
-	
-	var model = qm.analytics.StreamStory({ 
-		base: modelBase, 
-		fname: fname
-	});
-	
-	model.setId(fname);
-	return model;
-}
-
-function loadOfflineModel(baseDir) {
-	if (log.debug())
-		log.debug('Loading offline model from base: %s', baseDir);
-	
-	try {
-		var dbDir = getDbDir(baseDir);
-		var modelFName = getModelFName(baseDir);
-		
-		if (log.debug())
-			log.debug('Opening new base: %s', dbDir);
-		
-		var userBase = new qm.Base({
-			mode: 'openReadOnly',
-			dbPath: getDbDir(baseDir)
-		});
-		
-		if (log.debug())
-			log.debug('Loading model from file: %s', modelFName)
-		
-		var model = loadModel(userBase, modelFName);
-		
-		model.setOnline(false);
-		
-		return {base: userBase, model: model};
-	} catch (e) {
-		log.error(e, 'Failed to open base!');
-		throw e;
-	}
-}
-
-function loadOnlineModel(fname) {
-	var model = loadModel(base, fname);
-	
-	model.setOnline(true);
-	
-	return model;
 }
 
 function closeBase(session) {
@@ -925,14 +858,9 @@ function initDataUploadApi() {
 			delete session.datasetName;
 			delete session.headerFields;
 			
-			var attrSet = {};
-			for (var i = 0; i < attrs.length; i++) {
-				attrSet[attrs[i]] = true;
-			}
-			
 			log.debug('Creating a new base for the current user ...');
-			var baseDir = getBaseDir(username, new Date().getTime());
-			var dbDir = getDbDir(baseDir);
+			var baseDir = utils.getBaseDir(username, new Date().getTime());
+			var dbDir = utils.getDbDir(baseDir);
 			
 			db.createUser(username, function (e) {
 				if (e != null) {
@@ -986,190 +914,97 @@ function initDataUploadApi() {
 							});
 						}
 						
-						// initialize the feature spaces
-			    		var obsFields = [];
-						var contrFields = [];
-						
-						var usedFields = {};
-						for (var i = 0; i < controlAttrs.length; i++) {
-							var fieldNm = controlAttrs[i];
-							contrFields.push({
-								field: fieldNm,
-								source: storeNm,
-								type: 'numeric',
-								normalize: true
-							});
-							usedFields[fieldNm] = true;
+						var opts = {
+							base: userBase,
+							store: store,
+							storeNm: storeNm,
+							timeUnit: timeUnit,
+							headers: headers,
+							timeAttr: timeAttr,
+							attrs: attrs,
+							controlAttrs: controlAttrs,
+							isRealTime: isRealTime,
+							fileBuff: fileBuff,
+							clustConfig: clustConfig,
+							baseDir: baseDir
 						}
 						
-						for (var i = 0; i < attrs.length; i++) {
-							var fieldNm = attrs[i];
-							if (fieldNm in usedFields || fieldNm == timeAttr) continue;
-												
-							obsFields.push({
-								field: fieldNm,
-								source: storeNm,
-								type: 'numeric',
-								normalize: true
-							});
-						}
-						
-						var obsFtrSpace = new qm.FeatureSpace(userBase, obsFields);
-			    		var controlFtrSpace = new qm.FeatureSpace(userBase, contrFields);
-						
-			    		var recs = [];
-			    		
-						// fill the store
-						log.debug('Processing CSV file ...');
-						var lineN = 0;
-						qm.fs.readCsvLines(fileBuff, {
-							skipLines: 1,
-							onLine: function (lineArr) {
-								if (++lineN % 10000 == 0 && log.debug())
-									log.debug('Read %d lines ...', lineN);
-								
-								var recJson = {};
-								for (var i = 0; i < headers.length; i++) {
-									var attr = headers[i].name;
-									if (attr == timeAttr) {
-										var date = utils.dateToQmDate(new Date(parseInt(lineArr[i])));
-										recJson[attr] = date;
-										if (log.trace())
-											log.trace('Parsed date: %s', date);
-									} else {
-										recJson[attr] = parseFloat(lineArr[i]);
-									}
+						modelStore.buildModel(opts, function (e, model, fname) {
+							if (e != null) {
+								handleServerError(e, req, res);
+								return;
+							}
+							
+							var modelId = model.getId();
+							
+							if (isRealTime) {
+								var dbOpts = {
+									username: username,
+									model_file: fname,
+									dataset: datasetName,
+									name: modelName,
+									is_active: 1
 								}
 								
-								if (log.trace())
-									log.trace('Inserting value: %s', JSON.stringify(recJson));
-								
-								// create the actual record and update the feature spaces						
-								recs.push(store.newRecord(recJson));
-							},
-							onEnd: function (err) {
-								if (err != null) {
-									log.error(err, 'Exception while parsing the uploaded CSV file!');
-									res.status(500);	// internal server error
-									return;
+								log.info('Storing a new online model ...');
+								db.storeOnlineModel(dbOpts, function (e) {
+									if (e != null) {
+										log.error(e, 'Failed to store offline model to DB!');
+										res.status(500);	// internal server error
+										res.end();
+										return;
+									}
+									
+									try {
+										if (log.debug())
+											log.debug('Online model stored!');
+										
+										activateModel(model);
+										saveToSession(sessionId, session, username, userBase, model, modelId);
+										
+										// end request
+										res.status(204);	// no content
+										res.end();
+									} catch (e1) {
+										log.error(e1, 'Failed to open base!');
+										res.status(500);	// internal server error
+										res.end();
+									}
+								});
+							}
+							else {
+								var dbOpts = {
+									username: username,
+									base_dir: baseDir,
+									model_file: fname,
+									dataset: datasetName,
+									name: modelName
 								}
 								
-								log.info('Building StreamStory model ...');
-								
-								// create the configuration
-								try {
-									var modelParams = utils.clone(config.STREAM_STORY_PARAMS);
-									modelParams.clustering = clustConfig;
-									modelParams.transitions.timeUnit = timeUnit;
-									
-									if (log.info())
-										log.info('Creating a new model with params: %s', JSON.stringify(modelParams));
-									
-									// create the model
-									var model = qm.analytics.StreamStory({
-										base: userBase,
-										config: modelParams,
-										obsFtrSpace: obsFtrSpace,
-										controlFtrSpace: controlFtrSpace
-									});
-									
-									// fit the model
-									// first create a matrix out of the records
-									model.fit({
-										recV: recs,
-										timeField: timeAttr,
-										batchEndV: null
-									});
-									
-									if (isRealTime) {
-										var fname = config.REAL_TIME_MODELS_PATH + new Date().getTime() + '.bin';
-										var modelId = fname;
-										
-										log.info('Saving model ...');
-										model.save(fname);
-										
-										var dbOpts = {
-											username: username,
-											model_file: fname,
-											dataset: datasetName,
-											name: modelName,
-											is_active: 1
-										}
-										
-										log.info('Storing a new online model ...');
-										db.storeOnlineModel(dbOpts, function (e) {
-											if (e != null) {
-												log.error(e, 'Failed to store offline model to DB!');
-												res.status(500);	// internal server error
-												res.end();
-												return;
-											}
-											
-											try {
-												if (log.debug())
-													log.debug('Online model stored!');
-												
-												model.setId(modelId);
-												activateModel(model);
-												model.setOnline(true);
-												saveToSession(sessionId, session, username, userBase, model, modelId);
-												
-												// end request
-												res.status(204);	// no content
-												res.end();
-											} catch (e1) {
-												log.error(e1, 'Failed to open base!');
-												res.status(500);	// internal server error
-												res.end();
-											}
-										});
+								log.info('Storing a new offline model ...');
+								db.storeOfflineModel(dbOpts, function (e) {
+									if (e != null) {
+										log.error(e, 'Failed to store offline model to DB!');
+										res.status(500);	// internal server error
+										res.end();
+										return;
 									}
-									else {
-										var modelFile = getModelFName(baseDir);
-										var modelId = modelFile;
+									
+									try {
+										if (log.debug())
+											log.debug('Offline model stored!');
 										
-										log.info('Saving model and base ...');
-										model.save(modelFile);
-										userBase.close();
-										log.info('Saved!');
+										var baseConfig = modelStore.loadOfflineModel(baseDir);
+										saveToSession(sessionId, session, username, baseConfig.base, baseConfig.model, modelId);
 										
-										var dbOpts = {
-											username: username,
-											base_dir: baseDir,
-											model_file: modelFile,
-											dataset: datasetName,
-											name: modelName
-										}
-										
-										log.info('Storing a new offline model ...');
-										db.storeOfflineModel(dbOpts, function (e) {
-											if (e != null) {
-												log.error(e, 'Failed to store offline model to DB!');
-												res.status(500);	// internal server error
-												res.end();
-												return;
-											}
-											
-											try {
-												if (log.debug())
-													log.debug('Offline model stored!');
-												
-												var baseConfig = loadOfflineModel(baseDir);
-												saveToSession(sessionId, session, username, baseConfig.base, baseConfig.model, modelId);
-												
-												// end request
-												res.status(204);	// no content
-												res.end();
-											} catch (e1) {
-												log.error(e1, 'Failed to open base!');
-												handleServerError(e, req, res);
-											}
-										})
+										// end request
+										res.status(204);	// no content
+										res.end();
+									} catch (e1) {
+										log.error(e1, 'Failed to open base!');
+										handleServerError(e1, req, res);
 									}
-								} catch (e) {
-									log.error(e, 'Failed to create the store!');
-									handleServerError(e, req, res);
-								}
+								})
 							}
 						});
 					} catch (e) {
@@ -1190,7 +1025,7 @@ function initDataUploadApi() {
 		
 		// create new base with the default store
 		log.info('Creating users directory ...');
-		var userDirNm = getUserDir(req.body.username);
+		var userDirNm = utils.getUserDir(req.body.username);
 		
 		fs.exists(userDirNm, function (exists) {
 			if (exists) {
@@ -1258,12 +1093,11 @@ function initDataUploadApi() {
 						if (log.debug())
 							log.debug('Adding an inactive model to the session ...');
 						
-						var model = loadOnlineModel(modelConfig.model_file);
+						var model = modelStore.loadOnlineModel(modelConfig.model_file);
 						saveToSession(sessionId, session, username, base, model, modelId);
 					}
 				} else {
-//					closeBase(session);		// TODO bug in qminer, have to do this before opening a new base
-					var baseConfig = loadOfflineModel(modelConfig.base_dir);
+					var baseConfig = modelStore.loadOfflineModel(modelConfig.base_dir);
 					saveToSession(sessionId, session, username, baseConfig.base, baseConfig.model, modelId);
 				}
 				
@@ -1716,7 +1550,7 @@ function loadActiveModels() {
 				if (log.info())
 					log.info('Initializing model %s ...', JSON.stringify(modelConfig));
 				
-				var model = loadOnlineModel(modelConfig.model_file);
+				var model = modelStore.loadOnlineModel(modelConfig.model_file);
 				activateModel(model);
 			} catch (e1) {
 				log.error(e1, 'Exception while initializing model %s', JSON.stringify(model));
@@ -1860,6 +1694,7 @@ exports.init = function (opts) {
 	});
 	
 	modelStore = ModelStore({
+		base: base,
 		ws: ws,
 		onAdd: function (model) {
 			if (log.debug())

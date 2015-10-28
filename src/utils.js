@@ -32,6 +32,30 @@ module.exports = {
 	closeBase: closeBase,
 	exit: exit,
 	
+	//=============================================
+	// DIRECTORIES
+	//=============================================
+	
+	getUserDir: function (username) {
+		return config.USER_BASES_PATH + username;
+	},
+	
+	getBaseDir: function (username, timestamp) {
+		return module.exports.getUserDir(username) + '/' + timestamp;
+	},
+	
+	getDbDir: function (baseDir) {
+		return baseDir + '/db';
+	},
+	
+	getModelFName: function (baseDir) {
+		return baseDir + '/StreamStory.bin';
+	},
+	
+	//=============================================
+	// HELPER FUNCTIONS
+	//=============================================
+	
 	dateToQmDate: function (date) {
 		return date.toISOString().split('Z')[0];
 	},
@@ -39,6 +63,21 @@ module.exports = {
 	isFinite: function (num) {
 		return !isNaN(num) && isFinite(num);
 	},
+	
+	createDirSync: function (dir) {
+		if (!fs.existsSync(dir)) {
+			log.info('Creating directory %s ...', dir);
+			mkdirp.sync(dir);
+		}
+	},
+	
+	clone: function (obj) {
+		return JSON.parse(JSON.stringify(obj));
+	},
+	
+	//=============================================
+	// HELPER CLASSES
+	//=============================================
 	
 	RecBuffer: function (size) {
 		var buff = [];
@@ -56,16 +95,5 @@ module.exports = {
 		this.clear = function () {
 			buff = [];
 		};
-	},
-	
-	createDirSync: function (dir) {
-		if (!fs.existsSync(dir)) {
-			log.info('Creating directory %s ...', dir);
-			mkdirp.sync(dir);
-		}
-	},
-	
-	clone: function (obj) {
-		return JSON.parse(JSON.stringify(obj));
 	}
 }

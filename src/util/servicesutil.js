@@ -1,4 +1,7 @@
 var WebSocket = require('ws');
+var chproc = require('child_process');
+
+var utils = require('../utils.js');
 var config = require('../../config.js');
 
 //=============================================================
@@ -8,8 +11,12 @@ var config = require('../../config.js');
 exports.RealTimeModelStore = function (opts) {
 	log.info('Initializing model store ...');
 	
+	if (opts.base == null) throw new Error('Missing base for online models!');
+	if (opts.ws == null) throw new Error('Missing web sockets!');
+	
 	var store = {};
 	
+	var base = opts.base;
 	var ws = opts.ws;
 	var onAddCb = opts.onAdd;
 	var onRemoveBc = opts.onRemove;
@@ -64,7 +71,24 @@ exports.RealTimeModelStore = function (opts) {
 		store[modelId].socketIds[socketId] = socketId;
 	}
 	
+	function loadModel(modelBase, fname) {
+		if (log.debug())
+			log.debug('Loading model from file %s ...', fname);
+		
+		var model = qm.analytics.StreamStory({ 
+			base: modelBase, 
+			fname: fname
+		});
+		
+		model.setId(fname);
+		return model;
+	}
+	
 	var that = {
+		//====================================================
+		// MODEL MANAGEMENT
+		//====================================================
+			
 		getModel: getModel,
 		add: function (model) {
 			if (model.getId() == null) throw new Error('Tried to add a model with no ID to the real-time model store!');
@@ -92,6 +116,11 @@ exports.RealTimeModelStore = function (opts) {
 				model.update(val);
 			}
 		},
+		
+		//====================================================
+		// MESSAGES
+		//====================================================
+		
 		sendMsg: function (modelId, msgStr) {
 			var socketIds = getWebSocketIds(modelId);
 			for (var socketId in socketIds) {
@@ -111,6 +140,219 @@ exports.RealTimeModelStore = function (opts) {
 				var modelConf = store[modelId];
 				if (socketId in modelConf.socketIds)
 					delete modelConf.socketIds[socketId];
+			}
+		},
+		
+		//====================================================
+		// CREATING AND LOADING MODELS
+		//====================================================
+		
+		loadOfflineModel: function (baseDir) {
+			if (log.debug())
+				log.debug('Loading offline model from base: %s', baseDir);
+			
+			try {
+				var dbDir = utils.getDbDir(baseDir);
+				var modelFName = utils.getModelFName(baseDir);
+				
+				if (log.debug())
+					log.debug('Opening new base: %s', dbDir);
+				
+				var userBase = new qm.Base({
+					mode: 'openReadOnly',
+					dbPath: utils.getDbDir(baseDir)
+				});
+				
+				if (log.debug())
+					log.debug('Loading model from file: %s', modelFName)
+				
+				var model = loadModel(userBase, modelFName);
+				
+				model.setOnline(false);
+				
+				return {base: userBase, model: model};
+			} catch (e) {
+				log.error(e, 'Failed to open base!');
+				throw e;
+			}
+		},
+		loadOnlineModel: function (fname) {
+			var model = loadModel(base, fname);
+			
+			model.setOnline(true);
+			
+			return model;
+		},
+		buildModel: function (opts, callback) {
+			if (callback == null) callback = function (e) { log.error(e, 'Exception while buillding model!'); }
+			
+			try {
+				var userBase = opts.base;
+				var store = opts.store;
+				var storeNm = opts.storeNm;
+				var timeUnit = opts.timeUnit;
+				var headers = opts.headers;
+				var timeAttr = opts.timeAttr;
+				var attrs = opts.attrs;
+				var controlAttrs = opts.controlAttrs;
+				var isRealTime = opts.isRealTime;
+				var fileBuff = opts.fileBuff;
+				var clustConfig = opts.clustConfig;
+				var baseDir = opts.baseDir;
+				
+				var attrSet = {};
+				for (var i = 0; i < attrs.length; i++) {
+					attrSet[attrs[i]] = true;
+				}
+				
+				// initialize the feature spaces
+	    		var obsFields = [];
+				var contrFields = [];
+				
+				var usedFields = {};
+				for (var i = 0; i < controlAttrs.length; i++) {
+					var fieldNm = controlAttrs[i];
+					contrFields.push({
+						field: fieldNm,
+						source: storeNm,
+						type: 'numeric',
+						normalize: true
+					});
+					usedFields[fieldNm] = true;
+				}
+				
+				for (var i = 0; i < attrs.length; i++) {
+					var fieldNm = attrs[i];
+					if (fieldNm in usedFields || fieldNm == timeAttr) continue;
+										
+					obsFields.push({
+						field: fieldNm,
+						source: storeNm,
+						type: 'numeric',
+						normalize: true
+					});
+				}
+				
+				var obsFtrSpace = new qm.FeatureSpace(userBase, obsFields);
+	    		var controlFtrSpace = new qm.FeatureSpace(userBase, contrFields);
+				
+	    		var recs = [];
+	    		
+				// fill the store
+				log.debug('Processing CSV file ...');
+				var lineN = 0;
+				qm.fs.readCsvLines(fileBuff, {
+					skipLines: 1,
+					onLine: function (lineArr) {
+						if (++lineN % 10000 == 0 && log.debug())
+							log.debug('Read %d lines ...', lineN);
+						
+						var recJson = {};
+						for (var i = 0; i < headers.length; i++) {
+							var attr = headers[i].name;
+							if (attr == timeAttr) {
+								var date = utils.dateToQmDate(new Date(parseInt(lineArr[i])));
+								recJson[attr] = date;
+								if (log.trace())
+									log.trace('Parsed date: %s', date);
+							} else {
+								recJson[attr] = parseFloat(lineArr[i]);
+							}
+						}
+						
+						if (log.trace())
+							log.trace('Inserting value: %s', JSON.stringify(recJson));
+						
+						// create the actual record and update the feature spaces						
+						recs.push(store.newRecord(recJson));
+					},
+					onEnd: function (err) {
+						if (err != null) {
+							log.error(err, 'Exception while parsing the uploaded CSV file!');
+							callback(err);
+							return;
+						}
+						
+						log.info('Building StreamStory model ...');
+						
+						// create the configuration
+						try {
+							var modelParams = utils.clone(config.STREAM_STORY_PARAMS);
+							modelParams.clustering = clustConfig;
+							modelParams.transitions.timeUnit = timeUnit;
+							
+							if (log.info())
+								log.info('Creating a new model with params: %s', JSON.stringify(modelParams));
+							
+							// create the model
+							var model = qm.analytics.StreamStory({
+								base: userBase,
+								config: modelParams,
+								obsFtrSpace: obsFtrSpace,
+								controlFtrSpace: controlFtrSpace
+							});
+							
+							// fit the model
+							// first create a matrix out of the records
+							model.fit({
+								recV: recs,
+								timeField: timeAttr,
+								batchEndV: null
+							});
+							
+							var fname = isRealTime ? 
+									config.REAL_TIME_MODELS_PATH + new Date().getTime() + '.bin' :
+									utils.getModelFName(baseDir);
+							var modelId = fname;
+							
+							log.info('Saving model ...');
+							model.save(fname);
+							model.setId(modelId);
+							model.setOnline(isRealTime);
+							
+							if (!isRealTime) {
+								log.info('Closing base ...');
+								userBase.close();
+							}
+							
+							callback(undefined, model, fname);
+						} catch (e) {
+							log.error(e, 'Failed to create the store!');
+							callback(e);
+						}
+					},
+					onError: function (e) {
+						log.error(e, 'Exception while parsing CSV!');
+						callback(e);
+					}
+				});
+				
+				
+//				var worker = chproc.fork(__dirname + '/buildmodel.js');
+//				var model = null;
+//				
+//				if (log.info())
+//					log.info('Spawned a child process with PID: %d', worker.pid);
+//				
+//				worker.on('exit', function (code, signal) {
+//					if (code != 0) {
+//						callback(new Error('Model builder exited with status ' + code + '!'));
+//					} else {
+//						log.info('Worker exited successfully!');
+//						if (model == null)
+//							callback(new Error('Worker exited, but the model has not been received!'));
+//						else
+//							callback(undefined, model);
+//					}
+//				});
+//				
+//				worker.on('message', function (msg) {
+//					log.debug('Builder sent: %s', msg);
+//				});
+//				
+//				worker.send('start');
+			} catch (e) {
+				callback(e);
 			}
 		}
 	}
