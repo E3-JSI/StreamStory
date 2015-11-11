@@ -20,6 +20,139 @@ function changeControlVal(stateId, ftrIdx, val) {
 
 (function () {
 	
+	function visualizeDecisionTree(root) {
+		$('#tree-wrapper').removeClass('hidden');
+		
+		var nodes = [];
+		var edges = [];
+		
+		var nodeW = 300;
+		var nodeH = 250;
+		
+		var currNodeId = 0;
+		var maxDepth = Number.MAX_VALUE;
+		
+		(function construct(node, depth) {
+			var children = node.children;
+			
+			node.id = currNodeId + '';
+			currNodeId++;
+			
+			var data = {
+				id: node.id,
+				pie1: node.classes[0]*100,
+				pie2: node.classes[1]*100
+			}
+			
+			if (node.cut != null) data.label = node.cut.name + '\n\u2264 ' + node.cut.value.toPrecision(2) + ' <';
+			
+			node.data = data;
+			
+			if (depth == maxDepth) {
+				node.width = nodeW;
+				node.children = [];
+				return;
+			}
+			
+			var totalW = 0;
+			for (var i = 0; i < children.length; i++) {
+				var child = children[i];
+				
+				construct(child, depth + 1);
+				
+				totalW += child.width;
+				
+				edges.push({
+					data: {
+						source: node.id,
+						target: child.id,
+					}
+				});
+			}
+			
+			node.width = totalW != 0 ? totalW : nodeW;
+		})(root, 0);
+		
+		(function position(node, pos) {
+			var children = node.children;
+			
+			nodes.push({
+				data: node.data,
+				position: pos,
+			});
+			
+			var startX = pos.x - node.width / 2;
+			var widthSum = 0;
+			for (var i = 0; i < children.length; i++) {
+				var child = children[i];
+				
+				var childCenter = startX + widthSum + child.width/2;
+				position(child, { x: childCenter, y: pos.y + nodeH });
+				
+				widthSum += child.width;
+			}
+		})(root, { x: 0, y: 0 });
+		
+		var cy = cytoscape({
+			container: document.getElementById('tree-wrapper'),
+			
+			boxSelectionEnabled: false,
+			autounselectify: true,
+			fit: true,
+			wheelSensitivity: 0.01,
+			
+			layout: {
+				name: 'preset'
+			},
+			
+			style: [
+				{
+					selector: 'node',
+					style: {
+						'content': 'data(label)',
+						'text-valign': 'bottom',
+						'text-halign': 'center',
+						'text-wrap': 'wrap',
+						'background-color': 'rgb(124, 181, 236)',
+						'border-width': 5,
+						'width': (nodeW*.7).toFixed(),
+						'height': 100,
+						'shape': 'rectangle',
+						'pie-size': '80px',
+						'pie-1-background-color': 'red',
+						'pie-2-background-color': 'green',
+						'pie-1-background-opacity': 100,
+						'pie-2-background-opacity': 100,
+						'pie-1-background-size': 'mapData(pie1, 0, 100, 0, 100)',
+						'pie-2-background-size': 'mapData(pie2, 0, 100, 0, 100)'
+					}
+				},
+
+				{
+					selector: 'edge',
+					style: {
+						'content': 'data(label)',
+						'width': 4,
+						'font-size': 50,
+						'target-arrow-shape': 'triangle',
+						'line-color': '#9dbaea',
+						'target-arrow-color': '#9dbaea'
+					}
+				}
+			],
+			elements: {
+				nodes: nodes,
+				edges: edges
+			},
+			
+			ready: function () {
+//				cy.fit(cy.nodes());
+//				cy.panningEnabled(false);
+				cy.mapData('pie1', 0, 100, 0, 100)
+			}
+		});
+	}
+	
 	//=======================================================
 	// WEB SOCKETS
 	//=======================================================
@@ -462,6 +595,11 @@ function changeControlVal(stateId, ftrIdx, val) {
 					$('#div-attrs').html('');
 					$('#div-future').html('');
 					$('#div-past').html('');
+					$('#tree-wrapper').html('');//.addClass('hidden');
+					
+					visualizeDecisionTree(data.classifyTree);
+					
+//					$('#tree-wrapper').html(JSON.stringify(data.classifyTree, null, '\t').replace(/\n/g, '<br />').replace(/\t/g, '<span style="width: 10px;">&nbsp;&nbsp;&nbsp;&nbsp;</span>')).removeClass('hidden');
 					
 					// populate
 					// basic info

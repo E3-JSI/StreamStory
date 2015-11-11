@@ -6,7 +6,7 @@
 		"initializeZeros": true
 	},
 	"server": {
-		"port": 8585,
+		"port": 8484,
 		"pingInterval": 10000
 	},
 	"log": {
@@ -33,12 +33,12 @@
 		"database": "hella"
 	},
 	"integration": {
-		"type": "http",
+		"type": "broker",
 		"brokerUrl": "127.0.0.1",
 		"zookeperPort": 2181,
 		"producerPort": 8090
 	},
 	"useCase": "hella",
 	"interpolation": "current",
-	"dataPath": "/mnt/raidM2T/project-data/StreamStory-hella/"
+	"dataPath": "/mnt/raidM2T/project-data/StreamStory-hella1/"
 }

@@ -108,6 +108,11 @@ exports.integration = config.integration;
 exports.GC_INTERVAL = 1000000
 
 //================================================================
+// MULTITHREADING
+//================================================================
+exports.MULTI_THREAD = true;
+
+//================================================================
 // PRINT
 //================================================================
 exports.RAW_PRINT_INTERVAL = config.log.print.rawData;

@@ -1,6 +1,6 @@
 var WebSocket = require('ws');
-var chproc = require('child_process');
 
+var StreamStory = require('../streamstory.js').StreamStory;
 var utils = require('../utils.js');
 var config = require('../../config.js');
 
@@ -75,7 +75,7 @@ exports.RealTimeModelStore = function (opts) {
 		if (log.debug())
 			log.debug('Loading model from file %s ...', fname);
 		
-		var model = qm.analytics.StreamStory({ 
+		var model = StreamStory({ 
 			base: modelBase, 
 			fname: fname
 		});
@@ -236,14 +236,20 @@ exports.RealTimeModelStore = function (opts) {
 				var obsFtrSpace = new qm.FeatureSpace(userBase, obsFields);
 	    		var controlFtrSpace = new qm.FeatureSpace(userBase, contrFields);
 				
-	    		var recs = [];
+	    		var recs = new qm.RecordVector();
 	    		
 				// fill the store
 				log.debug('Processing CSV file ...');
+				
+				var timeV = new qm.la.Vector({ vals: 0, mxVals: 200000 });
+				
 				var lineN = 0;
-				qm.fs.readCsvLines(fileBuff, {
-					skipLines: 1,
-					onLine: function (lineArr) {
+				qm.fs.readCsvAsync(fileBuff, { offset: 1 }, function onBatch(lines) {
+					var nLines = lines.length;
+					
+					for (var entryN = 0; entryN < nLines; entryN++) {
+						var lineArr = lines[entryN];
+						
 						if (++lineN % 10000 == 0 && log.debug())
 							log.debug('Read %d lines ...', lineN);
 						
@@ -251,10 +257,13 @@ exports.RealTimeModelStore = function (opts) {
 						for (var i = 0; i < headers.length; i++) {
 							var attr = headers[i].name;
 							if (attr == timeAttr) {
-								var date = utils.dateToQmDate(new Date(parseInt(lineArr[i])));
-								recJson[attr] = date;
+								var date = new Date(parseInt(lineArr[i]));
+								var qmDate = utils.dateToQmDate(date);
 								if (log.trace())
-									log.trace('Parsed date: %s', date);
+									log.trace('Parsed date: %s', date.toString());
+								
+								recJson[attr] = qmDate;
+								timeV.push(date.getTime());
 							} else {
 								recJson[attr] = parseFloat(lineArr[i]);
 							}
@@ -263,42 +272,70 @@ exports.RealTimeModelStore = function (opts) {
 						if (log.trace())
 							log.trace('Inserting value: %s', JSON.stringify(recJson));
 						
-						// create the actual record and update the feature spaces						
+						// create the actual record and update the feature spaces
 						recs.push(store.newRecord(recJson));
-					},
-					onEnd: function (err) {
-						if (err != null) {
-							log.error(err, 'Exception while parsing the uploaded CSV file!');
-							callback(err);
-							return;
-						}
+					}
+				}, function onEnd(e) {
+					if (e != null) {
+						log.error(e, 'Exception while parsing the uploaded CSV file!');
+						callback(e);
+						return;
+					}
+					
+					log.info('Building StreamStory model ...');
+					
+					// create the configuration
+					try {
+						var modelParams = utils.clone(config.STREAM_STORY_PARAMS);
+						modelParams.clustering = clustConfig;
+						modelParams.transitions.timeUnit = timeUnit;
 						
-						log.info('Building StreamStory model ...');
+						if (log.info())
+							log.info('Creating a new model with params: %s', JSON.stringify(modelParams));
 						
-						// create the configuration
-						try {
-							var modelParams = utils.clone(config.STREAM_STORY_PARAMS);
-							modelParams.clustering = clustConfig;
-							modelParams.transitions.timeUnit = timeUnit;
-							
-							if (log.info())
-								log.info('Creating a new model with params: %s', JSON.stringify(modelParams));
-							
-							// create the model
-							var model = qm.analytics.StreamStory({
-								base: userBase,
-								config: modelParams,
-								obsFtrSpace: obsFtrSpace,
-								controlFtrSpace: controlFtrSpace
+						// create the model
+						var model = StreamStory({
+							base: userBase,
+							config: modelParams,
+							obsFtrSpace: obsFtrSpace,
+							controlFtrSpace: controlFtrSpace
+						});
+						
+						// fit the model
+						// first create a matrix out of the records
+						var fitOpts = {
+							recV: recs,
+							timeV: timeV,
+							batchEndV: null
+						};
+						
+						if (config.MULTI_THREAD) {
+							model.fitAsync(fitOpts, function (e1) {
+								if (e1 != null) {
+									log.error(e1, 'Exception while fitting model!');
+									callback(e1);
+									return;
+								}
+								
+								var fname = isRealTime ? 
+										config.REAL_TIME_MODELS_PATH + new Date().getTime() + '.bin' :
+										utils.getModelFName(baseDir);
+								var modelId = fname;
+								
+								log.info('Saving model ...');
+								model.save(fname);
+								model.setId(modelId);
+								model.setOnline(isRealTime);
+								
+								if (!isRealTime) {
+									log.info('Closing base ...');
+									userBase.close();
+								}
+								
+								callback(undefined, model, fname);
 							});
-							
-							// fit the model
-							// first create a matrix out of the records
-							model.fit({
-								recV: recs,
-								timeField: timeAttr,
-								batchEndV: null
-							});
+						} else {
+							model.fit(fitOpts);
 							
 							var fname = isRealTime ? 
 									config.REAL_TIME_MODELS_PATH + new Date().getTime() + '.bin' :
@@ -316,41 +353,47 @@ exports.RealTimeModelStore = function (opts) {
 							}
 							
 							callback(undefined, model, fname);
-						} catch (e) {
-							log.error(e, 'Failed to create the store!');
-							callback(e);
 						}
-					},
-					onError: function (e) {
-						log.error(e, 'Exception while parsing CSV!');
+					} catch (e) {
+						log.error(e, 'Failed to create the store!');
 						callback(e);
 					}
 				});
-				
-				
-//				var worker = chproc.fork(__dirname + '/buildmodel.js');
-//				var model = null;
-//				
-//				if (log.info())
-//					log.info('Spawned a child process with PID: %d', worker.pid);
-//				
-//				worker.on('exit', function (code, signal) {
-//					if (code != 0) {
-//						callback(new Error('Model builder exited with status ' + code + '!'));
-//					} else {
-//						log.info('Worker exited successfully!');
-//						if (model == null)
-//							callback(new Error('Worker exited, but the model has not been received!'));
-//						else
-//							callback(undefined, model);
+//				qm.fs.readCsvLinesAsync(fileBuff, {
+//					skipLines: 1,
+//					onLine: function (lineArr) {
+//						if (++lineN % 10000 == 0 && log.debug())
+//							log.debug('Read %d lines ...', lineN);
+//						
+//						var recJson = {};
+//						for (var i = 0; i < headers.length; i++) {
+//							var attr = headers[i].name;
+//							if (attr == timeAttr) {
+//								var date = utils.dateToQmDate(new Date(parseInt(lineArr[i])));
+//								recJson[attr] = date;
+//								if (log.trace())
+//									log.trace('Parsed date: %s', date);
+//							} else {
+//								recJson[attr] = parseFloat(lineArr[i]);
+//							}
+//						}
+//						
+//						if (log.trace())
+//							log.trace('Inserting value: %s', JSON.stringify(recJson));
+//						
+//						// create the actual record and update the feature spaces						
+//						recs.push(store.newRecord(recJson));
+//					},
+//					onEnd: function (e) {
+//						if (e != null) {
+//							log.error(e, 'Exception while parsing the uploaded CSV file!');
+//							callback(e);
+//							return;
+//						}
+//						
+//						
 //					}
 //				});
-//				
-//				worker.on('message', function (msg) {
-//					log.debug('Builder sent: %s', msg);
-//				});
-//				
-//				worker.send('start');
 			} catch (e) {
 				callback(e);
 			}

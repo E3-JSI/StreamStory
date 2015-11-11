@@ -1046,7 +1046,7 @@ var zoomVis = function (opts) {
 			callbacks.stateSelected(stateId, hierarchy[currentLevel].height);
 	}
 	
-	var cy = window.cy = cytoscape({
+	var cy = cytoscape({
 		container: document.getElementById(opts.visContainer),
 		style: [
 			{
@@ -1067,7 +1067,20 @@ var zoomVis = function (opts) {
 			}
 		],
 		
+		motionBlur: false,
+		fit: false,
+		userZoomingEnabled: false,
+		boxSelectionEnabled: false,
+		wheelSensitivity: 0.01,
 		
+		// moving the viewport
+		panningEnabled: true,
+		userPanningEnabled: true,
+		hideEdgesOnViewport: false,
+		textureOnViewport: true,
+		
+		minZoom: minCyZoom,
+		maxZoom: maxCyZoom,
 		
 		ready: function() {
 			fetchUI();
@@ -1164,21 +1177,7 @@ var zoomVis = function (opts) {
 					cancelHover();
 				});
 			})();
-		},
-		motionBlur: false,
-		fit: false,
-		userZoomingEnabled: false,
-		boxSelectionEnabled: false,
-		wheelSensitivity: 0.01,
-		
-		// moving the viewport
-		panningEnabled: true,
-		userPanningEnabled: true,
-		hideEdgesOnViewport: false,
-		textureOnViewport: true,
-		
-		minZoom: minCyZoom,
-		maxZoom: maxCyZoom
+		}
 	});
 	
 	function setMode(mode, config) {

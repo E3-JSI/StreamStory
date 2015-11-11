@@ -608,8 +608,8 @@ function initStreamStoryRestApi() {
 				
 				var model = getModel(req.sessionID, req.session);
 				
-				if (log.debug())
-					log.debug('Fetching histogram for state %d, feature %d ...', stateId, ftrIdx);
+				if (log.trace())
+					log.trace('Fetching histogram for state %d, feature %d ...', stateId, ftrIdx);
 				
 				res.send(model.histogram(stateId, ftrIdx));
 			} catch (e) {
@@ -628,8 +628,8 @@ function initStreamStoryRestApi() {
 				
 				var model = getModel(req.sessionID, req.session);
 				
-				if (log.debug())
-					log.debug('Fetching transition histogram for transition %d -> %d, feature %d ...', sourceId, targetId, ftrId);
+				if (log.trace())
+					log.trace('Fetching transition histogram for transition %d -> %d, feature %d ...', sourceId, targetId, ftrId);
 				
 				res.send(model.transitionHistogram(sourceId, targetId, ftrId));
 			} catch (e) {
@@ -812,20 +812,18 @@ function initDataUploadApi() {
 
 				log.debug('Fields read!');
 			},
-			onEnd: function (err) {
-				if (err != null) {
-					log.error(err, 'Exception while reading CSV headers!');
-					res.status(500);	// internal server error
-					res.end();
-					return;
-				}
-				
+			onEnd: function () {
 				log.debug('Headers read, sending them back to the UI ...');
 				if (log.trace()) 
 					log.trace('Read headers: %s', JSON.stringify(headers));
 				
 				session.headerFields = headers;
 				res.send(headers);
+				res.end();
+			},
+			onError: function () {
+				log.error(new Error(), 'Exception while reading CSV headers!');
+				res.status(500);	// internal server error
 				res.end();
 			}
 		});
