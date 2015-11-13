@@ -39,13 +39,14 @@ exports.StreamStory = function (opts) {
 		}
 	}
 	else if (opts.fname != null) {
-		console.log('Loading StreamStory from: ' + opts.fname);
+		log.info('Loading StreamStory from:%s ', opts.fname);
 		var fin = new qm.fs.FIn(opts.fname);
+		
 		mc = new analytics._StreamStory(fin);
-		console.log('Loading feature spaces ...');
+		log.info('Loading feature spaces ...');
 		obsFtrSpace = new qm.FeatureSpace(base, fin);
 		controlFtrSpace = new qm.FeatureSpace(base, fin);
-		console.log('Loaded!');
+		log.info('Loaded!');
 	}
 	else {
 		throw new Error('Missing parameters (base and config) or fname!');
@@ -399,11 +400,11 @@ exports.StreamStory = function (opts) {
 		/**
 		 * Saves the feature space and model into the specified files.
 		 */
-		save: function (mcFName) {
+		save: function (fname) {
 			try {
 				console.log('Saving Markov chain ...');
 
-				var fout = new qm.fs.FOut(mcFName);
+				var fout = new qm.fs.FOut(fname);
 
     			mc.save(fout);
     			obsFtrSpace.save(fout);

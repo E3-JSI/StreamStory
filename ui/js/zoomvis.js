@@ -737,9 +737,7 @@ var zoomVis = function (opts) {
 			var probs = config.probs;
 			var prob = probs[nodeId];
 			var intens = 100*prob;//*futureColorFromProb(prob);
-			
-			console.log('Drawing future node ' + nodeId + ', prob: ' + prob + ', color: ' + intens);	// TODO remove
-			
+						
 			var color = 'hsla(' + VIZ_NODE_COLOR + ',' + Math.ceil(intens) + '%, 55%, 1)';
 			node.css('backgroundColor', color);
 		} 
@@ -1308,6 +1306,66 @@ var zoomVis = function (opts) {
 					var edge = edges[i];
 					var prob = edge.data().prob;
 					edge.css({ content: show ? prob : '' });
+				}
+			})
+		},
+		
+		autoLayout: function () {
+			var center = { x: 0, y: 0 };
+			var newCenter = { x: 0, y: 0 };
+			
+			var nodes = cy.nodes();
+			for (var i = 0; i < nodes.length; i++) {
+				var cyNode = nodes[i];
+				var pos = cyNode.position();
+				center.x += pos.x;
+				center.y += pos.y;
+			}
+			
+			center.x /= nodes.length;
+			center.y /= nodes.length;
+			
+			cy.layout({
+				name: 'cose',
+				animate: 'true',
+				nodeOverlap: 500,
+				useMultitasking: true,
+				stop: function () {
+					cy.batch(function () {
+						var nodes = cy.nodes();
+						for (var i = 0; i < nodes.length; i++) {
+							var cyNode = nodes[i];
+							var pos = cyNode.position();
+							newCenter.x += pos.x;
+							newCenter.y += pos.y;
+						}
+						
+						newCenter.x /= nodes.length;
+						newCenter.y /= nodes.length;
+						
+						var deltaCenter = { x: center.x - newCenter.x, y: center.y - newCenter.y };
+						
+						var nodes = cy.nodes();
+						for (var i = 0; i < nodes.length; i++) {
+							var cyNode = nodes[i];
+							var id = parseInt(cyNode.id());
+							var pos = cyNode.position();
+							var newPos = { x: pos.x + deltaCenter.x, y: pos.y + deltaCenter.y }
+							
+							cyNode.position('x', newPos.x);
+							cyNode.position('y', newPos.y);
+							
+							var level = currentLevel;
+							var node = levelNodeMap[level][id];
+							
+							var serverPos = serverPosition(newPos);
+							node.x = serverPos.x;
+							node.y = serverPos.y;
+						}
+						
+						var padding = parseInt(Math.min(cy.width()*xOffset, cy.height()*yOffset).toFixed());
+						cy.fit(nodes, padding);
+					});
 				}
 			})
 		},

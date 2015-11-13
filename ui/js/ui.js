@@ -496,6 +496,10 @@ function changeControlVal(stateId, ftrIdx, val) {
 			$('#chk-sim-inputs').change();
 		});
 		
+		$('#btn-layout').click(function () {
+			viz.autoLayout();
+		})
+		
 		$('#btn-png').click(function () {
 			var png = viz.getPNG();
 			//console.log("PNG: " + png);

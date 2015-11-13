@@ -305,7 +305,7 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 		
 		return result;
 	}
-} else {
+} else if (config.USE_CASE == config.USE_CASE_HELLA) {
 	console.log('Initializing fields for Hella ...');
 	
 	var montracFields = [
@@ -439,4 +439,6 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 		
 		return rawStores.concat([enrichedStore, oaInStore, streamStoryStore]);
 	};
+} else {
+	throw new Error('Invalid use case!');
 }
