@@ -199,6 +199,10 @@ var zoomVis = function (opts) {
 	// UTILITY FUNCTIONS
 	//===============================================================
 	
+	function toUiPrecision(val) {
+		return val.toPrecision(3);
+	}
+	
 	function getNodeLabel(node) {
 		return (node.name != null ? node.name : (node.id + ''));
 	}
@@ -623,12 +627,15 @@ var zoomVis = function (opts) {
 			});
 			
 			middle.css('line-style', 'solid');
+			middle.css('content', 'data(prob)');
 			bold.css('line-color', '#505050');
 			bold.css('target-arrow-color', '#505050');
-			
+						
 			// remember for later
 			for (var i = 0; i < middle.length; i++) {
-				middle[i].data().style['line-style'] = 'solid';
+				var edge = middle[i];
+				edge.data().style['line-style'] = 'solid';
+				edge.css({ content: toUiPrecision(edge.data().prob) });
 			}
 			for (var i = 0; i < bold.length; i++) {
 				bold[i].data().style['line-color'] = '#505050';
@@ -845,6 +852,53 @@ var zoomVis = function (opts) {
 		drawNodes();
 	}
 	
+	function setSelectedState(node) {
+		var prevStateId = modeConfig.selected;
+		
+		if (node == null) {
+			modeConfig.selected = null;
+			
+			cy.batch(function () {
+				cy.nodes().css('border-width', DEFAULT_BORDER_WIDTH);
+				
+				// emphasize edges
+				var edges = cy.edges();
+				var nedges = edges.length;
+				for (var i = 0; i < nedges; i++) {
+					var edge = edges[i];
+					edge.css(edge.data().style);
+				}
+			});
+		} else {
+			var stateId = parseInt(node.id());
+			// set selected state
+			modeConfig.selected = stateId;
+			// redraw
+			cy.batch(function () {
+				cy.nodes().css('border-width', DEFAULT_BORDER_WIDTH);
+				drawNode(stateId, true);
+				
+				// emphasize edges
+				var edges = cy.edges();
+				var nedges = edges.length;
+				for (var i = 0; i < nedges; i++) {
+					var edge = edges[i];
+					edge.css(edge.data().style);
+				}
+				
+				node.edgesTo('').css({
+					'line-color': 'green',
+					'target-arrow-color': 'green',
+					'line-style': 'solid'
+				});
+			});
+		}
+		
+		// notify the handler
+		if (prevStateId != modeConfig.selected)
+			callbacks.stateSelected(stateId, hierarchy[currentLevel].height);
+	}
+	
 	//===============================================================
 	// FETCH METHODS
 	//===============================================================
@@ -995,53 +1049,6 @@ var zoomVis = function (opts) {
 	} else {
 		// unsupported browser
 		alert("your browser is unsupported");
-	}
-	
-	function setSelectedState(node) {	// TODO move this somewhere
-		var prevStateId = modeConfig.selected;
-		
-		if (node == null) {
-			modeConfig.selected = null;
-			
-			cy.batch(function () {
-				cy.nodes().css('border-width', DEFAULT_BORDER_WIDTH);
-				
-				// emphasize edges
-				var edges = cy.edges();
-				var nedges = edges.length;
-				for (var i = 0; i < nedges; i++) {
-					var edge = edges[i];
-					edge.css(edge.data().style);
-				}
-			});
-		} else {
-			var stateId = parseInt(node.id());
-			// set selected state
-			modeConfig.selected = stateId;
-			// redraw
-			cy.batch(function () {
-				cy.nodes().css('border-width', DEFAULT_BORDER_WIDTH);
-				drawNode(stateId, true);
-				
-				// emphasize edges
-				var edges = cy.edges();
-				var nedges = edges.length;
-				for (var i = 0; i < nedges; i++) {
-					var edge = edges[i];
-					edge.css(edge.data().style);
-				}
-				
-				node.edgesTo('').css({
-					'line-color': 'green',
-					'target-arrow-color': 'green',
-					'line-style': 'solid'
-				});
-			});
-		}
-		
-		// notify the handler
-		if (prevStateId != modeConfig.selected)
-			callbacks.stateSelected(stateId, hierarchy[currentLevel].height);
 	}
 	
 	var cy = cytoscape({
@@ -1293,9 +1300,6 @@ var zoomVis = function (opts) {
 			
 			var graphNode = cy.nodes('#' + stateId);
 			graphNode.data().name = name;
-//			var label = getNodeLabel(node);
-//			graphNode.css('label', label);
-//			graphNode.data('label', label);
 		},
 		
 		setShowTransitionProbs: function (show) {
@@ -1305,7 +1309,7 @@ var zoomVis = function (opts) {
 				for (var i = 0; i < edges.length; i++) {
 					var edge = edges[i];
 					var prob = edge.data().prob;
-					edge.css({ content: show ? prob : '' });
+					edge.css({ content: show ? toUiPrecision(prob) : '' });
 				}
 			})
 		},

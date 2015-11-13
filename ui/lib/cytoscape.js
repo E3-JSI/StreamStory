@@ -20,13 +20,18 @@
 
 var cytoscape;
 
-function _getTextSize(node) {
-  var style = node._private.style;
-  var nodeW = style['width'].pxValue;
-  var content = style['content'];
-  var fontH = parseInt((nodeW / 4).toFixed());
-  if (fontH < 10) fontH = 10;
-  return fontH;
+function _getTextSize(el) {
+	var style = el._private.style;
+	if (el.group() == 'nodes') {
+		var nodeW = style['width'].pxValue;
+		var content = style['content'];
+		var fontH = parseInt((nodeW / 4).toFixed());
+		if (fontH < 10) fontH = 10;
+		return fontH;
+	} else {
+		console.log('Edge font size: ' + style['font-size'].pxValue);
+		return style['font-size'].pxValue;
+	}
 }
 
 (function(window){ 'use strict';
@@ -16713,6 +16718,7 @@ this.cytoscape = cytoscape;
     var r = this;
     var style = ele._private.style;
     var fStyle = style['font-style'].strValue;
+    
     var size = _getTextSize(ele) + 'px';
 //    var size = style['font-size'].pxValue + 'px';
     var family = style['font-family'].strValue;
@@ -18207,7 +18213,7 @@ this.cytoscape = cytoscape;
 
     if( this.hideEdgesOnViewport && (this.dragData.didDrag || this.pinching || this.hoverData.dragging || this.data.wheel || this.swipePanning) ){ return; } // save cycles on pinching
 
-    var computedSize = edge._private.style['font-size'].pxValue * edge.cy().zoom();
+    var computedSize = _getTextSize(edge)/*edge._private.style['font-size'].pxValue*/ * edge.cy().zoom();
     var minSize = edge._private.style['min-zoomed-font-size'].pxValue;
 
     if( computedSize < minSize ){
@@ -18218,6 +18224,7 @@ this.cytoscape = cytoscape;
 
     context.textAlign = 'center';
     context.textBaseline = 'middle';
+    context.font = 'normal ' + _getTextSize(edge) + 'px sans-serif';
 
     var rs = edge._private.rscratch;
     if( !$$.is.number( rs.labelX ) || !$$.is.number( rs.labelY ) ){ return; } // no pos => label can't be rendered
