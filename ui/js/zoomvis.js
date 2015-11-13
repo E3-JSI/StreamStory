@@ -200,7 +200,7 @@ var zoomVis = function (opts) {
 	//===============================================================
 	
 	function toUiPrecision(val) {
-		return val.toPrecision(3);
+		return val.toFixed(3);
 	}
 	
 	function getNodeLabel(node) {
@@ -358,6 +358,18 @@ var zoomVis = function (opts) {
 	//===============================================================
 	// DRAW FUNCTIONS
 	//===============================================================	
+	
+	function drawTransitionText(edge) {
+		var show = drawEdgeVals;
+		
+		var data = edge.data();
+		var prob = data.prob;
+		
+		if (prob > .2 || prob == edge.source().data().maxProb)
+			show = true;
+		
+		edge.css({ content: show ? toUiPrecision(prob) : '' });
+	}
 	
 	function getEdgeConfig(sourceN, targetN, transitions, nodeInfo, cumProb, maxProb) {
 		var sourceId = nodeInfo[sourceN].id;
@@ -1304,12 +1316,12 @@ var zoomVis = function (opts) {
 		
 		setShowTransitionProbs: function (show) {
 			drawEdgeVals = show;
+			
 			cy.batch(function () {
 				var edges = cy.edges();
 				for (var i = 0; i < edges.length; i++) {
 					var edge = edges[i];
-					var prob = edge.data().prob;
-					edge.css({ content: show ? toUiPrecision(prob) : '' });
+					drawTransitionText(edge);
 				}
 			})
 		},
