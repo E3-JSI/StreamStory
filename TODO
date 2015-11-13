@@ -1,4 +1,3 @@
-- show transition probs doesn't work
 - distribution of time (timeline + days/hours)
 - vse decimalke 3 natancnost
 - naj na stateih pise ime
@@ -6,7 +5,5 @@
 - histogrami: default tako kot zdaj, moznost zoom v lokalne vrednosti
 - STD pri povprecnih vrednostih (mediana + avg prikazi na histogramu + kvartili)
 - izboljsaj predlaganje atributov (razlozljivost) + implementiraj decision drevo za vsako stanje
-- moznost barva glede na atribut po nivoju sivine
-- verjetnosti na transitionih - popravi in daj le na crtkane
 - zoom v eno stanje
 - poglej in daj moznost alternativnih grafov (drugo kot histogram)

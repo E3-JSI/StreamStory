@@ -23,11 +23,38 @@ function changeControlVal(stateId, ftrIdx, val) {
 	function visualizeDecisionTree(root) {
 		$('#tree-wrapper').removeClass('hidden');
 		
+		var totalExamples = root.examples;
+		
 		var nodes = [];
 		var edges = [];
 		
-		var nodeW = 300;
-		var nodeH = 250;
+		var minNodeSize = 100;
+		var pieSize = minNodeSize*.8;
+		var levelH = 250;
+		var hPadding = 50;
+		
+//		var maxRaduis = Math.log(root.examples);
+		
+		var maxNodeW = 1500;
+		var minNodeW = 150;
+		
+		var nodeWRange = maxNodeW - minNodeW;
+		
+		
+		
+		function getNodeW(examples) {
+			var w = nodeWRange*Math.log(1 + 999*examples / root.examples) / 6.907755278982137;
+			var uiW = minNodeW + w;
+			
+			console.log('w: ' + w + ', uiW: ' + uiW + ', range: ' + nodeWRange);
+			return uiW;
+////			var w = Math.max(minNodeW, Math.log(1000*(1 + examples / root.examples)));
+//			console.log(w);
+//			return w;
+		}
+		
+//		var nodeW = 300;
+		
 		
 		var currNodeId = 0;
 		var maxDepth = Number.MAX_VALUE;
@@ -70,7 +97,13 @@ function changeControlVal(stateId, ftrIdx, val) {
 				});
 			}
 			
-			node.width = totalW != 0 ? totalW : nodeW;
+			if (children.length == 0) {
+				node.width = getNodeW(node.examples) + hPadding;
+//				node.width = minNodeW + (node.examples / totalExamples)*nodeWRange;
+			} else {
+				node.width = totalW;
+			}
+//			node.width = totalW != 0 ? totalW : nodeW;
 		})(root, 0);
 		
 		(function position(node, pos) {
@@ -79,6 +112,9 @@ function changeControlVal(stateId, ftrIdx, val) {
 			nodes.push({
 				data: node.data,
 				position: pos,
+				css: {
+					width: getNodeW(node.examples).toFixed()
+				}
 			});
 			
 			var startX = pos.x - node.width / 2;
@@ -87,11 +123,13 @@ function changeControlVal(stateId, ftrIdx, val) {
 				var child = children[i];
 				
 				var childCenter = startX + widthSum + child.width/2;
-				position(child, { x: childCenter, y: pos.y + nodeH });
+				position(child, { x: childCenter, y: pos.y + levelH });
 				
 				widthSum += child.width;
 			}
 		})(root, { x: 0, y: 0 });
+		
+		var edgeColor = 'darkgray';
 		
 		var cy = cytoscape({
 			container: document.getElementById('tree-wrapper'),
@@ -100,6 +138,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 			autounselectify: true,
 			fit: true,
 			wheelSensitivity: 0.01,
+			autoungrabify: true,
 			
 			layout: {
 				name: 'preset'
@@ -115,10 +154,11 @@ function changeControlVal(stateId, ftrIdx, val) {
 						'text-wrap': 'wrap',
 						'background-color': 'rgb(124, 181, 236)',
 						'border-width': 5,
-						'width': (nodeW*.7).toFixed(),
-						'height': 100,
+						'font-size': 50,
+//						'width': (nodeW*.7).toFixed(),
+						'height': minNodeSize,
 						'shape': 'rectangle',
-						'pie-size': '80px',
+						'pie-size': pieSize + 'px',
 						'pie-1-background-color': 'red',
 						'pie-2-background-color': 'green',
 						'pie-1-background-opacity': 100,
@@ -135,8 +175,9 @@ function changeControlVal(stateId, ftrIdx, val) {
 						'width': 4,
 						'font-size': 50,
 						'target-arrow-shape': 'triangle',
-						'line-color': '#9dbaea',
-						'target-arrow-color': '#9dbaea'
+						'line-color': edgeColor,
+						'target-arrow-color': edgeColor,
+						'width': 10
 					}
 				}
 			],
@@ -148,7 +189,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 			ready: function () {
 //				cy.fit(cy.nodes());
 //				cy.panningEnabled(false);
-				cy.mapData('pie1', 0, 100, 0, 100)
+//				cy.mapData('pie1', 0, 100, 0, 100)
 			}
 		});
 	}

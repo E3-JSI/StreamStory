@@ -23,11 +23,21 @@ var cytoscape;
 function _getTextSize(el) {
 	var style = el._private.style;
 	if (el.group() == 'nodes') {
+		var val = style['font-size'].pxValue;
+		if (val != 10000) return val;
+		
 		var nodeW = style['width'].pxValue;
+		
 		var content = style['content'];
 		var fontH = parseInt((nodeW / 4).toFixed());
 		if (fontH < 10) fontH = 10;
 		return fontH;
+		
+		if (style['font-size'] != 'auto') {
+			return style['font-size'].pxValue;
+		} else {
+			
+		}
 	} else {
 		console.log('Edge font size: ' + style['font-size'].pxValue);
 		return style['font-size'].pxValue;
