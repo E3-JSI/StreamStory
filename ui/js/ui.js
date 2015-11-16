@@ -32,29 +32,17 @@ function changeControlVal(stateId, ftrIdx, val) {
 		var pieSize = minNodeSize*.8;
 		var levelH = 250;
 		var hPadding = 50;
-		
-//		var maxRaduis = Math.log(root.examples);
-		
+				
 		var maxNodeW = 1500;
 		var minNodeW = 150;
 		
 		var nodeWRange = maxNodeW - minNodeW;
-		
-		
-		
+
 		function getNodeW(examples) {
 			var w = nodeWRange*Math.log(1 + 999*examples / root.examples) / 6.907755278982137;
 			var uiW = minNodeW + w;
-			
-			console.log('w: ' + w + ', uiW: ' + uiW + ', range: ' + nodeWRange);
 			return uiW;
-////			var w = Math.max(minNodeW, Math.log(1000*(1 + examples / root.examples)));
-//			console.log(w);
-//			return w;
 		}
-		
-//		var nodeW = 300;
-		
 		
 		var currNodeId = 0;
 		var maxDepth = Number.MAX_VALUE;
@@ -71,7 +59,26 @@ function changeControlVal(stateId, ftrIdx, val) {
 				pie2: node.classes[1]*100
 			}
 			
-			if (node.cut != null) data.label = node.cut.name + '\n\u2264 ' + node.cut.value.toPrecision(2) + ' <';
+			if (node.cut != null) {
+				var cut = node.cut;
+				
+				var label = cut.name;
+				
+				var alternatives = cut.alternatives;
+				if (alternatives.length > 0 &&
+						alternatives[0].corr > .9 &&
+						alternatives[0].p < .1) {
+					label += '\n(' + alternatives[0].name + ')';
+				}
+				
+				if (cut.value > 1000) {
+					label += '\n\u2264 ' + node.cut.value.toFixed() + ' <';
+				} else {
+					label += '\n\u2264 ' + node.cut.value.toPrecision(3) + ' <';
+				}
+				
+				data.label = label;
+			}
 			
 			node.data = data;
 			
@@ -99,11 +106,9 @@ function changeControlVal(stateId, ftrIdx, val) {
 			
 			if (children.length == 0) {
 				node.width = getNodeW(node.examples) + hPadding;
-//				node.width = minNodeW + (node.examples / totalExamples)*nodeWRange;
 			} else {
 				node.width = totalW;
 			}
-//			node.width = totalW != 0 ? totalW : nodeW;
 		})(root, 0);
 		
 		(function position(node, pos) {
@@ -154,8 +159,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 						'text-wrap': 'wrap',
 						'background-color': 'rgb(124, 181, 236)',
 						'border-width': 5,
-						'font-size': 50,
-//						'width': (nodeW*.7).toFixed(),
+						'font-size': 40,
 						'height': minNodeSize,
 						'shape': 'rectangle',
 						'pie-size': pieSize + 'px',

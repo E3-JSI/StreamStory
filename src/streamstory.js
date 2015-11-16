@@ -203,45 +203,6 @@ exports.StreamStory = function (opts) {
 		if (opts.recV != null) {
 			var recV = opts.recV;
 			
-//			log.debug('Updating observation feature space ...');
-//			obsFtrSpace.updateRecordsAsync(recV, function (e) {
-//				if (e != null) {
-//					callback(e);
-//					return;
-//				}
-//				
-//				log.debug('Updating control feature space ...');
-//				controlFtrSpace.updateRecordsAsync(recV, function (e) {
-//					if (e != null) {
-//						callback(e);
-//						return;
-//					}
-//					
-//					log.debug('Updating observation matrix ...');
-//					obsFtrSpace.extractMatrixAsync(recV, function (e, obsColMat) {
-//						if (e != null) {
-//							log.error(e, 'Exception while creating feature matrices!');
-//							callback(e);
-//							return;
-//						}
-//						
-//						log.debug('Updating control matrix ...');
-//						controlFtrSpace.extractMatrixAsync(recV, function (e, contrColMat) {
-//							if (e != null) {
-//								log.error(e, 'Exception while creating feature matrices!');
-//								callback(e);
-//								return;
-//							}
-//							
-//							callback(undefined, {
-//			    				obsColMat: obsColMat,
-//			    				contrColMat: contrColMat
-//			    			});
-//						});
-//					});
-//				});
-//			});
-			
 			async.parallel([
 			    function (callback) {
 			    	log.debug('Updating observation feature space ...');
@@ -516,7 +477,8 @@ exports.StreamStory = function (opts) {
 			var wgts = mc.getStateWgtV(stateId);
 			var classifyTree = mc.getClassifyTree(stateId);
 
-			log.info('Tree: %s', JSON.stringify(classifyTree));
+			if (log.trace())
+				log.trace('Tree: %s', JSON.stringify(classifyTree));
 			
 			(function annotateDecisionTree(node) {
     			var features = node.features;
@@ -538,6 +500,16 @@ exports.StreamStory = function (opts) {
     					name: names[cutFtr.id],
     					value: invertFeature(cutFtr.id, cutFtr.value)
     				}
+    				
+    				var alt = cutFtr.alternatives;
+    				
+    				if (alt != null) {
+    					for (var i = 0; i < alt.length; i++) {
+    						alt[i].name = names[alt[i].id];
+    						delete alt[i].id;
+    					}
+    					node.cut.alternatives = alt;
+    				}
     			}
     			
     			for (var i = 0; i < children.length; i++) {
@@ -558,6 +530,33 @@ exports.StreamStory = function (opts) {
 				featureWeights: wgts,
 				classifyTree: classifyTree
 			};
+		},
+		
+		explainState: function (stateId) {
+			var unionV = mc.explainState(stateId);
+			var names = getObsFtrNames();
+			
+			for (var unionN = 0; unionN < unionV.length; unionN++) {
+				var intersect = unionV[unionN].terms;
+				for (var termN = 0; termN < intersect.length; termN++) {
+					var term = intersect[termN];
+					var ftrN = term.ftrId;
+					
+					term.feature = names[ftrN];
+					if (term.le != Number.MAX_VALUE)
+						term.le = invertFeature(ftrN, term.le);
+					else
+						delete term.le;
+					if (term.gt != -Number.MAX_VALUE)
+						term.gt = invertFeature(ftrN, term.gt);
+					else
+						delete term.gt;
+					
+					delete term.ftrId;
+				}
+			}
+			
+			return unionV;
 		},
 
 		/**

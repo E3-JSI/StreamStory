@@ -600,6 +600,25 @@ function initStreamStoryRestApi() {
 			res.end();
 		});
 		
+		// state explanation
+		app.get(API_PATH + '/explanation', function (req, res) {
+			try {
+				var stateId = parseInt(req.query.stateId);
+				
+				var model = getModel(req.sessionID, req.session);
+				
+				if (log.debug())
+					log.debug('Fetching explanation for state: %d', stateId);
+				
+				res.send(model.explainState(stateId));
+			} catch (e) {
+				log.error(e, 'Failed to query state details!');
+				res.status(500);	// internal server error
+			}
+			
+			res.end();
+		});
+		
 		// histograms
 		app.get(API_PATH + '/histogram', function (req, res) {
 			try {

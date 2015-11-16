@@ -7,3 +7,6 @@
 - izboljsaj predlaganje atributov (razlozljivost) + implementiraj decision drevo za vsako stanje
 - zoom v eno stanje
 - poglej in daj moznost alternativnih grafov (drugo kot histogram)
+- moznost izpisa najbolj informativnih atributov na stanjih
+- importance bar namesto barve (logreg)
+- izpisi koreliran atribut (poleg split atributa)

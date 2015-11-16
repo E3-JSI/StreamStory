@@ -52,14 +52,88 @@ var zoomVis = function (opts) {
 	var nodeQtipOpts = clone(DEFAULT_QTIP_OPTS);
 	var edgeQtipOpts = clone(DEFAULT_QTIP_OPTS);
 	
-	nodeQtipOpts.content = function (event) { 
+	nodeQtipOpts.content = function (event, api) { 
 		var data = this.data();
 		var name = data.name;
 		var txt = '';
 		if (name != null) txt += '<h3>' + name + '</h3>';
-		txt += 'Holding time ' + data.holdingTime.toPrecision(2)
+		txt += 'Holding time ' + data.holdingTime.toPrecision(2);
+		txt += '<div id="div-explain-' + data.id + '" class="tooltip-div-explain"></div>';
+		
+		$.ajax('api/explanation', {
+			dataType: 'json',
+			method: 'GET',
+			data: { stateId: data.id },
+			success: function (union) {
+				var score = function (interserct) {
+					return interserct.covered*interserct.purity;
+				}
+				
+				union.sort(function (inter1, inter2) {
+					return score(inter2) - score(inter1);
+				});
+				
+				var bestScore = score(union[0]);
+				var lastN = 0;
+				while (lastN < union.length-1 && score(union[lastN+1]) > bestScore / 10) {
+					lastN++;
+				}
+				
+				union.splice(lastN+1);
+				
+				// construct the rules
+				var unionStr = '';
+				for (var i = 0; i < union.length; i++) {
+					var intersect = union[i];
+					var intersectStr = '';
+					var terms = intersect.terms;
+					
+					// sort the terms
+					terms.sort(function (t1, t2) {
+						if (t2.feature < t1.feature)
+							return -1;
+						else if (t2.feature > t1.feature)
+							return 1;
+						else return 0;
+					});
+					
+					for (var j = 0; j < terms.length; j++) {
+						var term = terms[j];
+						
+						intersectStr += '&#09;';
+						
+						if (term.le != null && term.gt != null) {
+							intersectStr += term.feature + ' &isin; (' + toUiPrecision(term.gt) + ', ' + toUiPrecision(term.le) + ']';
+						} else if (term.le != null) {
+							intersectStr += term.feature + ' \u2264 ' + toUiPrecision(term.le);
+						} else {
+							intersectStr += term.feature + ' > ' + toUiPrecision(term.gt);
+						}
+					
+						if (j < terms.length-1)
+							intersectStr += '<br />';
+					}
+					
+					unionStr += '<br />' + intersectStr + '<br />';
+					
+					if (i < union.length-1) {
+						unionStr += '<br />';
+					}
+				}
+				
+				$('#div-explain-' + data.id).html(unionStr);
+				api.reposition(undefined, false);
+			},
+			error: function (jqXHR, status) {
+				alert(status);
+			}
+		});
+		
 		return txt;
 	};
+	
+	nodeQtipOpts.show.event = 'hover';
+	nodeQtipOpts.hide.event = 'hovercancel';
 	
 	edgeQtipOpts.content = function (event) { 
 		return 'Probability ' + this.data().prob.toPrecision(2)
@@ -200,7 +274,11 @@ var zoomVis = function (opts) {
 	//===============================================================
 	
 	function toUiPrecision(val) {
-		return val.toFixed(3);
+		if (val > 1000) {
+			return val.toFixed();
+		} else {
+			return val.toPrecision(3);
+		}
 	}
 	
 	function getNodeLabel(node) {
@@ -1175,31 +1253,33 @@ var zoomVis = function (opts) {
 			
 			(function () {	// fix for the non-working qtip delay
 				var hoverTimeout;
-				var edge = cy.collection();
+				var element = cy.collection();
 				var isShown = false;
 				
 				function cancelHover() {
 					clearTimeout(hoverTimeout);
-					edge.trigger('hovercancel');
+					element.trigger('hovercancel');
 					isShown = false;
 				}
 				
-				cy.on('mousemove', 'edge', function (event) {
-					edge = this;
+				cy.on('mousemove', 'edge,node', function (event) {
+					element = this;
 					if (!isShown) {
-						var offset = $(cy.container()).offset();
-						var api = edge.qtip('api');
-						api.set('position.adjust.x', event.cyRenderedPosition.x + offset.left);
-						api.set('position.adjust.y', event.cyRenderedPosition.y + offset.top);
+						if (element.group() == 'edges') {
+							var offset = $(cy.container()).offset();
+							var api = element.qtip('api');
+							api.set('position.adjust.x', event.cyRenderedPosition.x + offset.left);
+							api.set('position.adjust.y', event.cyRenderedPosition.y + offset.top);
+						}
 						clearTimeout(hoverTimeout); 
 						hoverTimeout = setTimeout(function () {
-							edge.trigger('hover');
+							element.trigger('hover');
 							isShown = true;
 						}, 1000);
 					} else {
 						cancelHover();
 					}
-				}).on('mouseout', 'edge', function (event) {
+				}).on('mouseout', 'edge,node', function (event) {
 					cancelHover();
 				});
 			})();

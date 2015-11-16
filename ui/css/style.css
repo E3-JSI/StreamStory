@@ -87,6 +87,11 @@
   	width: 80%;
 }
 
+.tooltip-div-explain {
+	font-size: 8px;
+	line-height: 10px;
+}
+
 
 /*===============================================================
  	HELPERS
