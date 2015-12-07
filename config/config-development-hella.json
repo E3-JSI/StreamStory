@@ -33,12 +33,12 @@
 		"database": "hella"
 	},
 	"integration": {
-		"type": "broker",
+		"type": "http",
 		"brokerUrl": "127.0.0.1",
 		"zookeperPort": 2181,
 		"producerPort": 8090
 	},
-	"useCase": "hella",
+	"useCase": "mhwirth",
 	"interpolation": "current",
 	"dataPath": "/mnt/raidM2T/project-data/StreamStory-hella1/"
 }

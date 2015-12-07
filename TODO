@@ -4,9 +4,7 @@
 - boxplots zraven histogramov
 - histogrami: default tako kot zdaj, moznost zoom v lokalne vrednosti
 - STD pri povprecnih vrednostih (mediana + avg prikazi na histogramu + kvartili)
-- izboljsaj predlaganje atributov (razlozljivost) + implementiraj decision drevo za vsako stanje
 - zoom v eno stanje
 - poglej in daj moznost alternativnih grafov (drugo kot histogram)
 - moznost izpisa najbolj informativnih atributov na stanjih
 - importance bar namesto barve (logreg)
-- izpisi koreliran atribut (poleg split atributa)
