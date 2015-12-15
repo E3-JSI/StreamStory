@@ -215,7 +215,10 @@ exports.RealTimeModelStore = function (opts) {
 			if (callback == null) callback = function (e) { log.error(e, 'Exception while buillding model!'); }
 			
 			try {
-				var userBase = opts.base;
+				var username = opts.username;
+				var datasetName = opts.datasetName;
+				var modelName = opts.modelName;
+				var base = opts.base;
 				var store = opts.store;
 				var storeNm = opts.storeNm;
 				var timeUnit = opts.timeUnit;
@@ -261,8 +264,8 @@ exports.RealTimeModelStore = function (opts) {
 					});
 				}
 				
-				var obsFtrSpace = new qm.FeatureSpace(userBase, obsFields);
-	    		var controlFtrSpace = new qm.FeatureSpace(userBase, contrFields);
+				var obsFtrSpace = new qm.FeatureSpace(base, obsFields);
+	    		var controlFtrSpace = new qm.FeatureSpace(base, contrFields);
 				
 	    		var recs = new qm.RecordVector();
 	    		
@@ -323,7 +326,7 @@ exports.RealTimeModelStore = function (opts) {
 						
 						// create the model
 						var model = StreamStory({
-							base: userBase,
+							base: base,
 							config: modelParams,
 							obsFtrSpace: obsFtrSpace,
 							controlFtrSpace: controlFtrSpace
@@ -337,51 +340,88 @@ exports.RealTimeModelStore = function (opts) {
 							batchEndV: null
 						};
 						
-						if (config.MULTI_THREAD) {
-							model.fitAsync(fitOpts, function (e1) {
-								if (e1 != null) {
-									log.error(e1, 'Exception while fitting model!');
-									callback(e1);
-									return;
-								}
-								
-								var fname = isRealTime ? 
-										config.REAL_TIME_MODELS_PATH + new Date().getTime() + '.bin' :
-										utils.getModelFName(baseDir);
-								var modelId = fname;
-								
-								log.info('Saving model ...');
-								model.save(fname);
-								model.setId(modelId);
-								model.setOnline(isRealTime);
-								
-								if (!isRealTime) {
-									log.info('Closing base ...');
-									userBase.close();
-								}
-								
-								callback(undefined, model, fname);
-							});
-						} else {
-							model.fit(fitOpts);
+						model.fitAsync(fitOpts, function (e1) {
+							if (e1 != null) {
+								log.error(e1, 'Exception while fitting model!');
+								callback(e1);
+								return;
+							}
 							
 							var fname = isRealTime ? 
 									config.REAL_TIME_MODELS_PATH + new Date().getTime() + '.bin' :
 									utils.getModelFName(baseDir);
-							var modelId = fname;
 							
-							log.info('Saving model ...');
-							model.save(fname);
-							model.setId(modelId);
-							model.setOnline(isRealTime);
-							
-							if (!isRealTime) {
-								log.info('Closing base ...');
-								userBase.close();
+							if (isRealTime) {
+								var dbOpts = {
+									username: username,
+									model_file: fname,
+									dataset: datasetName,
+									name: modelName,
+									is_active: 1
+								}
+								
+								log.info('Storing a new online model ...');
+								db.storeOnlineModel(dbOpts, function (e, mid) {
+									if (e != null) {
+										log.error(e, 'Failed to store offline model to DB!');
+										callback(e);
+										return;
+									}
+																	
+									log.info('Saving model ...');
+									model.save(fname);
+									model.setId(mid);
+									model.setOnline(true);
+									
+									callback(undefined, model);
+								});
+							} else {
+								// store the model into the DB
+								var dbOpts = {
+									username: username,
+									base_dir: baseDir,
+									model_file: fname,
+									dataset: datasetName,
+									name: modelName
+								}
+								
+								log.info('Storing a new offline model ...');
+								db.storeOfflineModel(dbOpts, function (e, mid) {
+									if (e != null) {
+										log.error(e, 'Failed to store offline model to DB!');
+										callback(e);
+										return;
+									}
+									
+									try {
+//										model.setId(mid);
+//										model.setOnline(false);
+										model.save(fname);
+										// need to close the base to be able to re-open it later
+										base.close();
+										
+										if (log.debug())
+											log.debug('Offline model stored!');
+										
+										that.loadOfflineModel(baseDir, function (e, baseConfig) {
+											if (e != null) {
+												log.error(e, 'Failed to load an offline model!');
+												callback(e);
+												return;
+											}
+											
+											var model = baseConfig.model;
+											var base = baseConfig.base;
+											
+											callback(undefined, model, base);
+										});
+									} catch (e1) {
+										log.error(e1, 'Failed to open base!');
+										callback(e1);
+									}
+								})
 							}
-							
-							callback(undefined, model, fname);
-						}
+						});
 					} catch (e) {
 						log.error(e, 'Failed to create the store!');
 						callback(e);

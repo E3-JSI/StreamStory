@@ -10,8 +10,7 @@
 - importance bar namesto barve (logreg)
 
 ZA REVIEW:
-- select dataset - ali je modelId pravi?
-- ali je modelId pravi, pri generiranju novega modela?
-- poglej kje vse se klice loadOfflineModel in naredi klic asinhron
-- not all states display their target property, check why!!!
+- poglej, ce load model dela v vseh primerih
 - check if the prediction of an undesired state works as expected
+- when I set a target state in the UI and then scroll, the height is lost
+-- it is regained when I refresh the page

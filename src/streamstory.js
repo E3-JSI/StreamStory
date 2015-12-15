@@ -471,7 +471,7 @@ exports.StreamStory = function (opts) {
 		stateDetails: function (stateId, height) {
 			var futureStates = mc.futureStates(height, stateId);
 			var pastStates = mc.pastStates(height, stateId);
-			var isTarget = mc.isTarget(stateId, height);
+			var isTarget = mc.isTarget(stateId);
 			var isLeaf = mc.isLeaf(stateId);
 			var stateNm = mc.getStateName(stateId);
 			var wgts = mc.getStateWgtV(stateId);

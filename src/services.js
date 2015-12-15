@@ -699,7 +699,7 @@ function initStreamStoryRestApi() {
 		});
 		
 		app.post(API_PATH + '/stateProperties', function (req, res) {
-			var stateId, stateNm, isUndesired, eventId, height;
+			var stateId, stateNm, isUndesired, eventId;
 			
 			try {
 				var session = req.session;
@@ -710,7 +710,6 @@ function initStreamStoryRestApi() {
 				stateId = parseInt(req.body.id);
 				stateNm = req.body.name;
 				isUndesired = JSON.parse(req.body.isUndesired);
-				height = parseFloat(req.body.height);
 				eventId = req.body.eventId;
 				
 				if (isUndesired && (eventId == null || eventId == '')) {
@@ -735,7 +734,7 @@ function initStreamStoryRestApi() {
 				if (log.info()) 
 					log.info('Setting undesired state: %d, isUndesired: ' + isUndesired, stateId);
 
-				model.getModel().setTarget(stateId, height, isUndesired);
+				model.getModel().setTarget(stateId, isUndesired);
 				model.save(getModelFile(session));
 				
 				if (!isUndesired) {
@@ -773,30 +772,6 @@ function initStreamStoryRestApi() {
 				res.status(500);	// internal server error
 			}
 		});
-		
-//		app.post(API_PATH + '/setTarget', function (req, res) {
-//			var stateId, isTarget, height;
-//			
-//			try {
-//				stateId = parseInt(req.body.id);
-//				height = parseFloat(req.body.height);
-//				isTarget = JSON.parse(req.body.isTarget);
-//				
-//				var model = getModel(req.sessionID, req.session);
-//				
-//				if (log.info()) 
-//					log.info('Setting target state: %d, isTarget: ' + isTarget, stateId);
-//				
-//				
-//				model.getModel().setTarget(stateId, height, isTarget);
-//				res.status(204);	// no content
-//			} catch (e) {
-//				log.error(e, 'Failed to set target state %d!', stateId);
-//				res.status(500);	// internal server error
-//			}
-//			
-//			res.end();
-//		});
 		
 		app.post(API_PATH + '/setControl', function (req, res) {
 			var ftrId, val;
@@ -998,6 +973,9 @@ function initDataUploadApi() {
 						}
 						
 						var opts = {
+							username: username,
+							datasetName: datasetName,
+							modelName: modelName,
 							base: userBase,
 							store: store,
 							storeNm: storeNm,
@@ -1012,90 +990,103 @@ function initDataUploadApi() {
 							baseDir: baseDir
 						}
 						
-						modelStore.buildModel(opts, function (e, model, fname) {
+						modelStore.buildModel(opts, function (e, model, base) {
 							if (e != null) {
 								handleServerError(e, req, res);
 								return;
 							}
 							
-							var modelId = model.getId();
-							
 							if (isRealTime) {
-								var dbOpts = {
-									username: username,
-									model_file: fname,
-									dataset: datasetName,
-									name: modelName,
-									is_active: 1
-								}
+								if (log.debug())
+									log.debug('Online model created!');
 								
-								log.info('Storing a new online model ...');
-								db.storeOnlineModel(dbOpts, function (e, mid) {
-									if (e != null) {
-										log.error(e, 'Failed to store offline model to DB!');
-										res.status(500);	// internal server error
-										res.end();
-										return;
-									}
-									
-									try {
-										if (log.debug())
-											log.debug('Online model stored!');
-										
-										activateModel(model);
-										saveToSession(sessionId, session, username, userBase, model, mid);
-										
-										// end request
-										res.status(204);	// no content
-										res.end();
-									} catch (e1) {
-										log.error(e1, 'Failed to open base!');
-										res.status(500);	// internal server error
-										res.end();
-									}
-								});
+								activateModel(model);
+								saveToSession(sessionId, session, username, userBase, model, model.getId());
+							} else {
+								saveToSession(sessionId, session, username, base, model, model.getId());
 							}
-							else {
-								var dbOpts = {
-									username: username,
-									base_dir: baseDir,
-									model_file: fname,
-									dataset: datasetName,
-									name: modelName
-								}
-								
-								log.info('Storing a new offline model ...');
-								db.storeOfflineModel(dbOpts, function (e, mid) {
-									if (e != null) {
-										log.error(e, 'Failed to store offline model to DB!');
-										res.status(500);	// internal server error
-										res.end();
-										return;
-									}
-									
-									try {
-										if (log.debug())
-											log.debug('Offline model stored!');
-										
-										modelStore.loadOfflineModel(baseDir, function (e, baseConfig) {
-											if (e != null) {
-												log.error(e, 'Failed to load an offline model!');
-												handleServerError(e, req, res);
-												return;
-											}
-											
-											saveToSession(sessionId, session, username, baseConfig.base, baseConfig.model, mid);
-										
-											// end request
-											res.status(204);	// no content
-											res.end();
-										});
-									} catch (e1) {
-										log.error(e1, 'Failed to open base!');
-										handleServerError(e1, req, res);
-									}
-								})
-							}
+							
+							res.status(204);	// no content
+							res.end();
+							
+//							var modelId = model.getId();
+//							
+//							if (isRealTime) {
+//								var dbOpts = {
+//									username: username,
+//									model_file: fname,
+//									dataset: datasetName,
+//									name: modelName,
+//									is_active: 1
+//								}
+//								
+//								log.info('Storing a new online model ...');
+//								db.storeOnlineModel(dbOpts, function (e, mid) {
+//									if (e != null) {
+//										log.error(e, 'Failed to store offline model to DB!');
+//										res.status(500);	// internal server error
+//										res.end();
+//										return;
+//									}
+//									
+//									try {
+//										if (log.debug())
+//											log.debug('Online model stored!');
+//										
+//										activateModel(model);
+//										saveToSession(sessionId, session, username, userBase, model, mid);
+//										
+//										// end request
+//										res.status(204);	// no content
+//										res.end();
+//									} catch (e1) {
+//										log.error(e1, 'Failed to open base!');
+//										res.status(500);	// internal server error
+//										res.end();
+//									}
+//								});
+//							}
+//							else {
+//								var dbOpts = {
+//									username: username,
+//									base_dir: baseDir,
+//									model_file: fname,
+//									dataset: datasetName,
+//									name: modelName
+//								}
+//								
+//								log.info('Storing a new offline model ...');
+//								db.storeOfflineModel(dbOpts, function (e, mid) {
+//									if (e != null) {
+//										log.error(e, 'Failed to store offline model to DB!');
+//										res.status(500);	// internal server error
+//										res.end();
+//										return;
+//									}
+//									
+//									try {
+//										if (log.debug())
+//											log.debug('Offline model stored!');
+//										
+//										modelStore.loadOfflineModel(baseDir, function (e, baseConfig) {
+//											if (e != null) {
+//												log.error(e, 'Failed to load an offline model!');
+//												handleServerError(e, req, res);
+//												return;
+//											}
+//											
+//											saveToSession(sessionId, session, username, baseConfig.base, baseConfig.model, mid);
+//										
+//											// end request
+//											res.status(204);	// no content
+//											res.end();
+//										});
+//									} catch (e1) {
+//										log.error(e1, 'Failed to open base!');
+//										handleServerError(e1, req, res);
+//									}
+//								})
+//							}
 						});
 					} catch (e) {
 						log.error(e, 'Exception while uploading a new dataset!');

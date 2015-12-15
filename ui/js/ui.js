@@ -620,7 +620,6 @@ function changeControlVal(stateId, ftrIdx, val) {
 			}
 			
 			if (stateId == null) return;
-			var stateHeight = viz.getCurrentHeight();
 			
 			// fetch state details
 			$.ajax('api/stateDetails', {
@@ -741,8 +740,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 						var data = {
 							id: stateId,
 							name: stateName,
-							isUndesired: isUndesired,
-							height: stateHeight
+							isUndesired: isUndesired
 						};
 						
 						if (isUndesired && eventId != null && eventId != '') {
