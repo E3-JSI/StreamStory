@@ -78,8 +78,10 @@ var zoomVis = function (opts) {
 				while (lastN < union.length-1 && score(union[lastN+1]) > bestScore / 10) {
 					lastN++;
 				}
-				
-				union.splice(lastN+1);
+
+				if (union.length > 1) {				
+					union.splice(lastN+1);
+				}
 				
 				// construct the rules
 				var unionStr = '';
