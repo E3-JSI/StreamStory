@@ -12,9 +12,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 		success: function (data) {
 			viz.setModel(data);
 		},
-		error: function (jqXHR, status) {
-			alert(status);
-		}
+		error: handleAjaxError
 	});
 }
 
@@ -324,7 +322,8 @@ function changeControlVal(stateId, ftrIdx, val) {
 				}
 				else if (msg.type == 'statePrediction') {
 					var content = msg.content;
-					var msgStr = 'Prediction, current: ' + content.currState + ' target: ' + content.targetState + ', prob: ' + content.probability.toFixed(2);
+					var eventId = content.eventId;
+					var msgStr = 'Undesired event prediction: ' + eventId + ', prob: ' + content.probability.toFixed(2);
 					drawMsg(msgStr, function (event) {
 						// draw a histogram of the PDF
 						var timeV = content.pdf.timeV;
@@ -402,9 +401,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 								showY: opts.showY
 							});
 						},
-						error: function (jqXHR, status) {
-							alert(status);
-						}
+						error: handleAjaxError
 					});
 				}
 			} else {	// transition
@@ -418,9 +415,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 							showY: opts.showY
 						});
 					},
-					error: function (jqXHR, status) {
-						alert(status);
-					}
+					error: handleAjaxError
 				});
 			}
 		}
@@ -441,9 +436,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 				success: function (data) {
 					viz.setModel(data);
 				},
-				error: function (jqXHR, status) {
-					alert(status);
-				}
+				error: handleAjaxError
 			});
 		}
 		
@@ -466,9 +459,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 					viz.setProbDist(data);
 					$('#div-fut-time').html(time);
 				},
-				error: function (xhr, status, err) {
-					alert(xhr.responseText);
-				}
+				error: handleAjaxError
 			});
 		}
 		
@@ -602,7 +593,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 					}
 				},
 			});
-		})()
+		})();
 	
 		$("#slider_item_div").slider({
 			value: viz.getZoom(),
@@ -629,6 +620,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 			}
 			
 			if (stateId == null) return;
+			var stateHeight = viz.getCurrentHeight();
 			
 			// fetch state details
 			$.ajax('api/stateDetails', {
@@ -641,39 +633,39 @@ function changeControlVal(stateId, ftrIdx, val) {
 					// clear the panel
 					$('#txt-name').val(data.id);
 					$('#chk-target').removeAttr('checked');
+					$('#txt-event-id').val('');
+					$('#div-button-save-state').addClass('hidden');
 					$('#div-attrs').html('');
 					$('#div-future').html('');
 					$('#div-past').html('');
-					$('#tree-wrapper').html('');//.addClass('hidden');
-					
+					$('#tree-wrapper').html('');
+
 					visualizeDecisionTree(data.classifyTree);
-					
-//					$('#tree-wrapper').html(JSON.stringify(data.classifyTree, null, '\t').replace(/\n/g, '<br />').replace(/\t/g, '<span style="width: 10px;">&nbsp;&nbsp;&nbsp;&nbsp;</span>')).removeClass('hidden');
-					
+										
 					// populate
 					// basic info
 					if (data.name != null) $('#txt-name').val(data.name);
 					
 					$('#chk-target').off('change');	// remove the previous handlers
 					$('#chk-target').prop('checked', data.isTarget != null && data.isTarget);
-					$('#chk-target').change(function (event) {
-						var stateId = data.id;
-						var height = viz.getCurrentHeight();
-						var isTarget = $('#chk-target').is(':checked');
-						
-						$.ajax('api/setTarget', {
-							dataType: 'json',
-							type: 'POST',
-							data: { id: stateId, height: height, isTarget: isTarget },
-							error: function () {
-								alert('Failed to set target state!');
-							},
-							success: function () {
-								viz.setTargetState(stateId, isTarget);
-							}
-						});
-					});
+					if (data.isTarget != null && data.isTarget) {
+						$('#div-event-id').removeClass('hidden');
+					} else {
+						$('#div-event-id').addClass('hidden');
+					}
 					
+					$('#chk-target').change(function (event) {
+						$('#div-button-save-state').removeClass('hidden');
+						
+						var isUndesiredEvent = $('#chk-target').is(':checked');
+
+						if (isUndesiredEvent) {
+							$('#div-event-id').removeClass('hidden');
+						} else {
+							$('#div-event-id').addClass('hidden');
+						}
+					});
+										
 					// features
 					// feature weights
 					var ftrWgts = data.featureWeights;
@@ -732,32 +724,50 @@ function changeControlVal(stateId, ftrIdx, val) {
 					});
 										
 					// add handlers
-					$('#txt-name').change(function (event) {
-						var name = $('#txt-name').val();
-						var data = { id: stateId, name: name };
+					$('#txt-event-id').off('change');
+					
+					if (data.undesiredEventId != null) { $('#txt-event-id').val(data.undesiredEventId); }
+					
+					$('#txt-event-id').change(function () {
+						$('#div-button-save-state').removeClass('hidden');
+					});
+					
+					$('#btn-button-save-state').off('click');
+					$('#btn-button-save-state').click(function () {
+						var stateName = $('#txt-name').val();
+						var isUndesired = $('#chk-target').is(':checked');
+						var eventId = $('#txt-event-id').val();
+						
+						var data = {
+							id: stateId,
+							name: stateName,
+							isUndesired: isUndesired,
+							height: stateHeight
+						};
+						
+						if (isUndesired && eventId != null && eventId != '') {
+							data.eventId = eventId;
+						}
 						
 						var shouldClear = name == '' || name == stateId;
 						if (shouldClear) {	// clear the state name
 							delete data.name;
 						}
 						
-						$.ajax('api/stateName', {
+						$.ajax('api/stateProperties', {
 							dataType: 'json',
 						    type: 'POST',
 						    data: data,
 						    success: function () {
 						    	viz.setStateName(stateId, shouldClear ? stateId : name);
+						    	viz.setTargetState(stateId, isUndesired);
+						    	$('#div-button-save-state').addClass('hidden');
 						    },
-						    error: function () {
-						    	alert('Failed to set name!');
-						    }
+						    error: handleAjaxError
 						});
 					});
 				},
-				error: function (jqXHR, status, err) {
-					console.log(JSON.stringify(err));
-					alert(status);
-				}
+				error: handleAjaxError
 			});
 		});
 		
@@ -850,9 +860,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 									viz.setModel(data);
 									valField.html(parseFloat(val).toPrecision(3));
 								},
-								error: function (xhr, status) {
-									alert(status);
-								}
+								error: handleAjaxError
 							});
 						}
 					});
@@ -872,9 +880,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 				if (data.active)
 					$('#btn-reset-sim').removeClass('hidden');
 			},
-			error: function (jqXHR, status) {
-				alert('Faield to fetch simulation status: ' + status);
-			}
+			error: handleAjaxError
 		});
 				
 		return that;

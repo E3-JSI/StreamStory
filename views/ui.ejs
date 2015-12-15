@@ -51,7 +51,9 @@
 				}
 			});
 		}
-	
+		
+		<% if (useCase == 'mhwirth') { %>
+		<% if (model.isOnline()) { %>
 		function fetchFricConfig() {
 			$.ajax('api/config', {
 				dataType: 'json',
@@ -83,9 +85,12 @@
 				}
 			});
 		}
+		<% } %>
 		
 		function fetchConfig() {
+			<% if (useCase == 'mhwirth') { %>
 			fetchFricConfig();
+			<% } %>
 			
 			$.ajax('api/param', {
 				dataType: 'json',
@@ -120,6 +125,7 @@
 				}
 			});
 		}
+		<% } %>
 		
 		var ui;
 	
@@ -238,7 +244,7 @@
 								<div id="range-pdf-bins"></div>
 							</div>
 						</div>
-						<% if (useCase == 'mhwirth') { %>
+						<% if (useCase == 'mhwirth' && model.isOnline()) { %>
 						<div>
 							<div class="checkbox">
    								<label>
@@ -328,14 +334,14 @@
 						});
 						
 						$('#range-time-horizon').slider({
-							value: 1,
+							value: 10,
 							min: 0,
-							max: 10,
+							max: 100,
 							step: .1,
 							animate: true,
 							change: function (event, ui) {
 								var val = ui.value;
-								$('#span-time-horizon').html(val);
+								$('#span-time-horizon').html(val + ' ' + getTimeUnit() + 's');
 							}
 						});
 						
@@ -543,12 +549,21 @@
 										<input id="txt-name" type="text" class="form-control" />
 									</div>
 									<% if (model.isOnline()) { %>
-									<div class="checkbox">
-								    	<label>
-								      		<input id="chk-target" type="checkbox" /> Make target
-								    	</label>
+									<div class="form-group">
+										<div class="checkbox">
+									    	<label>
+									      		<input id="chk-target" type="checkbox" /> Is undesired event
+									    	</label>
+									  	</div>
+									  	<div id="div-event-id" class="hidden">
+									  		<label for="txt-event-id">Event id (used for recommendations)</label>
+									  		<input id="txt-event-id" type="text" class="form-control" />
+									  	</div>
 								  	</div>
 								  	<% } %>
+								  	<div id="div-button-save-state" class="form-group" class="hidden">
+										<input id="btn-button-save-state" type="button" class="btn btn-success" value="Save" />
+									</div>
 								</div>
 							</div>
 							<div class="row">

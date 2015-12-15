@@ -57,79 +57,80 @@ var zoomVis = function (opts) {
 		var name = data.name;
 		var txt = '';
 		if (name != null) txt += '<h3>' + name + '</h3>';
-		txt += 'Holding time ' + data.holdingTime.toPrecision(2);
+		txt += data.holdingTime.toPrecision(2) + ' ' + getTimeUnit() + 's';
 		txt += '<div id="div-explain-' + data.id + '" class="tooltip-div-explain"></div>';
 		
-		$.ajax('api/explanation', {
-			dataType: 'json',
-			method: 'GET',
-			data: { stateId: data.id },
-			success: function (union) {
-				var score = function (interserct) {
-					return interserct.covered*interserct.purity;
-				}
-				
-				union.sort(function (inter1, inter2) {
-					return score(inter2) - score(inter1);
-				});
-				
-				var bestScore = score(union[0]);
-				var lastN = 0;
-				while (lastN < union.length-1 && score(union[lastN+1]) > bestScore / 10) {
-					lastN++;
-				}
-
-				if (union.length > 1) {				
-					union.splice(lastN+1);
-				}
-				
-				// construct the rules
-				var unionStr = '';
-				for (var i = 0; i < union.length; i++) {
-					var intersect = union[i];
-					var intersectStr = '';
-					var terms = intersect.terms;
+		setTimeout(function () {
+			$.ajax('api/explanation', {
+				dataType: 'json',
+				method: 'GET',
+				data: { stateId: data.id },
+				success: function (union) {
+					var score = function (interserct) {
+						return interserct.covered*interserct.purity;
+					}
 					
-					// sort the terms
-					terms.sort(function (t1, t2) {
-						if (t2.feature < t1.feature)
-							return -1;
-						else if (t2.feature > t1.feature)
-							return 1;
-						else return 0;
+					union.sort(function (inter1, inter2) {
+						return score(inter2) - score(inter1);
 					});
 					
-					for (var j = 0; j < terms.length; j++) {
-						var term = terms[j];
+					var bestScore = score(union[0]);
+					var lastN = 0;
+					while (lastN < union.length-1 && score(union[lastN+1]) > bestScore / 10) {
+						lastN++;
+					}
+	
+					if (union.length > 1) {				
+						union.splice(lastN+1);
+					}
+					
+					// construct the rules
+					var unionStr = '';
+					for (var i = 0; i < union.length; i++) {
+						var intersect = union[i];
+						var intersectStr = '';
+						var terms = intersect.terms;
 						
-						intersectStr += '&#09;';
+						// sort the terms
+						terms.sort(function (t1, t2) {
+							if (t2.feature < t1.feature)
+								return -1;
+							else if (t2.feature > t1.feature)
+								return 1;
+							else return 0;
+						});
 						
-						if (term.le != null && term.gt != null) {
-							intersectStr += term.feature + ' &isin; (' + toUiPrecision(term.gt) + ', ' + toUiPrecision(term.le) + ']';
-						} else if (term.le != null) {
-							intersectStr += term.feature + ' \u2264 ' + toUiPrecision(term.le);
-						} else {
-							intersectStr += term.feature + ' > ' + toUiPrecision(term.gt);
+						for (var j = 0; j < terms.length; j++) {
+							var term = terms[j];
+							
+							intersectStr += '&#09;';
+							
+							if (term.le != null && term.gt != null) {
+								intersectStr += term.feature + ' &isin; (' + toUiPrecision(term.gt) + ', ' + toUiPrecision(term.le) + ']';
+							} else if (term.le != null) {
+								intersectStr += term.feature + ' \u2264 ' + toUiPrecision(term.le);
+							} else {
+								intersectStr += term.feature + ' > ' + toUiPrecision(term.gt);
+							}
+						
+							if (j < terms.length-1)
+								intersectStr += '<br />';
 						}
-					
-						if (j < terms.length-1)
-							intersectStr += '<br />';
+						
+						unionStr += '<br />' + intersectStr + '<br />';
+						
+						if (i < union.length-1) {
+							unionStr += '<br />';
+						}
 					}
 					
-					unionStr += '<br />' + intersectStr + '<br />';
-					
-					if (i < union.length-1) {
-						unionStr += '<br />';
-					}
-				}
-				
-				$('#div-explain-' + data.id).html(unionStr);
-				api.reposition(undefined, false);
-			},
-			error: function (jqXHR, status) {
-				alert(status);
-			}
-		});
+					$('#div-explain-' + data.id).html(unionStr);
+					api.reposition(undefined, false);
+				},
+				error: handleAjaxError
+			});
+		}, 10);
+		
 		
 		return txt;
 	};

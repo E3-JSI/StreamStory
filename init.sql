@@ -34,6 +34,14 @@ CREATE TABLE online_model (
 	FOREIGN KEY (mid) REFERENCES model(mid)
 );
 
+CREATE TABLE state_properties (
+	mid INT NOT NULL,
+	sid INT NOT NULL,
+	eventId VARCHAR(255) NOT NULL,
+	FOREIGN KEY (mid) REFERENCES model(mid),
+	CONSTRAINT pk_state_properties PRIMARY KEY (mid,sid)
+);
+
 -- configuration of the friction coefficient
 CREATE TABLE config (
 	property VARCHAR(100) PRIMARY KEY,

@@ -46,7 +46,9 @@ var intensConfig = {};
 
 function activateModel(model) {
 	try {
-		log.info('Activating an online model ...');
+		if (log.info())
+			log.info('Activating an online model, ID: %s ...', model.getId());
+		
 		modelStore.add(model);
 		initStreamStoryHandlers(model, true);
 		model.setActive(true);
@@ -209,12 +211,12 @@ function addRawMeasurement(val) {
 }
 
 function initStreamStoryHandlers(model, enable) {
-	log.info('Registering StreamStory callbacks ...');
-	
 	if (model == null) {
 		log.warn('StreamStory is NULL, cannot register callbacks ...');
 		return;
 	}
+	
+	log.info('Registering StreamStory callbacks for model %s ...', model.getId());
 	
 	if (enable) {
 		log.info('Registering state changed callback ...');
@@ -260,53 +262,61 @@ function initStreamStoryHandlers(model, enable) {
 				var currStateNm = _model.getStateName(currState);
 				var targetStateNm = _model.getStateName(targetState);
 				
-				if (currStateNm == null || currStateNm.length == 0) currStateNm = currState;
-				if (targetStateNm == null || targetStateNm.length == 0) targetStateNm = targetState;
-				
-				var uiMsg = {
-					type: 'statePrediction',
-					content: {
-						time: date.getTime(),
-						currState: currStateNm,
-						targetState: targetStateNm,
-						probability: prob,
-						pdf: {
-							type: 'histogram',
-							probV: probV,
-							timeV: timeV
-						}
+				db.getUndesiredEventId(model.getId(), targetState, function (e, eventId) {
+					if (e != null) {
+						log.error(e, 'Failed to fetch event ID from the database!');
+						return;
 					}
-				};
-				
-				var currStateIds = _model.currState();
-				var stateId = currStateIds[0].id;
-				var level = currStateIds[0].height;
-				
-				var details = model.stateDetails(stateId, level);
-				var metadata = {};
-				
-				var obs = details.features.observations;
-				var contr = details.features.controls;
-				for (var i = 0; i < obs.length; i++) {
-					var ftr = obs[i];
-					metadata[ftr.name] = ftr.value;
-				}
-				for (var i = 0; i < contr.length; i++) {
-					var ftr = contr[i];
-					metadata[ftr.name] = ftr.value;
-				}
-				
-				var brokerMsg = transform.genHistPrediction(
-					date.getTime(),
-					currState == targetState ? ('Arrived in ' + currStateNm) : (currStateNm + ' to ' + targetStateNm),
-					timeV,
-					probV,
-					model.getModel().getTimeUnit(),
-					metadata
-				);
-				
-				broker.send(broker.PREDICTION_PRODUCER_TOPIC, JSON.stringify(brokerMsg));
-				modelStore.sendMsg(model.getId(), JSON.stringify(uiMsg));
+					
+					if (currStateNm == null || currStateNm.length == 0) currStateNm = currState;
+					if (targetStateNm == null || targetStateNm.length == 0) targetStateNm = targetState;
+					
+					var uiMsg = {
+						type: 'statePrediction',
+						content: {
+							time: date.getTime(),
+							currState: currStateNm,
+							targetState: targetStateNm,
+							eventId: eventId,
+							probability: prob,
+							pdf: {
+								type: 'histogram',
+								probV: probV,
+								timeV: timeV
+							}
+						}
+					};
+					
+					var currStateIds = _model.currState();
+					var stateId = currStateIds[0].id;
+					var level = currStateIds[0].height;
+					
+					var details = model.stateDetails(stateId, level);
+					var metadata = {};
+					
+					var obs = details.features.observations;
+					var contr = details.features.controls;
+					for (var i = 0; i < obs.length; i++) {
+						var ftr = obs[i];
+						metadata[ftr.name] = ftr.value;
+					}
+					for (var i = 0; i < contr.length; i++) {
+						var ftr = contr[i];
+						metadata[ftr.name] = ftr.value;
+					}
+					
+					var brokerMsg = transform.genHistPrediction(
+						date.getTime(),
+						eventId,
+						timeV,
+						probV,
+						model.getModel().getTimeUnit(),
+						metadata
+					);
+					
+					broker.send(broker.PREDICTION_PRODUCER_TOPIC, JSON.stringify(brokerMsg));
+					modelStore.sendMsg(model.getId(), JSON.stringify(uiMsg));
+				});
 			} catch (e) {
 				log.error(e, 'Failed to send target state prediction!');
 			}
@@ -591,13 +601,23 @@ function initStreamStoryRestApi() {
 				if (log.debug())
 					log.debug('Fetching details for state: %d', stateId);
 				
-				res.send(model.stateDetails(stateId, height));
+				var details = model.stateDetails(stateId, height);
+				
+				db.getUndesiredEventId(model.getId(), stateId, function (e, eventId) {
+					if (e != null) {
+						log.error(e, 'Failed to fetch undesired event ID!');
+						handleServerError(e, req, res);
+						return;
+					}
+					
+					details.undesiredEventId = eventId;
+					res.send(details);
+					res.end();
+				});
 			} catch (e) {
 				log.error(e, 'Failed to query state details!');
 				res.status(500);	// internal server error
 			}
-			
-			res.end();
 		});
 		
 		// state explanation
@@ -678,14 +698,26 @@ function initStreamStoryRestApi() {
 			res.end();
 		});
 		
-		app.post(API_PATH + '/stateName', function (req, res) {
-			var stateId, stateNm;
+		app.post(API_PATH + '/stateProperties', function (req, res) {
+			var stateId, stateNm, isUndesired, eventId, height;
 			
 			try {
-				var model = getModel(req.sessionID, req.session);
+				var session = req.session;
+				
+				var model = getModel(req.sessionID, session);
+				var mid = session.modelId;
 				
 				stateId = parseInt(req.body.id);
 				stateNm = req.body.name;
+				isUndesired = JSON.parse(req.body.isUndesired);
+				height = parseFloat(req.body.height);
+				eventId = req.body.eventId;
+				
+				if (isUndesired && (eventId == null || eventId == '')) {
+					log.warn('The state is marked undesired, but the eventId is missing!');
+					handleBadInput(res, 'Undesired event without an event id!');
+					return;
+				}
 				
 				if (stateNm != null) {
 					if (log.debug()) 
@@ -699,38 +731,72 @@ function initStreamStoryRestApi() {
 					
 					model.getModel().clearStateName(stateId);
 				}
-				res.status(204);	// no content
+				
+				if (log.info()) 
+					log.info('Setting undesired state: %d, isUndesired: ' + isUndesired, stateId);
+
+				model.getModel().setTarget(stateId, height, isUndesired);
+				model.save(getModelFile(session));
+				
+				if (!isUndesired) {
+					if (log.debug())
+						log.debug('Clearing undesired event id ...');
+					
+					// clear the event id from the database
+					db.clearUndesiredEventId(mid, stateId, function (e) {
+						if (e != null) {
+							log.error(e, 'Failed to clear undesired event ID!');
+							handleServerError(e, req, res);
+							return;
+						}
+						
+						res.status(204);	// no content
+						res.end();
+					});
+				} else {
+					if (log.debug())
+						log.debug('Setting undesired event id ...');
+						
+					db.setUndesiredEventId(mid, stateId, eventId, function (e) {
+						if (e != null) {
+							log.error(e, 'Failed to set undesired event ID!');
+							handleServerError(e, req, res);
+							return;
+						}
+						
+						res.status(204);	// no content
+						res.end();
+					});
+				}
 			} catch (e) {
 				log.error(e, 'Failed to set name of state %d to %s', stateId, stateNm);
 				res.status(500);	// internal server error
 			}
-			
-			res.end();
 		});
 		
-		app.post(API_PATH + '/setTarget', function (req, res) {
-			var stateId, isTarget, height;
-			
-			try {
-				stateId = parseInt(req.body.id);
-				height = parseFloat(req.body.height);
-				isTarget = JSON.parse(req.body.isTarget);
-				
-				var model = getModel(req.sessionID, req.session);
-				
-				if (log.info()) 
-					log.info('Setting target state: %d, isTarget: ' + isTarget, stateId);
-				
-				
-				model.getModel().setTarget(stateId, height, isTarget);
-				res.status(204);	// no content
-			} catch (e) {
-				log.error(e, 'Failed to set target state %d!', stateId);
-				res.status(500);	// internal server error
-			}
-			
-			res.end();
-		});
+//		app.post(API_PATH + '/setTarget', function (req, res) {
+//			var stateId, isTarget, height;
+//			
+//			try {
+//				stateId = parseInt(req.body.id);
+//				height = parseFloat(req.body.height);
+//				isTarget = JSON.parse(req.body.isTarget);
+//				
+//				var model = getModel(req.sessionID, req.session);
+//				
+//				if (log.info()) 
+//					log.info('Setting target state: %d, isTarget: ' + isTarget, stateId);
+//				
+//				
+//				model.getModel().setTarget(stateId, height, isTarget);
+//				res.status(204);	// no content
+//			} catch (e) {
+//				log.error(e, 'Failed to set target state %d!', stateId);
+//				res.status(500);	// internal server error
+//			}
+//			
+//			res.end();
+//		});
 		
 		app.post(API_PATH + '/setControl', function (req, res) {
 			var ftrId, val;
@@ -964,7 +1030,7 @@ function initDataUploadApi() {
 								}
 								
 								log.info('Storing a new online model ...');
-								db.storeOnlineModel(dbOpts, function (e) {
+								db.storeOnlineModel(dbOpts, function (e, mid) {
 									if (e != null) {
 										log.error(e, 'Failed to store offline model to DB!');
 										res.status(500);	// internal server error
@@ -977,7 +1043,7 @@ function initDataUploadApi() {
 											log.debug('Online model stored!');
 										
 										activateModel(model);
-										saveToSession(sessionId, session, username, userBase, model, modelId);
+										saveToSession(sessionId, session, username, userBase, model, mid);
 										
 										// end request
 										res.status(204);	// no content
@@ -999,7 +1065,7 @@ function initDataUploadApi() {
 								}
 								
 								log.info('Storing a new offline model ...');
-								db.storeOfflineModel(dbOpts, function (e) {
+								db.storeOfflineModel(dbOpts, function (e, mid) {
 									if (e != null) {
 										log.error(e, 'Failed to store offline model to DB!');
 										res.status(500);	// internal server error
@@ -1011,12 +1077,19 @@ function initDataUploadApi() {
 										if (log.debug())
 											log.debug('Offline model stored!');
 										
-										var baseConfig = modelStore.loadOfflineModel(baseDir);
-										saveToSession(sessionId, session, username, baseConfig.base, baseConfig.model, modelId);
+										modelStore.loadOfflineModel(baseDir, function (e, baseConfig) {
+											if (e != null) {
+												log.error(e, 'Failed to load an offline model!');
+												handleServerError(e, req, res);
+												return;
+											}
+											
+											saveToSession(sessionId, session, username, baseConfig.base, baseConfig.model, mid);
 										
-										// end request
-										res.status(204);	// no content
-										res.end();
+											// end request
+											res.status(204);	// no content
+											res.end();
+										});
 									} catch (e1) {
 										log.error(e1, 'Failed to open base!');
 										handleServerError(e1, req, res);
@@ -1069,8 +1142,7 @@ function initDataUploadApi() {
 		db.fetchUserModels(username, function (e, models) {
 			if (e != null) {
 				log.error(e, 'Failed to fetch models for user: %s', username);
-				res.status(500);	// internal server error
-				res.end();
+				handleServerError(e, req, res);
 				return;
 			}
 			
@@ -1092,8 +1164,7 @@ function initDataUploadApi() {
 		db.fetchModel(modelId, function (e, modelConfig) {
 			if (e != null) {
 				log.error(e, 'Failed to get base info for user: %s', username);
-				res.status(500);	// internal server error
-				res.end();
+				handleServerError(e, req, res);
 				return;
 			}
 			
@@ -1106,20 +1177,37 @@ function initDataUploadApi() {
 						
 						var model = modelStore.getModel(modelId);
 						saveToSession(sessionId, session, username, base, model, modelId);
+						res.status(204);	// no content
+						res.end();
 					} else {
 						if (log.debug())
 							log.debug('Adding an inactive model to the session ...');
 						
-						var model = modelStore.loadOnlineModel(modelConfig.model_file);
-						saveToSession(sessionId, session, username, base, model, modelId);
+						modelStore.loadOnlineModel(modelConfig.model_file, function (e, model) {
+							if (e != null) {
+								log.error(e, 'Exception while loading online model!');
+								handleServerError(e, req, res);
+								return;
+							}
+							
+							saveToSession(sessionId, session, username, base, model, modelId);
+							res.status(204);	// no content
+							res.end();
+						});						
 					}
 				} else {
-					var baseConfig = modelStore.loadOfflineModel(modelConfig.base_dir);
-					saveToSession(sessionId, session, username, baseConfig.base, baseConfig.model, modelId);
+					modelStore.loadOfflineModel(modelConfig.base_dir, function (e, baseConfig) {
+						if (e != null) {
+							log.error(e, 'Exception while loading offline model!');
+							handleServerError(e, req, res);
+							return;
+						}
+						
+						saveToSession(sessionId, session, username, baseConfig.base, baseConfig.model, modelId);
+						res.status(204);	// no content
+						res.end();
+					});
 				}
-				
-				res.status(204);	// no content
-				res.end();
 			} catch (e1) {
 				log.error(e1, 'Failed to initialize model!');
 				res.status(500);	// internal server error
@@ -1567,10 +1655,19 @@ function loadActiveModels() {
 				if (log.info())
 					log.info('Initializing model %s ...', JSON.stringify(modelConfig));
 				
-				var model = modelStore.loadOnlineModel(modelConfig.model_file);
-				activateModel(model);
+				modelStore.loadOnlineModel(modelConfig.model_file, function (e, model) {
+					if (e != null) {
+						log.error(e, 'Exception while loading online model!');
+						return;
+					}
+					
+					if (log.debug())
+						log.debug('Activating model with id %s', model.getId());
+					
+					activateModel(model);
+				});
 			} catch (e1) {
-				log.error(e1, 'Exception while initializing model %s', JSON.stringify(model));
+				log.error(e1, 'Exception while initializing model %s', JSON.stringify(modelConfig));
 			}
 		}
 	});
@@ -1713,6 +1810,7 @@ exports.init = function (opts) {
 	modelStore = ModelStore({
 		base: base,
 		ws: ws,
+		db: db,
 		onAdd: function (model) {
 			if (log.debug())
 				log.debug('Model %s added to the model store, activating handlers ...', model.getId());

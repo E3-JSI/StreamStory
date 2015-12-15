@@ -299,7 +299,7 @@
 					
 					var modelData = data[i];
 					
-					option.val(modelData.model_file);
+					option.val(modelData.mid);
 					option.html(modelData.name + ' (' + modelData.date_created + ')' + (modelData.is_realtime == 1 ? ' (online)' : ' (offline)'));
 					if (i == 0) {
 						option.attr('selected', 'selected');

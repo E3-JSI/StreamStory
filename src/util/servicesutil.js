@@ -13,6 +13,7 @@ exports.RealTimeModelStore = function (opts) {
 	
 	if (opts.base == null) throw new Error('Missing base for online models!');
 	if (opts.ws == null) throw new Error('Missing web sockets!');
+	if (opts.db == null) throw new Error('Missing database in model store!');
 	
 	var store = {};
 	
@@ -20,6 +21,7 @@ exports.RealTimeModelStore = function (opts) {
 	var ws = opts.ws;
 	var onAddCb = opts.onAdd;
 	var onRemoveBc = opts.onRemove;
+	var db = opts.db;
 	
 	function getModel(modelId) {
 		if (!(modelId in store)) {
@@ -71,7 +73,7 @@ exports.RealTimeModelStore = function (opts) {
 		store[modelId].socketIds[socketId] = socketId;
 	}
 	
-	function loadModel(modelBase, fname) {
+	function loadModel(modelBase, fname, callback) {
 		if (log.debug())
 			log.debug('Loading model from file %s ...', fname);
 		
@@ -80,8 +82,19 @@ exports.RealTimeModelStore = function (opts) {
 			fname: fname
 		});
 		
-		model.setId(fname);
-		return model;
+		db.fetchModelByFName(fname, function (e, dbModel) {
+			if (e != null) {
+				log.error(e, 'Failed to fetch a model from the DB!');
+				callback(e);
+				return;
+			}
+			
+			if (log.trace())
+				log.trace('Setting model id to ' + dbModel.mid);
+			
+ 			model.setId(dbModel.mid);
+			callback(undefined, model);
+		});
 	}
 	
 	var that = {
@@ -147,7 +160,7 @@ exports.RealTimeModelStore = function (opts) {
 		// CREATING AND LOADING MODELS
 		//====================================================
 		
-		loadOfflineModel: function (baseDir) {
+		loadOfflineModel: function (baseDir, callback) {
 			if (log.debug())
 				log.debug('Loading offline model from base: %s', baseDir);
 			
@@ -166,22 +179,37 @@ exports.RealTimeModelStore = function (opts) {
 				if (log.debug())
 					log.debug('Loading model from file: %s', modelFName)
 				
-				var model = loadModel(userBase, modelFName);
-				
-				model.setOnline(false);
-				
-				return {base: userBase, model: model};
+				loadModel(userBase, modelFName, function (e, model) {
+					if (e != null) {
+						callback(e);
+						return;
+					}
+					
+					model.setOnline(false);
+					callback(undefined, {base: userBase, model: model});
+				});
 			} catch (e) {
 				log.error(e, 'Failed to open base!');
 				throw e;
 			}
 		},
-		loadOnlineModel: function (fname) {
-			var model = loadModel(base, fname);
+		loadOnlineModel: function (fname, callback) {
+			if (log.debug())
+				log.debug('Loading online model from file: %s ...', fname);
 			
-			model.setOnline(true);
-			
-			return model;
+			loadModel(base, fname, function (e, model) {
+				if (e != null) {
+					callback(e);
+					return;
+				}
+				
+				model.setOnline(true);
+				
+				if (log.debug())
+					log.debug('Model %s loaded, calling callback ...', model.getId());
+				
+				callback(undefined, model);
+			});
 		},
 		buildModel: function (opts, callback) {
 			if (callback == null) callback = function (e) { log.error(e, 'Exception while buillding model!'); }

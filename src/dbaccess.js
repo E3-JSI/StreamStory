@@ -305,11 +305,28 @@ module.exports = function () {
 					nextOp: createUser({
 						username: username,
 						nextOp: query({
-							sql: 'SELECT * FROM model m LEFT JOIN offline_model ofm ON m.mid = ofm.mid LEFT JOIN online_model onm ON m.mid = onm.mid ' + 
+							sql: 'SELECT m.*, onm.is_active FROM model m LEFT JOIN offline_model ofm ON m.mid = ofm.mid LEFT JOIN online_model onm ON m.mid = onm.mid ' + 
 									'WHERE m.username = ? OR m.is_public = 1',
 							params: [username]
 						})
 					})
+				})
+			});
+		},
+		
+		fetchModelByFName: function (fname, callback) {
+			connection({
+				callback: callback,
+				nextOp: query({
+					sql: 'SELECT m.*, onm.is_active FROM model m LEFT JOIN offline_model ofm ON m.mid = ofm.mid LEFT JOIN online_model onm ON m.mid = onm.mid ' + 
+									'WHERE m.model_file = ?',
+					params: [fname],
+					nextOp: function (conn, onsuccess, onerror, results) {
+						if (results.length == 0)
+							onerror(new Error('Model with fname "' + fname + '" does not exist!'));
+						else
+							onsuccess(results[0]);
+					}
 				})
 			});
 		},
@@ -329,7 +346,10 @@ module.exports = function () {
 						nextOp: function (conn, onsuccess, onerror, modelId) {
 							query({
 								sql: 'INSERT INTO online_model SET ?',
-								params: { mid: modelId, is_active: is_active }
+								params: { mid: modelId, is_active: is_active },
+								nextOp: function (conn, onsuccess, onerror, results) {
+									onsuccess(modelId);
+								}
 							})(conn, onsuccess, onerror);
 						}
 					})
@@ -351,7 +371,10 @@ module.exports = function () {
 						nextOp: function (conn, onsuccess, onerror, modelId) {
 							query({
 								sql: 'INSERT INTO offline_model SET ?',
-								params: { mid: modelId, base_dir: baseDir }
+								params: { mid: modelId, base_dir: baseDir },
+								nextOp: function (conn, onsuccess, onerror, results) {
+									onsuccess(modelId);
+								}
 							})(conn, onsuccess, onerror);
 						}
 					})
@@ -359,30 +382,19 @@ module.exports = function () {
 			});
 		},
 		fetchModel: function (modelId, callback) {
-			pool.getConnection(function (e, conn) {
-				if (e != null) {
-					callback(e);
-					return;
-				}
-				
-				var query = 'SELECT * FROM model m LEFT JOIN offline_model ofm ON m.mid = ofm.mid LEFT JOIN online_model onm ON m.mid = onm.mid ' + 
-								'WHERE m.model_file = ?';
-				
-				conn.query(query, [modelId], function (e1, result) {
-					conn.release();
-					
-					if (e1 != null) {
-						callback(e1);
-						return;
+			connection({
+				callback: callback,
+				nextOp: query({
+					sql: 'SELECT m.*, onm.is_active FROM model m LEFT JOIN offline_model ofm ON m.mid = ofm.mid LEFT JOIN online_model onm ON m.mid = onm.mid ' + 
+								'WHERE m.mid = ?',
+					params: [modelId],
+					nextOp: function (conn, onsuccess, onerror, results) {
+						if (results.length == 0)
+							onerror(new Error('The model doesn\'t exist!'));
+						else
+							onsuccess(results[0]);
 					}
-					
-					if (result.length == null) {
-						callback(new Error('The model doesn\'t exist!'));
-						return;
-					}
-					
-					callback(undefined, result[0]);
-				});
+				})
 			});
 		},
 		countActiveModels: function (callback) {
@@ -448,6 +460,61 @@ module.exports = function () {
 					conn.release();
 					callback(e1);
 				});
+			});
+		},
+		
+		//===============================================================
+		// MODEL QUERIES
+		//===============================================================
+		
+		setUndesiredEventId: function (mid, sid, eventId, callback) {
+			connection({
+				callback: callback,
+				nextOp: query({
+					sql: 'SELECT EXISTS(SELECT 1 FROM state_properties WHERE mid = ? AND sid = ?) AS ex',
+					params: [mid, sid],
+					nextOp: function (conn, onsuccess, onerror, results) {
+						var exists = results[0].ex;
+						
+						if (!exists) {
+							query({
+								sql: 'INSERT INTO state_properties SET ?',
+								params: { mid: mid, sid: sid, eventId: eventId }
+							})(conn, onsuccess, onerror);
+						} else {
+							query({
+								sql: 'UPDATE state_properties SET eventId = ? WHERE mid = ? AND sid = ?',
+								params: [eventId, mid, sid]
+							})(conn, onsuccess, onerror);
+						}
+					}
+				})
+			});
+		},
+		
+		getUndesiredEventId: function (mid, sid, callback) {
+			connection({
+				callback: callback,
+				nextOp: query({
+					sql: 'SELECT eventId FROM state_properties WHERE mid = ? AND sid = ?',
+					params: [mid, sid],
+					nextOp: function (conn, onsuccess, onerror, results) {
+						if (results.length == 0)
+							onsuccess(undefined);
+						else
+							onsuccess(results[0].eventId);
+					}
+				})
+			});
+		},
+		
+		clearUndesiredEventId: function (mid, sid, callback) {
+			connection({
+				callback: callback,
+				nextOp: query({
+					sql: 'DELETE FROM state_properties WHERE mid = ? AND sid = ?',
+					params: [mid, sid]
+				})
 			});
 		},
 		
