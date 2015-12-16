@@ -588,6 +588,18 @@ function initStreamStoryRestApi() {
 	}
 	
 	{
+		function fetchUndesiredEventId(mid, stateId, callback) {
+			db.getUndesiredEventId(mid, stateId, function (e, eventId) {
+				if (e != null) {
+					log.error(e, 'Failed to fetch undesired event ID!');
+					callback(e);
+					return;
+				}
+				
+				callback(undefined, eventId);
+			});
+		}
+		
 		log.info('Registering state details service ...');
 		
 		// state details
@@ -603,9 +615,8 @@ function initStreamStoryRestApi() {
 				
 				var details = model.stateDetails(stateId, height);
 				
-				db.getUndesiredEventId(model.getId(), stateId, function (e, eventId) {
+				fetchUndesiredEventId(model.getId(), stateId, function (e, eventId) {
 					if (e != null) {
-						log.error(e, 'Failed to fetch undesired event ID!');
 						handleServerError(e, req, res);
 						return;
 					}
@@ -616,7 +627,38 @@ function initStreamStoryRestApi() {
 				});
 			} catch (e) {
 				log.error(e, 'Failed to query state details!');
-				res.status(500);	// internal server error
+				andleServerError(e, req, res);
+			}
+		});
+		
+		app.get(API_PATH + '/targetProperties', function (req, res) {
+			try {
+				var stateId = parseInt(req.query.stateId);
+				
+				var model = getModel(req.sessionID, req.session);
+				
+				if (log.debug())
+					log.debug('Fetching target details for state: %d', stateId);
+				
+				var isUndesired = model.getModel().isTarget(stateId);
+				
+				if (isUndesired) {
+					fetchUndesiredEventId(model.getId(), stateId, function (e, eventId) {
+						if (e != null) {
+							handleServerError(e, req, res);
+							return;
+						}
+						
+						res.send({ isUndesired: isUndesired, eventId: eventId });
+						res.end();
+					});
+				} else {
+					res.send({ isUndesired: isUndesired });
+					res.end();
+				}
+			} catch (e) {
+				log.error(e, 'Failed to query target details!');
+				handleServerError(e, req, res);
 			}
 		});
 		
@@ -759,7 +801,7 @@ function initStreamStoryRestApi() {
 					});
 				} else {
 					if (log.debug())
-						log.debug('Setting undesired event id ...');
+						log.debug('Setting undesired event id to "%s" ...', eventId);
 						
 					db.setUndesiredEventId(mid, stateId, eventId, function (e) {
 						if (e != null) {

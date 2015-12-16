@@ -12,4 +12,4 @@
 ZA REVIEW:
 - poglej, ce load model dela v vseh primerih
 - check if the prediction of an undesired state works as expected
-- ko ponovno nalozim model se izgubi informacija o target state-ih
+- name se shrani kot cifra

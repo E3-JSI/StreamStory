@@ -55,10 +55,44 @@ var zoomVis = function (opts) {
 	nodeQtipOpts.content = function (event, api) { 
 		var data = this.data();
 		var name = data.name;
-		var txt = '';
-		if (name != null) txt += '<h3>' + name + '</h3>';
-		txt += data.holdingTime.toPrecision(2) + ' ' + getTimeUnit() + 's';
-		txt += '<div id="div-explain-' + data.id + '" class="tooltip-div-explain"></div>';
+		
+		var tooltip = $('<div />');
+		
+		// name
+		if (name != null) {
+			var nameDiv = $('<h3 />');
+			nameDiv.html(name);
+			tooltip.append(nameDiv);
+		}
+		
+		// holding time
+		var timeDiv = $('<div />');
+		timeDiv.html(data.holdingTime.toPrecision(2) + ' ' + getTimeUnit() + 's');
+		tooltip.append(timeDiv);
+		
+		// undesired event properties
+		var undesiredDiv = $('<div />');
+		undesiredDiv.attr('id', 'div-tooltip-undesired-' + data.id);
+		undesiredDiv.addClass('tooltip-undesired');
+		if ($('#div-tooltip-undesired-' + data.id).html() != null) {
+			undesiredDiv.html($('#div-tooltip-undesired-' + data.id).html());
+		}
+		tooltip.append(undesiredDiv);
+		
+		var explainDiv = $('<div />');
+		explainDiv.attr('id', 'div-explain-' + data.id);
+		explainDiv.addClass('tooltip-div-explain');
+		if ($('#div-explain-' + data.id).html() != null) {
+			explainDiv.html($('#div-explain-' + data.id).html());
+		}
+		tooltip.append(explainDiv);
+		
+		
+//		var txt = '';
+//		if (name != null) txt += '<h3>' + name + '</h3>';
+//		txt += data.holdingTime.toPrecision(2) + ' ' + getTimeUnit() + 's';
+//		txt += '<div id="div-tooltip-undesired-' + data.id + '" class="tooltip-undesired">' + $('#div-tooltip-undesired-' + data.id).html() + '</div>';
+//		txt += '<div id="div-explain-' + data.id + '" class="tooltip-div-explain">' + $('#div-explain-' + data.id).html() + '</div>';
 		
 		setTimeout(function () {
 			$.ajax('api/explanation', {
@@ -129,10 +163,26 @@ var zoomVis = function (opts) {
 				},
 				error: handleAjaxError
 			});
+			
+			$.ajax('api/targetProperties', {
+				dataType: 'json',
+				method: 'GET',
+				data: { stateId: data.id },
+				success: function (props) {
+					if (props.isUndesired) {
+						$('#div-tooltip-undesired-' + data.id).html('Event id: ' + props.eventId);
+					} else {
+						$('#div-tooltip-undesired-' + data.id).html('');
+					}
+					
+					api.reposition(undefined, false);
+				},
+				error: handleAjaxError
+			});
 		}, 10);
 		
 		
-		return txt;
+		return tooltip.html();
 	};
 	
 	nodeQtipOpts.show.event = 'hover';
@@ -1364,8 +1414,6 @@ var zoomVis = function (opts) {
 		},
 		
 		setTargetState: function (stateId, isTarget) {
-//			var level = currentLevel;
-//			var levelInfo = levelNodes[level];
 			// find the node
 			for (var levelN = 0; levelN < levelNodes.length; levelN++) {
 				var levelInfo = levelNodes[levelN];

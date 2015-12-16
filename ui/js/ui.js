@@ -653,6 +653,10 @@ function changeControlVal(stateId, ftrIdx, val) {
 						$('#div-event-id').addClass('hidden');
 					}
 					
+					$('#txt-name').change(function () {
+						$('#div-button-save-state').removeClass('hidden');
+					});
+					
 					$('#chk-target').change(function (event) {
 						$('#div-button-save-state').removeClass('hidden');
 						
@@ -747,7 +751,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 							data.eventId = eventId;
 						}
 						
-						var shouldClear = name == '' || name == stateId;
+						var shouldClear = stateName == '' || stateName == stateId;
 						if (shouldClear) {	// clear the state name
 							delete data.name;
 						}
@@ -757,7 +761,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 						    type: 'POST',
 						    data: data,
 						    success: function () {
-						    	viz.setStateName(stateId, shouldClear ? stateId : name);
+						    	viz.setStateName(stateId, shouldClear ? stateId : stateName);
 						    	viz.setTargetState(stateId, isUndesired);
 						    	$('#div-button-save-state').addClass('hidden');
 						    },
