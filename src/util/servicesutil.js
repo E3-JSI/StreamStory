@@ -373,7 +373,7 @@ exports.RealTimeModelStore = function (opts) {
 									model.setId(mid);
 									model.setOnline(true);
 									
-									callback(undefined, model);
+									callback(undefined, model, undefined, fname);
 								});
 							} else {
 								// store the model into the DB
@@ -413,7 +413,7 @@ exports.RealTimeModelStore = function (opts) {
 											var model = baseConfig.model;
 											var base = baseConfig.base;
 											
-											callback(undefined, model, base);
+											callback(undefined, model, base, fname);
 										});
 									} catch (e1) {
 										log.error(e1, 'Failed to open base!');

@@ -12,5 +12,4 @@
 ZA REVIEW:
 - poglej, ce load model dela v vseh primerih
 - check if the prediction of an undesired state works as expected
-- when I set a target state in the UI and then scroll, the height is lost
--- it is regained when I refresh the page
+- ko ponovno nalozim model se izgubi informacija o target state-ih

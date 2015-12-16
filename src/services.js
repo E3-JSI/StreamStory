@@ -118,7 +118,7 @@ function cleanUpSession(sessionId, session) {
 	delete session.modelFile;
 }
 
-function saveToSession(sessionId, session, username, userBase, model, modelId) {
+function saveToSession(sessionId, session, username, userBase, model, modelId, fname) {
 	if (session.base != null)
 		cleanUpSession(sessionId, session);
 	
@@ -132,7 +132,7 @@ function saveToSession(sessionId, session, username, userBase, model, modelId) {
 	session.base = userBase;
 	session.model = model;
 	session.modelId = modelId;
-	session.modelFile = modelId;	// TODO maybe in the future set modelId to something else
+	session.modelFile = fname;
 	
 	if (log.debug())
 		log.debug('Saved to session!');
@@ -735,7 +735,12 @@ function initStreamStoryRestApi() {
 					log.info('Setting undesired state: %d, isUndesired: ' + isUndesired, stateId);
 
 				model.getModel().setTarget(stateId, isUndesired);
-				model.save(getModelFile(session));
+				var fname = getModelFile(session);
+				
+				if (log.debug())
+					log.debug('Saving model to file: %s', fname);
+				
+				model.save(fname);
 				
 				if (!isUndesired) {
 					if (log.debug())
@@ -990,7 +995,7 @@ function initDataUploadApi() {
 							baseDir: baseDir
 						}
 						
-						modelStore.buildModel(opts, function (e, model, base) {
+						modelStore.buildModel(opts, function (e, model, base, fname) {
 							if (e != null) {
 								handleServerError(e, req, res);
 								return;
@@ -1001,92 +1006,13 @@ function initDataUploadApi() {
 									log.debug('Online model created!');
 								
 								activateModel(model);
-								saveToSession(sessionId, session, username, userBase, model, model.getId());
+								saveToSession(sessionId, session, username, userBase, model, model.getId(), fname);
 							} else {
-								saveToSession(sessionId, session, username, base, model, model.getId());
+								saveToSession(sessionId, session, username, base, model, model.getId(), fname);
 							}
 							
 							res.status(204);	// no content
 							res.end();
-							
-//							var modelId = model.getId();
-//							
-//							if (isRealTime) {
-//								var dbOpts = {
-//									username: username,
-//									model_file: fname,
-//									dataset: datasetName,
-//									name: modelName,
-//									is_active: 1
-//								}
-//								
-//								log.info('Storing a new online model ...');
-//								db.storeOnlineModel(dbOpts, function (e, mid) {
-//									if (e != null) {
-//										log.error(e, 'Failed to store offline model to DB!');
-//										res.status(500);	// internal server error
-//										res.end();
-//										return;
-//									}
-//									
-//									try {
-//										if (log.debug())
-//											log.debug('Online model stored!');
-//										
-//										activateModel(model);
-//										saveToSession(sessionId, session, username, userBase, model, mid);
-//										
-//										// end request
-//										res.status(204);	// no content
-//										res.end();
-//									} catch (e1) {
-//										log.error(e1, 'Failed to open base!');
-//										res.status(500);	// internal server error
-//										res.end();
-//									}
-//								});
-//							}
-//							else {
-//								var dbOpts = {
-//									username: username,
-//									base_dir: baseDir,
-//									model_file: fname,
-//									dataset: datasetName,
-//									name: modelName
-//								}
-//								
-//								log.info('Storing a new offline model ...');
-//								db.storeOfflineModel(dbOpts, function (e, mid) {
-//									if (e != null) {
-//										log.error(e, 'Failed to store offline model to DB!');
-//										res.status(500);	// internal server error
-//										res.end();
-//										return;
-//									}
-//									
-//									try {
-//										if (log.debug())
-//											log.debug('Offline model stored!');
-//										
-//										modelStore.loadOfflineModel(baseDir, function (e, baseConfig) {
-//											if (e != null) {
-//												log.error(e, 'Failed to load an offline model!');
-//												handleServerError(e, req, res);
-//												return;
-//											}
-//											
-//											saveToSession(sessionId, session, username, baseConfig.base, baseConfig.model, mid);
-//										
-//											// end request
-//											res.status(204);	// no content
-//											res.end();
-//										});
-//									} catch (e1) {
-//										log.error(e1, 'Failed to open base!');
-//										handleServerError(e1, req, res);
-//									}
-//								})
-//							}
 						});
 					} catch (e) {
 						log.error(e, 'Exception while uploading a new dataset!');
@@ -1161,13 +1087,15 @@ function initDataUploadApi() {
 			
 			try {
 				if (modelConfig.is_realtime == 1) {
+					var fname = modelConfig.model_file;
 					var isActive = modelConfig.is_active == 1;
+					
 					if (isActive) {
 						if (log.debug())
 							log.debug('Adding an already active model to the session ...');
 						
 						var model = modelStore.getModel(modelId);
-						saveToSession(sessionId, session, username, base, model, modelId);
+						saveToSession(sessionId, session, username, base, model, modelId, fname);
 						res.status(204);	// no content
 						res.end();
 					} else {
@@ -1181,12 +1109,14 @@ function initDataUploadApi() {
 								return;
 							}
 							
-							saveToSession(sessionId, session, username, base, model, modelId);
+							saveToSession(sessionId, session, username, base, model, modelId, fname);
 							res.status(204);	// no content
 							res.end();
 						});						
 					}
 				} else {
+					var fname = utils.getModelFName(modelConfig.base_dir);
+					
 					modelStore.loadOfflineModel(modelConfig.base_dir, function (e, baseConfig) {
 						if (e != null) {
 							log.error(e, 'Exception while loading offline model!');
@@ -1194,7 +1124,7 @@ function initDataUploadApi() {
 							return;
 						}
 						
-						saveToSession(sessionId, session, username, baseConfig.base, baseConfig.model, modelId);
+						saveToSession(sessionId, session, username, baseConfig.base, baseConfig.model, modelId, fname);
 						res.status(204);	// no content
 						res.end();
 					});

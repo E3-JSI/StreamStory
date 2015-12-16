@@ -3,10 +3,10 @@
 		"path": "../qminer/",
 		"mode": "createClean",
 		"createPipeline": true,
-		"initializeZeros": true
+		"initializeZeros": false
 	},
 	"server": {
-		"port": 8585,
+		"port": 8484,
 		"pingInterval": 10000
 	},
 	"log": {
@@ -39,6 +39,6 @@
 		"producerPort": 8090
 	},
 	"useCase": "mhwirth",
-	"interpolation": "current",
+	"interpolation": "linear",
 	"dataPath": "/mnt/raidM2T/project-data/StreamStory-mhwirth/"
 }

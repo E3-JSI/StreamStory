@@ -449,17 +449,12 @@ module.exports = function () {
 			});
 		},
 		activateModel: function (opts, callback) {
-			pool.getConnection(function (e, conn) {
-				if (e != null) {
-					callback(e);
-					return;
-				}
-				
-				var query = 'UPDATE online_model SET is_active = ? WHERE mid = (SELECT m.mid FROM model m WHERE m.model_file = ?)';
-				conn.query(query, [opts.activate ? 1 : 0, opts.modelId], function (e1) {
-					conn.release();
-					callback(e1);
-				});
+			connection({
+				callback: callback,
+				nextOp: query({
+					sql: 'UPDATE online_model SET is_active = ? WHERE mid = ?',
+					params: [opts.activate ? 1 : 0, opts.modelId]
+				})
 			});
 		},
 		

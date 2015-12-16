@@ -1364,14 +1364,17 @@ var zoomVis = function (opts) {
 		},
 		
 		setTargetState: function (stateId, isTarget) {
-			var level = currentLevel;
-			var levelInfo = levelNodes[level];
+//			var level = currentLevel;
+//			var levelInfo = levelNodes[level];
 			// find the node
-			for (var i = 0; i < levelInfo.length; i++) {
-				var node = levelInfo[i];
-				if (node.id == stateId) {
-					node.isTarget = isTarget;
-					break;
+			for (var levelN = 0; levelN < levelNodes.length; levelN++) {
+				var levelInfo = levelNodes[levelN];
+				for (var i = 0; i < levelInfo.length; i++) {
+					var node = levelInfo[i];
+					if (node.id == stateId) {
+						node.isTarget = isTarget;
+						break;
+					}
 				}
 			}
 			
@@ -1379,10 +1382,12 @@ var zoomVis = function (opts) {
 			if (isTarget) {
 				for (var cssClass in TARGET_NODE_CSS) {
 					node.css(cssClass, TARGET_NODE_CSS[cssClass]);
+					cache.getNode(stateId).css[cssClass] = TARGET_NODE_CSS[cssClass];
 				}
 			} else {
 				for (var cssClass in TARGET_NODE_CSS) {
 					node.removeCss(cssClass);
+					delete cache.getNode(stateId).css[cssClass];
 				}
 			}
 		},
