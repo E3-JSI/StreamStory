@@ -87,13 +87,6 @@ var zoomVis = function (opts) {
 		}
 		tooltip.append(explainDiv);
 		
-		
-//		var txt = '';
-//		if (name != null) txt += '<h3>' + name + '</h3>';
-//		txt += data.holdingTime.toPrecision(2) + ' ' + getTimeUnit() + 's';
-//		txt += '<div id="div-tooltip-undesired-' + data.id + '" class="tooltip-undesired">' + $('#div-tooltip-undesired-' + data.id).html() + '</div>';
-//		txt += '<div id="div-explain-' + data.id + '" class="tooltip-div-explain">' + $('#div-explain-' + data.id).html() + '</div>';
-		
 		setTimeout(function () {
 			$.ajax('api/explanation', {
 				dataType: 'json',
@@ -193,7 +186,6 @@ var zoomVis = function (opts) {
 	};
 	edgeQtipOpts.show.event = 'hover';
 	edgeQtipOpts.hide.event = 'hovercancel';
-	
 	
 	
 	var TARGET_NODE_CSS = {
@@ -777,7 +769,10 @@ var zoomVis = function (opts) {
 			// remember for later
 			for (var i = 0; i < middle.length; i++) {
 				var edge = middle[i];
+				var prob = toUiPrecision(edge.data().prob);
+				
 				edge.data().style['line-style'] = 'solid';
+				edge.data().style['content'] = prob;
 				edge.css({ content: toUiPrecision(edge.data().prob) });
 			}
 			for (var i = 0; i < bold.length; i++) {

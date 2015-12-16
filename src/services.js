@@ -1380,7 +1380,11 @@ function initConfigRestApi() {
 function sendPrediction(msg, timestamp) {
 	var msgStr = JSON.stringify(msg);
 	
-	var brokerMsg = transform.genExpPrediction(msg.content.pdf.lambda, 'month', timestamp);
+	var perMonth = msg.content.pdf.lambda;
+	var perHour = perMonth / (30*24);
+	// TODO transform this to hours
+	
+	var brokerMsg = transform.genExpPrediction(perHour, 'hour', timestamp);
 	broker.send(broker.PREDICTION_PRODUCER_TOPIC, JSON.stringify(brokerMsg));
 	modelStore.distributeMsg(msgStr);
 }

@@ -339,6 +339,8 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
         'IMM5_SW11'
 	];
 	
+	var environmentFields = ['1_3um_20_13_4', 'Temperature_12_11_0', '5um_20_13_9', '6_5um_20_13_10', '0_4um_18_13_0', '1_6um_18_13_5', '0_8um_20_13_2', '4um_20_13_8', 'Temperature_20_11_0', '1_6um_20_13_5', 'Humidity_7_11_1', 'Humidity_9_11_1', '5um_18_13_9', '3um_20_13_7', '0_5um_20_13_1', '8um_20_13_11', 'IRtemp_17_12_0', 'Humidity_4_11_1', '12um_18_13_13', 'Temperature_6_11_0', '0_4um_20_13_0', 'Temperature_10_11_0', '12um_19_13_13', 'Sampling_period_18_13_16', 'Humidity_2_11_1', 'Humidity_13_11_1', 'IRtemp_4_12_0', 'Flow_rate_19_13_17', 'Temperature_17_11_0', 'Humidity_6_11_1', 'Humidity_20_11_1', '14um_18_13_14', 'Temperature_19_11_0', '0_5um_19_13_1', '1um_19_13_3', 'Humidity_16_11_1', '1_3um_19_13_4', 'Temperature_1_11_0', '8um_18_13_11', '0_5um_18_13_1', 'Temperature_2_11_0', 'Humidity_11_11_1', 'Humidity_14_11_1', '16um-17um_18_13_15', 'Humidity_19_11_1', 'IRtemp_14_12_0', 'Humidity_1_11_1', 'Temperature_15_11_0', 'Sampling_period_19_13_16', '3um_19_13_7', 'Flow_rate_20_13_17', '12um_20_13_13', 'Humidity_15_11_1', 'Humidity_18_11_1', '14um_20_13_14', '2_1um_18_13_6', '6_5um_19_13_10', '4um_18_13_8', 'IRtemp_15_12_0', '1_3um_18_13_4', '4um_19_13_8', 'Humidity_8_11_1', 'Humidity_5_11_1', '1_6um_19_13_5', '8um_19_13_11', '0_8um_19_13_2', 'Humidity_17_11_1', '10um_19_13_12', '2_1um_19_13_6', 'Temperature_14_11_0', 'Humidity_10_11_1', 'Temperature_8_11_0', 'Sampling_period_20_13_16', '1um_20_13_3', 'Humidity_3_11_1', 'Temperature_4_11_0', 'Temperature_9_11_0', '14um_19_13_14', 'IRtemp_16_12_0', '0_4um_19_13_0', 'IRtemp_6_12_0', '10um_18_13_12', '2_1um_20_13_6', '6_5um_18_13_10', '16um-17um_20_13_15', 'Temperature_5_11_0', '16um-17um_19_13_15', 'Temperature_11_11_0', '5um_19_13_9', '10um_20_13_12', 'Temperature_13_11_0', 'Temperature_16_11_0', 'Temperature_7_11_0', 'Temperature_3_11_0', 'Humidity_12_11_1', '1um_18_13_3', '0_8um_18_13_2', 'Flow_rate_18_13_17', 'Temperature_18_11_0', '3um_18_13_7'];
+	
 	var rawStores = [{
 		name: 'LACQUERING',
 		fields: [
@@ -350,6 +352,16 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 	for (var i = 0; i < montracFields.length; i++) {
 		rawStores.push({
 			name: montracFields[i],
+			fields: [
+			    {name: 'time_ms', type: 'uint64'},
+			    {name: "time", type: "datetime"},
+	 			{name: "value", type: "float"}
+			]
+		});
+	}
+	for (var i = 0; i < environmentFields.length; i++) {
+		rawStores.push({
+			name: environmentFields[i],
 			fields: [
 			    {name: 'time_ms', type: 'uint64'},
 			    {name: "time", type: "datetime"},
