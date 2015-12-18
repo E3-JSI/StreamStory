@@ -669,9 +669,9 @@ module.exports.parseDominiksDerivedEvent = function (event) {
 	}
 }
 
-module.exports.genExpPrediction = function (lambda, timeUnit, timestamp) {
+module.exports.genExpPrediction = function (lambda, timeUnit, date) {
 	var msg = {
-		timestamp: timestamp,
+		timestamp: date.getTime(),
 		eventName: 'prediction',
 		params: [lambda],
 		eventProperties: { timeUnit: timeUnit },
