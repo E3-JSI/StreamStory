@@ -33,7 +33,7 @@
 		"database": "StreamStory"
 	},
 	"integration": {
-		"type": "http",
+		"type": "broker",
 		"brokerUrl": "192.168.84.39",
 		"zookeperPort": 2181,
 		"producerPort": 8090
