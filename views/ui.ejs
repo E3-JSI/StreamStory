@@ -369,173 +369,163 @@
 	<div class="container-fluid">
 		<div class="row">
 			<div class="col-md-8">
-				<div class="row">
-					<div class="col-md-12">
-						<div id="parent_container" class="panel panel-default main-vis">
-							<div class="panel-heading clearfix">
-								<h4 class="panel-title pull-left">Visualization <span id="span-zoom" class="component-title-additional">&nbsp;(Zoom: <span id="span-zoom-val">0</span>%)</span></h4>
-								<!-- toggler for the visualization options -->
-								<button id="vis-toggler" class="btn btn-default btn-xs pull-right" style="padding: 0px 5px;" aria-label="Left Align">
-								  	<span class="glyphicon glyphicon-align-justify" aria-hidden="true"></span>
-								</button>
-								<span class="pull-right component-title-additional">
-									<% if (model.isOnline()) { %>
-									<span id="span-no-active"></span> online models,
-									<% } %> 
-									time unit:&nbsp;<span id="span-tu"><%= model.getModel().getTimeUnit() %></span>&nbsp;&nbsp;&nbsp;
-								</span>
-								<!-- options for the visualization component -->
-								<div id="content-options" class="popover fade bottom in" style="width: 280px;">
-									<div class="arrow"></div>
-									<div id="vis_options" class="container-fluid">
-										<div style="padding-top: 12px; padding-bottom: 12px;">
-											<div class="row">
-												<div id="div-ftrs" class="col-md-12">
-													<%
-													var ftrDesc = model.getFtrDesc();
-													var observations = ftrDesc.observation;
-													var controls = ftrDesc.control;
-													var featureInfo = observations.concat(controls);
-													%>
-													<div class="form-group">
-														<h4>Show attribute</h4>
-														<ul id="ul-ftrs-obs">
-														<% for (var ftrN = 0; ftrN < featureInfo.length; ftrN++) { %>
-															<li><input type="checkbox" value="<%= ftrN %>" /> <%= featureInfo[ftrN].name %></li>
-														<% } %>
-														</ul>
-													</div>
-													<% if (controls.length > 0) { %>
-													<div class="form-group">
-														<h4>Adjust control</h4>
-														<div class="checkbox">
-															<label><input id="chk-sim-inputs" type="checkbox" /> Simulate inputs</label>
-														</div>
-														<div id="div-ftrs-control">
-														<% for (var controlN = 0; controlN < controls.length; controlN++) { 
-															var bounds = controls[controlN].bounds;
-															var ftrId = observations.length + controlN; %>
-															<div class="form-group">
-																<label for="<%= ftrId %>"><%= controls[controlN].name + ' (' + bounds.min.toFixed(2) + ' to ' + bounds.max.toFixed(2) + ')' %></label>
-																<div id="<%= ftrId %>" class="slider-contr"></div>
-															</div>
-															<script type="text/javascript">
-																$('#<%= ftrId %>').slider({
-																	value: <%= (bounds.min + bounds.max) / 2 %>,
-																	min: <%= bounds.min %>,
-																	max: <%= bounds.max %>,
-																	step: <%= (bounds.max - bounds.min) / 100 %>,
-																	animate:"slow",
-																	orientation: "hotizontal",
-																	disabled: true,
-																	change: function (event, ui) {
-																		var shouldFire = $('#chk-sim-inputs').is(':checked');
-																		if (shouldFire) {
-																			var val = $(this).slider('value');//ui.value;
-																			var ftrId = $(this).attr('id');
-																			changeControlVal(null, ftrId, val);
-																		}
-																	}
-																});
-															</script>
-														<% } %>
-														</div>
-													</div>
-													<% } %>
-												</div>
+				<div id="parent_container" class="panel panel-default main-vis">
+					<div class="panel-heading clearfix">
+						<h4 class="panel-title pull-left">Visualization <span id="span-zoom" class="component-title-additional">&nbsp;(Zoom: <span id="span-zoom-val">0</span>%)</span></h4>
+						<!-- toggler for the visualization options -->
+						<button id="vis-toggler" class="btn btn-default btn-xs pull-right" style="padding: 0px 5px;" aria-label="Left Align">
+						  	<span class="glyphicon glyphicon-align-justify" aria-hidden="true"></span>
+						</button>
+						<span class="pull-right component-title-additional">
+							<% if (model.isOnline()) { %>
+							<span id="span-no-active"></span> online models,
+							<% } %> 
+							time unit:&nbsp;<span id="span-tu"><%= model.getModel().getTimeUnit() %></span>&nbsp;&nbsp;&nbsp;
+						</span>
+						<!-- options for the visualization component -->
+						<div id="content-options" class="popover fade bottom in" style="width: 280px;">
+							<div class="arrow"></div>
+							<div id="vis_options" class="container-fluid">
+								<div style="padding-top: 12px; padding-bottom: 12px;">
+									<div class="row">
+										<div id="div-ftrs" class="col-md-12">
+											<%
+											var ftrDesc = model.getFtrDesc();
+											var observations = ftrDesc.observation;
+											var controls = ftrDesc.control;
+											var featureInfo = observations.concat(controls);
+											%>
+											<div class="form-group">
+												<h4>Show attribute</h4>
+												<ul id="ul-ftrs-obs">
+												<% for (var ftrN = 0; ftrN < featureInfo.length; ftrN++) { %>
+													<li><input type="checkbox" value="<%= ftrN %>" /> <%= featureInfo[ftrN].name %></li>
+												<% } %>
+												</ul>
 											</div>
-											<div class="row">
-												<div  class="col-md-12">
-													<div class="form-group">
-														<h4>View future</h4>
-														<input type="checkbox" id="chk-show-fut" />Show future
-														<div id="div-future-opts" class="hidden">
-															<div id="rng-time-probs"></div>
-															<div id="div-fut-time"></div>
-														</div>
-													</div>
+											<% if (controls.length > 0) { %>
+											<div class="form-group">
+												<h4>Adjust control</h4>
+												<div class="checkbox">
+													<label><input id="chk-sim-inputs" type="checkbox" /> Simulate inputs</label>
 												</div>
-											</div>
-											<div class="row">
-												<div id="container-buttons" class="col-md-12" style="padding-top: 12px;">
-													<% if (model.isOnline()) { %>
-													<input type="button" id="btn-activate" value="Activate Model" class="btn btn-success btn-block hidden" />
+												<div id="div-ftrs-control">
+												<% for (var controlN = 0; controlN < controls.length; controlN++) { 
+													var bounds = controls[controlN].bounds;
+													var ftrId = observations.length + controlN; %>
+													<div class="form-group">
+														<label for="<%= ftrId %>"><%= controls[controlN].name + ' (' + bounds.min.toFixed(2) + ' to ' + bounds.max.toFixed(2) + ')' %></label>
+														<div id="<%= ftrId %>" class="slider-contr"></div>
+													</div>
 													<script type="text/javascript">
-														{
-															var isActive = false;
-															
-															$.ajax('api/modelMode', {
-																dataType: 'json',
-																success: function (data) {
-																	if (!data.isRealtime)
-																		return;
-																		
-																	isActive = data.isActive;
-																	var btn = $('#btn-activate');
-																	
-																	btn.removeClass('hidden');
-																	if (isActive) {
-																		btn.val('Deactivate Model');
-																		btn.removeClass('btn-success');
-																		btn.addClass('btn-danger');
-																	} else {
-																		btn.val('Activate Model');
-																		btn.removeClass('btn-danger');
-																		btn.addClass('btn-success');
-																	}
-																},
-																error: function (jqXHR, status) {
-																	alert(status);
+														$('#<%= ftrId %>').slider({
+															value: <%= (bounds.min + bounds.max) / 2 %>,
+															min: <%= bounds.min %>,
+															max: <%= bounds.max %>,
+															step: <%= (bounds.max - bounds.min) / 100 %>,
+															animate:"slow",
+															orientation: "hotizontal",
+															disabled: true,
+															change: function (event, ui) {
+																var shouldFire = $('#chk-sim-inputs').is(':checked');
+																if (shouldFire) {
+																	var val = $(this).slider('value');//ui.value;
+																	var ftrId = $(this).attr('id');
+																	changeControlVal(null, ftrId, val);
 																}
-															});
-															$('#btn-activate').click(function () {
-																$.ajax('api/activateModel', {
-																	dataType: 'json',
-																	method: 'POST',
-																	data: { activate: !isActive },
-																	success: function () {
-																		window.location.reload();
-																	},
-																	error: function (jqXHR, status) {
-																		alert(status);
-																	}
-																});
-															});
-														}
+															}
+														});
 													</script>
-													<% } %>
-													<input type="button" id="btn-reset-sim" value="Reset Simulation" class="btn btn-default btn-block hidden" />
-													<input type="button" id="btn-layout" value="Auto Layout" class="btn btn-default btn-block" />
-													<input type="button" id="btn-png" value="Save as PNG" class="btn btn-default btn-block" />
-													<input type="button" id="btn-save" value="Save Model" class="btn btn-primary btn-block" />
+												<% } %>
+												</div>
+											</div>
+											<% } %>
+										</div>
+									</div>
+									<div class="row">
+										<div  class="col-md-12">
+											<div class="form-group">
+												<h4>View future</h4>
+												<input type="checkbox" id="chk-show-fut" />Show future
+												<div id="div-future-opts" class="hidden">
+													<div id="rng-time-probs"></div>
+													<div id="div-fut-time"></div>
 												</div>
 											</div>
 										</div>
 									</div>
+									<div class="row">
+										<div id="container-buttons" class="col-md-12" style="padding-top: 12px;">
+											<% if (model.isOnline()) { %>
+											<input type="button" id="btn-activate" value="Activate Model" class="btn btn-success btn-block hidden" />
+											<script type="text/javascript">
+												{
+													var isActive = false;
+													
+													$.ajax('api/modelMode', {
+														dataType: 'json',
+														success: function (data) {
+															if (!data.isRealtime)
+																return;
+																
+															isActive = data.isActive;
+															var btn = $('#btn-activate');
+															
+															btn.removeClass('hidden');
+															if (isActive) {
+																btn.val('Deactivate Model');
+																btn.removeClass('btn-success');
+																btn.addClass('btn-danger');
+															} else {
+																btn.val('Activate Model');
+																btn.removeClass('btn-danger');
+																btn.addClass('btn-success');
+															}
+														},
+														error: function (jqXHR, status) {
+															alert(status);
+														}
+													});
+													$('#btn-activate').click(function () {
+														$.ajax('api/activateModel', {
+															dataType: 'json',
+															method: 'POST',
+															data: { activate: !isActive },
+															success: function () {
+																window.location.reload();
+															},
+															error: function (jqXHR, status) {
+																alert(status);
+															}
+														});
+													});
+												}
+											</script>
+											<% } %>
+											<input type="button" id="btn-reset-sim" value="Reset Simulation" class="btn btn-default btn-block hidden" />
+											<input type="button" id="btn-layout" value="Auto Layout" class="btn btn-default btn-block" />
+											<input type="button" id="btn-png" value="Save as PNG" class="btn btn-default btn-block" />
+											<input type="button" id="btn-save" value="Save Model" class="btn btn-primary btn-block" />
+										</div>
+									</div>
 								</div>
-								<script type="application/javascript">
-									$('#vis-toggler').click(function () {
-										$('#content-options').slideToggle();
-									});
-								</script>
-							</div>
-							<div id="vis-wrapper" class="panel-body nopadding">
-								<div id="slider_container">
-									<div id="slider_item_div"></div>
-								</div>
-								<div id="vis_container" class="nopadding"></div>						
-								<div id="threshold_slider"></div>
 							</div>
 						</div>
+						<script type="application/javascript">
+							$('#vis-toggler').click(function () {
+								$('#content-options').slideToggle();
+							});
+						</script>
 					</div>
-				</div>
-				<div class="row">
-					<div class="col-md-12">
-						<div style="height: 300px;min-height: 300px;">
-							<div id="tree-wrapper" style="height: 100%;width: 100%;" class="nopadding"></div>
+					<div id="vis-wrapper" class="panel-body nopadding">
+						<div id="slider_container">
+							<div id="slider_item_div"></div>
 						</div>
+						<div id="vis_container" class="nopadding"></div>						
+						<div id="threshold_slider"></div>
 					</div>
 				</div>
+
 			</div>
 			<div class="col-md-4">
 				<div id="container-details" class="panel panel-default main-vis">
@@ -607,6 +597,26 @@
 					    </div>
 					</div>
 				</div>
+				
+			</div>
+		</div>
+		<% if (model.isOnline()) { %>
+		<div class="row row-values">
+			<div id="thumbnail-online-vals" class="hidden">
+				<div class="col-md-1" style="height: 100%;">
+					<div class="thumbnail" style="height: calc(100% - 5px); margin-bottom: 5px;"></div>
+				</div>
+			</div>
+			<div id="div-values-wrapper" style="height: 100%;"></div>
+		</div>
+		<% } %>
+		<div class="row">
+			<div class="col-md-8">
+				<div style="height: 300px;min-height: 300px;">
+					<div id="tree-wrapper" style="height: 100%;width: 100%;" class="nopadding"></div>
+				</div>
+			</div>
+			<div class="col-md-4">
 				<div class="row">
 					<div id="div-msg-0-wrapper" class="col-md-12"></div>
 				</div>

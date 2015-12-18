@@ -357,6 +357,22 @@ exports.StreamStory = function (opts) {
 
 			mc.update(obsFtrVec, contFtrVec, timestamp);
 		},
+		
+		project: function (rec) {
+			var result = {};
+			
+			var obsNames = getFtrNames(obsFtrSpace);
+			var contrNames = getFtrNames(controlFtrSpace);
+			
+			for (var i = 0; i < obsNames.length; i++) {
+				result[obsNames[i]] = rec[obsNames[i]];
+			}
+			for (var i = 0; i < contrNames.length; i++) {
+				result[contrNames[i]] = rec[contrNames[i]];
+			}
+			
+			return result;
+		},
 
 		/**
 		 * Saves the feature space and model into the specified files.

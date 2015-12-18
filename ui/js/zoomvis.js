@@ -318,14 +318,6 @@ var zoomVis = function (opts) {
 	// UTILITY FUNCTIONS
 	//===============================================================
 	
-	function toUiPrecision(val) {
-		if (val > 1000) {
-			return val.toFixed();
-		} else {
-			return val.toPrecision(3);
-		}
-	}
-	
 	function getNodeLabel(node) {
 		return (node.name != null ? node.name : (node.id + ''));
 	}

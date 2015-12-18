@@ -36,6 +36,19 @@
 	min-height: 600px;
 }
 
+.row-values {
+	height: 70px;
+	max_height: 70px;
+}
+
+#div-values-wrapper .thumbnail {
+	font-size: 10px;
+}
+
+#div-values-wrapper .values-current {
+	background-color: yellow;
+}
+
 /*===============================================================
  	DETAILS PANEL
 ===============================================================*/

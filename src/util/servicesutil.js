@@ -127,6 +127,12 @@ exports.RealTimeModelStore = function (opts) {
 			for (var modelId in store) {
 				var model = getModel(modelId);
 				model.update(val);
+				
+				var outVal = model.project(val);
+				that.sendMsg(modelId, JSON.stringify({
+					type: 'values',
+					content: outVal
+				}));
 			}
 		},
 		
@@ -637,8 +643,8 @@ exports.WebSocketWrapper = function (opts) {
 					return;
 				}
 				
-				if (log.debug())
-					log.debug('Distributing to web socket: %d ...', id);
+				if (log.trace())
+					log.trace('Distributing to web socket: %d ...', id);
 				sockets[id].client.send(msg);
 			} catch (e) {
 				log.error(e, 'Exception while distributig message. Web socket ID: %d', id);

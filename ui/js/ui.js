@@ -320,6 +320,43 @@ function changeControlVal(stateId, ftrIdx, val) {
 				else if (msg.type == 'coeff') {
 					drawMsg(getMsgContent('Coefficient', msg.content));
 				}
+				else if (msg.type == 'values') {
+					var content = msg.content;
+					
+					var thumbs = $('#div-values-wrapper').children();
+					
+					var maxThumbs = 12;
+					
+					var txt = '';
+					for (var key in content) {
+						txt += key + ': ' + toUiPrecision(content[key]) + '<br />';
+					}
+					
+					var thumb = $($('#thumbnail-online-vals').html());
+					thumb.find('.thumbnail').html(txt);
+
+					if (thumbs.length >= maxThumbs) {
+						var first = thumbs.first();
+						first.width(first.width()-1);	// hack to avoid a blink
+						thumbs.first().hide({
+							duration: 100,
+							easing: 'linear',
+							start: function () {
+								console.log('started');
+							},
+							complete: function () {
+								$(this).remove();
+								thumbs.last().find('.thumbnail').removeClass('values-current');
+								$('#div-values-wrapper').append(thumb);
+								$('#div-values-wrapper').children().last().find('.thumbnail').addClass('values-current')
+							}
+						});//.remove();
+					} else {
+						thumbs.last().find('.thumbnail').removeClass('values-current');
+						$('#div-values-wrapper').append(thumb);
+						$('#div-values-wrapper').children().last().find('.thumbnail').addClass('values-current')
+					}
+				}
 				else if (msg.type == 'statePrediction') {
 					var content = msg.content;
 					var eventId = content.eventId;

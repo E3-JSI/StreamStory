@@ -12,3 +12,4 @@
 ZA REVIEW:
 - poglej, ce load model dela v vseh primerih
 - check if the prediction of an undesired state works as expected
+- state name se ne pokaze takoj

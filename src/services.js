@@ -1382,7 +1382,6 @@ function sendPrediction(msg, timestamp) {
 	
 	var perMonth = msg.content.pdf.lambda;
 	var perHour = perMonth / (30*24);
-	// TODO transform this to hours
 	
 	var brokerMsg = transform.genExpPrediction(perHour, 'hour', timestamp);
 	broker.send(broker.PREDICTION_PRODUCER_TOPIC, JSON.stringify(brokerMsg));
@@ -1433,44 +1432,46 @@ function initPipelineHandlers() {
 				
 				var zscore = opts.zScore;
 				
-				if (zscore >= 5) {
-					pdf = {
-						type: 'exponential',
-						lambda: intensConfig.deviation_extreme_lambda		// degradation occurs once per month
-					};
-				} else if (zscore >= 4) {					// major deviation
-					pdf = {
-						type: 'exponential',
-						lambda: intensConfig.deviation_major_lambda			// degradation occurs once per two months
-					};
-				} else if (zscore >= 3) {					// significant deviation
-					pdf = {
-						type: 'exponential',
-						lambda: intensConfig.deviation_significant_lambda	// degradation occurs once per year
-					};
-				} else if (zscore >= 2) {					// minor deviation
-					pdf = {
-						type: 'exponential',
-						lambda: intensConfig.deviation_minor_lambda			// degradation occurs once per two years
-					};
-				}
-				
-				modelStore.distributeMsg(JSON.stringify({
-					type: 'coeff',
-					content: opts
-				}));
-				
-				if (pdf != null) {
-					var msg = {
-						type: 'prediction',
-						content: {
-							time: opts.time,
-							eventId: opts.eventId,
-							pdf: pdf
-						}
-					};
+				if (zscore >= 2) {
+					if (zscore >= 5) {
+						pdf = {
+							type: 'exponential',
+							lambda: intensConfig.deviation_extreme_lambda		// degradation occurs once per month
+						};
+					} else if (zscore >= 4) {					// major deviation
+						pdf = {
+							type: 'exponential',
+							lambda: intensConfig.deviation_major_lambda			// degradation occurs once per two months
+						};
+					} else if (zscore >= 3) {					// significant deviation
+						pdf = {
+							type: 'exponential',
+							lambda: intensConfig.deviation_significant_lambda	// degradation occurs once per year
+						};
+					} else {					// (zscore >= 2) minor deviation
+						pdf = {
+							type: 'exponential',
+							lambda: intensConfig.deviation_minor_lambda			// degradation occurs once per two years
+						};
+					}
 					
-					sendPrediction(msg, opts.time);
+					modelStore.distributeMsg(JSON.stringify({
+						type: 'coeff',
+						content: opts
+					}));
+					
+					if (pdf != null) {
+						var msg = {
+							type: 'prediction',
+							content: {
+								time: opts.time,
+								eventId: opts.eventId,
+								pdf: pdf
+							}
+						};
+						
+						sendPrediction(msg, opts.time);
+					}
 				}
 			});
 		});

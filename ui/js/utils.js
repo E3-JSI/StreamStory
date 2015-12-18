@@ -14,3 +14,11 @@ function getTimeUnit() {
 function handleAjaxError(xhr, status, err) {
 	alert(xhr.responseText);
 }
+
+function toUiPrecision(val) {
+	if (val > 1000) {
+		return val.toFixed();
+	} else {
+		return val.toPrecision(3);
+	}
+}
