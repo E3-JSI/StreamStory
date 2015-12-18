@@ -146,7 +146,7 @@ function calcFriction() {
 	
 	// compute the friction coefficient
 	var BUFF_SIZE = 1;
-	var EXPONENTIAL_FIT = false;
+	var EXPONENTIAL_FIT = true;
 	var buff = new utils.RecBuffer(BUFF_SIZE);
 	
 	var CALC_START_THRESHOLD = 7;//1000;				TODO Mihas units???
@@ -453,7 +453,7 @@ function initTriggers() {
 						throw new Error('enricherOutStore.addTrigger: Current time lower than previous time: ' + utils.dateToQmDate(new Date(currTime)) + ' < ' + utils.dateToQmDate(new Date(prevTime)));
 					
 					if (resamplerInitialized) {
-						if (config.USE_BROKER) {
+						if (false /*config.USE_BROKER*/) {	// TODO uncomment important
 							broker.send(broker.ENRICHED_DATA_PRODUCER_TOPIC, JSON.stringify(transform.toDerivedEvent(currTime, outVal)));
 						} else {
 							outVal.time = utils.dateToQmDate(val.time);
