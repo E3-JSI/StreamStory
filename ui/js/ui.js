@@ -256,7 +256,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 						var val = contentVal[keys[j]];
 						if (!isNaN(val))
 							val = toUiPrecision(parseFloat(val))
-						drawStr += keys[j] + '=' + val;
+						drawStr += keys[j] + ' = ' + val;
 						if (j < keys.length - 1)
 							drawStr += ', ';
 					}	
