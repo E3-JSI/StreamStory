@@ -233,7 +233,6 @@ function calcFriction() {
 	}
 	
 	function checkOutlier(coeff, temp, alpha, dist_mean, dist_std, time, useCase, type) {
-		var y = coeff;
 		var yHat;
 		if (type == 'linear') {
 			yHat = alpha[0] + temp*alpha[1];
