@@ -55,7 +55,7 @@ INSERT INTO config (property, value) values ('deviation_major', '4');
 INSERT INTO config (property, value) values ('deviation_significant', '3');
 INSERT INTO config (property, value) values ('deviation_minor', '2');
 
-INSERT INTO config (property, value) values ('deviation_extreme_lambda', '1');
-INSERT INTO config (property, value) values ('deviation_major_lambda', '0.5');
-INSERT INTO config (property, value) values ('deviation_significant_lambda', '0.08333333333333333');
-INSERT INTO config (property, value) values ('deviation_minor_lambda', '0.041666666666666664');
+INSERT INTO config (property, value) values ('deviation_extreme_lambda', '0.0054');
+INSERT INTO config (property, value) values ('deviation_major_lambda', '0.0005');
+INSERT INTO config (property, value) values ('deviation_significant_lambda', '0.000001');
+INSERT INTO config (property, value) values ('deviation_minor_lambda', '0.000000001');
