@@ -1384,6 +1384,10 @@ function sendPrediction(msg, timestamp) {
 	var perHour = perMonth / (30*24);
 	
 	var brokerMsg = transform.genExpPrediction(perHour, 'hour', timestamp);
+	
+	if (log.debug())
+		log.debug('Sending prediction: %s', JSON.stringify(brokerMsg))
+	
 	broker.send(broker.PREDICTION_PRODUCER_TOPIC, JSON.stringify(brokerMsg));
 	modelStore.distributeMsg(msgStr);
 }
