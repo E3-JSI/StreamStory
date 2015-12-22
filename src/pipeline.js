@@ -149,9 +149,9 @@ function calcFriction() {
 	var EXPONENTIAL_FIT = true;
 	var buff = new utils.RecBuffer(BUFF_SIZE);
 	
-	var CALC_START_THRESHOLD = 7;//1000;				TODO Mihas units???
+	var CALC_START_THRESHOLD = 7;
 //	const CALC_START_THRESHOLD = 1000;
-	var MIN_DRILL_TIME = 1000*60*10;	// 10mins
+	var MIN_DRILL_TIME = 1000*60*8;	// 8mins
 	var DEFAULT_COEFF = 0;
 	
 //	const Q = 600000; //gearbox
@@ -242,7 +242,8 @@ function calcFriction() {
 		
 		var residual = coeff - yHat;
 		var zScore = statistics.getZScore(coeff, yHat, dist_std);
-		var pVal = statistics.studentCdf(coeff, yHat, dist_std, 2);
+//		var pVal = statistics.studentCdf(coeff, yHat, dist_std, 2);
+		var pVal = statistics.studentCdf((coeff - yHat) / dist_std, 1);
 		
 		if (log.debug())
 			log.debug('use-case=%s, mean: %d, std: %d, coeff: %d', useCase, yHat, dist_std, coeff);
@@ -302,17 +303,17 @@ function calcFriction() {
 			var intervalStart = firstVal.timestamp;
 			var intervalEnd = lastVal.timestamp;
 			
-			for (var i = 0; i < coeffBuff.length; i++) {
-				var coeffInfo = coeffBuff[i];
-				
-				coeffStore.push({
-					timestamp: utils.dateToQmDate(coeffInfo.timestamp),
-					coeff_swivel: coeffInfo.coeffSwivel,
-					coeff_gearbox: coeffInfo.coeffGearbox,
-					interval_start: utils.dateToQmDate(intervalStart),
-					interval_end: utils.dateToQmDate(intervalEnd)
-				});
-			}
+//			for (var i = 0; i < coeffBuff.length; i++) {
+//				var coeffInfo = coeffBuff[i];
+//				
+//				coeffStore.push({
+//					timestamp: utils.dateToQmDate(coeffInfo.timestamp),
+//					coeff_swivel: coeffInfo.coeffSwivel,
+//					coeff_gearbox: coeffInfo.coeffGearbox,
+//					interval_start: utils.dateToQmDate(intervalStart),
+//					interval_end: utils.dateToQmDate(intervalEnd)
+//				});
+//			}
 			
 			if (log.debug())
 				log.debug('Stored coefficients!');

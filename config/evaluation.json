@@ -6,7 +6,7 @@
 		"initializeZeros": true
 	},
 	"server": {
-		"port": 8484,
+		"port": 8787,
 		"pingInterval": 10000
 	},
 	"log": {
@@ -30,15 +30,15 @@
 		"host": "localhost",
 		"user": "StreamStory",
 		"password": "StreamStory",
-		"database": "mhwirth"
+		"database": "evaluation"
 	},
 	"integration": {
-		"type": "http",
-		"brokerUrl": "127.0.0.1",
+		"type": "broker",
+		"brokerUrl": "192.168.84.39",
 		"zookeperPort": 2181,
 		"producerPort": 8090
 	},
 	"useCase": "mhwirth",
 	"interpolation": "current",
-	"dataPath": "/mnt/raidM2T/project-data/StreamStory-mhwirth/"
+	"dataPath": "/mnt/raidM2T/project-data/db-eval/"
 }

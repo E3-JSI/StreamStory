@@ -20,7 +20,7 @@
 		},
 		"print": {
 			"rawData": 100000,
-			"streamStory": 1,
+			"streamStory": 100,
 			"stores": 100000,
 			"broker": 1000,
 			"coeff": 1000
@@ -38,7 +38,7 @@
 		"zookeperPort": 2181,
 		"producerPort": 8090
 	},
-	"useCase": "mhwirth",
+	"useCase": "hella",
 	"interpolation": "current",
 	"dataPath": "/mnt/raidM2T/project-data/StreamStory-hella1/"
 }

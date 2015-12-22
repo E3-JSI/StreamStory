@@ -294,6 +294,8 @@ function changeControlVal(stateId, ftrIdx, val) {
 		function initWs() {
 			var address = getWsUrl();
 			
+			var isDrawing = false;
+			
 			console.log('Connecting websocket to address: ' + address); 
 			var ws = new WebSocket(address);
 			
@@ -328,7 +330,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 					
 					var thumbs = $('#div-values-wrapper').children();
 					
-					var maxThumbs = 12;
+					var maxThumbs = 6;
 					
 					var txt = '';
 					for (var key in content) {
@@ -336,24 +338,28 @@ function changeControlVal(stateId, ftrIdx, val) {
 					}
 					
 					var thumb = $($('#thumbnail-online-vals').html());
-					thumb.find('.thumbnail').html(txt);
+					thumb.find('.txt-wrapper').html(txt);
 
 					if (thumbs.length >= maxThumbs) {
-						var first = thumbs.first();
-						first.width(first.width()-1);	// hack to avoid a blink
-						thumbs.first().hide({
-							duration: 100,
-							easing: 'linear',
-							start: function () {
-								console.log('started');
-							},
-							complete: function () {
-								$(this).remove();
-								thumbs.last().find('.thumbnail').removeClass('values-current');
-								$('#div-values-wrapper').append(thumb);
-								$('#div-values-wrapper').children().last().find('.thumbnail').addClass('values-current')
-							}
-						});//.remove();
+						if (!isDrawing) {
+							isDrawing = true;
+							var first = thumbs.first();
+							first.width(first.width()-1);	// hack to avoid a blink
+							thumbs.first().hide({
+								duration: 100,
+								easing: 'linear',
+								start: function () {
+									console.log('started');
+								},
+								complete: function () {
+									$(this).remove();
+									thumbs.last().find('.thumbnail').removeClass('values-current');
+									$('#div-values-wrapper').append(thumb);
+									$('#div-values-wrapper').children().last().find('.thumbnail').addClass('values-current')
+									isDrawing = false;
+								}
+							});//.remove();
+						}
 					} else {
 						thumbs.last().find('.thumbnail').removeClass('values-current');
 						$('#div-values-wrapper').append(thumb);

@@ -41,12 +41,22 @@
 	max_height: 70px;
 }
 
+.thumbnail-values {
+	overflow-y: hidden;
+}
+
+.thumbnail-values .txt-wrapper {
+	height: 100%;
+	overflow-y: hidden;
+}
+
 #div-values-wrapper .thumbnail {
-	font-size: 10px;
+	font-size: 9px;
 }
 
 #div-values-wrapper .values-current {
-	background-color: yellow;
+	border-color: #428bca;
+	
 }
 
 /*===============================================================

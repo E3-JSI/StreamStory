@@ -171,6 +171,10 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 	var prevQueueLengths = {};
 	var prevLLSize = -1;
 	var prevTimestamp = 0;	
+	var prevEnvironmentTimestamp = 0;
+	
+	var envPrevTimestamp = 0;
+	var environmentBuff = {};
 	
 	var montracFields = fields.getMontracStores();
 	
@@ -534,80 +538,105 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 		},
 		transform: function (val) {
 			var sensorId = val.sensorId;
-			
-			if (sensorId != 'montrac') {
-				log.warn('Unknown sensorId: %s', sensorId);
-				return [];
-			}
-						
 			var timestamp = val.timestamp;
-			
 			var props = val.eventProperties;
 			
-			var location = props.location;
-			var event = props.event;
-			var shuttleId = props.shuttle;
-			var left = props.leftPiece;
-			var right = props.rightPiece;
-			
-			if (event == 'Arrive')
-				onArrived(timestamp, location, shuttleId, left, right);
-			else
-				onFinished(timestamp, shuttleId, location, left, right);
-			
-			var vals = [];
-			
-			function getQueueSizes() {
-				var result = {};
-				for (var queueId in queues) {
-					var size = getQueueSize(queueId);
-					result[queueId] = size;
+			if (sensorId == 'montrac') {				
+				var location = props.location;
+				var event = props.event;
+				var shuttleId = props.shuttle;
+				var left = props.leftPiece;
+				var right = props.rightPiece;
+				
+				if (event == 'Arrive')
+					onArrived(timestamp, location, shuttleId, left, right);
+				else
+					onFinished(timestamp, shuttleId, location, left, right);
+				
+				var vals = [];
+				
+				function getQueueSizes() {
+					var result = {};
+					for (var queueId in queues) {
+						var size = getQueueSize(queueId);
+						result[queueId] = size;
+					}
+					return result;
 				}
-				return result;
-			}
-			
-			if (timestamp > prevTimestamp) {
-				for (var queueId in queues) {
-					var length = getQueueSize(queueId);
+				
+				if (timestamp > prevTimestamp) {
+					for (var queueId in queues) {
+						var length = getQueueSize(queueId);
+						
+						if (length != prevQueueLengths[queueId]) {
+							vals.push({
+								store: queueId,
+								timestamp: timestamp,
+								value: {
+									time_ms: timestamp,
+						    		time: utils.dateToQmDate(new Date(timestamp)),
+						    		value: length
+								}
+							});
+							prevQueueLengths[queueId] = length;
+						}
+					}
 					
-					if (length != prevQueueLengths[queueId]) {
+					// lacquering
+					cleanLacqueringLine(timestamp);
+					var llSize = countLacqueredParts();
+					
+					if (prevLLSize != llSize) {
 						vals.push({
-							store: queueId,
+							store: 'LACQUERING',
 							timestamp: timestamp,
 							value: {
 								time_ms: timestamp,
 					    		time: utils.dateToQmDate(new Date(timestamp)),
-					    		value: length
+					    		value: llSize
 							}
 						});
-						prevQueueLengths[queueId] = length;
+						prevLLSize = llSize;
 					}
+					
+					prevTimestamp = timestamp;
 				}
 				
-				// lacquering
-				cleanLacqueringLine(timestamp);
-				var llSize = countLacqueredParts();
+				if (log.trace())
+					log.trace('Transform returning %d values ...', vals.length);
 				
-				if (prevLLSize != llSize) {
-					vals.push({
-						store: 'LACQUERING',
-						timestamp: timestamp,
-						value: {
-							time_ms: timestamp,
-				    		time: utils.dateToQmDate(new Date(timestamp)),
-				    		value: llSize
-						}
-					});
-					prevLLSize = llSize;
-				}
-				
-				prevTimestamp = timestamp;
+				return vals;
 			}
-			
-			if (log.trace())
-				log.trace('Transform returning %d values ...', vals.length);
-			
-			return vals;
+			else if ('unit' in props) {	// environmental
+				var value = props.value;
+				var name = props.name;
+				
+				var transVal = {
+					store: name + ' - ' + sensorId,
+					timestamp: timestamp,
+					value: {
+						time_ms: timestamp,
+						time: utils.dateToQmDate(new Date(timestamp)),
+						value: value
+					}
+				};
+				var retVal = [];
+				
+				if (envPrevTimestamp != timestamp) {
+					for (var key in environmentBuff)
+						retVal.push(environmentBuff[key]);
+					environmentBuff = {};
+				}
+				
+				environmentBuff[sensorId] = transVal;
+				envPrevTimestamp = timestamp;
+				
+				return retVal;
+			}
+			else {
+				log.warn('Unknown sensorId: %s', sensorId);
+				return [];
+			}
 		}
 	}
 }

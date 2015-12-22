@@ -37,7 +37,8 @@ try {
 	base = new qm.Base({
 		dbPath: config.REAL_TIME_BASE_PATH,
 		schema: schema,
-		mode: config.QM_DATABASE_MODE
+		mode: config.QM_DATABASE_MODE,
+		strictNames: false
 	});
 
 	if (config.QM_CREATE_PIPELINE) {
