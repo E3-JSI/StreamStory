@@ -385,7 +385,7 @@ module.exports = function () {
 			connection({
 				callback: callback,
 				nextOp: query({
-					sql: 'SELECT m.*, onm.is_active FROM model m LEFT JOIN offline_model ofm ON m.mid = ofm.mid LEFT JOIN online_model onm ON m.mid = onm.mid ' + 
+					sql: 'SELECT m.*, onm.is_active, ofm.base_dir FROM model m LEFT JOIN offline_model ofm ON m.mid = ofm.mid LEFT JOIN online_model onm ON m.mid = onm.mid ' + 
 								'WHERE m.mid = ?',
 					params: [modelId],
 					nextOp: function (conn, onsuccess, onerror, results) {

@@ -58,15 +58,16 @@ exports.StreamStory = function (opts) {
 
 	function getFtrNames(ftrSpace) {
 		var names = [];
-
+		
 		var dims = ftrSpace.dims;
 		for (var i = 0; i < dims.length; i++) {
 			var ftrDesc = ftrSpace.getFeature(i);
-			var match = ftrDesc.match(/\[\w*\]$/)[0];	// remove Numeric[ ]
+			var match = ftrDesc.match(/\[[-\w\s]*\]$/);	// remove Numeric[ ]
 
-			if (match != null)
+			if (match != null) {
+				match = match[0];
 				names.push(match.substring(1, match.length-1));
-			else
+			} else
 				names.push(ftrDesc);
 		}
 

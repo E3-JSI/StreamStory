@@ -1009,7 +1009,8 @@ function initDataUploadApi() {
 							storeNm = config.QM_USER_DEFAULT_STORE_NAME;
 							userBase = new qm.Base({
 								mode: 'create',
-								dbPath: dbDir
+								dbPath: dbDir,
+								strictNames: false
 							});
 							
 							log.debug('Creating default store ...');
