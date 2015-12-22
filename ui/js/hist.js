@@ -31,6 +31,11 @@ function drawHistogram(opts) {
 	    		enabled: opts.showY != null ? opts.showY : true
 	    	}
 	    },
+	    tooltip: {
+	    	formatter: function () {
+	    		return toUiPrecision(this.x);
+	    	}
+	    },
 	    plotOptions: {
 	        column: {
 	            groupPadding: 0,

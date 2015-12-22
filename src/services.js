@@ -1094,6 +1094,51 @@ function initDataUploadApi() {
 			}
 		});
 	});
+//	
+//	function modelComplete(req, res) {
+//		try {
+//			
+//		} catch (e) {
+//			handleServerError(e, req, res);
+//		}
+//	}
+//	
+//	app.get(API_PATH + '/checkProgress', function (req, res) {
+//		try {
+//			var session = req.session;
+//			var sessionId = req.sessionID;
+//			
+//			if (modelStore.modelFinished(sessionId)) {
+//				// TODO
+//				
+//				var config = modelStore.
+//				
+//				if (isRealTime) {
+//					if (log.debug())
+//						log.debug('Online model created!');
+//					
+//					activateModel(model);
+//					saveToSession(sessionId, session, username, userBase, model, model.getId(), fname);
+//				} else {
+//					saveToSession(sessionId, session, username, base, model, model.getId(), fname);
+//				}
+//			} else {
+//				var timeoutId = setTimeout(function () {
+//					var status = modelStore.getProgress(sessionId);
+//					res.send({ event: 'progress', status: status });
+//					res.end();
+//				}, 30000);
+//				
+//				modelStore.setFinishedCallback(sessionId, function (config) {
+//					clearTimeout(timeoutId);
+//					modelComplete(req, res, config);
+//				});
+//			}
+//		} catch (e) {
+//			log.error(e, 'Exception while checking progress!');
+//			handleServerError(e, req, res);
+//		}
+//	});
 	
 	app.get(API_PATH + '/selectDataset', upload.single('dataset'), function (req, res, next) {
 		var session = req.session;

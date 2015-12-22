@@ -433,41 +433,6 @@ exports.RealTimeModelStore = function (opts) {
 						callback(e);
 					}
 				});
-//				qm.fs.readCsvLinesAsync(fileBuff, {
-//					skipLines: 1,
-//					onLine: function (lineArr) {
-//						if (++lineN % 10000 == 0 && log.debug())
-//							log.debug('Read %d lines ...', lineN);
-//						
-//						var recJson = {};
-//						for (var i = 0; i < headers.length; i++) {
-//							var attr = headers[i].name;
-//							if (attr == timeAttr) {
-//								var date = utils.dateToQmDate(new Date(parseInt(lineArr[i])));
-//								recJson[attr] = date;
-//								if (log.trace())
-//									log.trace('Parsed date: %s', date);
-//							} else {
-//								recJson[attr] = parseFloat(lineArr[i]);
-//							}
-//						}
-//						
-//						if (log.trace())
-//							log.trace('Inserting value: %s', JSON.stringify(recJson));
-//						
-//						// create the actual record and update the feature spaces						
-//						recs.push(store.newRecord(recJson));
-//					},
-//					onEnd: function (e) {
-//						if (e != null) {
-//							log.error(e, 'Exception while parsing the uploaded CSV file!');
-//							callback(e);
-//							return;
-//						}
-//						
-//						
-//					}
-//				});
 			} catch (e) {
 				callback(e);
 			}
