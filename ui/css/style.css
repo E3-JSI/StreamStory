@@ -1,6 +1,8 @@
 #content-options {
+	width: 320px;
+	max-width: 320px;
 	top: 32px !important;
-	right: -95px !important;
+	right: -117px !important;
 	left: auto !important;
 }
 
@@ -114,6 +116,11 @@
 .tooltip-div-explain {
 	font-size: 10px;
 	line-height: 11px;
+}
+
+#ul-ftrs-obs {
+	list-style: none;
+	padding-left: 0;
 }
 
 
