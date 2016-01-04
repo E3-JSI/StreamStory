@@ -353,6 +353,9 @@ exports.RealTimeModelStore = function (opts) {
 								return;
 							}
 							
+							if (log.debug())
+								log.debug('Model created, storing ...');
+							
 							var fname = isRealTime ? 
 									config.REAL_TIME_MODELS_PATH + new Date().getTime() + '.bin' :
 									utils.getModelFName(baseDir);
