@@ -8,14 +8,12 @@
 	
 	<link rel="stylesheet" href="lib/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="css/landing-page.css">
-    <link rel="stylesheet" href="lib/bootstrap-duallistbox.css">
 	<!-- Custom Fonts -->
     <link href="lib/bootstrap/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css">
     <link href="http://fonts.googleapis.com/css?family=Lato:300,400,700,300italic,400italic,700italic" rel="stylesheet" type="text/css">
 	
 	<script type="text/javascript" src="lib/jquery-1.11.1.min.js"></script>
 	<script type="text/javascript" src="lib/bootstrap/js/bootstrap.min.js"></script>
-	<script type="text/javascript" src="lib/jquery.bootstrap-duallistbox.js"></script>
 	<script type="text/javascript" src="js/utils.js"></script>
 	<script type="text/javascript" src="js/index.js"></script>
 
@@ -79,10 +77,7 @@
                         <hr class="intro-divider">
                         <ul class="list-inline intro-social-buttons">
                             <li>
-   								<input id="input-upload" type="button" class="btn btn-default btn-primary" value="Upload Dataset" />
-                            </li>
-                            <li>
-   								<input id="input-select-source" type="button" class="btn btn-default btn-primary" value="Use Stored Dataset" />
+                            	<a href="dashboard.html" class="btn btn-default btn-primary">Go to Dashboard</a>
                             </li>
                         </ul>
                     </div>
@@ -94,140 +89,7 @@
     </div>
     <!-- /.intro-header -->
 
-	<div id="popup-data-upload" class="modal fade" role="dialog" tabindex="-1">
-		<div class="modal-dialog">
-			<div class="modal-content">
-				<div class="modal-header">
-    				<button type="button" class="close" data-dismiss="modal">&times;</button>
-    				<h4 class="modal-title">Configure Dataset</h4>
-  				</div>
-  				<div class="modal-body">
-  					<form id="form-upload" action="upload" method="POST" enctype="multipart/form-data">
-  						<div class="form-group">
-		  					<label for="input-email">Email address</label>
-		  					<input id="input-email" type="email" class="form-control" placeholder="Email" />
-	  					</div>
-	  					<div class="form-group">
-                          	<label for="input-choose-upload">Choose file</label>
-	  						<input id="input-choose-upload" type="file" name="dataset" class="btn btn-default btn-file" />
-	  					</div>
-	  					<div id="progress-file-upload-wrapper" class="progress">
-						  	<div id="progress-file-upload" class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="min-width:0%; max-width:100%; width: 0%;"></div>
-						</div>
-	  					<div id="form-phase2" style="display: none;">
-	  						<div class="panel panel-default">
-	  							<div class="panel-heading">Select Attributes</div>
-	  							<div id="div-select-attrs" class="panel-body">
-	  								<select id="select-attrs" multiple="multiple"></select>
-								</div>
-	  						</div>
-		  					<div id="form-phase3" style="display: none;">
-		  						<div class="panel panel-default">
-		  							<div class="panel-heading">Configure Time Attribute</div>
-		  							<div id="div-select-controls" class="panel-body">
-		  								<label for="radio-time">Select time attribute (must be timestamp)</label>
-		  								<div id="radio-time" class="radios"></div>
-		  								
-		  								<label for="select-tu">Select time unit</label>
-		  								<select id="select-tu" class="form-control">
-					  						<option value="second">Second</option>
-					  						<option value="minute">Minute</option>
-					  						<option value="hour" selected="selected">Hour</option>
-					  						<option value="day">Day</option>
-					  						<option value="month">Month</option>
-					  					</select>
-									</div>
-		  						</div>
-		  						<div id="form-phase4"  style="display: none;">
-		  							<div class="panel panel-default">
-		  								<div class="panel-heading">Configure States</div>
-			  							<div id="div-select-controls" class="panel-body">
-			  								<div class="form-group">
-												<label for="select-clust">Select Algorithm</label>
-											    <select id="select-clust" class="form-control">
-											    	<option value="kmeans" selected="selected">K-Means</option>
-											    	<option value="dpmeans">DP-Means</option>
-											    </select>
-											</div>
-											<div id="div-config-kmeans">
-												<div class="form-group">
-													<label for="input-kmeans-k">Number of States</label>
-													<input id="input-kmeans-k" type="number" class="form-control" value="12" min="5" max="50" step="1" />
-												</div>
-											</div>
-											<div id="div-config-dpmeans" class="hidden">
-												<div class="form-group">
-													<label for="input-dpmeans-minstates">Minimum Number of States</label>
-													<input id="input-dpmeans-minstates" type="number" class="form-control" value="10" min="3" max="20" step="1" />
-												</div>
-												<div class="form-group">
-													<label for="input-dpmeans-maxstates">Maximum Number of States</label>
-													<input id="input-dpmeans-maxstates" type="number" class="form-control" value="30" min="10" max="100" step="1" />
-												</div>
-												<div class="form-group">
-													<label for="input-dpmeans-lambda">State Radius</label>
-													<input id="input-dpmeans-lambda" type="number" class="form-control" value="0.8" min="0.1" max="2" step="0.01" />
-												</div>
-											</div>
-										</div>
-		  							</div>
-		  							<div class="panel panel-default">
-			  							<div class="panel-heading">Organize Attributes</div>
-			  							<div id="div-select-controls" class="panel-body">
-										    <select id="select-controls" multiple="multiple"></select>
-										</div>
-			  						</div>
-			  						<div class="form-group">
-				  						<div class="checkbox">
-				                          	<label>
-				                          		<input id="check-realtime" type="checkbox" /> Real-time model
-				                          	</label>
-				  						</div>
-				  					</div>
-				  					<div class="form-group">
-			                          	<label for="input-model-name">Model name</label>
-	  									<input id="input-model-name" type="text" class="form-control" placeholder="Model name" />
-				  					</div>
-				  					<div id="progress-build-model-wrapper" class="progress" style="display: none;">
-									  	<div id="progress-build-model" class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="min-width:0%; max-width:100%; width: 0%;"></div>
-									</div>
-		  						</div>
-		  					</div>
-	  					</div>
-  					</form>
-  				</div>
-  				<div class="modal-footer">
-    				<button id="btn-done" type="button" class="btn btn-success" disabled="disabled">Done</button>
-  				</div>
-			</div>
-		</div>
-	</div>
-	<div id="popup-data-select" class="modal fade" role="dialog" tabindex="-1">
-		<div class="modal-dialog">
-			<div class="modal-content">
-				<div class="modal-header">
-    				<button type="button" class="close" data-dismiss="modal">&times;</button>
-    				<h4 class="modal-title">Select Dataset</h4>
-  				</div>
-  				<div class="modal-body">
-					<div class="form-group">
-	  					<label for="input-email-select">Email address</label>
-	  					<input id="input-email-select" type="email" class="form-control" placeholder="Email" />
-  					</div>
-  					<div class="form-group">
-                      	<label for="select-dataset">Choose dataset</label>
- 						<select id="select-dataset" class="form-control"></select>
-					</div>
-  				</div>
-  				<div class="modal-footer">
-    				<button id="btn-upload-done" type="button" class="btn btn-success" disabled="disabled">Done</button>
-  				</div>
-			</div>
-		</div>
-	</div>
-
     <!-- Page Content -->
-
 	<a name="services"></a>
     <div class="content-section-a">
         <div class="container">

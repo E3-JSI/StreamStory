@@ -7,7 +7,8 @@ GRANT ALL PRIVILEGES ON StreamStory.* TO 'StreamStory'@'localhost';
 USE StreamStory;
 
 CREATE TABLE user (
-	email VARCHAR(100) PRIMARY KEY
+	email VARCHAR(100) PRIMARY KEY,
+	passwd VARCHAR(128) NOT NULL
 );
 
 CREATE TABLE model (

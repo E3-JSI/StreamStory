@@ -1,6 +1,21 @@
+var crypto = require('crypto');
+var randomstring = require('randomstring');
+var nodemailer = require('nodemailer');
+var dateformat = require('dateformat');
 var fs = require('fs');
 var mkdirp = require('mkdirp');
 var config = require('../config.js');
+
+var UI_DATE_FORMAT = 'dd/mm/yyyy';
+var HASH_ALG = 'sha256';
+
+var emailTransporter = nodemailer.createTransport({
+    service: 'Gmail',
+    auth: {
+        user: 'sometestemail9@gmail.com',
+        pass: 'testemailpassword'
+    }
+});
 
 //=============================================
 // EXIT FUNCTIONS
@@ -25,12 +40,79 @@ function exit(base) {
 }
 
 //=============================================
+// HELPER FUNCTIONS
+//=============================================
+
+function isValidDate(d) {
+	if (Object.prototype.toString.call(d) === "[object Date]") {
+		// it is a date
+		if (isNaN(d.getTime())) {  // d.valueOf() could also work
+			return false;
+		}
+		else {
+			var currYear = new Date().getFullYear();
+			var year = d.getFullYear();
+			
+			if (Math.abs(currYear - year) > 150)
+				return false;
+			else
+				return true;
+		}
+	}
+	else {
+		return false;
+	}
+}
+
+//=============================================
 // EXPORTS
 //=============================================
 
 module.exports = {
 	closeBase: closeBase,
 	exit: exit,
+	
+	//=============================================
+	// PASSWORDS
+	//=============================================
+	
+	hashPassword: function (password) {
+		var hash = crypto.createHash(HASH_ALG);
+		
+		if (hash == null)
+			throw new Error('Algorithm ' + HASH_ALG + ' is not available!');
+		
+		hash.update(password, 'utf-8');
+		return hash.digest('hex');
+	},
+	genPassword: function () {
+		return randomstring.generate({ length: 8, readable: true });
+	},
+	
+	sendEmail: function (opts, callback) {
+		var text = 'Dear ' + opts.email + '\n\n' +
+					'Your new password is: ' + opts.password + '\n\n' +
+					'Best,\n' +
+					'StreamStory team';
+		
+		var mailOptions = {
+		    from: 'StreamStory <luka.stopar@ijs.si>', // sender address
+		    to: opts.email, // list of receivers
+		    subject: 'StreamStory', // Subject line
+		    text: text, // plaintext body
+//		    html: '<b>Hello world ✔</b>' // html body
+		};
+		
+		emailTransporter.sendMail(mailOptions, function (e, info){
+		    if (e != null) {
+		    	callback(e);
+		        return;
+		    }
+		    
+		    log.info('Message sent: %s', JSON.stringify(info));
+		    callback();
+		});
+	},
 	
 	//=============================================
 	// DIRECTORIES
@@ -55,6 +137,10 @@ module.exports = {
 	//=============================================
 	// HELPER FUNCTIONS
 	//=============================================
+	dateformat: function (date) {
+		if (!isValidDate(date)) return "Invalid date!";
+		return dateformat(date, UI_DATE_FORMAT);
+	},
 	
 	dateToQmDate: function (date) {
 		return date.toISOString().split('Z')[0];

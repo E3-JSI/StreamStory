@@ -21,6 +21,7 @@ var WebSocketWrapper = require('./util/servicesutil.js').WebSocketWrapper;
 var qmutil = qm.qm_util;
 
 var UI_PATH = '/';
+var LOGIN_PATH = '/login';
 var API_PATH = '/api';
 var DATA_PATH = '/data';
 var WS_PATH = '/ws';
@@ -30,6 +31,18 @@ var LONG_REQUEST_TIMEOUT = 1000*60*60*24;
 var app = express();
 
 var fileBuffH = {};	// if I store the file buffer directly into the session, the request takes forever to complete
+
+var titles = {
+	'': 'Index',
+	'index.html': 'Index',
+	'login.html': 'Login',
+	'register.html': 'Register',
+	'resetpassword.html': 'Reset Password',
+	'dashboard.html': 'Dashboard',
+	'profile.html': 'Profile',
+	'ui.html': 'View Model',
+	'profile.html': 'Profile'
+}
 
 var base;
 var db;
@@ -105,22 +118,34 @@ function getModelFile(session) {
 	return session.modelFile;
 }
 
-function cleanUpSession(sessionId, session) {
+function cleanUpSessionModel(sessionId, session) {
 	if (log.debug())
 		log.debug('Cleaning up session %s ...', sessionId);
 	
 	closeBase(session);
 	
-	delete session.username;
 	delete session.base;
 	delete session.model;
 	delete session.modelId;
 	delete session.modelFile;
 }
 
-function saveToSession(sessionId, session, username, userBase, model, modelId, fname) {
+function cleanUpSession(sessionId, session) {
+	cleanUpSessionModel(sessionId, session);
+	delete session.username;
+}
+
+function loginUser(session, username) {
+	session.username = username;
+}
+
+function isLoggedIn(session) {
+	return session.username != null;
+}
+
+function saveToSession(sessionId, session, userBase, model, modelId, fname) {
 	if (session.base != null)
-		cleanUpSession(sessionId, session);
+		cleanUpSessionModel(sessionId, session);
 	
 	if (log.debug())
 		log.debug('Saving new data to session %s ...', sessionId);
@@ -128,7 +153,6 @@ function saveToSession(sessionId, session, username, userBase, model, modelId, f
 	if (userBase.isClosed())
 		throw new Error('Tried to save a closed base to session!');
 	
-	session.username = username;
 	session.base = userBase;
 	session.model = model;
 	session.modelId = modelId;
@@ -136,6 +160,26 @@ function saveToSession(sessionId, session, username, userBase, model, modelId, f
 	
 	if (log.debug())
 		log.debug('Saved to session!');
+}
+
+//=====================================================
+// UTILITY METHODS
+//=====================================================
+
+function getRequestedPage(req) {
+	return req.path.split('/').pop();
+}
+
+function getRequestedPath(req) {
+	var spl = req.path.split('/');
+	spl.pop();
+	return spl.pop();
+}
+
+function redirect(res, page) {
+	if (log.debug())
+		log.debug('Redirecting to %s ...', page);
+	res.redirect(page);
 }
 
 //=====================================================
@@ -332,6 +376,261 @@ function initStreamStoryHandlers(model, enable) {
 		log.debug('Removing prediction callback ...');
 		model.onPrediction();
 	}
+}
+
+function initLoginRestApi() {
+	log.info('Initializing Login REST services ...');
+	
+	app.post(LOGIN_PATH + '/login', function (req, res) {
+		try {
+			var session = req.session;
+			
+			var username = req.body.email;
+			var password = req.body.password;
+			
+			if (log.debug())
+				log.debug('Loggin in user: %s', username);
+			
+			if (username == null || username == '') {
+				session.warning = 'Email missing!';
+				redirect(res, '../login.html');
+				return;
+			}
+			
+			if (password == null || password == '') {
+				session.warning = 'Password missing!';
+				redirect(res, '../login.html');
+				return;
+			}
+			
+			db.userExists(username, function (e, exists) {
+				if (e != null) {
+					log.error(e, 'Exception while checking if user exists!');
+					handleServerError(e, req, res);
+					return;
+				}
+				
+				if (!exists) {
+					session.warning = 'Invalid email or password!';
+					redirect(res, '../login.html');
+					return;
+				}
+				
+				db.fetchUserPassword(username, function (e1, storedHash) {
+					if (e1 != null) {
+						log.error(e1, 'Exception while checking if user exists!');
+						handleServerError(e1, req, res);
+						return;
+					}
+					
+					var hash = utils.hashPassword(password);
+					
+					if (hash != storedHash) {
+						session.warning = 'Invalid email or password!';
+						redirect(res, '../login.html');
+						return;
+					} else {
+						loginUser(session, username);
+						redirect(res, '../dashboard.html');
+					}
+				});
+			});
+		} catch (e) {
+			handleServerError(e, req, res);
+		}
+	});
+	
+	app.post(LOGIN_PATH + '/register', function (req, res) {
+		try {
+			var session = req.session;
+			
+			var username = req.body.email;
+			var password = req.body.password;
+			var password1 = req.body.password1;
+			
+			if (log.debug())
+				log.debug('Registering user: %s', username);
+			
+			if (username == null || username == '') {
+				session.warning = 'Email missing!';
+				redirect(res, '../register.html');
+				return;
+			}
+			
+			if (password == null || password == '') {
+				session.warning = 'Password missing!';
+				redirect(res, '../register.html');
+				return;
+			}
+			
+			if (password.length < 6) {
+				session.warning = 'The password must be at least 6 characters long!';
+				redirect(res, '../register.html');
+				return;
+			}
+			
+			if (password1 == null || password1 == '') {
+				session.warning = 'Please repeat password!';
+				redirect(res, '../register.html');
+				return;
+			}
+			
+			if (password != password1) {
+				session.warning = 'Passwords don\'t match!';
+				redirect(res, '../register.html');
+				return;
+			}
+			
+			db.userExists(username, function (e, exists) {
+				if (e != null) {
+					log.error(e, 'Exception while checking if user exists!');
+					handleServerError(e, req, res);
+					return;
+				}
+				
+				if (exists) {
+					session.warning = 'Email "' + username + '" already taken!';
+					redirect(res, '../register.html');
+					return;
+				} else {
+					var hash = utils.hashPassword(password);
+					db.createUser(username, hash, function (e1) {
+						if (e1 != null) {
+							log.error(e1, 'Exception while creating a new user!');
+							handleServerError(e1, req, res);
+							return;
+						}
+						
+						loginUser(session, username);
+						redirect(res, '../dashboard.html');
+					});
+				}
+			});
+		} catch (e) {
+			handleServerError(e, req, res);
+		}
+	});
+	
+	app.post(LOGIN_PATH + '/resetPassword', function (req, res) {
+		try {
+			var session = req.session;
+			var email = req.body.email;
+			
+			var password = utils.genPassword();
+			var hash = utils.hashPassword(password);
+			
+			db.userExists(email, function (e, exists) {
+				if (e != null) {
+					handleServerError(e, req, res);
+					return;
+				}
+				
+				if (!exists) {
+					session.error = 'Invalid email address!';
+					redirect(res, '../resetpassword.html');
+				} else {
+					db.updatePassword(email, hash, function (e1) {
+						if (e1 != null) {
+							log.error(e, 'Failed to update password!');
+							handleServerError(e1, req, res);
+							return;
+						}
+						
+						var opts = {
+							password: password,
+							email: email
+						}
+						
+						utils.sendEmail(opts, function (e2) {
+							if (e2 != null) {
+								log.error(e2, 'Failed to send email!');
+								handleServerError(e2, req, res);
+								return;
+							}
+							
+							session.message = 'Your new password has been sent to ' + email + '!';
+							redirect(res, '../resetpassword.html');
+						})
+					});
+				}
+			})
+		} catch (e) {
+			log.error(e, 'Exception while resetting password!');
+			handleServerError(e, req, res);
+		}
+	});
+	
+	app.post(API_PATH + '/changePassword', function (req, res) {
+		try {
+			var session = req.session;
+			
+			var email = session.username;
+			
+			var old = req.body.old;
+			var password = req.body.newP;
+			var password1 = req.body.repeat;
+			
+			if (password == null || password == '') {
+				handleBadInput(res, 'Password missing!');
+				return;
+			}
+			
+			if (password.length < 6) {
+				handleBadInput(res, 'The password must be at least 6 characters long!');
+				return;
+			}
+			
+			if (password1 == null || password1 == '') {
+				handleBadInput(res, 'Please repeat password!');
+				return;
+			}
+			
+			if (password != password1) {
+				handleBadInput(res, 'Passwords don\'t match!');
+				return;
+			}
+			
+			var hashOld = utils.hashPassword(old);
+			
+			db.fetchUserPassword(email, function (e, storedHash) {
+				if (e != null) {
+					log.error(e, 'Exception while fetching user password!');
+					handleServerError(e, req, res);
+					return;
+				}
+				
+				if (hashOld != storedHash) {
+					handleBadInput(res, 'Passwords don\'t match!');
+					return;
+				}
+				
+				var hash = utils.hashPassword(password);
+				
+				db.updatePassword(email, hash, function (e1) {
+					if (e1 != null) {
+						log.error(e, 'Failed to update password!');
+						handleServerError(e1, req, res);
+						return;
+					}
+					
+					res.status(204);	// no content
+	       			res.end();
+				});
+			});
+		} catch (e) {
+			log.error(e, 'Exception while changing password!');
+			handleServerError(e, req, res);
+		}
+	});
+	
+	app.post(API_PATH + '/logout', function (req, res) {
+		try {
+			cleanUpSession(req.sessionID, req.session);
+			redirect(res, '../login.html');
+		} catch (e) {
+			handleServerError(e, req, res);
+		}
+	});
 }
 
 function initStreamStoryRestApi() {
@@ -943,13 +1242,15 @@ function initDataUploadApi() {
 			var session = req.session;
 			var sessionId = req.sessionID;
 			
+			var username = session.username;
+			
 			var timeAttr = req.body.time;
-			var username = req.body.username;
 			var modelName = req.body.name;
 			var timeUnit = req.body.timeUnit;
 			var attrs = req.body.attrs;
 			var controlAttrs = req.body.controlAttrs;
 			var isRealTime = req.body.isRealTime;
+			var hierarchy = req.body.hierarchyType;
 			var clustConfig = req.body.clust;
 			
 			var fileBuff = fileBuffH[sessionId];
@@ -967,71 +1268,66 @@ function initDataUploadApi() {
 			var baseDir = utils.getBaseDir(username, new Date().getTime());
 			var dbDir = utils.getDbDir(baseDir);
 			
-			db.createUser(username, function (e) {
+			mkdirp(dbDir, function (e) {
 				if (e != null) {
-					handleServerError(e, req, res);
+					log.error(e, 'Failed to create base directory!');
+					res.status(500);	// internal server error
 					return;
 				}
 				
-				mkdirp(dbDir, function (e) {
-					if (e != null) {
-						log.error(e, 'Failed to create base directory!');
-						res.status(500);	// internal server error
-						return;
-					}
+				try {
+					// create the store and base, depending on wether the model will be 
+					// applied in real-time
+					var storeNm;
+					var userBase;
+					var store;
 					
-					try {
-						// create the store and base, depending on wether the model will be 
-						// applied in real-time
-						var storeNm;
-						var userBase;
-						var store;
+					if (isRealTime) {
+						log.debug('Using real-time base and store ...');
+						storeNm = fields.STREAM_STORY_STORE;
+						userBase = base;
+						store = base.store(storeNm);
+					} else {	// not real-time => create a new base and store
+						if (log.debug())
+							log.debug('Creating new base and store ...');
 						
-						if (isRealTime) {
-							log.debug('Using real-time base and store ...');
-							storeNm = fields.STREAM_STORY_STORE;
-							userBase = base;
-							store = base.store(storeNm);
-						} else {	// not real-time => create a new base and store
-							if (log.debug())
-								log.debug('Creating new base and store ...');
-							
-							var storeFields = [];
-							for (var i = 0; i < headers.length; i++) {
-								var attr = headers[i].name;
-								storeFields.push({
-									name: attr,
-									type: attr == timeAttr ? 'datetime' : 'float',
-									'null': false
-								});
-							}
-							
-							storeNm = config.QM_USER_DEFAULT_STORE_NAME;
-							userBase = new qm.Base({
-								mode: 'create',
-								dbPath: dbDir,
-								strictNames: false
-							});
-							
-							log.debug('Creating default store ...');
-							store = userBase.createStore({
-								name: storeNm,
-								fields: storeFields
+						var storeFields = [];
+						for (var i = 0; i < headers.length; i++) {
+							var attr = headers[i].name;
+							storeFields.push({
+								name: attr,
+								type: attr == timeAttr ? 'datetime' : 'float',
+								'null': false
 							});
 						}
 						
-						var opts = {
-							username: username,
-							datasetName: datasetName,
-							modelName: modelName,
-							base: userBase,
-							store: store,
-							storeNm: storeNm,
-							timeUnit: timeUnit,
-							headers: headers,
-							timeAttr: timeAttr,
-							attrs: attrs,
-							controlAttrs: controlAttrs,
+						storeNm = config.QM_USER_DEFAULT_STORE_NAME;
+						userBase = new qm.Base({
+							mode: 'create',
+							dbPath: dbDir,
+							strictNames: false
+						});
+						
+						log.debug('Creating default store ...');
+						store = userBase.createStore({
+							name: storeNm,
+							fields: storeFields
+						});
+					}
+					
+					var opts = {
+						username: username,
+						datasetName: datasetName,
+						modelName: modelName,
+						base: userBase,
+						store: store,
+						storeNm: storeNm,
+						timeUnit: timeUnit,
+						headers: headers,
+						timeAttr: timeAttr,
+						hierarchyType: hierarchy,
+						attrs: attrs,
+						controlAttrs: controlAttrs,
 							isRealTime: isRealTime,
 							fileBuff: fileBuff,
 							clustConfig: clustConfig,
@@ -1049,9 +1345,9 @@ function initDataUploadApi() {
 									log.debug('Online model created!');
 								
 								activateModel(model);
-								saveToSession(sessionId, session, username, userBase, model, model.getId(), fname);
+								saveToSession(sessionId, session, userBase, model, model.getId(), fname);
 							} else {
-								saveToSession(sessionId, session, username, base, model, model.getId(), fname);
+								saveToSession(sessionId, session, base, model, model.getId(), fname);
 							}
 							
 							res.status(204);	// no content
@@ -1062,7 +1358,6 @@ function initDataUploadApi() {
 						handleServerError(e, req, res);
 					}
 				});
-			});
 		} catch (e) {
 			log.error(e, 'Exception while building model!');
 			res.status(500);	// internal server error
@@ -1140,22 +1435,22 @@ function initDataUploadApi() {
 //		}
 //	});
 	
-	app.get(API_PATH + '/selectDataset', upload.single('dataset'), function (req, res, next) {
-		var session = req.session;
-		var username = req.query.email;
-		
-		db.fetchUserModels(username, function (e, models) {
-			if (e != null) {
-				log.error(e, 'Failed to fetch models for user: %s', username);
-				handleServerError(e, req, res);
-				return;
-			}
-			
-			session.username = username;
-			res.send(models);
-			res.end();
-		});
-	});
+//	app.get(API_PATH + '/selectDataset', upload.single('dataset'), function (req, res, next) {
+//		var session = req.session;
+//		var username = req.query.email;
+//		
+//		db.fetchUserModels(username, function (e, models) {
+//			if (e != null) {
+//				log.error(e, 'Failed to fetch models for user: %s', username);
+//				handleServerError(e, req, res);
+//				return;
+//			}
+//			
+//			session.username = username;
+//			res.send(models);
+//			res.end();
+//		});
+//	});
 	
 	app.post(API_PATH + '/selectDataset', function (req, res) {
 		var session = req.session;
@@ -1183,7 +1478,7 @@ function initDataUploadApi() {
 							log.debug('Adding an already active model to the session ...');
 						
 						var model = modelStore.getModel(modelId);
-						saveToSession(sessionId, session, username, base, model, modelId, fname);
+						saveToSession(sessionId, session, base, model, modelId, fname);
 						res.status(204);	// no content
 						res.end();
 					} else {
@@ -1197,7 +1492,7 @@ function initDataUploadApi() {
 								return;
 							}
 							
-							saveToSession(sessionId, session, username, base, model, modelId, fname);
+							saveToSession(sessionId, session, base, model, modelId, fname);
 							res.status(204);	// no content
 							res.end();
 						});						
@@ -1212,7 +1507,7 @@ function initDataUploadApi() {
 							return;
 						}
 						
-						saveToSession(sessionId, session, username, baseConfig.base, baseConfig.model, modelId, fname);
+						saveToSession(sessionId, session, baseConfig.base, baseConfig.model, modelId, fname);
 						res.status(204);	// no content
 						res.end();
 					});
@@ -1268,8 +1563,7 @@ function initServerApi() {
 				resp.end();
 			} catch (e) {
 				log.error(e, 'Failed to process raw measurement!');
-				resp.status(500);
-				resp.end();
+				handleServerError(e, req, res);
 			}
 		});
 	}
@@ -1282,8 +1576,8 @@ function initServerApi() {
 			db.countActiveModels(function (e, result) {
 				if (e != null) {
 					log.error(e, 'Failed to count the number of active models!');
-					res.status(500);	// internal server error
-					res.end();
+					handleServerError(e, req, res);
+					return;
 				}
 				
 				res.send(result);
@@ -1298,28 +1592,48 @@ function initServerApi() {
 		app.post(API_PATH + '/activateModel', function (req, res) {
 			try {
 				var session = req.session;
-				var model = getModel(req.sessionID, session);
-				
-				var activate = req.body.activate == 'true';
-				
+				var modelId = req.body.modelId;
+				var activate = req.body.activate;
+
 				if (activate == null) throw new Error('Missing parameter activate!');
-				if (model.getId() == null) throw new Error('WTF?! Tried to activate a model that doesn\'t have an ID!');
+				if (modelId == null) throw new Error('WTF?! Tried to activate a model that doesn\'t have an ID!');
 				
 				if (log.info())
-					log.info('Activating model %s: ' + activate, model.getId());
+					log.info('Activating model %s: ' + activate, modelId);
 				
-				db.activateModel({modelId: model.getId(), activate: activate}, function (e1) {
+				db.activateModel({modelId: modelId, activate: activate}, function (e1) {
 					if (e1 != null) {
 						log.error(e1, 'Failed to activate model %s!', modelId);
-						res.status(500);
-						res.end();
+						handleServerError(e, req, res);
+						return;
 					}
 					
 					try {
-						if (activate)
-							activateModel(model);
-						else
+						if (activate) {
+							db.fetchModel(modelId, function (e2, modelConfig) {
+								if (e2 != null) {
+									log.error(e2, 'Failed to fetch a model from the DB!');
+									handleServerError(e, req, res);
+									return;
+								}
+								
+								modelStore.loadOnlineModel(modelConfig.model_file, function (e, model) {
+									if (e != null) {
+										log.error(e, 'Exception while loading online model!');
+										return;
+									}
+									
+									if (log.debug())
+										log.debug('Activating model with id %s', model.getId());
+									
+									activateModel(model);
+								});
+							});
+						} else {
+							// deactivate, the model is currently active
+							var model = modelStore.getModel(modelId);
 							deactivateModel(model);
+						}
 						
 						res.status(204);
 						res.end();
@@ -1347,8 +1661,7 @@ function initServerApi() {
 			db.fetchModel(model.getId(), function (e, modelConfig) {
 				if (e != null) {
 					log.error(e, 'Failed to get model mode from the DB!');
-					res.status(500);	// internal server error
-					res.end();
+					handleServerError(e, req, res);
 					return;
 				}
 				
@@ -1360,6 +1673,32 @@ function initServerApi() {
 			});
 		});
 	}
+	
+	app.post(API_PATH + '/shareModel', function (req, res) {
+		try {
+			var session = req.session;
+			
+			var mid = req.body.modelId;
+			
+			if (log.info())
+				log.info('Sharing model %s: ', mid);
+			
+			db.makeModelPublic(mid, function (e) {
+				if (e != null) {
+					log.error(e, 'Failed to activate model %s!', modelId);
+					handleServerError(e, req, res);
+					return;
+				}
+				
+				res.status(204);
+				res.end();
+			});
+		} catch (e) {
+			log.error(e, 'Failed to process raw measurement!');
+			res.status(500);
+			res.end();
+		}
+	});
 }
 
 function initConfigRestApi() {
@@ -1691,28 +2030,206 @@ function loadActiveModels() {
 	});
 }
 
+function excludeDirs(dirs, middleware) {
+	function isInDirs(path) {
+		for (var i = 0; i < dirs.length; i++) {
+			if (path.startsWith(dirs[i]))
+				return true;
+		}
+		return false;
+	}
+	
+	return function (req, res, next) {
+		var path = req.path;
+		if (log.trace())
+			log.trace('Request to path %s', path);
+		
+		if (isInDirs(path)) {
+			if (log.trace())
+				log.trace('Will not use middleware!')
+			return next();
+		} else {
+			if (log.trace())
+				log.trace('Will use middleware!')
+			return middleware(req, res, next);
+		}
+	}
+}
+
+function excludeFiles(files, middleware) {
+	return function (req, res, next) {
+		var path = req.path;
+		
+		if (path == '/') path = '/index.html';
+		
+		if (log.trace())
+			log.trace('Request to path %s', path);
+		
+		var isExcluded = false;
+		
+		for (var i = 0; i < files.length; i++) {
+			var fname = files[i];
+			if (path.endsWith(fname)) {
+				isExcluded = true;
+			}
+		}
+		
+		if (isExcluded) {
+			if (log.trace())
+				log.trace('Will not use middleware!')
+			return next();
+		} else {
+			if (log.trace())
+				log.trace('Will use middleware!')
+			return middleware(req, res, next);
+		}
+	}
+}
+
+function getPageOpts(req, res) {
+	var session = req.session;
+	var page = getRequestedPage(req);
+	
+	var opts = {
+		utils: utils,
+		username: null,
+		model: session.model,
+		modelConfig: null,
+		models: null,
+		error: null,
+		warning: null,
+		message: null,
+		page: page,
+		subtitle: titles[page],
+		useCase: config.USE_CASE_NAME
+	};
+	
+	if (isLoggedIn(session)) {
+		opts.username = session.username;
+	}
+	
+	if (session.error != null) {
+		opts.error = session.error;
+		delete session.error;
+	}
+	
+	if (session.warning != null) {
+		opts.warning = session.warning;
+		delete session.warning;
+	}
+	
+	if (session.message != null) {
+		opts.message = session.message;
+		delete session.message;
+	}
+	
+	return opts;
+}
+
+function prepPage(page) {
+	return function(req, res) {
+		res.render(page, getPageOpts(req, res));
+	}
+}
+
+function prepDashboard() {
+	return function (req, res) {
+		var opts = getPageOpts(req, res);
+		var session = req.session;
+		
+		var username = session.username;
+		
+		db.fetchUserModels(username, function (e, dbModels) {
+			if (e != null) {
+				log.error(e, 'Failed to fetch user models!');
+				handleServerError(e, req, res);
+				return;
+			}
+			
+			var models = {
+				online: {
+					active: [],
+					inactive: [],
+				},
+				offline: [],
+				publicModels: []
+			};
+			for (var i = 0; i < dbModels.length; i++) {
+				var model = dbModels[i];
+				
+				var isOnline = model.is_active != null;
+				var isPublic = model.is_public == 1;
+				
+				if (isPublic) {
+					models.publicModels.push(model);
+				}
+				else if (isOnline) {
+					if (model.is_active == 1) {
+						models.online.active.push(model);
+					} else {
+						models.online.inactive.push(model);
+					}
+				}
+				else {
+					models.offline.push(model);
+				}
+			}
+			
+			opts.models = models;
+			res.render('dashboard', opts);
+		});
+	}
+}
+
+function prepMainUi() {
+	return function (req, res) {
+		var opts = getPageOpts(req, res);
+		var session = req.session;
+		
+		db.fetchModel(session.model.getId(), function (e, modelConfig) {
+			if (e != null) {
+				log.error(e, 'Failed to fetch model configuration from the DB!');
+				handleServerError(e, req, res);
+				return;
+			}
+			
+			opts.modelConfig = modelConfig;
+			res.render('ui', opts);
+		});
+	}
+}
+
+function accessControl(req, res, next) {
+	var session = req.session;
+	
+	var page = getRequestedPage(req);
+	var dir = getRequestedPath(req);
+	
+	if (!isLoggedIn(session)) {
+		if (log.debug())
+			log.debug('Session data missing for page %s, dir %s ...', page, dir);
+		
+		var isAjax = req.xhr;
+		if (isAjax) {
+			if (log.debug())
+				log.debug('Session data missing for AJAX API call, blocking!');
+			handleNoPermission(req, res);
+		} else {
+			redirect(res, 'login.html');
+		}
+	} else {
+		next();
+	}
+}
+
 function getHackedSessionStore() {
 	var store =  new SessionStore();
 	store.on('preDestroy', function (sessionId, session) {
-		cleanUpSession(sessionId, session);
+		cleanUpSessionModel(sessionId, session);
 		if (sessionId in fileBuffH)
 			delete fileBuffH[sessionId];
 	});
 	return store;
-}
-
-function prepPage(page) {
-	return function (req, res) {
-		var session = req.session;
-		
-		var opts = {
-			//isOnlineModel: session.model.isOnline(),
-			model: session.model,
-			useCase: config.USE_CASE_NAME
-		};
-		
-		res.render(page, opts);
-	}
 }
 
 function initServer(sessionStore, parseCookie) {
@@ -1726,28 +2243,12 @@ function initServer(sessionStore, parseCookie) {
 		saveUninitialized: true
 	});
 	
-	function excludeDir(dir, middleware) {
-		return function (req, res, next) {
-			var path = req.path;
-			if (log.trace())
-				log.trace('Request to path %s', path);
-			
-			if (path.indexOf(dir) == 0) {
-				if (log.trace())
-					log.trace('Will not use middleware!')
-				return next();
-			} else {
-				if (log.trace())
-					log.trace('Will use middleware!')
-				return middleware(req, res, next);
-			}
-		}
-	}
-	
 	app.set('view engine', 'ejs');
 	app.use(parseCookie);
-	app.use(excludeDir(DATA_PATH, sess));
+	app.use(excludeDirs([DATA_PATH], sess));
 	// automatically parse body on the API path
+	app.use(LOGIN_PATH + '/', bodyParser.urlencoded({ extended: false }));
+	app.use(LOGIN_PATH + '/', bodyParser.json());
 	app.use(API_PATH + '/', bodyParser.urlencoded({ extended: false }));
 	app.use(API_PATH + '/', bodyParser.json());
 	app.use(DATA_PATH + '/', bodyParser.json());
@@ -1758,18 +2259,26 @@ function initServer(sessionStore, parseCookie) {
 		// check if we need to redirect to the index page
 		if (model == null) {
 			log.info('Session data missing, redirecting to index ...');
-			res.redirect('.');
+			res.redirect('dashboard.html');
 		} else {
 			next();
 		}
 	});
 	
+	initLoginRestApi();
 	initServerApi();
 	initStreamStoryRestApi();
 	initConfigRestApi();
 	initDataUploadApi();
 	
-	app.get('/ui.html', prepPage('ui'));
+	app.use(excludeDirs(['/login', '/js', '/css', '/img', '/lib', '/popups'], excludeFiles(['index.html', 'login.html', 'register.html', 'resetpassword.html'], accessControl)));
+	
+	app.get('/login.html', prepPage('login'));
+	app.get('/register.html', prepPage('register'));
+	app.get('/resetpassword.html', prepPage('resetpassword'));
+	app.get('/profile.html', prepPage('profile'));
+	app.get('/dashboard.html', prepDashboard('dashboard'));
+	app.get('/ui.html', prepMainUi('ui'));
 	
 	// serve static directories on the UI path
 	app.use(UI_PATH, express.static(path.join(__dirname, '../ui')));

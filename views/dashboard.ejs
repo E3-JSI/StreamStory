@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<% include partials/head %>
+	<link rel="stylesheet" href="lib/bootstrap-duallistbox.css">
+
+	<style>
+		.dl-horizontal dt {
+		    white-space: normal;
+		    width: 200px;
+		    text-align: left;
+		}
+	</style>
+</head>
+<body>
+	<nav class="navbar navbar-default">
+  		<div class="container-fluid">
+  			<% include partials/navlogo %>
+
+    		<!-- Collect the nav links, forms, and other content for toggling -->
+    		<div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+      			<ul class="nav navbar-nav navbar-right">
+        			<li>
+        				<!-- a id="lnk-config" href="#"><span class="glyphicon glyphicon-cog" aria-hidden="true"></span></a>
+        				<script type="text/javascript">
+        					$('#lnk-config').click(function (event) {
+        						event.preventDefault();
+        						$('#popup-config').modal({ show: true });
+        					});
+        				</script-->
+        			</li>
+        			<% include partials/navmenus %>
+      			</ul>
+    		</div><!-- /.navbar-collapse -->
+  		</div><!-- /.container-fluid -->
+	</nav>
+	
+	<div class="navbar-default sidebar" role="navigation">
+        <div class="sidebar-nav navbar-collapse">
+            <ul class="nav nav-pills nav-stacked">
+                <li>
+                    <a href="#tab-online" data-toggle="pill">
+                    	<span class="glyphicon glyphicon-user" aria-hidden="true"></span>
+                    	Online Models
+                    </a>
+                </li>
+                <li>
+                    <a href="#tab-offline" data-toggle="pill">
+                    	<span class="glyphicon glyphicon-user" aria-hidden="true"></span>
+                    	Offline Models
+                    </a>
+                </li>
+            </ul>
+        </div>
+        <!-- /.sidebar-collapse -->
+    </div>
+	
+	<div id="page-wrapper" class="container-fluid">
+		<%
+		var activeModels = models.online.active;
+		var inactiveModels = models.online.inactive;
+		var offlineModels = models.offline;
+		var publicModels = models.publicModels;
+		%>
+		<div class="row">
+			<div class="col-md-6">
+				<div class="tab-content">
+					<div id="tab-online" role="tabpanel" class="tab-pane fade active">
+						<div class="row">
+							<div class="col-md-12 col-dashboard">
+								<div class="row">
+									<div class="col-md-12">
+										<div class="row">
+											<div class="col-md-12">
+												<h3>Online models</h3>
+												<div class="panel panel-default">
+													<div class="panel-heading clearfix">
+														<h4 class="panel-title pull-left">Active models</h4>
+														<button id="btn-add-online" class="btn btn-default btn-xs pull-right" style="padding: 0px 5px;" aria-label="Left Align">
+														  	<span class="glyphicon glyphicon-plus"></span> Add
+														</button>
+													</div>
+													<div class="panel-body nopadding model-table-container">
+														<div class="table-responsive">
+															<table id="table-models-active" class="table table-striped table-hover">
+																<thead>
+																	<tr>
+																		<th>Model name</th>
+																		<th>Creation date</th>
+																		<th class="td-btns">&nbsp;</th>
+																	</tr>
+																</thead>
+																<tbody>
+																<% for (var i = 0; i < activeModels.length; i++) { 
+																	var model = activeModels[i]; %>
+																	<tr id="active-<%= model.mid %>">
+																		<td><%= model.name %></td>
+																		<td><%= utils.dateformat(model.date_created) %></td>
+																		<td class="td-btns">
+																			<span class="pull-right">
+																				<button class="btn btn-danger btn-xs btn-deactivate" aria-label="Left Align">
+																				  	<span class="glyphicon glyphicon-off"></span> Deactivate
+																				</button>
+																				<button class="btn btn-info btn-xs btn-view" aria-label="Left Align">
+																				  	<span class="glyphicon glyphicon-eye-open"></span> View
+																				</button>
+																			</span>
+																		</td>
+																	</tr>
+																<% } %>
+																</tbody>
+															</table>
+														</div>
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+								<div class="row">
+									<div class="col-md-12">
+										<div class="row">
+											<div class="col-md-12">
+												<div class="panel panel-default">
+													<div class="panel-heading clearfix">Inactive models</div>
+													<div class="panel-body nopadding model-table-container">
+														<div class="table-responsive">
+															<table id="table-models-inactive" class="table table-striped table-hover">
+																<thead>
+																	<tr>
+																		<th>Model name</th>
+																		<th>Creation date</th>
+																		<th class="td-btns">&nbsp;</th>
+																	</tr>
+																</thead>
+																<tbody>
+																<% for (var i = 0; i < inactiveModels.length; i++) {
+																	var model = inactiveModels[i]; %>
+																	<tr id="inactive-<%= model.mid %>">
+																		<td><%= model.name %></td>
+																		<td><%= utils.dateformat(model.date_created) %></td>
+																		<td class="td-btns">
+																			<span class="pull-right">
+																				<button class="btn btn-success btn-xs btn-activate" aria-label="Left Align">
+																				  	<span class="glyphicon glyphicon-off"></span> Activate
+																				</button>
+																				<button class="btn btn-info btn-xs btn-view" aria-label="Left Align">
+																				  	<span class="glyphicon glyphicon-eye-open"></span> View
+																				</button>
+																			</span>
+																		</td>
+																	</tr>
+																<% } %>
+																</tbody>
+															</table>
+														</div>
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div id="tab-offline" role="tabpanel" class="tab-pane fade active">
+						<div class="row">
+							<div class="col-md-12 col-dashboard">
+								<div class="row">
+									<div class="col-md-12">
+										<div class="row">
+											<div class="col-md-12">
+												<h3>Offline models</h3>
+												<div class="panel panel-default">
+													<div class="panel-heading clearfix">
+														<h4 class="panel-title pull-left">My models</h4>
+														<button id="btn-add-offline" class="btn btn-default btn-xs pull-right" style="padding: 0px 5px;" aria-label="Left Align">
+														  	<span class="glyphicon glyphicon-plus"></span> Add
+														</button>
+													</div>
+													<div class="panel-body nopadding model-table-container">
+														<div class="table-responsive">
+															<table id="table-models-offline" class="table table-striped table-hover table-models">
+																<thead>
+																	<tr>
+																		<th>Model name</th>
+																		<th>Creation date</th>
+																		<th class="td-btns">&nbsp;</th>
+																	</tr>
+																</thead>
+																<tbody>
+																<% for (var i = 0; i < offlineModels.length; i++) { 
+																	var model = offlineModels[i]; %>
+																	<tr id="offline-<%= model.mid %>">
+																		<td><%= model.name %></td>
+																		<td><%= utils.dateformat(model.date_created) %></td>
+																		<td class="td-btns">
+																			<span class="pull-right">
+																				<button class="btn btn-default btn-xs btn-share" aria-label="Left Align">
+																				  	<span class="glyphicon glyphicon-globe"></span> Share
+																				</button>
+																				<button class="btn btn-info btn-xs btn-view" aria-label="Left Align">
+																				  	<span class="glyphicon glyphicon-eye-open"></span> View
+																				</button>
+																			</span>
+																		</td>
+																	</tr>
+																<% } %>
+																</tbody>
+															</table>
+														</div>
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+								<div class="row">
+									<div class="col-md-12">
+										<div class="row">
+											<div class="col-md-12">
+												<div class="panel panel-default">
+													<div class="panel-heading clearfix">Public models</div>
+													<div class="panel-body nopadding model-table-container">
+														<div class="table-responsive">
+															<table id="table-models-public" class="table table-striped table-hover">
+																<thead>
+																	<tr>
+																		<th>Model name</th>
+																		<th>Creation date</th>
+																		<th class="td-btns">&nbsp;</th>
+																	</tr>
+																</thead>
+																<tbody>
+																<% for (var i = 0; i < publicModels.length; i++) {
+																	var model = publicModels[i]; %>
+																	<tr id="public-<%= model.mid %>">
+																		<td><%= model.name %></td>
+																		<td><%= utils.dateformat(model.date_created) %></td>
+																		<td class="td-btns">
+																			<span class="pull-right">
+																				<button class="btn btn-info btn-xs btn-view" aria-label="Left Align">
+																				  	<span class="glyphicon glyphicon-eye-open"></span> View
+																				</button>
+																			</span>
+																		</td>
+																	</tr>
+																<% } %>
+																</tbody>
+															</table>
+														</div>
+													</div>
+												</div>
+											</div>
+										</div>
+										<div class="row">
+											<div class="col-md-12">
+												<div class="form-group">
+													<button id="btn-view-public" class="btn btn-info btn-view" disabled="disabled">
+														<span class="glyphicon glyphicon-eye-open"></span> View
+													</button>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="col-md-6">
+				Hello World
+			</div>
+		</div>
+	</div>
+	
+	<div id="popup-data-upload" class="modal fade" role="dialog" tabindex="-1">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+    				<button type="button" class="close" data-dismiss="modal">&times;</button>
+    				<h4 class="modal-title">Configure Dataset</h4>
+  				</div>
+  				<div class="modal-body">
+  					<form id="form-upload" action="upload" method="POST" enctype="multipart/form-data">
+	  					<div class="form-group">
+                          	<label for="input-choose-upload">Choose file</label>
+	  						<input id="input-choose-upload" type="file" name="dataset" class="btn btn-default btn-file" />
+	  					</div>
+	  					<div id="progress-file-upload-wrapper" class="progress">
+						  	<div id="progress-file-upload" class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="min-width:0%; max-width:100%; width: 0%;"></div>
+						</div>
+	  					<div id="form-phase2" style="display: none;">
+	  						<div class="panel panel-default">
+	  							<div class="panel-heading">Select Attributes</div>
+	  							<div id="div-select-attrs" class="panel-body">
+	  								<select id="select-attrs" multiple="multiple"></select>
+								</div>
+	  						</div>
+		  					<div id="form-phase3" style="display: none;">
+		  						<div class="panel panel-default">
+		  							<div class="panel-heading">Configure Time Attribute</div>
+		  							<div id="div-select-controls" class="panel-body">
+		  								<label for="radio-time">Select time attribute (must be timestamp)</label>
+		  								<div id="radio-time" class="radios"></div>
+		  								
+		  								<label for="select-tu">Select time unit</label>
+		  								<select id="select-tu" class="form-control">
+					  						<option value="second">Second</option>
+					  						<option value="minute">Minute</option>
+					  						<option value="hour" selected="selected">Hour</option>
+					  						<option value="day">Day</option>
+					  						<option value="month">Month</option>
+					  					</select>
+									</div>
+		  						</div>
+		  						<div id="form-phase4"  style="display: none;">
+		  							<div class="panel panel-default">
+		  								<div class="panel-heading">Configure States</div>
+			  							<div id="div-select-controls" class="panel-body">
+			  								<div class="form-group">
+												<label for="select-clust">Select Algorithm</label>
+											    <select id="select-clust" class="form-control">
+											    	<option value="kmeans" selected="selected">K-Means</option>
+											    	<option value="dpmeans">DP-Means</option>
+											    </select>
+											</div>
+											<div id="div-config-kmeans">
+												<div class="form-group">
+													<label for="input-kmeans-k">Number of States</label>
+													<input id="input-kmeans-k" type="number" class="form-control" value="12" min="5" max="50" step="1" />
+												</div>
+											</div>
+											<div id="div-config-dpmeans" class="hidden">
+												<div class="form-group">
+													<label for="input-dpmeans-minstates">Minimum Number of States</label>
+													<input id="input-dpmeans-minstates" type="number" class="form-control" value="10" min="3" max="20" step="1" />
+												</div>
+												<div class="form-group">
+													<label for="input-dpmeans-maxstates">Maximum Number of States</label>
+													<input id="input-dpmeans-maxstates" type="number" class="form-control" value="30" min="10" max="100" step="1" />
+												</div>
+												<div class="form-group">
+													<label for="input-dpmeans-lambda">State Radius</label>
+													<input id="input-dpmeans-lambda" type="number" class="form-control" value="0.8" min="0.1" max="2" step="0.01" />
+												</div>
+											</div>
+										</div>
+		  							</div>
+		  							<div class="panel panel-default">
+		  								<div class="panel-heading">Configure Hierarchy</div>
+			  							<div class="panel-body">
+			  								<div class="form-group">
+												<label for="select-hierarchy">Select Hierarchy Type</label>
+											    <select id="select-hierarchy" class="form-control">
+											    	<option value="mchainPartitioning" selected="selected">Transition based</option>
+											    	<option value="aggClust">Distance based</option>
+											    </select>
+											</div>
+										</div>
+		  							</div>
+		  							<div class="panel panel-default">
+			  							<div class="panel-heading">Organize Attributes</div>
+			  							<div id="div-select-controls" class="panel-body">
+										    <select id="select-controls" multiple="multiple"></select>
+										</div>
+			  						</div>
+			  						<div class="checkbox hidden">
+			                          	<label>
+			                          		<input id="check-realtime" type="checkbox" /> Real-time model
+			                          	</label>
+			  						</div>
+				  					<div class="form-group">
+			                          	<label for="input-model-name">Model name</label>
+	  									<input id="input-model-name" type="text" class="form-control" placeholder="Model name" />
+				  					</div>
+				  					<div id="progress-build-model-wrapper" class="progress" style="display: none;">
+									  	<div id="progress-build-model" class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="min-width:0%; max-width:100%; width: 0%;"></div>
+									</div>
+		  						</div>
+		  					</div>
+	  					</div>
+  					</form>
+  				</div>
+  				<div class="modal-footer">
+    				<button id="btn-done" type="button" class="btn btn-success" disabled="disabled">Done</button>
+  				</div>
+			</div>
+		</div>
+	</div>
+	
+	<% include partials/includejs %>
+	<script type="text/javascript" src="lib/jquery.bootstrap-duallistbox.js"></script>
+	<script type="text/javascript" src="lib/js/jquery-ui.min.js"></script>
+	<script type="text/javascript" src="js/dashboard.js"></script>
+</body>

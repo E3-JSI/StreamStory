@@ -22,3 +22,31 @@ function toUiPrecision(val) {
 		return val.toPrecision(3);
 	}
 }
+
+function showAlert(holder, wrapper, clazz, title, msg, close) {
+	wrapper.children('div').alert('close');
+	wrapper.html(holder.html());
+	
+	var alertDiv = wrapper.children('div');
+	
+	alertDiv.removeClass('alert-danger');
+	alertDiv.removeClass('alert-success');
+	alertDiv.addClass(clazz);
+	
+	if (title != null)
+		alertDiv.children('.alert-title').html(title);
+	if (msg != null)
+		alertDiv.children('.alert-text').html(msg);
+	
+	alertDiv.alert();
+	
+	if (close == true) {
+		setTimeout(function () {
+			alertDiv.alert('close');
+		}, 5000);
+	}
+}
+
+function redirectToUI() {
+	window.location.replace('ui.html');
+}

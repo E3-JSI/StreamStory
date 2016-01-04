@@ -248,7 +248,11 @@ module.exports = function () {
 	
 	function createUser(opts) {
 		var username = opts.username;
+		var password = opts.passwd;
 		var nextOp = opts.nextOp;
+		
+		if (username == null) throw new Error('Usename missing!');
+		if (password == null) throw new Error('Password missing!');
 		
 		return query({
 			sql: 'SELECT EXISTS(SELECT 1 FROM user WHERE email = ?) as isRegistered',
@@ -257,20 +261,11 @@ module.exports = function () {
 				var exists = result[0].isRegistered == 1;
 				
 				if (exists) {
-					if (nextOp != null)
-						nextOp(conn, onsuccess, onerror, username);
-					else
-						onsuccess(undefined, username);
+					onerror(new Error('User with email "' + username + '" already exists!'));
 				} else {
 					query({
 						sql: 'INSERT INTO user SET ?',
-						params: {email: username},
-						nextOp: function (conn, onsuccess, onerror, result) {
-							if (nextOp != null)
-								nextOp(conn, onsuccess, onerror, result.insertId);
-							else
-								onsuccess(undefined, result.insertId)
-						}
+						params: {email: username, passwd: password}
 					})(conn, onsuccess, onerror);
 				}
 			}
@@ -283,13 +278,55 @@ module.exports = function () {
 		// USER QUERIES
 		//===============================================================
 			
-		createUser: function (email, callback) {
+		createUser: function (email, passwordHash, callback) {
 			log.debug('Creating user with username: %s', email);
 			
 			connection({
 				callback: callback,
 				nextOp: createUser({
-					username: email
+					username: email,
+					passwd: passwordHash
+				})
+			});
+		},
+		
+		userExists: function (email, callback) {
+			connection({
+				callback: callback,
+				nextOp: query({
+					sql: 'SELECT EXISTS(SELECT 1 FROM user WHERE email = ?) AS ex',
+					params: [email],
+					nextOp: function (conn, onsuccess, onerror, results) {
+						var exists = results[0].ex == 1;
+						onsuccess(exists);
+					}
+				})
+			});
+		},
+		
+		fetchUserPassword: function (email, callback) {
+			connection({
+				callback: callback,
+				nextOp: query({
+					sql: 'SELECT passwd FROM user WHERE email = ?',
+					params: [email],
+					nextOp: function (conn, onsuccess, onerror, results) {
+						if (results.length == 0) {
+							onerror(new Error('User ' + email + ' does not exist!'));
+						} else {
+							onsuccess(results[0].passwd);
+						}
+					}
+				}),
+			});
+		},
+		
+		updatePassword: function (email, password, callback) {
+			connection({
+				callback: callback,
+				nextOp: query({
+					sql: 'UPDATE user SET passwd = ? WHERE email = ?',
+					params: [password, email]
 				})
 			});
 		},
@@ -298,18 +335,13 @@ module.exports = function () {
 		// MODEL QUERIES
 		//===============================================================
 		
-		fetchUserModels: function (username, callback) {
+		fetchUserModels: function (username, callback) {	// TODO fix this method
 			connection({
 				callback: callback,
-				nextOp: transaction({
-					nextOp: createUser({
-						username: username,
-						nextOp: query({
-							sql: 'SELECT m.*, onm.is_active FROM model m LEFT JOIN offline_model ofm ON m.mid = ofm.mid LEFT JOIN online_model onm ON m.mid = onm.mid ' + 
-									'WHERE m.username = ? OR m.is_public = 1',
-							params: [username]
-						})
-					})
+				nextOp: query({
+					sql: 'SELECT m.*, onm.is_active FROM model m LEFT JOIN offline_model ofm ON m.mid = ofm.mid LEFT JOIN online_model onm ON m.mid = onm.mid ' + 
+							'WHERE m.username = ? OR m.is_public = 1',
+					params: [username]
 				})
 			});
 		},
@@ -454,6 +486,15 @@ module.exports = function () {
 				nextOp: query({
 					sql: 'UPDATE online_model SET is_active = ? WHERE mid = ?',
 					params: [opts.activate ? 1 : 0, opts.modelId]
+				})
+			});
+		},
+		makeModelPublic: function (mid, callback) {
+			connection({
+				callback: callback,
+				nextOp: query({
+					sql: 'UPDATE model SET is_public = ? WHERE mid = ?',
+					params: [1, mid]
 				})
 			});
 		},

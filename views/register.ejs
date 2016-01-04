@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+	<% include partials/loginhead %>
+</head>
+<body>
+	<!--login modal-->
+	<form class="form col-md-12 center-block" action="login/register" method="POST">
+		<div id="loginModal" class="modal show" tabindex="-1" role="dialog"
+			aria-hidden="true">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h1 class="text-center">Registration</h1>
+					</div>
+					<div class="modal-body">
+						<div class="form-group">
+							<input type="text" name="email" class="form-control input-lg" placeholder="Email">
+						</div>
+						<div class="form-group">
+							<input type="password" name="password" class="form-control input-lg" placeholder="Password">
+						</div>
+						<div class="form-group">
+							<input type="password" name="password1" class="form-control input-lg" placeholder="Repeat Password">
+						</div>
+						<% if (warning != null || error != null) { %>
+						<div class="form-group">
+					   		<div class="alert alert-<%= warning != null ? 'warning' : 'danger' %>" role="alert"><%= warning != null ? warning : error %></div>
+						</div>
+						<% } %>
+					</div>
+					<div class="modal-footer">
+						<button type="submit" class="btn btn-primary btn-lg btn-block">Register</button>
+						<span style="float: left;">
+							<a href="login.html">Back</a>
+						</span>
+					</div>
+				</div>
+			</div>
+		</div>
+	</form>
+
+	<% include partials/includejs %>
+</body>
+</html>

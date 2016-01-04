@@ -230,6 +230,7 @@ exports.RealTimeModelStore = function (opts) {
 				var timeUnit = opts.timeUnit;
 				var headers = opts.headers;
 				var timeAttr = opts.timeAttr;
+				var hierarchyType = opts.hierarchyType;
 				var attrs = opts.attrs;
 				var controlAttrs = opts.controlAttrs;
 				var isRealTime = opts.isRealTime;
@@ -326,6 +327,7 @@ exports.RealTimeModelStore = function (opts) {
 						var modelParams = utils.clone(config.STREAM_STORY_PARAMS);
 						modelParams.clustering = clustConfig;
 						modelParams.transitions.timeUnit = timeUnit;
+						modelParams.hierarchy = { isTransitionBased: hierarchyType == 'mchainPartitioning' };
 						
 						if (log.info())
 							log.info('Creating a new model with params: %s', JSON.stringify(modelParams));

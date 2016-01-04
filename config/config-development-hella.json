@@ -30,7 +30,7 @@
 		"host": "localhost",
 		"user": "StreamStory",
 		"password": "StreamStory",
-		"database": "hella"
+		"database": "StreamStoryDashboard"
 	},
 	"integration": {
 		"type": "http",
