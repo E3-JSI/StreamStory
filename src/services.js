@@ -1679,11 +1679,12 @@ function initServerApi() {
 			var session = req.session;
 			
 			var mid = req.body.modelId;
+			var share = req.body.share;
 			
 			if (log.info())
 				log.info('Sharing model %s: ', mid);
 			
-			db.makeModelPublic(mid, function (e) {
+			db.makeModelPublic(mid, share, function (e) {
 				if (e != null) {
 					log.error(e, 'Failed to activate model %s!', modelId);
 					handleServerError(e, req, res);

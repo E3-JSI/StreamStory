@@ -489,12 +489,12 @@ module.exports = function () {
 				})
 			});
 		},
-		makeModelPublic: function (mid, callback) {
+		makeModelPublic: function (mid, share, callback) {
 			connection({
 				callback: callback,
 				nextOp: query({
 					sql: 'UPDATE model SET is_public = ? WHERE mid = ?',
-					params: [1, mid]
+					params: [share ? 1 : 0, mid]
 				})
 			});
 		},

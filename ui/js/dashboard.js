@@ -360,7 +360,24 @@
 		$.ajax('api/shareModel', {
 			method: 'POST',
 			contentType: 'application/json',
-			data: JSON.stringify({ modelId: mid }),
+			data: JSON.stringify({ modelId: mid, share: true }),
+			success: function (data, status, xhr) {
+				window.location.reload();
+			},
+			error: handleAjaxError
+		});
+		
+		return false;
+	});
+	
+	$('.btn-unshare').click(function () {
+		var btn = $(this);
+		var mid = getModelIdFromBtn(btn);
+		
+		$.ajax('api/shareModel', {
+			method: 'POST',
+			contentType: 'application/json',
+			data: JSON.stringify({ modelId: mid, share: false }),
 			success: function (data, status, xhr) {
 				window.location.reload();
 			},
