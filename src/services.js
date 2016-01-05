@@ -930,6 +930,38 @@ function initStreamStoryRestApi() {
 			}
 		});
 		
+		app.get(API_PATH + '/modelDetails', function (req, res) {
+			try {
+				var modelId = parseInt(req.query.modelId);
+				
+				if (log.debug())
+					log.debug('Fetching model details for model: %d', modelId);
+				
+				db.fetchModel(modelId, function (e, modelConfig) {
+					if (e != null) {
+						log.error(e, 'Failed to fetch model details!');
+						handleServerError(e, req, res);
+						return;
+					}				
+
+					res.send({
+						mid: modelConfig.mid,
+						name: modelConfig.name,
+						dataset: modelConfig.dataset,
+						isOnline: modelConfig.is_realtime == 1,
+						creator: modelConfig.username,
+						creationDate: modelConfig.date_created,
+						isPublic: modelConfig.is_public == 1,
+						isActive: modelConfig.is_active == 1
+					});
+					res.end();
+				});
+			} catch (e) {
+				log.error(e, 'Failed to query state details!');
+				andleServerError(e, req, res);
+			}
+		});
+		
 		app.get(API_PATH + '/targetProperties', function (req, res) {
 			try {
 				var stateId = parseInt(req.query.stateId);

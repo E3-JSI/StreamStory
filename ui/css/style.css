@@ -141,6 +141,22 @@
 	width: 150px;
 }
 
+.table-hover:HOVER {
+	cursor: pointer;
+}
+
+.span-details {
+	font-weight: bold;
+}
+
+.green {
+	color: green;
+}
+
+.red {
+	color: red;
+}
+
 /*===============================================================
  	HELPERS
 ===============================================================*/

@@ -94,7 +94,7 @@
 																<% for (var i = 0; i < activeModels.length; i++) { 
 																	var model = activeModels[i]; %>
 																	<tr id="active-<%= model.mid %>">
-																		<td><%= model.name %></td>
+																		<td class="td-model-name"><%= model.name %></td>
 																		<td><%= utils.dateformat(model.date_created) %></td>
 																		<td class="td-btns">
 																			<span class="pull-right">
@@ -139,7 +139,7 @@
 																<% for (var i = 0; i < inactiveModels.length; i++) {
 																	var model = inactiveModels[i]; %>
 																	<tr id="inactive-<%= model.mid %>">
-																		<td><%= model.name %></td>
+																		<td class="td-model-name"><%= model.name %></td>
 																		<td><%= utils.dateformat(model.date_created) %></td>
 																		<td class="td-btns">
 																			<span class="pull-right">
@@ -194,7 +194,7 @@
 																<% for (var i = 0; i < offlineModels.length; i++) { 
 																	var model = offlineModels[i]; %>
 																	<tr id="offline-<%= model.mid %>">
-																		<td><%= model.name %></td>
+																		<td class="td-model-name"><%= model.name %></td>
 																		<td><%= utils.dateformat(model.date_created) %></td>
 																		<td class="td-btns">
 																			<span class="pull-right">
@@ -239,7 +239,7 @@
 																<% for (var i = 0; i < publicModels.length; i++) {
 																	var model = publicModels[i]; %>
 																	<tr id="public-<%= model.mid %>">
-																		<td><%= model.name %></td>
+																		<td class="td-model-name"><%= model.name %></td>
 																		<td><%= utils.dateformat(model.date_created) %></td>
 																		<td class="td-btns">
 																			<span class="pull-right">
@@ -262,15 +262,6 @@
 												</div>
 											</div>
 										</div>
-										<div class="row">
-											<div class="col-md-12">
-												<div class="form-group">
-													<button id="btn-view-public" class="btn btn-info btn-view" disabled="disabled">
-														<span class="glyphicon glyphicon-eye-open"></span> View
-													</button>
-												</div>
-											</div>
-										</div>
 									</div>
 								</div>
 							</div>
@@ -279,7 +270,20 @@
 				</div>
 			</div>
 			<div class="col-md-6">
-				Hello World
+				<div class="row">
+					<div id="div-model-details" class="col-md-12">
+						<h3 id="div-model-name"></h3>
+						<p>
+							Created by <span id="span-creator" class="span-details"></span>
+							 on <span id="span-creation-date" class="span-details"></span>
+						 	 using dataset <span id="span-dataset" class="span-details"></span>
+						</p>
+						<p>
+							The model is <span id="span-online-offline" class="span-details"></span>
+							 and <span id="span-model-active-public" class="span-details"></span>
+						</p>
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -398,6 +402,8 @@
 			</div>
 		</div>
 	</div>
+	
+	<% include partials/confirm %>
 	
 	<% include partials/includejs %>
 	<script type="text/javascript" src="lib/jquery.bootstrap-duallistbox.js"></script>

@@ -258,10 +258,21 @@
 		return table.parent().parent().parent().parent().parent().parent();
 	}
 	
+	function getModelIdFromTr(tr) {
+		return tr.attr('id').split('-')[1];
+	}
+	
+	function getTrFromBtn(btn) {
+		return btn.parent().parent().parent();
+	}
+	
+	function getModelNameFromTr(tr) {
+		return tr.find('.td-model-name').html();
+	}
+	
 	function getModelIdFromBtn(btn) {
-		var tr = btn.parent().parent().parent();
-		var mid = tr.attr('id').split('-')[1];
-		return mid;
+		var tr = getTrFromBtn(btn);
+		return getModelIdFromTr(tr);
 	}
 	
 	$('#table-models-active tbody,#table-models-inactive tbody,#table-models-offline tbody,#table-models-public tbody').sortable({
@@ -276,12 +287,60 @@
 	});
 	
 	$('#table-models-active tbody tr,#table-models-inactive tbody tr,#table-models-offline tbody tr,#table-models-public tbody tr').click(function () {
+		$('#table-models-active tbody tr,#table-models-inactive tbody tr,#table-models-offline tbody tr,#table-models-public tbody tr').removeClass('success');
+		
 		var tr = $(this);
+		tr.addClass('success');
+		
+		var mid = getModelIdFromTr(tr);
+		
+		$.ajax('api/modelDetails', {
+			dataType: 'json',
+			method: 'GET',
+			data: { modelId: mid },
+			success: function (data) {
+				$('#div-model-name').html(data.name);
+				$('#span-creator').html(data.creator);
+				$('#span-creation-date').html(formatDateTime(new Date(data.creationDate)));
+				$('#span-dataset').html(data.dataset);
+				
+				if (data.isOnline) {
+					$('#span-online-offline').addClass('green');
+					$('#span-online-offline').html('online');
+					
+					if (data.isActive) {
+						$('#span-model-active-public').removeClass('red');
+						$('#span-model-active-public').addClass('green');
+						$('#span-model-active-public').html('active');
+					} else {
+						$('#span-model-active-public').removeClass('green');
+						$('#span-model-active-public').addClass('red');
+						$('#span-model-active-public').html('inactive');
+					}
+				} else {
+					$('#span-online-offline').removeClass('green');
+					$('#span-online-offline').html('offline');
+					
+					$('#span-model-active-public').removeClass('red');
+					$('#span-model-active-public').removeClass('green');
+					
+					if (data.isPublic) {
+						$('#span-model-active-public').html('public');
+					} else {
+						$('#span-model-active-public').html('private');
+					}
+				}
+				
+				$('#div-model-details').removeClass('hidden');
+			},
+			error: handleAjaxError
+		});
+		
 		var table = tr.parent().parent();
 		var container = getContainerFromTable(table);
 		
-		table.find('tr').removeClass('success');
-		tr.addClass('success');
+		table.find('tr')
+		
 		
 		container.find('.btn-view').attr('disabled', false);
 	});
@@ -322,15 +381,18 @@
 	$('.btn-deactivate').click(function () {
 		var btn = $(this);
 		var mid = getModelIdFromBtn(btn);
+		var name = getModelNameFromTr(getTrFromBtn(btn));
 		
-		$.ajax('api/activateModel', {
-			method: 'POST',
-			contentType: 'application/json',
-			data: JSON.stringify({ modelId: mid, activate: false }),
-			success: function (data, status, xhr) {
-				window.location.reload();
-			},
-			error: handleAjaxError
+		promptConfirm('Deactivate Model', 'Are you sure you wish to deactivate model ' + name + '?', function () {
+			$.ajax('api/activateModel', {
+				method: 'POST',
+				contentType: 'application/json',
+				data: JSON.stringify({ modelId: mid, activate: false }),
+				success: function (data, status, xhr) {
+					window.location.reload();
+				},
+				error: handleAjaxError
+			});
 		});
 		
 		return false;
@@ -339,15 +401,18 @@
 	$('.btn-activate').click(function () {
 		var btn = $(this);
 		var mid = getModelIdFromBtn(btn);
+		var name = getModelNameFromTr(getTrFromBtn(btn));
 		
-		$.ajax('api/activateModel', {
-			method: 'POST',
-			contentType: 'application/json',
-			data: JSON.stringify({ modelId: mid, activate: true }),
-			success: function (data, status, xhr) {
-				window.location.reload();
-			},
-			error: handleAjaxError
+		promptConfirm('Activate Model', 'Are you sure you wish to activate model ' + name + '?', function () {
+			$.ajax('api/activateModel', {
+				method: 'POST',
+				contentType: 'application/json',
+				data: JSON.stringify({ modelId: mid, activate: true }),
+				success: function (data, status, xhr) {
+					window.location.reload();
+				},
+				error: handleAjaxError
+			});
 		});
 		
 		return false;
@@ -356,15 +421,18 @@
 	$('.btn-share').click(function () {
 		var btn = $(this);
 		var mid = getModelIdFromBtn(btn);
+		var name = getModelNameFromTr(getTrFromBtn(btn));
 		
-		$.ajax('api/shareModel', {
-			method: 'POST',
-			contentType: 'application/json',
-			data: JSON.stringify({ modelId: mid, share: true }),
-			success: function (data, status, xhr) {
-				window.location.reload();
-			},
-			error: handleAjaxError
+		promptConfirm('Share Model', 'Are you sure you wish to share model ' + name + '?', function () {
+			$.ajax('api/shareModel', {
+				method: 'POST',
+				contentType: 'application/json',
+				data: JSON.stringify({ modelId: mid, share: true }),
+				success: function (data, status, xhr) {
+					window.location.reload();
+				},
+				error: handleAjaxError
+			});
 		});
 		
 		return false;
@@ -373,15 +441,18 @@
 	$('.btn-unshare').click(function () {
 		var btn = $(this);
 		var mid = getModelIdFromBtn(btn);
+		var name = getModelNameFromTr(getTrFromBtn(btn));
 		
-		$.ajax('api/shareModel', {
-			method: 'POST',
-			contentType: 'application/json',
-			data: JSON.stringify({ modelId: mid, share: false }),
-			success: function (data, status, xhr) {
-				window.location.reload();
-			},
-			error: handleAjaxError
+		promptConfirm('Unshare Model', 'Are you sure you wish to unshare model ' + name + '?', function () {
+			$.ajax('api/shareModel', {
+				method: 'POST',
+				contentType: 'application/json',
+				data: JSON.stringify({ modelId: mid, share: false }),
+				success: function (data, status, xhr) {
+					window.location.reload();
+				},
+				error: handleAjaxError
+			});
 		});
 		
 		return false;
@@ -390,6 +461,10 @@
 	//========================================================
 	// INITIALIZE NAVIGATION
 	//========================================================	
+	
+	$('.nav-pills a').click(function () {
+		$('#div-model-details').addClass('hidden');
+	});
 	
 	$('.nav-pills a')[0].click();
 })();
