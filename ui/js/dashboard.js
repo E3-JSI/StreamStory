@@ -397,6 +397,7 @@
 					tr.parent().remove(tr.attr('id'));
 					$('#table-models-active').find('tbody').append(tr);
 					
+					tr.attr('id', 'active-' + mid);
 					var newBtn = $('<button class="btn btn-danger btn-xs btn-deactivate" aria-label="Left Align"><span class="glyphicon glyphicon-off"></span> Deactivate</button>');
 					
 					tr.find('.btn-activate').remove();
@@ -434,7 +435,7 @@
 					tr.find('.btn-deactivate').remove();
 					tr.find('.span-btns').prepend(newBtn);
 					
-					newBtn.click(deactivate);
+					newBtn.click(activate);
 					
 					if (tr.hasClass('success'))
 						fetchModelDetails(mid);
