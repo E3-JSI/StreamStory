@@ -30,7 +30,7 @@
 		"host": "localhost",
 		"user": "StreamStory",
 		"password": "StreamStory",
-		"database": "evaluation"
+		"database": "mhwirtheval"
 	},
 	"integration": {
 		"type": "broker",
