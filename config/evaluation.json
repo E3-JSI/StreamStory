@@ -33,7 +33,7 @@
 		"database": "mhwirtheval"
 	},
 	"integration": {
-		"type": "broker",
+		"type": "http",
 		"brokerUrl": "192.168.84.39",
 		"zookeperPort": 2181,
 		"producerPort": 8090
