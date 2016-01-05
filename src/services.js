@@ -463,7 +463,7 @@ function initLoginRestApi() {
 				return;
 			}
 			
-			if (password.length < 6) {
+			if (password.length < 4) {
 				session.warning = 'The password must be at least 6 characters long!';
 				redirect(res, '../register.html');
 				return;
@@ -575,7 +575,7 @@ function initLoginRestApi() {
 				return;
 			}
 			
-			if (password.length < 6) {
+			if (password.length < 4) {
 				handleBadInput(res, 'The password must be at least 6 characters long!');
 				return;
 			}
