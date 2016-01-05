@@ -275,25 +275,7 @@
 		return getModelIdFromTr(tr);
 	}
 	
-	$('#table-models-active tbody,#table-models-inactive tbody,#table-models-offline tbody,#table-models-public tbody').sortable({
-		helper: function(e, tr) {
-   			var $originals = tr.children();
-   			var $helper = tr.clone();
-   			$helper.children().each(function(index) {
-   				$(this).width($originals.eq(index).width())
-			});         
-   			return $helper;     
-		}
-	});
-	
-	$('#table-models-active tbody tr,#table-models-inactive tbody tr,#table-models-offline tbody tr,#table-models-public tbody tr').click(function () {
-		$('#table-models-active tbody tr,#table-models-inactive tbody tr,#table-models-offline tbody tr,#table-models-public tbody tr').removeClass('success');
-		
-		var tr = $(this);
-		tr.addClass('success');
-		
-		var mid = getModelIdFromTr(tr);
-		
+	function fetchModelDetails(mid) {
 		$.ajax('api/modelDetails', {
 			dataType: 'json',
 			method: 'GET',
@@ -335,14 +317,36 @@
 			},
 			error: handleAjaxError
 		});
+	}
+	
+	$('#table-models-active tbody,#table-models-inactive tbody,#table-models-offline tbody,#table-models-public tbody').sortable({
+		helper: function(e, tr) {
+   			var $originals = tr.children();
+   			var $helper = tr.clone();
+   			$helper.children().each(function(index) {
+   				$(this).width($originals.eq(index).width())
+			});         
+   			return $helper;     
+		}
+	});
+	
+	$('#table-models-active tbody tr,#table-models-inactive tbody tr,#table-models-offline tbody tr,#table-models-public tbody tr').click(function () {
+		$('#table-models-active tbody tr,#table-models-inactive tbody tr,#table-models-offline tbody tr,#table-models-public tbody tr').removeClass('success');
 		
-		var table = tr.parent().parent();
-		var container = getContainerFromTable(table);
+		var tr = $(this);
+		tr.addClass('success');
 		
-		table.find('tr')
+		var mid = getModelIdFromTr(tr);
+		fetchModelDetails(mid);
 		
 		
-		container.find('.btn-view').attr('disabled', false);
+//		var table = tr.parent().parent();
+//		var container = getContainerFromTable(table);
+//		
+//		table.find('tr')
+//		
+//		
+//		container.find('.btn-view').attr('disabled', false);
 	});
 	
 	
@@ -378,30 +382,11 @@
 		return false;
 	});
 	
-	$('.btn-deactivate').click(function () {
+	function activate() {
 		var btn = $(this);
-		var mid = getModelIdFromBtn(btn);
-		var name = getModelNameFromTr(getTrFromBtn(btn));
-		
-		promptConfirm('Deactivate Model', 'Are you sure you wish to deactivate model ' + name + '?', function () {
-			$.ajax('api/activateModel', {
-				method: 'POST',
-				contentType: 'application/json',
-				data: JSON.stringify({ modelId: mid, activate: false }),
-				success: function (data, status, xhr) {
-					window.location.reload();
-				},
-				error: handleAjaxError
-			});
-		});
-		
-		return false;
-	});
-	
-	$('.btn-activate').click(function () {
-		var btn = $(this);
-		var mid = getModelIdFromBtn(btn);
-		var name = getModelNameFromTr(getTrFromBtn(btn));
+		var tr = getTrFromBtn(btn);
+		var mid = getModelIdFromTr(tr);
+		var name = getModelNameFromTr(tr);
 		
 		promptConfirm('Activate Model', 'Are you sure you wish to activate model ' + name + '?', function () {
 			$.ajax('api/activateModel', {
@@ -409,19 +394,63 @@
 				contentType: 'application/json',
 				data: JSON.stringify({ modelId: mid, activate: true }),
 				success: function (data, status, xhr) {
-					window.location.reload();
+					tr.parent().remove(tr.attr('id'));
+					$('#table-models-active').find('tbody').append(tr);
+					
+					var newBtn = $('<button class="btn btn-danger btn-xs btn-deactivate" aria-label="Left Align"><span class="glyphicon glyphicon-off"></span> Deactivate</button>');
+					
+					tr.find('.btn-activate').remove();
+					tr.find('.span-btns').prepend(newBtn)
+					
+					newBtn.click(deactivate);
+					
+					if (tr.hasClass('success'))
+						fetchModelDetails(mid);
 				},
 				error: handleAjaxError
 			});
 		});
 		
 		return false;
-	});
+	}
 	
-	$('.btn-share').click(function () {
+	function deactivate() {
 		var btn = $(this);
-		var mid = getModelIdFromBtn(btn);
-		var name = getModelNameFromTr(getTrFromBtn(btn));
+		var tr = getTrFromBtn(btn);
+		var mid = getModelIdFromTr(tr);
+		var name = getModelNameFromTr(tr);
+		
+		promptConfirm('Deactivate Model', 'Are you sure you wish to deactivate model ' + name + '?', function () {
+			$.ajax('api/activateModel', {
+				method: 'POST',
+				contentType: 'application/json',
+				data: JSON.stringify({ modelId: mid, activate: false }),
+				success: function (data, status, xhr) {
+					tr.parent().remove(tr.attr('id'));
+					$('#table-models-inactive').find('tbody').append(tr);
+					
+					var newBtn = $('<button class="btn btn-success btn-xs btn-activate" aria-label="Left Align"><span class="glyphicon glyphicon-off"></span> Activate</button>');
+					
+					tr.find('.btn-deactivate').remove();
+					tr.find('.span-btns').prepend(newBtn);
+					
+					newBtn.click(deactivate);
+					
+					if (tr.hasClass('success'))
+						fetchModelDetails(mid);
+				},
+				error: handleAjaxError
+			});
+		});
+		
+		return false;
+	}
+	
+	function share() {
+		var btn = $(this);
+		var tr = getTrFromBtn(btn);
+		var mid = getModelIdFromTr(tr);
+		var name = getModelNameFromTr(tr);
 		
 		promptConfirm('Share Model', 'Are you sure you wish to share model ' + name + '?', function () {
 			$.ajax('api/shareModel', {
@@ -429,19 +458,31 @@
 				contentType: 'application/json',
 				data: JSON.stringify({ modelId: mid, share: true }),
 				success: function (data, status, xhr) {
-					window.location.reload();
+					tr.parent().remove(tr.attr('id'));
+					$('#table-models-public').find('tbody').append(tr);
+					
+					var newBtn = $('<button class="btn btn-warning btn-xs btn-unshare" aria-label="Left Align"><span class="glyphicon glyphicon-globe"></span> Unshare</button>');
+					
+					tr.find('.btn-share').remove();
+					tr.find('.span-btns').prepend(newBtn);
+					
+					newBtn.click(unshare);
+					
+					if (tr.hasClass('success'))
+						fetchModelDetails(mid);
 				},
 				error: handleAjaxError
 			});
 		});
 		
 		return false;
-	});
+	}
 	
-	$('.btn-unshare').click(function () {
+	function unshare() {
 		var btn = $(this);
-		var mid = getModelIdFromBtn(btn);
-		var name = getModelNameFromTr(getTrFromBtn(btn));
+		var tr = getTrFromBtn(btn);
+		var mid = getModelIdFromTr(tr);
+		var name = getModelNameFromTr(tr);
 		
 		promptConfirm('Unshare Model', 'Are you sure you wish to unshare model ' + name + '?', function () {
 			$.ajax('api/shareModel', {
@@ -449,14 +490,31 @@
 				contentType: 'application/json',
 				data: JSON.stringify({ modelId: mid, share: false }),
 				success: function (data, status, xhr) {
-					window.location.reload();
+					tr.parent().remove(tr.attr('id'));
+					$('#table-models-offline').find('tbody').append(tr);
+					
+					var newBtn = $('<button class="btn btn-default btn-xs btn-share" aria-label="Left Align"><span class="glyphicon glyphicon-globe"></span> Share</button>');
+				
+					tr.find('.btn-unshare').remove();
+					tr.find('.span-btns').prepend(newBtn);
+					
+					newBtn.click(share);
+					
+					if (tr.hasClass('success'))
+						fetchModelDetails(mid);
 				},
 				error: handleAjaxError
 			});
 		});
 		
 		return false;
-	});
+	}
+	
+	// table buttons
+	$('.btn-activate').click(activate);
+	$('.btn-deactivate').click(deactivate);
+	$('.btn-share').click(share);
+	$('.btn-unshare').click(unshare);
 	
 	//========================================================
 	// INITIALIZE NAVIGATION
