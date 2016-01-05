@@ -1621,6 +1621,54 @@ function initServerApi() {
 	{
 		log.info('Registering activate model service ...');
 		
+		function activateModelById(req, res, modelId, activate) {
+			if (log.info())
+				log.info('Activating model %s: ' + activate, modelId);
+			
+			db.activateModel({modelId: modelId, activate: activate}, function (e1) {
+				if (e1 != null) {
+					log.error(e1, 'Failed to activate model %s!', modelId);
+					handleServerError(e, req, res);
+					return;
+				}
+				
+				try {
+					if (activate) {
+						db.fetchModel(modelId, function (e2, modelConfig) {
+							if (e2 != null) {
+								log.error(e2, 'Failed to fetch a model from the DB!');
+								handleServerError(e, req, res);
+								return;
+							}
+							
+							modelStore.loadOnlineModel(modelConfig.model_file, function (e, model) {
+								if (e != null) {
+									log.error(e, 'Exception while loading online model!');
+									return;
+								}
+								
+								if (log.debug())
+									log.debug('Activating model with id %s', model.getId());
+								
+								activateModel(model);
+							});
+						});
+					} else {
+						// deactivate, the model is currently active
+						var model = modelStore.getModel(modelId);
+						deactivateModel(model);
+					}
+					
+					res.status(204);
+					res.end();
+				} catch (e2) {
+					log.error('Model activated in the DB, but failed to activate it in the app!');
+					res.status(500);
+					res.end();
+				}
+			});
+		}
+		
 		app.post(API_PATH + '/activateModel', function (req, res) {
 			try {
 				var session = req.session;
@@ -1630,51 +1678,24 @@ function initServerApi() {
 				if (activate == null) throw new Error('Missing parameter activate!');
 				if (modelId == null) throw new Error('WTF?! Tried to activate a model that doesn\'t have an ID!');
 				
-				if (log.info())
-					log.info('Activating model %s: ' + activate, modelId);
+				activateModelById(req, res, modelId, activate);
+			} catch (e) {
+				log.error(e, 'Failed to process raw measurement!');
+				res.status(500);
+				res.end();
+			}
+		});
+		
+		app.post(API_PATH + '/activateModelViz', function (req, res) {
+			try {
+				var session = req.session;
+				var activate = req.body.activate == 'true';
+
+				if (activate == null) throw new Error('Missing parameter activate!');
 				
-				db.activateModel({modelId: modelId, activate: activate}, function (e1) {
-					if (e1 != null) {
-						log.error(e1, 'Failed to activate model %s!', modelId);
-						handleServerError(e, req, res);
-						return;
-					}
-					
-					try {
-						if (activate) {
-							db.fetchModel(modelId, function (e2, modelConfig) {
-								if (e2 != null) {
-									log.error(e2, 'Failed to fetch a model from the DB!');
-									handleServerError(e, req, res);
-									return;
-								}
-								
-								modelStore.loadOnlineModel(modelConfig.model_file, function (e, model) {
-									if (e != null) {
-										log.error(e, 'Exception while loading online model!');
-										return;
-									}
-									
-									if (log.debug())
-										log.debug('Activating model with id %s', model.getId());
-									
-									activateModel(model);
-								});
-							});
-						} else {
-							// deactivate, the model is currently active
-							var model = modelStore.getModel(modelId);
-							deactivateModel(model);
-						}
-						
-						res.status(204);
-						res.end();
-					} catch (e2) {
-						log.error('Model activated in the DB, but failed to activate it in the app!');
-						res.status(500);
-						res.end();
-					}
-				});
+				var model = getModel(req.sessionID, session);
+				
+				activateModelById(req, res, model.getId(), activate);
 			} catch (e) {
 				log.error(e, 'Failed to process raw measurement!');
 				res.status(500);
