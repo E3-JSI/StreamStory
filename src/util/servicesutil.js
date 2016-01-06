@@ -16,6 +16,7 @@ exports.RealTimeModelStore = function (opts) {
 	if (opts.db == null) throw new Error('Missing database in model store!');
 	
 	var store = {};
+	var buildingModelStore = {};
 	
 	var base = opts.base;
 	var ws = opts.ws;
@@ -95,6 +96,94 @@ exports.RealTimeModelStore = function (opts) {
  			model.setId(dbModel.mid);
 			callback(undefined, model);
 		});
+	}
+	
+	function hasProgress(username) {
+		if (!that.isBuildingModel(username)) throw new Error('User ' + username + ' is not building a model!');
+		return buildingModelStore[username].progress != null;
+	}
+	
+	function popProgress(username) {
+		if (!that.hasProgress(username)) throw new Error('User ' + username + ' does not have any progress to report!');
+		
+		var status = buildingModelStore[username];
+		var progress = status.progress;
+		
+		status.prevProgress = progress;
+		status.progress = null;
+		
+		return {
+			error: status.error,
+			message: progress.message,
+			isFinished: progress.isFinished,
+			progress: progress.progress
+		}
+	}
+	
+	function setProgress(username, isFinished, progress, message) {
+		if (!that.isBuildingModel(username)) throw new Error(username + ' is not building a model!');
+	
+		var status = buildingModelStore[username];
+		status.progress = {
+			message: message,
+			progress: progress,
+			isFinished: isFinished
+		}
+	}
+	
+	function updateProgress(username, isFinished, progress, message) {
+		if (log.trace())
+			log.trace('Updating progress ...');
+		
+		if (!that.isBuildingModel(username)) throw new Error(username + ' is not building a model!');
+		
+		var status = buildingModelStore[username];
+		
+		status.prevProgress = status.progress;
+		setProgress(username, isFinished, progress, message);
+		
+		var callback = status.progressCallback;
+		if (callback != null) {
+			var progress = popProgress(username);			
+			callback(status.error, progress.isFinished, progress.progress, progress.message);
+		}
+	}
+	
+	function startBuildingModel(username, callback) {
+		buildingModelStore[username] = {
+			progress: null,
+			prevProgress: null,
+			callback: callback,
+			error: null,
+			mid: null
+		};
+		
+		updateProgress(username, false, 0, 'Initilizing ...');
+	}
+	
+	function setModelBuildError(username, e) {
+		log.warn('Setting model build error for user: %s', username);
+		
+		if (!that.isBuildingModel(username)) throw new Error(username + ' is not building a model!');
+		
+		var status = buildingModelStore[username];
+		status.error = e;
+		
+		updateProgress(username, true, 100, 'Error while building model: ' + e.message);
+	}
+	
+	function setModelFinshed(username, mid, model) {
+		if (log.trace())
+			log.trace('Finished building model, calling callbacks ...');
+		
+		if (!that.isBuildingModel(username)) throw new Error(username + ' is not building a model!');
+		
+		setProgress(username, true, 100, 'Finished!');		
+		buildingModelStore[username].mid = mid;
+		
+		// callbacks
+		buildingModelStore[username].callback(undefined, mid, model);
+		updateProgress(username, true, 100, 'Finished!');
 	}
 	
 	var that = {
@@ -217,10 +306,42 @@ exports.RealTimeModelStore = function (opts) {
 				callback(undefined, model);
 			});
 		},
+		isBuildingModel: function (username) {
+			return username in buildingModelStore;
+		},
+		confirmModelBuilt: function (username) {
+			if (log.trace())
+				log.trace('Confirming that the model was built ...');
+			
+			if (!that.isBuildingModel(username)) throw new Error('User ' + username + ' is not building a model!');
+			
+			delete buildingModelStore[username];
+		},
+		getBuildingModelId: function (username) {
+			if (!that.isBuildingModel(username)) throw new Error('User ' + username + ' is not building a model!');
+			if (buildingModelStore[username].mid == null) throw new Error('Model for ' + username + ' not yet built!');
+			
+			return buildingModelStore[username].mid;
+		},
+		hasProgress: hasProgress,
+		popProgress: popProgress,
+		setProgressCallback: function (username, callback) {
+			if (!that.isBuildingModel(username)) throw new Error('User ' + username + ' is not building a model!');
+			
+			buildingModelStore[username].progressCallback = callback;
+		},
+		clearProgressCallback: function (username) {
+			if (!that.isBuildingModel(username)) throw new Error('User ' + username + ' is not building a model!');
+		
+			buildingModelStore[username].progressCallback = null;
+		},
 		buildModel: function (opts, callback) {
 			if (callback == null) callback = function (e) { log.error(e, 'Exception while buillding model!'); }
+			if (that.isBuildingModel(opts.username)) throw new Error('User ' + opts.username + ' is already building a model!');
 			
 			try {
+				startBuildingModel(opts.username, callback);
+				
 				var username = opts.username;
 				var datasetName = opts.datasetName;
 				var modelName = opts.modelName;
@@ -288,8 +409,10 @@ exports.RealTimeModelStore = function (opts) {
 					for (var entryN = 0; entryN < nLines; entryN++) {
 						var lineArr = lines[entryN];
 						
-						if (++lineN % 10000 == 0 && log.debug())
+						if (++lineN % 10000 == 0 && log.debug()) {
 							log.debug('Read %d lines ...', lineN);
+							updateProgress(username, false, 20, 'Read ' + lineN + ' lines ...');
+						}
 						
 						var recJson = {};
 						for (var i = 0; i < headers.length; i++) {
@@ -316,11 +439,13 @@ exports.RealTimeModelStore = function (opts) {
 				}, function onEnd(e) {
 					if (e != null) {
 						log.error(e, 'Exception while parsing the uploaded CSV file!');
-						callback(e);
+						setModelBuildError(username, e);
+//						callback(e);
 						return;
 					}
 					
 					log.info('Building StreamStory model ...');
+					updateProgress(username, false, 40, 'Building the model ...');
 					
 					// create the configuration
 					try {
@@ -348,15 +473,24 @@ exports.RealTimeModelStore = function (opts) {
 							batchEndV: null
 						};
 						
+						model.getModel().onProgress(function (perc, msg) {
+							updateProgress(username, false, (40 + 55*perc/100).toFixed(), msg);
+						});
+						
 						model.fitAsync(fitOpts, function (e1) {
 							if (e1 != null) {
 								log.error(e1, 'Exception while fitting model!');
-								callback(e1);
+								setModelBuildError(username, e1);
+//								callback(e1);
 								return;
 							}
 							
-							if (log.debug())
+							model.getModel().onProgress(null);
+							
+							if (log.debug()) {
 								log.debug('Model created, storing ...');
+								updateProgress(username, false, 95, 'Storing ...');
+							}
 							
 							var fname = isRealTime ? 
 									config.REAL_TIME_MODELS_PATH + new Date().getTime() + '.bin' :
@@ -375,7 +509,8 @@ exports.RealTimeModelStore = function (opts) {
 								db.storeOnlineModel(dbOpts, function (e, mid) {
 									if (e != null) {
 										log.error(e, 'Failed to store offline model to DB!');
-										callback(e);
+										setModelBuildError(username, e);
+//										callback(e);
 										return;
 									}
 																	
@@ -384,7 +519,8 @@ exports.RealTimeModelStore = function (opts) {
 									model.setId(mid);
 									model.setOnline(true);
 									
-									callback(undefined, model, undefined, fname);
+									setModelFinshed(username, mid, model);
+//									callback(undefined, model, undefined, fname);
 								});
 							} else {
 								// store the model into the DB
@@ -400,7 +536,8 @@ exports.RealTimeModelStore = function (opts) {
 								db.storeOfflineModel(dbOpts, function (e, mid) {
 									if (e != null) {
 										log.error(e, 'Failed to store offline model to DB!');
-										callback(e);
+										setModelBuildError(username, e);
+//										callback(e);
 										return;
 									}
 									
@@ -414,18 +551,22 @@ exports.RealTimeModelStore = function (opts) {
 										if (log.debug())
 											log.debug('Offline model stored!');
 										
-										that.loadOfflineModel(baseDir, function (e, baseConfig) {
-											if (e != null) {
-												log.error(e, 'Failed to load an offline model!');
-												callback(e);
-												return;
-											}
-											
-											var model = baseConfig.model;
-											var base = baseConfig.base;
-											
-											callback(undefined, model, base, fname);
-										});
+										setModelFinshed(username, mid, undefined);
+										
+//										that.loadOfflineModel(baseDir, function (e, baseConfig) {
+//											if (e != null) {
+//												log.error(e, 'Failed to load an offline model!');
+//												setModelBuildError(username, e);
+////												callback(e);
+//												return;
+//											}
+//											
+//											var model = baseConfig.model;
+//											var base = baseConfig.base;
+//											
+//											
+////											callback(undefined, model, base, fname);
+//										});
 									} catch (e1) {
 										log.error(e1, 'Failed to open base!');
 										callback(e1);

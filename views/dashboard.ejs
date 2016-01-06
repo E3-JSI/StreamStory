@@ -95,7 +95,7 @@
 																	var model = activeModels[i]; %>
 																	<tr id="active-<%= model.mid %>">
 																		<td class="td-model-name"><%= model.name %></td>
-																		<td><%= utils.dateformat(model.date_created) %></td>
+																		<td class="td-model-date"><%= utils.dateformat(model.date_created) %></td>
 																		<td class="td-btns">
 																			<span class="pull-right span-btns">
 																				<button class="btn btn-danger btn-xs btn-deactivate" aria-label="Left Align">
@@ -195,7 +195,7 @@
 																	var model = offlineModels[i]; %>
 																	<tr id="offline-<%= model.mid %>">
 																		<td class="td-model-name"><%= model.name %></td>
-																		<td><%= utils.dateformat(model.date_created) %></td>
+																		<td class="td-model-date"><%= utils.dateformat(model.date_created) %></td>
 																		<td class="td-btns">
 																			<span class="pull-right span-btns">
 																				<button class="btn btn-default btn-xs btn-share" aria-label="Left Align">
@@ -240,7 +240,7 @@
 																	var model = publicModels[i]; %>
 																	<tr id="public-<%= model.mid %>">
 																		<td class="td-model-name"><%= model.name %></td>
-																		<td><%= utils.dateformat(model.date_created) %></td>
+																		<td class="td-model-date"><%= utils.dateformat(model.date_created) %></td>
 																		<td class="td-btns">
 																			<span class="pull-right span-btns">
 																				<% if (model.username == username) { %>
@@ -282,6 +282,14 @@
 							The model is <span id="span-online-offline" class="span-details"></span>
 							 and <span id="span-model-active-public" class="span-details"></span>
 						</p>
+					</div>
+				</div>
+				<div class="row">
+					<div id="div-model-progress" class="col-md-12"> <!-- hidden -->
+						<h3>Build progress</h3>
+						<div id="progress-build-model-wrapper" class="progress">	<!-- hidden -->
+						  	<div id="progress-build-model" class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="min-width:0%; max-width:100%; width: 0%;"></div>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -388,9 +396,6 @@
 			                          	<label for="input-model-name">Model name</label>
 	  									<input id="input-model-name" type="text" class="form-control" placeholder="Model name" />
 				  					</div>
-				  					<div id="progress-build-model-wrapper" class="progress" style="display: none;">
-									  	<div id="progress-build-model" class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="min-width:0%; max-width:100%; width: 0%;"></div>
-									</div>
 		  						</div>
 		  					</div>
 	  					</div>

@@ -1,6 +1,23 @@
 (function () {
 	var newModelPopup = $('#popup-data-upload');
 	
+	function viewModel() {
+		var btn = $(this);
+		var mid = getModelIdFromBtn(btn);
+		
+		$.ajax('api/selectDataset', {
+			method: 'POST',
+			contentType: 'application/json',
+			data: JSON.stringify({ modelId: mid }),
+			success: function (data, status, xhr) {
+				redirectToUI();
+			},
+			error: handleAjaxError
+		});
+		
+		return false;
+	}
+	
 	//========================================================
 	// ADDING A NEW MODEL
 	//========================================================
@@ -170,6 +187,98 @@
 		});
 	});
 	
+	function pingProgress(isRealTime) {
+		console.log('Pinging for model progress ...');
+		
+		$.ajax('api/pingProgress', {
+			method: 'GET',
+			contentType: 'application/json',
+			success: function (data, status, xhr) {
+				console.log('Gor ping result!');
+				
+				if (xhr.status == 204) {	// no content
+					pingProgress(isRealTime);
+					return;
+				}
+				
+				if (data.error != null) {
+					alert('Error while building model: ' + data.error);
+				} else {
+					$('#progress-build-model').css('width', data.progress + '%');
+					$('#progress-build-model').html(data.message);
+					
+					if (!data.isFinished) {
+						pingProgress(isRealTime);
+					} else {	// finished
+						console.log('Finished building the model!');
+					
+						var mid = data.mid;
+						
+						// fetch the new model
+						$.ajax('api/modelDetails', {
+							dataType: 'json',
+							method: 'GET',
+							data: { modelId: mid },
+							success: function (data) {
+								var table = isRealTime ? $('#table-models-active') : $('#table-models-offline');
+								var tbody = table.find('tbody');
+								
+								var tr = $('<tr />');
+								tr.attr('id', (isRealTime ? 'active-' : 'offline-') + data.mid);
+								tr.addClass('ui-sortable-handle');
+								
+								var nameTd = $('<td />');
+								var dateTd = $('<td />');
+								var buttonsTd = $('<td />');
+								
+								nameTd.addClass('td-model-name');
+								nameTd.html(data.name);
+								
+								dateTd.addClass('td-model-date');
+								dateTd.html(formatDate(new Date(data.creationDate)));
+								
+								buttonsTd.addClass('td-btns');
+															
+								tr.append(nameTd);
+								tr.append(dateTd);
+								tr.append(buttonsTd);
+								tbody.append(tr);
+								
+								// initialize the buttons
+								var buttonSpan = $('<span class="pull-right span-btns" />');
+								
+								var btnView = $('<button class="btn btn-info btn-xs btn-view" aria-label="Left Align"><span class="glyphicon glyphicon-eye-open"></span> View</button>');
+								btnView.click(viewModel);
+								
+								if (isRealTime) {
+									var deactivateBtn = $('<button class="btn btn-danger btn-xs btn-deactivate" aria-label="Left Align"><span class="glyphicon glyphicon-off"></span> Deactivate</button>');
+									deactivateBtn.click(deactivate);
+									buttonSpan.append(deactivateBtn);
+								} else {
+									var shareBtn = $('<button class="btn btn-default btn-xs btn-share" aria-label="Left Align"><span class="glyphicon glyphicon-globe"></span> Share</button>');
+									shareBtn.click(share);
+									buttonSpan.append(shareBtn);
+								}
+								
+								buttonSpan.append(btnView);
+								buttonsTd.append(buttonSpan);
+								
+								setTimeout(function () {
+									$('#div-model-progress').addClass('hidden');
+								}, 5000);
+							},
+							error: handleAjaxError
+						});
+					}
+				}
+			},
+			error: function (xhr, status, e) {
+				handleAjaxError(xhr, status, e);
+				$('#div-model-progress').addClass('hidden');
+			}
+		});
+	}
+	
 	$('#btn-done').click(function () {
 		var btn = $(this);
 		
@@ -215,36 +324,17 @@
 				data.clust.maxStates = maxStates;
 		}
 		
-		var startTime = new Date().getTime();
-		
-		var currProgress = 0;
-		var prevProgress = 0;
-		var intervalId = setInterval(function () {
-			var time = (new Date().getTime() - startTime) / 1000;
-			currProgress = Math.floor((1 - Math.exp(-time/(60*2))) * 100);
-			
-			if (currProgress != prevProgress) {
-				$('#progress-build-model').css('width', currProgress + '%');
-				$('#progress-build-model').html(currProgress + '%');
-				prevProgress = currProgress;
-			}
-		}, 500);
-		
-		$.ajax('api/configureModel', {
+		$.ajax('api/buildModel', {
 			method: 'POST',
 			contentType: 'application/json',
 			data: JSON.stringify(data),
 			timeout: 1000*60*60*24,	// 1 day
 			success: function (data) {
 				newModelPopup.modal('hide');
-				window.location.reload();
+				$('#div-model-progress').removeClass('hidden');
+				pingProgress(isRealTime);
 			},
-			error: function (xhr, status) {
-				alert(status);
-			},
-			complete: function () {
-				clearInterval(intervalId);
-			}
+			error: handleAjaxError
 		});
 		
 		btn.attr('disabled', 'disabled');
@@ -338,15 +428,6 @@
 		
 		var mid = getModelIdFromTr(tr);
 		fetchModelDetails(mid);
-		
-		
-//		var table = tr.parent().parent();
-//		var container = getContainerFromTable(table);
-//		
-//		table.find('tr')
-//		
-//		
-//		container.find('.btn-view').attr('disabled', false);
 	});
 	
 	
@@ -365,22 +446,7 @@
 		newModelPopup.modal('show');
 	});
 	
-	$('.btn-view').click(function () {
-		var btn = $(this);
-		var mid = getModelIdFromBtn(btn);
-		
-		$.ajax('api/selectDataset', {
-			method: 'POST',
-			contentType: 'application/json',
-			data: JSON.stringify({ modelId: mid }),
-			success: function (data, status, xhr) {
-				redirectToUI();
-			},
-			error: handleAjaxError
-		});
-		
-		return false;
-	});
+	$('.btn-view').click(viewModel);
 	
 	function activate() {
 		var btn = $(this);

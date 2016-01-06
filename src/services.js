@@ -1364,32 +1364,30 @@ function initDataUploadApi() {
 							fileBuff: fileBuff,
 							clustConfig: clustConfig,
 							baseDir: baseDir
+					}
+						
+					modelStore.buildModel(opts, function (e, mid, model) {
+						if (e != null) {
+							log.error('Exception while building model!');
+							return;
 						}
 						
-						modelStore.buildModel(opts, function (e, model, base, fname) {
-							if (e != null) {
-								handleServerError(e, req, res);
-								return;
-							}
+						if (isRealTime) {
+							if (log.debug())
+								log.debug('Online model created!');
 							
-							if (isRealTime) {
-								if (log.debug())
-									log.debug('Online model created!');
-								
-								activateModel(model);
-								saveToSession(sessionId, session, userBase, model, model.getId(), fname);
-							} else {
-								saveToSession(sessionId, session, base, model, model.getId(), fname);
-							}
-							
-							res.status(204);	// no content
-							res.end();
-						});
-					} catch (e) {
-						log.error(e, 'Exception while uploading a new dataset!');
-						handleServerError(e, req, res);
-					}
-				});
+							activateModel(model);
+						}
+					});
+					
+					// finish the request
+					res.status(204);	// no content
+					res.end();
+				} catch (e) {
+					log.error(e, 'Exception while uploading a new dataset!');
+					handleServerError(e, req, res);
+				}
+			});
 		} catch (e) {
 			log.error(e, 'Exception while building model!');
 			res.status(500);	// internal server error
@@ -1397,7 +1395,85 @@ function initDataUploadApi() {
 		}
 	}
 	
-	app.post(API_PATH + '/configureModel', function (req, res) {
+	function handleGotProgress(req, res, e, isFinished, progress, msg) {
+		try {
+			var session = req.session;
+			var username = session.username;
+			
+			if (e != null) {
+				log.error(e, 'Failed to build model!');
+				res.send({
+					error: e.message
+				});
+			} else if (isFinished) {
+				var mid = modelStore.getBuildingModelId(username);
+				modelStore.confirmModelBuilt(username);
+				
+				res.send({
+					isFinished: true,
+					progress: progress,
+					message: msg,
+					mid: mid
+				});
+			} else {
+				res.send({
+					isFinished: false,
+					message: msg,
+					progress: progress
+				});
+			}
+			
+			res.end();
+		} catch (e) {
+			log.error(e, 'Failed to send progress to the UI!');
+			handleServerError(e, req, res);
+		}
+	}
+	
+	app.get(API_PATH + '/pingProgress', function (req, res) {
+		if (log.debug())
+			log.debug('Checking model progress ...');
+		
+		try {
+			var session = req.session;
+			var username = session.username;
+			
+			if (!modelStore.isBuildingModel(username)) throw new Error('The user is not building a model!');
+			
+			if (modelStore.hasProgress(username)) {
+				if (log.trace())
+					log.trace('Already have progress, returning result ...');
+				
+				var progress = modelStore.popProgress(username);
+				handleGotProgress(req, res, progress.error, progress.isFinished, progress.progress, progress.message);
+			}
+			else {
+				var timeoutId = setTimeout(function () {
+					if (log.trace())
+						log.trace('Progress request expired, sending no content ...');
+					
+					modelStore.clearProgressCallback(username);
+					res.status(204);	// no content
+					res.end();
+				}, 30000);
+				
+				modelStore.setProgressCallback(username, function (e, isFinished, progress, message) {
+					if (log.debug())
+						log.debug('Progress callback called ...');
+					
+					clearTimeout(timeoutId);
+					modelStore.clearProgressCallback(username);
+					
+					handleGotProgress(req, res, e, isFinished, progress, message);
+				});
+			}
+		} catch (e) {
+			log.error(e, 'Failed to check model progress!');
+			handleServerError(e, req, res);
+		}
+	});
+	
+	app.post(API_PATH + '/buildModel', function (req, res) {
 		log.info('Building the model ...');
 		
 		// create new base with the default store
