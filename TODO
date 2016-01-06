@@ -13,8 +13,8 @@ ZA REVIEW:
 - poglej, ce load model dela v vseh primerih
 - check if the prediction of an undesired state works as expected
 - state name se ne pokaze takoj
-- deactivate model from the main UI
 - poglej kaj se zgodi s trenutnim modelom, ko ga aktiviras/deaktivirak prek dashboarda
-- kam naj vodi logo link? Dashboard ali landing page?
 - add a description to each model
-- fix dashboard for small screens
+- check what happens when you try to build 2 models
+- ko dodam model, sta buttona skupaj
+

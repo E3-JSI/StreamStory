@@ -1,22 +1,285 @@
-(function () {
-	var newModelPopup = $('#popup-data-upload');
+function getContainerFromTable(table) {
+	return table.parent().parent().parent().parent().parent().parent();
+}
+
+function getModelIdFromTr(tr) {
+	return tr.attr('id').split('-')[1];
+}
+
+function getTrFromBtn(btn) {
+	return btn.parent().parent().parent();
+}
+
+function getModelNameFromTr(tr) {
+	return tr.find('.td-model-name').html();
+}
+
+function getModelIdFromBtn(btn) {
+	var tr = getTrFromBtn(btn);
+	return getModelIdFromTr(tr);
+}
+
+function fetchDetails() {
+	$('#table-models-active tbody tr,#table-models-inactive tbody tr,#table-models-offline tbody tr,#table-models-public tbody tr').removeClass('success');
 	
-	function viewModel() {
-		var btn = $(this);
-		var mid = getModelIdFromBtn(btn);
-		
-		$.ajax('api/selectDataset', {
+	var tr = $(this);
+	tr.addClass('success');
+	
+	var mid = getModelIdFromTr(tr);
+	fetchModelDetails(mid);
+}
+
+function viewModel() {
+	var btn = $(this);
+	var mid = getModelIdFromBtn(btn);
+	
+	$.ajax('api/selectDataset', {
+		method: 'POST',
+		contentType: 'application/json',
+		data: JSON.stringify({ modelId: mid }),
+		success: function (data, status, xhr) {
+			redirectToUI();
+		},
+		error: handleAjaxError
+	});
+	
+	return false;
+}
+
+function activate() {
+	var btn = $(this);
+	var tr = getTrFromBtn(btn);
+	var mid = getModelIdFromTr(tr);
+	var name = getModelNameFromTr(tr);
+	
+	promptConfirm('Activate Model', 'Are you sure you wish to activate model ' + name + '?', function () {
+		$.ajax('api/activateModel', {
 			method: 'POST',
 			contentType: 'application/json',
-			data: JSON.stringify({ modelId: mid }),
+			data: JSON.stringify({ modelId: mid, activate: true }),
 			success: function (data, status, xhr) {
-				redirectToUI();
+				tr.parent().remove(tr.attr('id'));
+				$('#table-models-active').find('tbody').append(tr);
+				
+				tr.attr('id', 'active-' + mid);
+				var newBtn = $('<button class="btn btn-danger btn-xs btn-deactivate" aria-label="Left Align"><span class="glyphicon glyphicon-off"></span> Deactivate</button>');
+				
+				tr.find('.btn-activate').remove();
+				tr.find('.span-btns').prepend(newBtn)
+				
+				newBtn.click(deactivate);
+				
+				if (tr.hasClass('success'))
+					fetchModelDetails(mid);
 			},
 			error: handleAjaxError
 		});
-		
-		return false;
-	}
+	});
+	
+	return false;
+}
+
+function deactivate() {
+	var btn = $(this);
+	var tr = getTrFromBtn(btn);
+	var mid = getModelIdFromTr(tr);
+	var name = getModelNameFromTr(tr);
+	
+	promptConfirm('Deactivate Model', 'Are you sure you wish to deactivate model ' + name + '?', function () {
+		$.ajax('api/activateModel', {
+			method: 'POST',
+			contentType: 'application/json',
+			data: JSON.stringify({ modelId: mid, activate: false }),
+			success: function (data, status, xhr) {
+				tr.parent().remove(tr.attr('id'));
+				$('#table-models-inactive').find('tbody').append(tr);
+				
+				var newBtn = $('<button class="btn btn-success btn-xs btn-activate" aria-label="Left Align"><span class="glyphicon glyphicon-off"></span> Activate</button>');
+				
+				tr.find('.btn-deactivate').remove();
+				tr.find('.span-btns').prepend(newBtn);
+				
+				newBtn.click(activate);
+				
+				if (tr.hasClass('success'))
+					fetchModelDetails(mid);
+			},
+			error: handleAjaxError
+		});
+	});
+	
+	return false;
+}
+
+function share() {
+	var btn = $(this);
+	var tr = getTrFromBtn(btn);
+	var mid = getModelIdFromTr(tr);
+	var name = getModelNameFromTr(tr);
+	
+	promptConfirm('Share Model', 'Are you sure you wish to share model ' + name + '?', function () {
+		$.ajax('api/shareModel', {
+			method: 'POST',
+			contentType: 'application/json',
+			data: JSON.stringify({ modelId: mid, share: true }),
+			success: function (data, status, xhr) {
+				tr.parent().remove(tr.attr('id'));
+				$('#table-models-public').find('tbody').append(tr);
+				
+				var newBtn = $('<button class="btn btn-warning btn-xs btn-unshare" aria-label="Left Align"><span class="glyphicon glyphicon-globe"></span> Unshare</button>');
+				
+				tr.find('.btn-share').remove();
+				tr.find('.span-btns').prepend(newBtn);
+				
+				newBtn.click(unshare);
+				
+				if (tr.hasClass('success'))
+					fetchModelDetails(mid);
+			},
+			error: handleAjaxError
+		});
+	});
+	
+	return false;
+}
+
+function unshare() {
+	var btn = $(this);
+	var tr = getTrFromBtn(btn);
+	var mid = getModelIdFromTr(tr);
+	var name = getModelNameFromTr(tr);
+	
+	promptConfirm('Unshare Model', 'Are you sure you wish to unshare model ' + name + '?', function () {
+		$.ajax('api/shareModel', {
+			method: 'POST',
+			contentType: 'application/json',
+			data: JSON.stringify({ modelId: mid, share: false }),
+			success: function (data, status, xhr) {
+				tr.parent().remove(tr.attr('id'));
+				$('#table-models-offline').find('tbody').append(tr);
+				
+				var newBtn = $('<button class="btn btn-default btn-xs btn-share" aria-label="Left Align"><span class="glyphicon glyphicon-globe"></span> Share</button>');
+			
+				tr.find('.btn-unshare').remove();
+				tr.find('.span-btns').prepend(newBtn);
+				
+				newBtn.click(share);
+				
+				if (tr.hasClass('success'))
+					fetchModelDetails(mid);
+			},
+			error: handleAjaxError
+		});
+	});
+	
+	return false;
+}
+
+function pingProgress(isRealTime) {
+	console.log('Pinging for model progress ...');
+	
+	$.ajax('api/pingProgress', {
+		method: 'GET',
+		contentType: 'application/json',
+		success: function (data, status, xhr) {
+			console.log('Gor ping result!');
+			
+			if (xhr.status == 204) {	// no content
+				pingProgress(isRealTime);
+				return;
+			}
+			
+			$('#progress-build-model').css('width', data.progress + '%');
+			$('#progress-build-model').html(data.message);
+			
+			if (data.isFinished) {
+				$('#btn-add-online,#btn-add-offline').removeAttr('disabled', 'disabled');
+			}
+			
+			if (data.error != null) {
+				$('#progress-build-model').css('background-color', 'red');
+//				alert('Error while building model: ' + data.error);
+//				setTimeout(function () {
+//					$('#progress-build-model').css('background-color', '');
+//					$('#div-model-progress').addClass('hidden');
+//				}, 30000);
+//				$('#div-model-progress').addClass('hidden');
+			} else {
+				if (!data.isFinished) {
+					pingProgress(isRealTime);
+				} else {	// finished
+					console.log('Finished building the model!');
+					
+					var mid = data.mid;
+					
+					// fetch the new model
+					$.ajax('api/modelDetails', {
+						dataType: 'json',
+						method: 'GET',
+						data: { modelId: mid },
+						success: function (data) {
+							var table = isRealTime ? $('#table-models-active') : $('#table-models-offline');
+							
+							var tr = $('<tr />');
+							tr.attr('id', (isRealTime ? 'active-' : 'offline-') + data.mid);
+							tr.addClass('ui-sortable-handle');
+							tr.click(fetchDetails);
+							
+							var nameTd = $('<td />');
+							var dateTd = $('<td />');
+							var buttonsTd = $('<td />');
+							
+							nameTd.addClass('td-model-name');
+							nameTd.html(data.name);
+							
+							dateTd.addClass('td-model-date');
+							dateTd.html(formatDate(new Date(data.creationDate)));
+							
+							buttonsTd.addClass('td-btns');
+														
+							tr.append(nameTd);
+							tr.append(dateTd);
+							tr.append(buttonsTd);
+							
+							// initialize the buttons
+							var buttonSpan = $('<span class="pull-right span-btns" />');
+							
+							var btnView = $('<button class="btn btn-info btn-xs btn-view" aria-label="Left Align"><span class="glyphicon glyphicon-eye-open"></span> View</button>');
+							btnView.click(viewModel);
+							
+							buttonSpan.append(btnView);
+							buttonsTd.append(buttonSpan);
+							
+							if (isRealTime) {
+								var deactivateBtn = $('<button class="btn btn-danger btn-xs btn-deactivate" aria-label="Left Align"><span class="glyphicon glyphicon-off"></span> Deactivate</button>');
+								deactivateBtn.click(deactivate);
+								buttonSpan.prepend(deactivateBtn);
+							} else {
+								var shareBtn = $('<button class="btn btn-default btn-xs btn-share" aria-label="Left Align"><span class="glyphicon glyphicon-globe"></span> Share</button>');
+								shareBtn.click(share);
+								buttonSpan.prepend(shareBtn);
+							}
+							
+							table.find('tbody').append(tr);
+							
+							setTimeout(function () {
+								$('#div-model-progress').addClass('hidden');
+							}, 5000);
+						},
+						error: handleAjaxError
+					});
+				}
+			}
+		},
+		error: function (xhr, status, e) {
+			handleAjaxError(xhr, status, e);
+			$('#div-model-progress').addClass('hidden');
+		}
+	});
+}
+
+(function () {
+	var newModelPopup = $('#popup-data-upload');
 	
 	//========================================================
 	// ADDING A NEW MODEL
@@ -187,103 +450,12 @@
 		});
 	});
 	
-	function pingProgress(isRealTime) {
-		console.log('Pinging for model progress ...');
-		
-		$.ajax('api/pingProgress', {
-			method: 'GET',
-			contentType: 'application/json',
-			success: function (data, status, xhr) {
-				console.log('Gor ping result!');
-				
-				if (xhr.status == 204) {	// no content
-					pingProgress(isRealTime);
-					return;
-				}
-				
-				if (data.error != null) {
-					alert('Error while building model: ' + data.error);
-				} else {
-					$('#progress-build-model').css('width', data.progress + '%');
-					$('#progress-build-model').html(data.message);
-					
-					if (!data.isFinished) {
-						pingProgress(isRealTime);
-					} else {	// finished
-						console.log('Finished building the model!');
-					
-						var mid = data.mid;
-						
-						// fetch the new model
-						$.ajax('api/modelDetails', {
-							dataType: 'json',
-							method: 'GET',
-							data: { modelId: mid },
-							success: function (data) {
-								var table = isRealTime ? $('#table-models-active') : $('#table-models-offline');
-								var tbody = table.find('tbody');
-								
-								var tr = $('<tr />');
-								tr.attr('id', (isRealTime ? 'active-' : 'offline-') + data.mid);
-								tr.addClass('ui-sortable-handle');
-								
-								var nameTd = $('<td />');
-								var dateTd = $('<td />');
-								var buttonsTd = $('<td />');
-								
-								nameTd.addClass('td-model-name');
-								nameTd.html(data.name);
-								
-								dateTd.addClass('td-model-date');
-								dateTd.html(formatDate(new Date(data.creationDate)));
-								
-								buttonsTd.addClass('td-btns');
-															
-								tr.append(nameTd);
-								tr.append(dateTd);
-								tr.append(buttonsTd);
-								tbody.append(tr);
-								
-								// initialize the buttons
-								var buttonSpan = $('<span class="pull-right span-btns" />');
-								
-								var btnView = $('<button class="btn btn-info btn-xs btn-view" aria-label="Left Align"><span class="glyphicon glyphicon-eye-open"></span> View</button>');
-								btnView.click(viewModel);
-								
-								if (isRealTime) {
-									var deactivateBtn = $('<button class="btn btn-danger btn-xs btn-deactivate" aria-label="Left Align"><span class="glyphicon glyphicon-off"></span> Deactivate</button>');
-									deactivateBtn.click(deactivate);
-									buttonSpan.append(deactivateBtn);
-								} else {
-									var shareBtn = $('<button class="btn btn-default btn-xs btn-share" aria-label="Left Align"><span class="glyphicon glyphicon-globe"></span> Share</button>');
-									shareBtn.click(share);
-									buttonSpan.append(shareBtn);
-								}
-								
-								buttonSpan.append(btnView);
-								buttonsTd.append(buttonSpan);
-								
-								setTimeout(function () {
-									$('#div-model-progress').addClass('hidden');
-								}, 5000);
-							},
-							error: handleAjaxError
-						});
-					}
-				}
-			},
-			error: function (xhr, status, e) {
-				handleAjaxError(xhr, status, e);
-				$('#div-model-progress').addClass('hidden');
-			}
-		});
-	}
-	
 	$('#btn-done').click(function () {
 		var btn = $(this);
 		
 		if (!checkConfigureDataset()) return;
 		
+		$('#progress-build-model').css('background-color', '');
 		$('#progress-build-model-wrapper').show(0);
 	
 		var attrs = $('#select-attrs').val();
@@ -337,33 +509,13 @@
 			error: handleAjaxError
 		});
 		
+		$('#btn-add-online,#btn-add-offline').attr('disabled', 'disabled');
 		btn.attr('disabled', 'disabled');
 	});
 	
 	//========================================================
 	// TABLES
 	//========================================================	
-	
-	function getContainerFromTable(table) {
-		return table.parent().parent().parent().parent().parent().parent();
-	}
-	
-	function getModelIdFromTr(tr) {
-		return tr.attr('id').split('-')[1];
-	}
-	
-	function getTrFromBtn(btn) {
-		return btn.parent().parent().parent();
-	}
-	
-	function getModelNameFromTr(tr) {
-		return tr.find('.td-model-name').html();
-	}
-	
-	function getModelIdFromBtn(btn) {
-		var tr = getTrFromBtn(btn);
-		return getModelIdFromTr(tr);
-	}
 	
 	function fetchModelDetails(mid) {
 		$.ajax('api/modelDetails', {
@@ -420,162 +572,38 @@
 		}
 	});
 	
-	$('#table-models-active tbody tr,#table-models-inactive tbody tr,#table-models-offline tbody tr,#table-models-public tbody tr').click(function () {
-		$('#table-models-active tbody tr,#table-models-inactive tbody tr,#table-models-offline tbody tr,#table-models-public tbody tr').removeClass('success');
-		
-		var tr = $(this);
-		tr.addClass('success');
-		
-		var mid = getModelIdFromTr(tr);
-		fetchModelDetails(mid);
-	});
-	
-	
+	$('#table-models-active tbody tr,#table-models-inactive tbody tr,#table-models-offline tbody tr,#table-models-public tbody tr').click(fetchDetails);
 	
 	//========================================================
 	// BUTTONS ON THE DASHBOARD
 	//========================================================	
 	
+	function clearConfigureDataset() {
+		$('#input-choose-upload').val('');
+		$('#select-attrs').val('');
+		$('#select-tu').val('hour');
+		$('#select-clust').val('kmeans');
+		$('#select-hierarchy').val('aggClust');
+		$('#input-model-name').val('');
+		
+		$('#input-choose-upload').change();
+		$('#progress-file-upload').css('width','0%');
+		$('#progress-file-upload').html('0%');
+	}
+	
 	$('#btn-add-online').click(function () {
+		clearConfigureDataset();
 		$('#check-realtime').prop('checked', true);
 		newModelPopup.modal('show');
 	});
 	
 	$('#btn-add-offline').click(function () {
+		clearConfigureDataset();
 		$('#check-realtime').prop('checked', false);
 		newModelPopup.modal('show');
 	});
 	
 	$('.btn-view').click(viewModel);
-	
-	function activate() {
-		var btn = $(this);
-		var tr = getTrFromBtn(btn);
-		var mid = getModelIdFromTr(tr);
-		var name = getModelNameFromTr(tr);
-		
-		promptConfirm('Activate Model', 'Are you sure you wish to activate model ' + name + '?', function () {
-			$.ajax('api/activateModel', {
-				method: 'POST',
-				contentType: 'application/json',
-				data: JSON.stringify({ modelId: mid, activate: true }),
-				success: function (data, status, xhr) {
-					tr.parent().remove(tr.attr('id'));
-					$('#table-models-active').find('tbody').append(tr);
-					
-					tr.attr('id', 'active-' + mid);
-					var newBtn = $('<button class="btn btn-danger btn-xs btn-deactivate" aria-label="Left Align"><span class="glyphicon glyphicon-off"></span> Deactivate</button>');
-					
-					tr.find('.btn-activate').remove();
-					tr.find('.span-btns').prepend(newBtn)
-					
-					newBtn.click(deactivate);
-					
-					if (tr.hasClass('success'))
-						fetchModelDetails(mid);
-				},
-				error: handleAjaxError
-			});
-		});
-		
-		return false;
-	}
-	
-	function deactivate() {
-		var btn = $(this);
-		var tr = getTrFromBtn(btn);
-		var mid = getModelIdFromTr(tr);
-		var name = getModelNameFromTr(tr);
-		
-		promptConfirm('Deactivate Model', 'Are you sure you wish to deactivate model ' + name + '?', function () {
-			$.ajax('api/activateModel', {
-				method: 'POST',
-				contentType: 'application/json',
-				data: JSON.stringify({ modelId: mid, activate: false }),
-				success: function (data, status, xhr) {
-					tr.parent().remove(tr.attr('id'));
-					$('#table-models-inactive').find('tbody').append(tr);
-					
-					var newBtn = $('<button class="btn btn-success btn-xs btn-activate" aria-label="Left Align"><span class="glyphicon glyphicon-off"></span> Activate</button>');
-					
-					tr.find('.btn-deactivate').remove();
-					tr.find('.span-btns').prepend(newBtn);
-					
-					newBtn.click(activate);
-					
-					if (tr.hasClass('success'))
-						fetchModelDetails(mid);
-				},
-				error: handleAjaxError
-			});
-		});
-		
-		return false;
-	}
-	
-	function share() {
-		var btn = $(this);
-		var tr = getTrFromBtn(btn);
-		var mid = getModelIdFromTr(tr);
-		var name = getModelNameFromTr(tr);
-		
-		promptConfirm('Share Model', 'Are you sure you wish to share model ' + name + '?', function () {
-			$.ajax('api/shareModel', {
-				method: 'POST',
-				contentType: 'application/json',
-				data: JSON.stringify({ modelId: mid, share: true }),
-				success: function (data, status, xhr) {
-					tr.parent().remove(tr.attr('id'));
-					$('#table-models-public').find('tbody').append(tr);
-					
-					var newBtn = $('<button class="btn btn-warning btn-xs btn-unshare" aria-label="Left Align"><span class="glyphicon glyphicon-globe"></span> Unshare</button>');
-					
-					tr.find('.btn-share').remove();
-					tr.find('.span-btns').prepend(newBtn);
-					
-					newBtn.click(unshare);
-					
-					if (tr.hasClass('success'))
-						fetchModelDetails(mid);
-				},
-				error: handleAjaxError
-			});
-		});
-		
-		return false;
-	}
-	
-	function unshare() {
-		var btn = $(this);
-		var tr = getTrFromBtn(btn);
-		var mid = getModelIdFromTr(tr);
-		var name = getModelNameFromTr(tr);
-		
-		promptConfirm('Unshare Model', 'Are you sure you wish to unshare model ' + name + '?', function () {
-			$.ajax('api/shareModel', {
-				method: 'POST',
-				contentType: 'application/json',
-				data: JSON.stringify({ modelId: mid, share: false }),
-				success: function (data, status, xhr) {
-					tr.parent().remove(tr.attr('id'));
-					$('#table-models-offline').find('tbody').append(tr);
-					
-					var newBtn = $('<button class="btn btn-default btn-xs btn-share" aria-label="Left Align"><span class="glyphicon glyphicon-globe"></span> Share</button>');
-				
-					tr.find('.btn-unshare').remove();
-					tr.find('.span-btns').prepend(newBtn);
-					
-					newBtn.click(share);
-					
-					if (tr.hasClass('success'))
-						fetchModelDetails(mid);
-				},
-				error: handleAjaxError
-			});
-		});
-		
-		return false;
-	}
 	
 	// table buttons
 	$('.btn-activate').click(activate);

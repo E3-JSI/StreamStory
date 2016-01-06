@@ -116,7 +116,25 @@ exports.RealTimeModelStore = function (opts) {
 			error: status.error,
 			message: progress.message,
 			isFinished: progress.isFinished,
-			progress: progress.progress
+			progress: progress.progress,
+			isRealTime: status.isRealTime
+		}
+	}
+	
+	function getPrevProgress(username) {
+		if (!that.isBuildingModel(username)) throw new Error('User ' + username + ' is not building a model!');
+		
+		var status = buildingModelStore[username];
+		var progress = status.prevProgress;
+		
+		if (progress == null) return null;
+		
+		return {
+			error: status.error,
+			message: progress.message,
+			isFinished: progress.isFinished,
+			progress: progress.progress,
+			isRealTime: status.isRealTime
 		}
 	}
 	
@@ -139,7 +157,7 @@ exports.RealTimeModelStore = function (opts) {
 		
 		var status = buildingModelStore[username];
 		
-		status.prevProgress = status.progress;
+		if (status.progress != null) status.prevProgress = status.progress;
 		setProgress(username, isFinished, progress, message);
 		
 		var callback = status.progressCallback;
@@ -149,13 +167,14 @@ exports.RealTimeModelStore = function (opts) {
 		}
 	}
 	
-	function startBuildingModel(username, callback) {
+	function startBuildingModel(username, isRealTime, callback) {
 		buildingModelStore[username] = {
 			progress: null,
 			prevProgress: null,
 			callback: callback,
 			error: null,
-			mid: null
+			mid: null,
+			isRealTime: isRealTime
 		};
 		
 		updateProgress(username, false, 0, 'Initilizing ...');
@@ -325,6 +344,7 @@ exports.RealTimeModelStore = function (opts) {
 		},
 		hasProgress: hasProgress,
 		popProgress: popProgress,
+		getPrevProgress: getPrevProgress,
 		setProgressCallback: function (username, callback) {
 			if (!that.isBuildingModel(username)) throw new Error('User ' + username + ' is not building a model!');
 			
@@ -339,10 +359,11 @@ exports.RealTimeModelStore = function (opts) {
 			if (callback == null) callback = function (e) { log.error(e, 'Exception while buillding model!'); }
 			if (that.isBuildingModel(opts.username)) throw new Error('User ' + opts.username + ' is already building a model!');
 			
+			var username = opts.username;
+			
 			try {
-				startBuildingModel(opts.username, callback);
+				startBuildingModel(opts.username, opts.isRealTime, callback);
 				
-				var username = opts.username;
 				var datasetName = opts.datasetName;
 				var modelName = opts.modelName;
 				var base = opts.base;
@@ -440,7 +461,6 @@ exports.RealTimeModelStore = function (opts) {
 					if (e != null) {
 						log.error(e, 'Exception while parsing the uploaded CSV file!');
 						setModelBuildError(username, e);
-//						callback(e);
 						return;
 					}
 					
@@ -481,7 +501,6 @@ exports.RealTimeModelStore = function (opts) {
 							if (e1 != null) {
 								log.error(e1, 'Exception while fitting model!');
 								setModelBuildError(username, e1);
-//								callback(e1);
 								return;
 							}
 							
@@ -510,7 +529,6 @@ exports.RealTimeModelStore = function (opts) {
 									if (e != null) {
 										log.error(e, 'Failed to store offline model to DB!');
 										setModelBuildError(username, e);
-//										callback(e);
 										return;
 									}
 																	
@@ -520,7 +538,6 @@ exports.RealTimeModelStore = function (opts) {
 									model.setOnline(true);
 									
 									setModelFinshed(username, mid, model);
-//									callback(undefined, model, undefined, fname);
 								});
 							} else {
 								// store the model into the DB
@@ -537,13 +554,10 @@ exports.RealTimeModelStore = function (opts) {
 									if (e != null) {
 										log.error(e, 'Failed to store offline model to DB!');
 										setModelBuildError(username, e);
-//										callback(e);
 										return;
 									}
 									
 									try {
-//										model.setId(mid);
-//										model.setOnline(false);
 										model.save(fname);
 										// need to close the base to be able to re-open it later
 										base.close();
@@ -552,35 +566,21 @@ exports.RealTimeModelStore = function (opts) {
 											log.debug('Offline model stored!');
 										
 										setModelFinshed(username, mid, undefined);
-										
-//										that.loadOfflineModel(baseDir, function (e, baseConfig) {
-//											if (e != null) {
-//												log.error(e, 'Failed to load an offline model!');
-//												setModelBuildError(username, e);
-////												callback(e);
-//												return;
-//											}
-//											
-//											var model = baseConfig.model;
-//											var base = baseConfig.base;
-//											
-//											
-////											callback(undefined, model, base, fname);
-//										});
 									} catch (e1) {
 										log.error(e1, 'Failed to open base!');
-										callback(e1);
+										setModelBuildError(username, e1);
 									}
 								})
 							}
 						});
 					} catch (e) {
 						log.error(e, 'Failed to create the store!');
-						callback(e);
+						setModelBuildError(username, e);
 					}
 				});
 			} catch (e) {
-				callback(e);
+				log.error(e, 'Exception while building model!');
+				setModelBuildError(username, e);
 			}
 		}
 	}

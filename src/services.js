@@ -1354,6 +1354,7 @@ function initDataUploadApi() {
 						base: userBase,
 						store: store,
 						storeNm: storeNm,
+						isRealTime: isRealTime,
 						timeUnit: timeUnit,
 						headers: headers,
 						timeAttr: timeAttr,
@@ -1366,6 +1367,11 @@ function initDataUploadApi() {
 							baseDir: baseDir
 					}
 						
+					// finish the request
+					res.status(204);	// no content
+					res.end();
+					
+					// build the model
 					modelStore.buildModel(opts, function (e, mid, model) {
 						if (e != null) {
 							log.error('Exception while building model!');
@@ -1379,10 +1385,6 @@ function initDataUploadApi() {
 							activateModel(model);
 						}
 					});
-					
-					// finish the request
-					res.status(204);	// no content
-					res.end();
 				} catch (e) {
 					log.error(e, 'Exception while uploading a new dataset!');
 					handleServerError(e, req, res);
@@ -1402,7 +1404,11 @@ function initDataUploadApi() {
 			
 			if (e != null) {
 				log.error(e, 'Failed to build model!');
+				modelStore.confirmModelBuilt(username);
 				res.send({
+					isFinished: true,
+					progress: 100,
+					message: e.message,
 					error: e.message
 				});
 			} else if (isFinished) {
@@ -1431,8 +1437,8 @@ function initDataUploadApi() {
 	}
 	
 	app.get(API_PATH + '/pingProgress', function (req, res) {
-		if (log.debug())
-			log.debug('Checking model progress ...');
+		if (log.trace())
+			log.trace('Checking model progress ...');
 		
 		try {
 			var session = req.session;
@@ -1452,9 +1458,13 @@ function initDataUploadApi() {
 					if (log.trace())
 						log.trace('Progress request expired, sending no content ...');
 					
-					modelStore.clearProgressCallback(username);
-					res.status(204);	// no content
-					res.end();
+					if (modelStore.isBuildingModel(username) && modelStore.hasProgress(username))
+						modelStore.clearProgressCallback(username);
+					
+					if (!res.finished) {
+						res.status(204);	// no content
+						res.end();
+					}
 				}, 30000);
 				
 				modelStore.setProgressCallback(username, function (e, isFinished, progress, message) {
@@ -1497,68 +1507,6 @@ function initDataUploadApi() {
 			}
 		});
 	});
-//	
-//	function modelComplete(req, res) {
-//		try {
-//			
-//		} catch (e) {
-//			handleServerError(e, req, res);
-//		}
-//	}
-//	
-//	app.get(API_PATH + '/checkProgress', function (req, res) {
-//		try {
-//			var session = req.session;
-//			var sessionId = req.sessionID;
-//			
-//			if (modelStore.modelFinished(sessionId)) {
-//				// TODO
-//				
-//				var config = modelStore.
-//				
-//				if (isRealTime) {
-//					if (log.debug())
-//						log.debug('Online model created!');
-//					
-//					activateModel(model);
-//					saveToSession(sessionId, session, username, userBase, model, model.getId(), fname);
-//				} else {
-//					saveToSession(sessionId, session, username, base, model, model.getId(), fname);
-//				}
-//			} else {
-//				var timeoutId = setTimeout(function () {
-//					var status = modelStore.getProgress(sessionId);
-//					res.send({ event: 'progress', status: status });
-//					res.end();
-//				}, 30000);
-//				
-//				modelStore.setFinishedCallback(sessionId, function (config) {
-//					clearTimeout(timeoutId);
-//					modelComplete(req, res, config);
-//				});
-//			}
-//		} catch (e) {
-//			log.error(e, 'Exception while checking progress!');
-//			handleServerError(e, req, res);
-//		}
-//	});
-	
-//	app.get(API_PATH + '/selectDataset', upload.single('dataset'), function (req, res, next) {
-//		var session = req.session;
-//		var username = req.query.email;
-//		
-//		db.fetchUserModels(username, function (e, models) {
-//			if (e != null) {
-//				log.error(e, 'Failed to fetch models for user: %s', username);
-//				handleServerError(e, req, res);
-//				return;
-//			}
-//			
-//			session.username = username;
-//			res.send(models);
-//			res.end();
-//		});
-//	});
 	
 	app.post(API_PATH + '/selectDataset', function (req, res) {
 		var session = req.session;
@@ -2226,6 +2174,7 @@ function getPageOpts(req, res) {
 		model: session.model,
 		modelConfig: null,
 		models: null,
+		modelStore: modelStore,
 		error: null,
 		warning: null,
 		message: null,
