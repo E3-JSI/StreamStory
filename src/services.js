@@ -1468,8 +1468,8 @@ function initDataUploadApi() {
 				}, 30000);
 				
 				modelStore.setProgressCallback(username, function (e, isFinished, progress, message) {
-					if (log.debug())
-						log.debug('Progress callback called ...');
+					if (log.trace())
+						log.trace('Progress callback called ...');
 					
 					clearTimeout(timeoutId);
 					modelStore.clearProgressCallback(username);

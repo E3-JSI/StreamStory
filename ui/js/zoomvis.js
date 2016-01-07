@@ -318,9 +318,9 @@ var zoomVis = function (opts) {
 	// UTILITY FUNCTIONS
 	//===============================================================
 	
-	function getNodeLabel(node) {
-		return (node.name != null ? node.name : (node.id + ''));
-	}
+//	function getNodeLabel(node) {
+//		return (node.name != null ? node.name : (node.label));
+//	}
 
 	function colorFromProb(prob) {
 		return prob*prob;
@@ -615,10 +615,10 @@ var zoomVis = function (opts) {
 			if (cache.getNode(id) == null) {
 				var position = cyPosition(node);
 				var nodeSize = cySize(levelInfo[i].radius);
-				var label = getNodeLabel(node);
+//				var label = getNodeLabel(node);
 				
 				var style = {
-					'content': node.id,
+					'content': node.label,
 					'text-transform': 'none',
 					'text-halign': 'center',
 					'text-valign': 'center',
@@ -634,7 +634,7 @@ var zoomVis = function (opts) {
 					'height': nodeSize.height,
 					'border-width': DEFAULT_BORDER_WIDTH,
 					'border-color': DEFAULT_BORDER_COLOR,
-					'label': node.id,
+					'label': node.label,
 					'z-index': BACKGROUND_Z_INDEX					
 				}
 				

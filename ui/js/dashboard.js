@@ -251,11 +251,11 @@ function pingProgress(isRealTime) {
 							buttonsTd.append(buttonSpan);
 							
 							if (isRealTime) {
-								var deactivateBtn = $('<button class="btn btn-danger btn-xs btn-deactivate" aria-label="Left Align"><span class="glyphicon glyphicon-off"></span> Deactivate</button>');
+								var deactivateBtn = $('<button class="btn btn-danger btn-xs btn-deactivate" aria-label="Left Align" style="margin-right: 4px;"><span class="glyphicon glyphicon-off"></span> Deactivate</button>');
 								deactivateBtn.click(deactivate);
 								buttonSpan.prepend(deactivateBtn);
 							} else {
-								var shareBtn = $('<button class="btn btn-default btn-xs btn-share" aria-label="Left Align"><span class="glyphicon glyphicon-globe"></span> Share</button>');
+								var shareBtn = $('<button class="btn btn-default btn-xs btn-share" aria-label="Left Align" style="margin-right: 4px;"><span class="glyphicon glyphicon-globe"></span> Share</button>');
 								shareBtn.click(share);
 								buttonSpan.prepend(shareBtn);
 							}
@@ -264,6 +264,7 @@ function pingProgress(isRealTime) {
 							
 							setTimeout(function () {
 								$('#div-model-progress').addClass('hidden');
+								$('#progress-build-model').css('width', '0%');
 							}, 5000);
 						},
 						error: handleAjaxError
@@ -332,7 +333,6 @@ function pingProgress(isRealTime) {
 		$('#form-phase2').hide(0);
 		$('#form-phase3').hide(0);
 		$('#form-phase4').hide(0);
-		$('#progress-build-model-wrapper').hide(0);
 
 		var hasData = $('#input-choose-upload').val() != '';
 		
