@@ -227,8 +227,6 @@ function initClient(callback) {
 				initConsumer(callback);
 			}
 		});
-		
-//		initConsumer(callback);
 	});
 	
 	producer.on('error', function (e) {

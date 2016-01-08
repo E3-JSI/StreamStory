@@ -2004,7 +2004,7 @@ function initBroker() {
 					return;
 				}
 				
-				if (eventName == 'enriched') {
+				if (eventName == 'Generated') {
 					if (log.trace())
 						log.trace('Got enriched event ...');
 					
