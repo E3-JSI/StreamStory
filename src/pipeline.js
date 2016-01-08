@@ -454,7 +454,7 @@ function initTriggers() {
 						throw new Error('enricherOutStore.addTrigger: Current time lower than previous time: ' + utils.dateToQmDate(new Date(currTime)) + ' < ' + utils.dateToQmDate(new Date(prevTime)));
 					
 					if (resamplerInitialized) {
-						if (config.USE_BROKER) {
+						if (false/*config.USE_BROKER*/) {	// TODO uncomment this !important
 							broker.send(broker.ENRICHED_DATA_PRODUCER_TOPIC, JSON.stringify(transform.toDerivedEvent(currTime, outVal)));
 						} else {
 							outVal.time = utils.dateToQmDate(val.time);
