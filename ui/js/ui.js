@@ -246,6 +246,9 @@ function changeControlVal(stateId, ftrIdx, val) {
 				var contentKey = contentKeys[i];
 				var contentVal = contentVals[contentKey];
 				
+				if (isNumber(contentVal))
+					contentVal = toUiPrecision(parseFloat(contentVal));
+				
 				if (contentVal != null && typeof contentVal == 'object') {
 					var keys = [];
 					for (var key in contentVal) {
@@ -256,12 +259,12 @@ function changeControlVal(stateId, ftrIdx, val) {
 						var val = contentVal[keys[j]];
 						if (!isNaN(val))
 							val = toUiPrecision(parseFloat(val))
-						drawStr += keys[j] + ' = ' + val;
+						drawStr += keys[j] + ': ' + val;
 						if (j < keys.length - 1)
 							drawStr += ', ';
 					}	
 				} else {
-					drawStr += contentKey + '=' + contentVal;
+					drawStr += contentKey + ': ' + (contentKey == 'time' ? formatDateTime(new Date(contentVal)) : contentVal);
 				}
 				
 				if (i < contentKeys.length - 1) {

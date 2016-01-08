@@ -187,6 +187,7 @@ function calcFriction() {
 	
 	var isCalculating = false;
 	var startTime = 0;
+	var prevEvalTime = 0;
 	
 	var recN = 0;
 	
@@ -211,6 +212,7 @@ function calcFriction() {
 		
 		isCalculating = false;
 		startTime = 0;
+		prevEvalTime = 0;
 		
 		recN = 0;
 	}
@@ -289,45 +291,36 @@ function calcFriction() {
 		log.info('Starting calculation of the friction coefficient, time=%d ...', startTime);
 	}
 	
-	function finishCalc(val) {
-		if (val.time.getTime() - startTime > MIN_DRILL_TIME) {
-			log.info('Finishing calculation of the friction coefficient ...');
-			if (log.debug())
-				log.debug('Storing %d values ...', coeffBuff.length);
-			
-			var coeffStore = base.store(fields.COEFF_STORE);
-			
+	function checkFrictionCoeffs(val) {
+		try {
 			var firstVal = coeffBuff[0];
 			var lastVal = coeffBuff[coeffBuff.length-1];
 			
 			var intervalStart = firstVal.timestamp;
 			var intervalEnd = lastVal.timestamp;
 			
-//			for (var i = 0; i < coeffBuff.length; i++) {
-//				var coeffInfo = coeffBuff[i];
-//				
-//				coeffStore.push({
-//					timestamp: utils.dateToQmDate(coeffInfo.timestamp),
-//					coeff_swivel: coeffInfo.coeffSwivel,
-//					coeff_gearbox: coeffInfo.coeffGearbox,
-//					interval_start: utils.dateToQmDate(intervalStart),
-//					interval_end: utils.dateToQmDate(intervalEnd)
-//				});
-//			}
-			
-			if (log.debug())
-				log.debug('Stored coefficients!');
-			
 			var coeffSwivel = lastVal.coeffSwivel;
 			var coeffGearbox = lastVal.coeffGearbox;
-			
-			log.info('Coeffs: (swivel: %d, gearbox: %d) at time %s', coeffSwivel, coeffGearbox, val.time.toISOString());
 			
 			var avgTempSwivel = (firstVal.tempSwivel + lastVal.tempSwivel) / 2;
 			var avgTempGearbox = (firstVal.tempGearbox + lastVal.tempGearbox) / 2;
 			
+			if (log.debug())
+				log.debug('Coeffs: (swivel: %d, gearbox: %d) at time %s', coeffSwivel, coeffGearbox, val.time.toISOString());
+			
 			checkOutlierSwivel(coeffSwivel, avgTempSwivel, intervalEnd);
 			checkOutlierGearbox(coeffGearbox, avgTempGearbox, intervalEnd);
+		} catch (e) {
+			log.error(e, 'Failed to check friction coefficients!');
+		}
+	}
+	
+	function finishCalc(val) {
+		if (val.time.getTime() - startTime > MIN_DRILL_TIME) {
+			if (log.info())
+				log.info('Finishing calculation of the friction coefficient ...');
+			
+			checkFrictionCoeffs(val);
 		} else {
 			log.info('Drilling didn not take long enough, the coefficient will be ignored!');
 		}
@@ -354,8 +347,7 @@ function calcFriction() {
 					return;
 				}
 				
-				var rpm = val.rpm / (60.0 * 1000);// / 60.0;	TODO should 1000 be here Mihas? units???
-//				var rpm = val.rpm / 60.0;
+				var rpm = val.rpm / (60.0 * 1000);
 				var torque = val.torque * 1000;
 				var time = val.time.getTime();
 				
@@ -369,13 +361,11 @@ function calcFriction() {
 					startCalc(val);
 				}
 				
-				if (isCalculating && time - rpmStartTime > 1000*60*5) {	// only start the calculation after 3 minutes
+				if (isCalculating && time - rpmStartTime > 1000*60*5) {	// only start the calculation after 5 minutes
 					recN++;
 					
 					// variables
 					var prevTime = prevVal.time.getTime();//		TODO Mihas units???
-//					var time = val.time.getTime() / 1000.0;
-//					var prevTime = prevVal.time.getTime() / 1000.0;
 					
 					var tempAmbient = val.temp_ambient;
 					
@@ -416,6 +406,17 @@ function calcFriction() {
 					
 					if (log.debug() && recN % config.COEFF_PRINT_INTERVAL == 0)
 						log.debug('Current friction coefficients: (swivel: %d, gearbox: %d)', coeffSwivel, coeffGearbox);
+					
+					// evaluate the friction coefficients every 10 minutes of drilling
+					if (prevEvalTime == 0) {
+						prevEvalTime = time;
+					} else if (time - prevEvalTime > 1000*60*15) {	// evaluate the coefficient every 10 minutes
+						if (log.debug())
+							log.debug('Periodic coefficient check ...');
+						
+						checkFrictionCoeffs(val);
+						prevEvalTime = time;
+					}
 				}
 				else {
 					setDefaultVals(val);
@@ -453,7 +454,7 @@ function initTriggers() {
 						throw new Error('enricherOutStore.addTrigger: Current time lower than previous time: ' + utils.dateToQmDate(new Date(currTime)) + ' < ' + utils.dateToQmDate(new Date(prevTime)));
 					
 					if (resamplerInitialized) {
-						if (false /*config.USE_BROKER*/) {	// TODO uncomment important
+						if (config.USE_BROKER) {
 							broker.send(broker.ENRICHED_DATA_PRODUCER_TOPIC, JSON.stringify(transform.toDerivedEvent(currTime, outVal)));
 						} else {
 							outVal.time = utils.dateToQmDate(val.time);
