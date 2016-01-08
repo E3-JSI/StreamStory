@@ -170,6 +170,8 @@ function initConsumer(callback) {
 	});
 	
 	{
+		log.info('Adding broker message handler ...');
+		
 		var nReceivedRaw = 0;
 		var nReceivedCep = 0;
 		
