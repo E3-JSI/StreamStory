@@ -638,18 +638,22 @@ function initStreamStoryRestApi() {
 	
 	{
 		log.info('Registering save service ...');
-		app.get(API_PATH + '/save', function (req, res) {
+		app.post(API_PATH + '/save', function (req, res) {
 			var session = req.session;
 			var sessionId = req.sessionID;
 			
 			try {
 				var model = getModel(sessionId, session);
+				var positions = req.body.positions != null ? JSON.parse(req.body.positions) : null;
 				
 				if (model == null) {
 					res.status(401);	// unauthorized
 					res.end();
 					return;
 				}
+				
+				if (positions != null)
+					model.getModel().setStateCoords(positions);
 				
 				var modelFile = getModelFile(session);
 				

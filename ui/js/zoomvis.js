@@ -1390,6 +1390,28 @@ var zoomVis = function (opts) {
 			return modeConfig.mode.type;
 		},
 		
+		getNodePositions: function () {
+			var posArr = [];
+			var positions = {};
+			
+			for (var level in levelNodeMap) {
+				for (var nodeId in levelNodeMap[level]) {
+					var node = levelNodeMap[level][nodeId];
+					
+					positions[nodeId] = {
+						x: node.x,
+						y: node.y
+					}
+				}
+			}
+			
+			for (var nodeId in positions) {
+				posArr.push({ id: parseInt(nodeId), position: positions[nodeId] });
+			}
+			
+			return posArr;
+		},
+		
 		resetMode: resetMode,
 		
 		setTargetFtr: function (ftrIdx) {

@@ -592,9 +592,16 @@ function changeControlVal(stateId, ftrIdx, val) {
 		});
 		
 		$('#btn-save').click(function () {
-			var rq = $.get('api/save');
-			rq.fail(function () {
-				alert('Failed to save!');
+			var nodePositions = viz.getNodePositions();
+			
+			$.ajax('api/save', {
+				dataType: 'json',
+				data: { positions: JSON.stringify(nodePositions) },
+				method: 'POST',
+				success: function (data) {
+					console.log('Successfully saved!');
+				},
+				error: handleAjaxError
 			});
 		});
 		
