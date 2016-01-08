@@ -652,8 +652,11 @@ function initStreamStoryRestApi() {
 					return;
 				}
 				
-				if (positions != null)
+				if (positions != null) {
+					if (log.debug())
+						log.debug('Saving node positions ...');
 					model.getModel().setStateCoords(positions);
+				}
 				
 				var modelFile = getModelFile(session);
 				
