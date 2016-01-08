@@ -212,7 +212,7 @@ function initClient(callback) {
 	
 	log.info('Initilizing producer ...');
 	producer.on('ready', function () {
-		log.info('Producer ready, creating topics!');
+		log.info('Producer ready, creating topics ...');
 		
 		var createTopics = [];
 		for (var topic in topics) {
@@ -224,9 +224,11 @@ function initClient(callback) {
 				callback(e);
 			} else {
 				log.info('Producer topics ready: %s!', JSON.stringify(data));
-				initConsumer(callback);
+//				initConsumer(callback);
 			}
 		});
+		
+		initConsumer(callback);
 	});
 	
 	producer.on('error', function (e) {
