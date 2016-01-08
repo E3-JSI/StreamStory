@@ -19,8 +19,8 @@
 			}
 		},
 		"print": {
-			"rawData": 100000,
-			"streamStory": 1,
+			"rawData": 10000,
+			"streamStory": 10,
 			"stores": 100000,
 			"broker": 1000,
 			"coeff": 1000
