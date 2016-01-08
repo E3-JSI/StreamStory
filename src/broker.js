@@ -224,11 +224,11 @@ function initClient(callback) {
 				callback(e);
 			} else {
 				log.info('Producer topics ready: %s!', JSON.stringify(data));
-//				initConsumer(callback);
+				initConsumer(callback);
 			}
 		});
 		
-		initConsumer(callback);
+//		initConsumer(callback);
 	});
 	
 	producer.on('error', function (e) {
