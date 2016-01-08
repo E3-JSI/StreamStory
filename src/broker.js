@@ -212,7 +212,7 @@ function initClient(callback) {
 	
 	log.info('Initilizing producer ...');
 	producer.on('ready', function () {
-		log.info('Producer ready!');
+		log.info('Producer ready, creating topics!');
 		
 		var createTopics = [];
 		for (var topic in topics) {
