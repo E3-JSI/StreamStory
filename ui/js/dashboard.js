@@ -673,6 +673,7 @@ function pingProgress(isRealTime) {
 	
 	$('.nav-pills a').click(function () {
 		$('#div-model-details').addClass('hidden');
+		var tr = $('#table-models-offline,#table-models-public,#table-models-active,#table-models-inactive').find('.success').removeClass('success');
 	});
 	
 	$('.nav-pills a')[0].click();
