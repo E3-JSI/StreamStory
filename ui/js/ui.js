@@ -594,6 +594,8 @@ function changeControlVal(stateId, ftrIdx, val) {
 		$('#btn-save').click(function () {
 			var nodePositions = viz.getNodePositions();
 			
+			console.log(JSON.stringify(nodePositions));
+			
 			$.ajax('api/save', {
 				dataType: 'json',
 				data: { positions: JSON.stringify(nodePositions) },

@@ -1273,15 +1273,27 @@ var zoomVis = function (opts) {
 				var cyNode = event.cyTarget;
 				var id = parseInt(cyNode.id());
 				var pos = cyNode.position();
-				
-				var level = currentLevel;
-				var node = levelNodeMap[level][id];
-				
 				var serverPos = serverPosition(pos);
-				node.x = serverPos.x;
-				node.y = serverPos.y;
 				
-				console.log('Stopped dragging node ' + id + ', pos: ' + JSON.stringify(pos));
+//				var level = currentLevel;
+//				var node = levelNodeMap[level][id];
+//				
+//				var serverPos = serverPosition(pos);
+//				node.x = serverPos.x;
+//				node.y = serverPos.y;
+//				
+				
+				for (var level in levelNodeMap) {
+					for (var nodeId in levelNodeMap[level]) {
+						if (nodeId == id) {
+							var node = levelNodeMap[level][nodeId];
+							node.x = serverPos.x;
+							node.y = serverPos.y;
+						}
+					}
+				}
+				
+				console.log('Stopped dragging node ' + id + ', pos: ' + JSON.stringify(pos) + ', serverPos: ' + JSON.stringify(serverPos));
 			});
 			
 			cy.on('click', 'edge', function (event) {

@@ -41,7 +41,6 @@ function _getTextSize(el) {
 		
 		return fontH;
 	} else {
-		console.log('Edge font size: ' + style['font-size'].pxValue);
 		return style['font-size'].pxValue;
 	}
 }
