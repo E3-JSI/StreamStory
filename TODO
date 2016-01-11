@@ -11,8 +11,6 @@
 
 ZA REVIEW:
 - check if the prediction of an undesired state works as expected
-- poglej kaj se zgodi s trenutnim modelom, ko ga aktiviras/deaktivirak prek dashboarda
-- add a description to each model
 - check what happens when you try to build 2 models
 - saving node positions doesn't work well
 
