@@ -28,16 +28,18 @@ function _getTextSize(el) {
 		
 		var nodeW = style['width'].pxValue;
 		
-		var content = style['content'];
-		var fontH = parseInt((nodeW / 4).toFixed());
-		if (fontH < 10) fontH = 10;
-		return fontH;
+		var content = style['content'].value;
 		
-		if (style['font-size'] != 'auto') {
-			return style['font-size'].pxValue;
+		var fontH;
+		if (content.length > 7) {
+			fontH = parseInt((nodeW / (content.length - 3)).toFixed());
+			if (fontH < 6) fontH = 6;
 		} else {
-			
+			fontH = parseInt((nodeW / 4).toFixed());
+			if (fontH < 10) fontH = 10;
 		}
+		
+		return fontH;
 	} else {
 		console.log('Edge font size: ' + style['font-size'].pxValue);
 		return style['font-size'].pxValue;

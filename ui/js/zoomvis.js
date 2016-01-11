@@ -318,9 +318,9 @@ var zoomVis = function (opts) {
 	// UTILITY FUNCTIONS
 	//===============================================================
 	
-//	function getNodeLabel(node) {
-//		return (node.name != null ? node.name : (node.label));
-//	}
+	function getNodeLabel(node) {
+		return (node.name != null ? node.name : (node.label));
+	}
 
 	function colorFromProb(prob) {
 		return prob*prob;
@@ -615,10 +615,10 @@ var zoomVis = function (opts) {
 			if (cache.getNode(id) == null) {
 				var position = cyPosition(node);
 				var nodeSize = cySize(levelInfo[i].radius);
-//				var label = getNodeLabel(node);
+				var label = getNodeLabel(node);
 				
 				var style = {
-					'content': node.label,
+					'content': label,//node.label,
 					'text-transform': 'none',
 					'text-halign': 'center',
 					'text-valign': 'center',
@@ -1454,18 +1454,27 @@ var zoomVis = function (opts) {
 			var levelInfo = levelNodes[level];
 			
 			var node;
+			var targetNode = null;
 			for (var i = 0; i < levelInfo.length; i++) {
 				node = levelInfo[i];
 				if (node.id == stateId) {
 					node.name = name;
-					break;
+					targetNode = node;
 				}
 			}
 			
-			if (node == null) return;
+			if (targetNode == null) return;
+			
+			var label = getNodeLabel(targetNode);
+			cache.getNode(stateId).css['content'] = label;
 			
 			var graphNode = cy.nodes('#' + stateId);
-			graphNode.data().name = name;
+			if (graphNode.length > 0) {
+				graphNode.data().name = name;
+				graphNode.css('content', getNodeLabel(targetNode));
+				graphNode.flashClass('nolabel', 1);	// fix, doesn't work without this
+//				graphNode.css().content = getNodeLabel(node);
+			}
 		},
 		
 		setShowTransitionProbs: function (show) {

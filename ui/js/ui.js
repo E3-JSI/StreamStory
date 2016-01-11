@@ -687,7 +687,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 					$('#txt-name').off('keyup');
 					
 					// clear the panel
-					$('#txt-name').val(data.id);
+					$('#txt-name').val(data.label);
 					$('#chk-target').removeAttr('checked');
 					$('#txt-event-id').val('');
 					$('#div-button-save-state').addClass('hidden');

@@ -493,6 +493,7 @@ exports.StreamStory = function (opts) {
 			var stateNm = mc.getStateName(stateId);
 			var wgts = mc.getStateWgtV(stateId);
 			var classifyTree = mc.getClassifyTree(stateId);
+			var label = mc.getStateLabel(stateId);
 
 			if (log.trace())
 				log.trace('Tree: %s', JSON.stringify(classifyTree));
@@ -539,6 +540,7 @@ exports.StreamStory = function (opts) {
 			return {
 				id: stateId,
 				name: stateNm.length > 0 ? stateNm : null,
+				label: label,
 				isTarget: isTarget,
 				isLeaf: isLeaf,
 				features: features,
