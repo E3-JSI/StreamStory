@@ -1922,7 +1922,7 @@ function initPipelineHandlers() {
 							type: 'exponential',
 							lambda: intensConfig.deviation_significant_lambda	// degradation occurs once per year
 						};
-					} else {					// (zscore >= 2) minor deviation
+					} else {									// (zscore >= 2) minor deviation
 						pdf = {
 							type: 'exponential',
 							lambda: intensConfig.deviation_minor_lambda			// degradation occurs once per two years

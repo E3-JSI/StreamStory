@@ -19,6 +19,50 @@ function getModelIdFromBtn(btn) {
 	return getModelIdFromTr(tr);
 }
 
+function fetchModelDetails(mid) {
+	$.ajax('api/modelDetails', {
+		dataType: 'json',
+		method: 'GET',
+		data: { modelId: mid },
+		success: function (data) {
+			$('#div-model-name').html(data.name);
+			$('#span-creator').html(data.creator);
+			$('#span-creation-date').html(formatDateTime(new Date(data.creationDate)));
+			$('#span-dataset').html(data.dataset);
+			
+			if (data.isOnline) {
+				$('#span-online-offline').addClass('green');
+				$('#span-online-offline').html('online');
+				
+				if (data.isActive) {
+					$('#span-model-active-public').removeClass('red');
+					$('#span-model-active-public').addClass('green');
+					$('#span-model-active-public').html('active');
+				} else {
+					$('#span-model-active-public').removeClass('green');
+					$('#span-model-active-public').addClass('red');
+					$('#span-model-active-public').html('inactive');
+				}
+			} else {
+				$('#span-online-offline').removeClass('green');
+				$('#span-online-offline').html('offline');
+				
+				$('#span-model-active-public').removeClass('red');
+				$('#span-model-active-public').removeClass('green');
+				
+				if (data.isPublic) {
+					$('#span-model-active-public').html('public');
+				} else {
+					$('#span-model-active-public').html('private');
+				}
+			}
+			
+			$('#div-model-details').removeClass('hidden');
+		},
+		error: handleAjaxError
+	});
+}
+
 function fetchDetails() {
 	$('#table-models-active tbody tr,#table-models-inactive tbody tr,#table-models-offline tbody tr,#table-models-public tbody tr').removeClass('success');
 	
@@ -63,6 +107,7 @@ function activate() {
 				
 				tr.attr('id', 'active-' + mid);
 				var newBtn = $('<button class="btn btn-danger btn-xs btn-deactivate" aria-label="Left Align"><span class="glyphicon glyphicon-off"></span> Deactivate</button>');
+				var oldBtn = tr.find('.btn-activate');
 				
 				tr.find('.btn-activate').remove();
 				tr.find('.span-btns').prepend(newBtn)
@@ -71,6 +116,8 @@ function activate() {
 				
 				if (tr.hasClass('success'))
 					fetchModelDetails(mid);
+				if (oldBtn.hasClass('tbl-btn-offset'))
+					newBtn.addClass('tbl-btn-offset');
 			},
 			error: handleAjaxError
 		});
@@ -95,6 +142,7 @@ function deactivate() {
 				$('#table-models-inactive').find('tbody').append(tr);
 				
 				var newBtn = $('<button class="btn btn-success btn-xs btn-activate" aria-label="Left Align"><span class="glyphicon glyphicon-off"></span> Activate</button>');
+				var oldBtn = tr.find('.btn-deactivate');
 				
 				tr.find('.btn-deactivate').remove();
 				tr.find('.span-btns').prepend(newBtn);
@@ -103,6 +151,8 @@ function deactivate() {
 				
 				if (tr.hasClass('success'))
 					fetchModelDetails(mid);
+				if (oldBtn.hasClass('tbl-btn-offset'))
+					newBtn.addClass('tbl-btn-offset');
 			},
 			error: handleAjaxError
 		});
@@ -127,6 +177,7 @@ function share() {
 				$('#table-models-public').find('tbody').append(tr);
 				
 				var newBtn = $('<button class="btn btn-warning btn-xs btn-unshare" aria-label="Left Align"><span class="glyphicon glyphicon-globe"></span> Unshare</button>');
+				var oldBtn = tr.find('.btn-share');
 				
 				tr.find('.btn-share').remove();
 				tr.find('.span-btns').prepend(newBtn);
@@ -135,6 +186,8 @@ function share() {
 				
 				if (tr.hasClass('success'))
 					fetchModelDetails(mid);
+				if (oldBtn.hasClass('tbl-btn-offset'))
+					newBtn.addClass('tbl-btn-offset');
 			},
 			error: handleAjaxError
 		});
@@ -159,7 +212,8 @@ function unshare() {
 				$('#table-models-offline').find('tbody').append(tr);
 				
 				var newBtn = $('<button class="btn btn-default btn-xs btn-share" aria-label="Left Align"><span class="glyphicon glyphicon-globe"></span> Share</button>');
-			
+				var oldBtn = tr.find('.btn-unshare');
+				
 				tr.find('.btn-unshare').remove();
 				tr.find('.span-btns').prepend(newBtn);
 				
@@ -167,6 +221,8 @@ function unshare() {
 				
 				if (tr.hasClass('success'))
 					fetchModelDetails(mid);
+				if (oldBtn.hasClass('tbl-btn-offset'))
+					newBtn.addClass('tbl-btn-offset');
 			},
 			error: handleAjaxError
 		});
@@ -198,12 +254,6 @@ function pingProgress(isRealTime) {
 			
 			if (data.error != null) {
 				$('#progress-build-model').css('background-color', 'red');
-//				alert('Error while building model: ' + data.error);
-//				setTimeout(function () {
-//					$('#progress-build-model').css('background-color', '');
-//					$('#div-model-progress').addClass('hidden');
-//				}, 30000);
-//				$('#div-model-progress').addClass('hidden');
 			} else {
 				if (!data.isFinished) {
 					pingProgress(isRealTime);
@@ -251,11 +301,11 @@ function pingProgress(isRealTime) {
 							buttonsTd.append(buttonSpan);
 							
 							if (isRealTime) {
-								var deactivateBtn = $('<button class="btn btn-danger btn-xs btn-deactivate" aria-label="Left Align" style="margin-right: 4px;"><span class="glyphicon glyphicon-off"></span> Deactivate</button>');
+								var deactivateBtn = $('<button class="btn btn-danger btn-xs btn-deactivate tbl-btn-offset" aria-label="Left Align"><span class="glyphicon glyphicon-off"></span> Deactivate</button>');
 								deactivateBtn.click(deactivate);
 								buttonSpan.prepend(deactivateBtn);
 							} else {
-								var shareBtn = $('<button class="btn btn-default btn-xs btn-share" aria-label="Left Align" style="margin-right: 4px;"><span class="glyphicon glyphicon-globe"></span> Share</button>');
+								var shareBtn = $('<button class="btn btn-default btn-xs btn-share tbl-btn-offset" aria-label="Left Align" style="margin-right: 4px;"><span class="glyphicon glyphicon-globe"></span> Share</button>');
 								shareBtn.click(share);
 								buttonSpan.prepend(shareBtn);
 							}
@@ -516,50 +566,6 @@ function pingProgress(isRealTime) {
 	//========================================================
 	// TABLES
 	//========================================================	
-	
-	function fetchModelDetails(mid) {
-		$.ajax('api/modelDetails', {
-			dataType: 'json',
-			method: 'GET',
-			data: { modelId: mid },
-			success: function (data) {
-				$('#div-model-name').html(data.name);
-				$('#span-creator').html(data.creator);
-				$('#span-creation-date').html(formatDateTime(new Date(data.creationDate)));
-				$('#span-dataset').html(data.dataset);
-				
-				if (data.isOnline) {
-					$('#span-online-offline').addClass('green');
-					$('#span-online-offline').html('online');
-					
-					if (data.isActive) {
-						$('#span-model-active-public').removeClass('red');
-						$('#span-model-active-public').addClass('green');
-						$('#span-model-active-public').html('active');
-					} else {
-						$('#span-model-active-public').removeClass('green');
-						$('#span-model-active-public').addClass('red');
-						$('#span-model-active-public').html('inactive');
-					}
-				} else {
-					$('#span-online-offline').removeClass('green');
-					$('#span-online-offline').html('offline');
-					
-					$('#span-model-active-public').removeClass('red');
-					$('#span-model-active-public').removeClass('green');
-					
-					if (data.isPublic) {
-						$('#span-model-active-public').html('public');
-					} else {
-						$('#span-model-active-public').html('private');
-					}
-				}
-				
-				$('#div-model-details').removeClass('hidden');
-			},
-			error: handleAjaxError
-		});
-	}
 	
 	$('#table-models-active tbody,#table-models-inactive tbody,#table-models-offline tbody,#table-models-public tbody').sortable({
 		helper: function(e, tr) {
