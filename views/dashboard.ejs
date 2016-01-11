@@ -266,6 +266,15 @@
 							The model is <span id="span-online-offline" class="span-details"></span>
 							 and <span id="span-model-active-public" class="span-details"></span>
 						</p>
+						<div class="form-group">
+                          	<label for="input-model-details-desc">Description</label>
+                          	<textarea id="input-model-details-desc" class="form-control" rows="3"></textarea>
+	  					</div>
+	  					<div id="alert-wrapper-model-details" class="form-group"></div>
+	  					<div id="div-model-details-btns" class="form-group hidden">
+                          	<button id="btn-cancel-model-details" type="button" class="btn btn-default">Cancel</button>
+                          	<button id="btn-save-model-details" type="button" class="btn btn-success">Save</button>
+	  					</div>
 					</div>
 				</div>
 				<div class="row">
@@ -404,6 +413,10 @@
 			                          	<label for="input-model-name">Model name</label>
 	  									<input id="input-model-name" type="text" class="form-control" placeholder="Model name" />
 				  					</div>
+				  					<div class="form-group">
+			                          	<label for="input-model-desc">Description</label>
+			                          	<textarea id="input-model-desc" class="form-control" rows="3"></textarea>
+				  					</div>
 		  						</div>
 		  					</div>
 	  					</div>
@@ -417,6 +430,7 @@
 	</div>
 	
 	<% include partials/confirm %>
+	<% include partials/alert %>
 	
 	<% include partials/includejs %>
 	<script type="text/javascript" src="lib/jquery.bootstrap-duallistbox.js"></script>

@@ -366,6 +366,7 @@ exports.RealTimeModelStore = function (opts) {
 				
 				var datasetName = opts.datasetName;
 				var modelName = opts.modelName;
+				var description = opts.description;
 				var base = opts.base;
 				var store = opts.store;
 				var storeNm = opts.storeNm;
@@ -521,6 +522,7 @@ exports.RealTimeModelStore = function (opts) {
 									model_file: fname,
 									dataset: datasetName,
 									name: modelName,
+									description: description,
 									is_active: 1
 								}
 								
@@ -546,7 +548,8 @@ exports.RealTimeModelStore = function (opts) {
 									base_dir: baseDir,
 									model_file: fname,
 									dataset: datasetName,
-									name: modelName
+									name: modelName,
+									description: description
 								}
 								
 								log.info('Storing a new offline model ...');

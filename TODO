@@ -10,12 +10,9 @@
 - importance bar namesto barve (logreg)
 
 ZA REVIEW:
-- poglej, ce load model dela v vseh primerih
 - check if the prediction of an undesired state works as expected
-- state name se ne pokaze takoj
 - poglej kaj se zgodi s trenutnim modelom, ko ga aktiviras/deaktivirak prek dashboarda
 - add a description to each model
 - check what happens when you try to build 2 models
-- ko dodam model, sta buttona skupaj
 - saving node positions doesn't work well
 

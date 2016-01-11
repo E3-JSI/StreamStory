@@ -25,6 +25,8 @@ function fetchModelDetails(mid) {
 		method: 'GET',
 		data: { modelId: mid },
 		success: function (data) {
+			$('#div-model-details-btns').addClass('hidden');
+			
 			$('#div-model-name').html(data.name);
 			$('#span-creator').html(data.creator);
 			$('#span-creation-date').html(formatDateTime(new Date(data.creationDate)));
@@ -56,6 +58,8 @@ function fetchModelDetails(mid) {
 					$('#span-model-active-public').html('private');
 				}
 			}
+			
+			$('#input-model-details-desc').val(data.description);
 			
 			$('#div-model-details').removeClass('hidden');
 		},
@@ -511,9 +515,10 @@ function pingProgress(isRealTime) {
 		var attrs = $('#select-attrs').val();
 		var controlAttrs = $('#select-controls').val();
 		var isRealTime = $('#check-realtime').is(':checked');
-		var name = $('#input-model-name').val();
 		var clustAlg = $('#select-clust').val();
 		var hierarchyType = $('#select-hierarchy').val();
+		var name = $('#input-model-name').val();
+		var desc = $('#input-model-desc').val();
 		
 		var data = {
 			username: $('#input-email').val(),
@@ -523,7 +528,8 @@ function pingProgress(isRealTime) {
 			controlAttrs: controlAttrs != null ? controlAttrs : [],
 			hierarchyType: hierarchyType,
 			isRealTime: isRealTime,
-			name: name
+			name: name,
+			description: desc
 		}
 		
 		if (clustAlg == 'kmeans') {
@@ -589,8 +595,13 @@ function pingProgress(isRealTime) {
 		$('#select-attrs').val('');
 		$('#select-tu').val('hour');
 		$('#select-clust').val('kmeans');
+		$('#input-kmeans-k').val('12');
+		$('#input-dpmeans-minstates').val('10');
+		$('#input-dpmeans-maxstates').val('30');
+		$('#input-dpmeans-lambda').val('0.8');
 		$('#select-hierarchy').val('aggClust');
 		$('#input-model-name').val('');
+		$('#input-model-desc').val('');
 		
 		$('#input-choose-upload').change();
 		$('#progress-file-upload').css('width','0%');
@@ -616,6 +627,45 @@ function pingProgress(isRealTime) {
 	$('.btn-deactivate').click(deactivate);
 	$('.btn-share').click(share);
 	$('.btn-unshare').click(unshare);
+	
+	//========================================================
+	// MODEL DETAILS
+	//========================================================
+	
+	$('#input-model-details-desc').keyup(function () {
+		$('#div-model-details-btns').removeClass('hidden');
+	});
+	
+	$('#btn-save-model-details').click(function () {
+		var tr = $('#table-models-offline,#table-models-public,#table-models-active,#table-models-inactive').find('.success');
+		var mid = getModelIdFromTr(tr);
+		var desc = $('#input-model-details-desc').val();
+		
+		$.ajax('api/modelDescription', {
+			dataType: 'json',
+			data: { modelId: mid, description: desc },
+			method: 'POST',
+			success: function (data, status, xhr) {
+				$('#div-model-details-btns').addClass('hidden');
+				showAlert($('#alert-holder'), $('#alert-wrapper-model-details'), 'alert-success', 'Details saved!', null, true);
+			},
+			error: function (xhr, status, err) {
+				if (xhr.status == 400) {
+					var responseText = xhr.responseText;
+					showAlert($('#alert-holder'), $('#alert-wrapper-model-details'), 'alert-danger', responseText, null, false);
+				} else {
+					alert(xhr.responseText);
+				}
+			}
+		});
+	});
+	
+	$('#btn-cancel-model-details').click(function () {
+		var tr = $('#table-models-offline,#table-models-public,#table-models-active,#table-models-inactive').find('.success');
+		var mid = getModelIdFromTr(tr);
+		
+		fetchModelDetails(mid);
+	});
 	
 	//========================================================
 	// INITIALIZE NAVIGATION

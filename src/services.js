@@ -954,6 +954,7 @@ function initStreamStoryRestApi() {
 					res.send({
 						mid: modelConfig.mid,
 						name: modelConfig.name,
+						description: modelConfig.description,
 						dataset: modelConfig.dataset,
 						isOnline: modelConfig.is_realtime == 1,
 						creator: modelConfig.username,
@@ -966,6 +967,32 @@ function initStreamStoryRestApi() {
 			} catch (e) {
 				log.error(e, 'Failed to query state details!');
 				andleServerError(e, req, res);
+			}
+		});
+		
+		app.post(API_PATH + '/modelDescription', function (req, res) {			
+			try {
+				var mid = req.body.modelId;
+				var desc = req.body.description;
+				
+				if (log.debug())
+					log.debug('Setting description for model %s', mid);
+				
+				if (desc == '') desc = null;
+				
+				db.setModelDescription(mid, desc, function (e) {
+					if (e != null) {
+						log.error(e, 'Failed to update model description!');
+						handleServerError(e, req, res);
+						return;
+					}
+					
+					res.status(204);	// no content
+					res.end();
+				});
+			} catch (e) {
+				log.error(e, 'Failed to set model details!');
+				handleServerError(e, req, res);
 			}
 		});
 		
@@ -1295,6 +1322,7 @@ function initDataUploadApi() {
 			
 			var timeAttr = req.body.time;
 			var modelName = req.body.name;
+			var description = req.body.description;
 			var timeUnit = req.body.timeUnit;
 			var attrs = req.body.attrs;
 			var controlAttrs = req.body.controlAttrs;
@@ -1312,6 +1340,9 @@ function initDataUploadApi() {
 			delete fileBuffH[sessionId];
 			delete session.datasetName;
 			delete session.headerFields;
+			
+			if (description != null && description.length > 300)
+				description = description.substring(0, 300);
 			
 			log.debug('Creating a new base for the current user ...');
 			var baseDir = utils.getBaseDir(username, new Date().getTime());
@@ -1368,6 +1399,7 @@ function initDataUploadApi() {
 						username: username,
 						datasetName: datasetName,
 						modelName: modelName,
+						description: description,
 						base: userBase,
 						store: store,
 						storeNm: storeNm,
@@ -1378,10 +1410,10 @@ function initDataUploadApi() {
 						hierarchyType: hierarchy,
 						attrs: attrs,
 						controlAttrs: controlAttrs,
-							isRealTime: isRealTime,
-							fileBuff: fileBuff,
-							clustConfig: clustConfig,
-							baseDir: baseDir
+						isRealTime: isRealTime,
+						fileBuff: fileBuff,
+						clustConfig: clustConfig,
+						baseDir: baseDir
 					}
 						
 					// finish the request

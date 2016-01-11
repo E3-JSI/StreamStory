@@ -335,7 +335,7 @@ module.exports = function () {
 		// MODEL QUERIES
 		//===============================================================
 		
-		fetchUserModels: function (username, callback) {	// TODO fix this method
+		fetchUserModels: function (username, callback) {
 			connection({
 				callback: callback,
 				nextOp: query({
@@ -495,6 +495,15 @@ module.exports = function () {
 				nextOp: query({
 					sql: 'UPDATE model SET is_public = ? WHERE mid = ?',
 					params: [share ? 1 : 0, mid]
+				})
+			});
+		},
+		setModelDescription: function (mid, desc, callback) {
+			connection({
+				callback: callback,
+				nextOp: query({
+					sql: 'UPDATE model SET description = ? WHERE mid = ?',
+					params: [desc, mid]
 				})
 			});
 		},
