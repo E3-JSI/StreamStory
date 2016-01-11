@@ -599,6 +599,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 				data: { positions: JSON.stringify(nodePositions) },
 				method: 'POST',
 				success: function (data) {
+					showAlert($('#alert-holder'), $('#alert-wrapper-viz-config'), 'alert-success', 'Saved!', null, true);
 					console.log('Successfully saved!');
 				},
 				error: handleAjaxError
@@ -683,7 +684,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 				data: { stateId: stateId, level: height },
 				success: function (data) {
 					$('#wrapper-state-details').show();
-					$('#txt-name').off('change');
+					$('#txt-name').off('keyup');
 					
 					// clear the panel
 					$('#txt-name').val(data.id);
@@ -709,7 +710,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 						$('#div-event-id').addClass('hidden');
 					}
 					
-					$('#txt-name').change(function () {
+					$('#txt-name').keyup(function () {
 						$('#div-button-save-state').removeClass('hidden');
 					});
 					
@@ -820,6 +821,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 						    	viz.setStateName(stateId, shouldClear ? stateId : stateName);
 						    	viz.setTargetState(stateId, isUndesired);
 						    	$('#div-button-save-state').addClass('hidden');
+						    	showAlert($('#alert-holder'), $('#alert-wrapper-save-state'), 'alert-success', 'Saved!', null, true);
 						    },
 						    error: handleAjaxError
 						});

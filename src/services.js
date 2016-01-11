@@ -1079,7 +1079,7 @@ function initStreamStoryRestApi() {
 		});
 		
 		app.post(API_PATH + '/stateProperties', function (req, res) {
-			var stateId, stateNm, isUndesired, eventId;
+			var stateId, stateNm;
 			
 			try {
 				var session = req.session;
@@ -1089,14 +1089,6 @@ function initStreamStoryRestApi() {
 				
 				stateId = parseInt(req.body.id);
 				stateNm = req.body.name;
-				isUndesired = JSON.parse(req.body.isUndesired);
-				eventId = req.body.eventId;
-				
-				if (isUndesired && (eventId == null || eventId == '')) {
-					log.warn('The state is marked undesired, but the eventId is missing!');
-					handleBadInput(res, 'Undesired event without an event id!');
-					return;
-				}
 				
 				if (stateNm != null) {
 					if (log.debug()) 
@@ -1110,47 +1102,65 @@ function initStreamStoryRestApi() {
 					
 					model.getModel().clearStateName(stateId);
 				}
-				
-				if (log.info()) 
-					log.info('Setting undesired state: %d, isUndesired: ' + isUndesired, stateId);
-
-				model.getModel().setTarget(stateId, isUndesired);
-				var fname = getModelFile(session);
-				
-				if (log.debug())
-					log.debug('Saving model to file: %s', fname);
-				
-				model.save(fname);
-				
-				if (!isUndesired) {
+				if (!model.isOnline()) {
+					var fname = getModelFile(session);
 					if (log.debug())
-						log.debug('Clearing undesired event id ...');
+						log.debug('Saving model to file: %s', fname);
+					model.save(fname);
+					res.status(204);	// no content
+					res.end();
+				} if (model.isOnline()) {
+					var isUndesired = JSON.parse(req.body.isUndesired);
+					var eventId = req.body.eventId;
 					
-					// clear the event id from the database
-					db.clearUndesiredEventId(mid, stateId, function (e) {
-						if (e != null) {
-							log.error(e, 'Failed to clear undesired event ID!');
-							handleServerError(e, req, res);
-							return;
-						}
-						
-						res.status(204);	// no content
-						res.end();
-					});
-				} else {
+					if (isUndesired && (eventId == null || eventId == '')) {
+						log.warn('The state is marked undesired, but the eventId is missing!');
+						handleBadInput(res, 'Undesired event without an event id!');
+						return;
+					}
+					
+					if (log.info()) 
+						log.info('Setting undesired state: %d, isUndesired: ' + isUndesired, stateId);
+	
+					model.getModel().setTarget(stateId, isUndesired);
+					var fname = getModelFile(session);
+					
 					if (log.debug())
-						log.debug('Setting undesired event id to "%s" ...', eventId);
+						log.debug('Saving model to file: %s', fname);
+					
+					var fname = getModelFile(session);
+					model.save(fname);
+					
+					if (!isUndesired) {
+						if (log.debug())
+							log.debug('Clearing undesired event id ...');
 						
-					db.setUndesiredEventId(mid, stateId, eventId, function (e) {
-						if (e != null) {
-							log.error(e, 'Failed to set undesired event ID!');
-							handleServerError(e, req, res);
-							return;
-						}
-						
-						res.status(204);	// no content
-						res.end();
-					});
+						// clear the event id from the database
+						db.clearUndesiredEventId(mid, stateId, function (e) {
+							if (e != null) {
+								log.error(e, 'Failed to clear undesired event ID!');
+								handleServerError(e, req, res);
+								return;
+							}
+							
+							res.status(204);	// no content
+							res.end();
+						});
+					} else {
+						if (log.debug())
+							log.debug('Setting undesired event id to "%s" ...', eventId);
+							
+						db.setUndesiredEventId(mid, stateId, eventId, function (e) {
+							if (e != null) {
+								log.error(e, 'Failed to set undesired event ID!');
+								handleServerError(e, req, res);
+								return;
+							}
+							
+							res.status(204);	// no content
+							res.end();
+						});
+					}
 				}
 			} catch (e) {
 				log.error(e, 'Failed to set name of state %d to %s', stateId, stateNm);

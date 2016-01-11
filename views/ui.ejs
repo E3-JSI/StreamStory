@@ -448,6 +448,7 @@
 									</div>
 									<div class="row">
 										<div id="container-buttons" class="col-md-12" style="padding-top: 12px;">
+											<div id="alert-wrapper-viz-config" class="form-group"></div>
 											<% if (model.isOnline()) { %>
 											<input type="button" id="btn-activate" value="Activate Model" class="btn btn-success btn-block hidden" />
 											<script type="text/javascript">
@@ -543,6 +544,7 @@
 									  	</div>
 								  	</div>
 								  	<% } %>
+								  	<div id="alert-wrapper-save-state" class="form-group"></div>
 								  	<div id="div-button-save-state" class="form-group" class="hidden">
 										<input id="btn-button-save-state" type="button" class="btn btn-success" value="Save" />
 									</div>
@@ -630,4 +632,6 @@
 		<a class="glyphicon glyphicon-remove btn-close" onclick="$('#popover-pdf-hist').slideUp();"></a>
 		<div id="hist-pdf" style="width: 100%; height: 100%;"></div>
 	</div>
+	
+	<% include partials/alert %>
 </body>
