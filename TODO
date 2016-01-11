@@ -11,5 +11,4 @@
 ZA REVIEW:
 - check if the prediction of an undesired state works as expected
 - check what happens when you try to build 2 models
-- saving node positions doesn't work well
 

@@ -1257,44 +1257,52 @@ var zoomVis = function (opts) {
 				}		
 			});
 			
-			cy.on('grab', 'node', function (event) {
-				var cyNode = event.cyTarget;
-				var id = parseInt(cyNode.id());
-				var pos = cyNode.position();
+			(function () {
+				var startPos = null;
 				
-				var level = currentLevel;
-				var node = levelNodeMap[level][id];
-				
-				console.log('Started dragging node ' + id + ', pos' + JSON.stringify({x: node.x, y: node.y}) + ', cyPos: ' + JSON.stringify(pos));
-			})
-			
-			// fired when a node is moved
-			cy.on('free', 'node', function (event) {
-				var cyNode = event.cyTarget;
-				var id = parseInt(cyNode.id());
-				var pos = cyNode.position();
-				var serverPos = serverPosition(pos);
-				
-//				var level = currentLevel;
-//				var node = levelNodeMap[level][id];
-//				
-//				var serverPos = serverPosition(pos);
-//				node.x = serverPos.x;
-//				node.y = serverPos.y;
-//				
-				
-				for (var level in levelNodeMap) {
-					for (var nodeId in levelNodeMap[level]) {
-						if (nodeId == id) {
-							var node = levelNodeMap[level][nodeId];
-							node.x = serverPos.x;
-							node.y = serverPos.y;
-						}
-					}
+				function dist(p1, p2) {
+					return Math.sqrt((p1.x - p2.x)*(p1.x - p2.x) + (p1.y - p2.y)*(p1.y - p2.y));
 				}
 				
-				console.log('Stopped dragging node ' + id + ', pos: ' + JSON.stringify(pos) + ', serverPos: ' + JSON.stringify(serverPos));
-			});
+				cy.on('grab', 'node', function (event) {
+					var cyNode = event.cyTarget;
+					var id = parseInt(cyNode.id());
+					var pos = cyNode.position();
+					
+					startPos = {x: pos.x, y: pos.y};
+				});
+				
+				// fired when a node is moved
+				cy.on('free', 'node', function (event) {
+					var cyNode = event.cyTarget;
+					var id = parseInt(cyNode.id());
+					var pos = cyNode.position();
+					var serverPos = serverPosition(pos);
+					
+					// check if we haven't moved
+					if (startPos != null) {
+						var d = dist(pos, startPos);
+						startPos = null;
+						
+						if (d < 3) {
+							console.log('Moved for: ' + d + ' ignoring ...');
+							return;
+						}
+					}	
+					
+					for (var level in levelNodeMap) {
+						for (var nodeId in levelNodeMap[level]) {
+							if (nodeId == id) {
+								var node = levelNodeMap[level][nodeId];
+								node.x = serverPos.x;
+								node.y = serverPos.y;
+							}
+						}
+					}
+					
+					console.log('node released ' + id + ', pos: ' + JSON.stringify(pos) + ', serverPos: ' + JSON.stringify(serverPos));
+				});
+			})();
 			
 			cy.on('click', 'edge', function (event) {
 				var edge = event.cyTarget;
