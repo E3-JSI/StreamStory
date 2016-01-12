@@ -62,7 +62,7 @@ exports.StreamStory = function (opts) {
 		var dims = ftrSpace.dims;
 		for (var i = 0; i < dims.length; i++) {
 			var ftrDesc = ftrSpace.getFeature(i);
-			var match = ftrDesc.match(/\[[-\w\s]*\]$/);	// remove Numeric[ ]
+			var match = ftrDesc.match(/\[[\W\w]*\]$/);	// remove Numeric[ ]
 
 			if (match != null) {
 				match = match[0];
