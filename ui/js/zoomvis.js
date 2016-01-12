@@ -186,6 +186,7 @@ var zoomVis = function (opts) {
 	};
 	edgeQtipOpts.show.event = 'hover';
 	edgeQtipOpts.hide.event = 'hovercancel';
+	edgeQtipOpts.hide.inactive = 3000;
 	
 	
 	var TARGET_NODE_CSS = {
@@ -1308,6 +1309,7 @@ var zoomVis = function (opts) {
 				var edge = event.cyTarget;
 				var sourceId = edge.source().id();
 				var targetId = edge.target().id();
+				
 				callbacks.edgeSelected(parseInt(sourceId), parseInt(targetId));
 			});
 			
