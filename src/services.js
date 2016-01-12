@@ -933,7 +933,7 @@ function initStreamStoryRestApi() {
 				});
 			} catch (e) {
 				log.error(e, 'Failed to query state details!');
-				andleServerError(e, req, res);
+				handleServerError(e, req, res);
 			}
 		});
 		

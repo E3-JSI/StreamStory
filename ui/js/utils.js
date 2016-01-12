@@ -39,7 +39,11 @@ function formatDateTime(date) {
 }
 
 function handleAjaxError(xhr, status, err) {
-	alert(xhr.responseText);
+	if (xhr.readyState == 0) {
+		console.log('Ajax error with request not initialized!');
+	} else {
+		alert(xhr.responseText);
+	}
 }
 
 function toUiPrecision(val) {
