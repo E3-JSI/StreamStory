@@ -1192,7 +1192,7 @@ function initStreamStoryRestApi() {
 				}
 			} catch (e) {
 				log.error(e, 'Failed to set name of state %d to %s', stateId, stateNm);
-				res.status(500);	// internal server error
+				handleServerError(e, req, res);
 			}
 		});
 		
