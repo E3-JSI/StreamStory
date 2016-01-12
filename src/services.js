@@ -1149,7 +1149,8 @@ function initStreamStoryRestApi() {
 					if (log.info()) 
 						log.info('Setting undesired state: %d, isUndesired: ' + isUndesired, stateId);
 	
-					model.getModel().setTarget(stateId, isUndesired);
+					if (model.getModel().isTarget(stateId) != isUndesired)
+						model.getModel().setTarget(stateId, isUndesired);
 					var fname = getModelFile(session);
 					
 					if (log.debug())
