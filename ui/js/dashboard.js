@@ -60,6 +60,11 @@ function fetchModelDetails(mid) {
 			}
 			
 			$('#input-model-details-desc').val(data.description);
+			if (data.isOwner) {
+				$('#input-model-details-desc').removeAttr('disabled');
+			} else {
+				$('#input-model-details-desc').attr('disabled', 'disabled');
+			}
 			
 			$('#div-model-details').removeClass('hidden');
 		},

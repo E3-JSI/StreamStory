@@ -939,6 +939,8 @@ function initStreamStoryRestApi() {
 		
 		app.get(API_PATH + '/modelDetails', function (req, res) {
 			try {
+				var session = req.session;
+				var username = session.username;
 				var modelId = parseInt(req.query.modelId);
 				
 				if (log.debug())
@@ -960,7 +962,8 @@ function initStreamStoryRestApi() {
 						creator: modelConfig.username,
 						creationDate: modelConfig.date_created,
 						isPublic: modelConfig.is_public == 1,
-						isActive: modelConfig.is_active == 1
+						isActive: modelConfig.is_active == 1,
+						isOwner: modelConfig.username == username
 					});
 					res.end();
 				});
