@@ -1763,7 +1763,7 @@ function initServerApi() {
 				if (activate == null) throw new Error('Missing parameter activate!');
 				if (modelId == null) throw new Error('WTF?! Tried to activate a model that doesn\'t have an ID!');
 				
-				activateModelById(req, res, modelId, activate);
+				activateModelById(req, res, modelId, activate, false);
 			} catch (e) {
 				log.error(e, 'Failed to process raw measurement!');
 				res.status(500);
@@ -1780,7 +1780,7 @@ function initServerApi() {
 				
 				var model = getModel(req.sessionID, session);
 				
-				activateModelById(req, res, model.getId(), activate);
+				activateModelById(req, res, model.getId(), activate, true);
 			} catch (e) {
 				log.error(e, 'Failed to process raw measurement!');
 				res.status(500);
