@@ -14,16 +14,6 @@
 		$('#input-choose-upload,#input-email,#select-clust,#select-clust,#input-dpmeans-lambda').change(checkConfigureDataset);
 		$('#input-model-name').keyup(checkConfigureDataset);
 		
-		$('#select-clust').change(function () {
-			var val = $(this).val();
-			
-			if (val != 'kmeans') $('#div-config-kmeans').addClass('hidden');
-			if (val != 'dpmeans') $('#div-config-dpmeans').addClass('hidden');
-			
-			if (val == 'kmeans') $('#div-config-kmeans').removeClass('hidden');
-			if (val == 'dpmeans') $('#div-config-dpmeans').removeClass('hidden');
-		});
-		
 		//================================================
 		// SELECT DATASET
 		//================================================

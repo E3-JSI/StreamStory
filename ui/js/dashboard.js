@@ -509,6 +509,16 @@ function pingProgress(isRealTime) {
 		});
 	});
 	
+	$('#select-clust').change(function () {
+		var val = $(this).val();
+		
+		if (val != 'kmeans') $('#div-config-kmeans').addClass('hidden');
+		if (val != 'dpmeans') $('#div-config-dpmeans').addClass('hidden');
+		
+		if (val == 'kmeans') $('#div-config-kmeans').removeClass('hidden');
+		if (val == 'dpmeans') $('#div-config-dpmeans').removeClass('hidden');
+	});
+	
 	$('#btn-done').click(function () {
 		var btn = $(this);
 		
