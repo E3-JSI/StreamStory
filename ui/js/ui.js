@@ -688,8 +688,10 @@ function changeControlVal(stateId, ftrIdx, val) {
 					$('#wrapper-state-details').show();
 					$('#txt-name').off('keyup');
 					
+					var stateLabel = data.label;
+					
 					// clear the panel
-					$('#txt-name').val(data.label);
+					$('#txt-name').val(stateLabel);
 					$('#chk-target').removeAttr('checked');
 					$('#txt-event-id').val('');
 					$('#div-button-save-state').addClass('hidden');
@@ -820,8 +822,9 @@ function changeControlVal(stateId, ftrIdx, val) {
 						    type: 'POST',
 						    data: data,
 						    success: function () {
-						    	viz.setStateName(stateId, shouldClear ? stateId : stateName);
+						    	viz.setStateName(stateId, shouldClear ? stateLabel : stateName);
 						    	viz.setTargetState(stateId, isUndesired);
+						    	$('#txt-name').val(stateLabel);
 						    	$('#div-button-save-state').addClass('hidden');
 						    	showAlert($('#alert-holder'), $('#alert-wrapper-save-state'), 'alert-success', 'Saved!', null, true);
 						    },
