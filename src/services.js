@@ -1736,20 +1736,22 @@ function initServerApi() {
 								}
 								
 								activateModel(model);
+								
+								res.status(204);
+								res.end();
 							});
 						});
 					} else {
 						// deactivate, the model is currently active
 						var model = modelStore.getModel(modelId);
 						deactivateModel(model);
+						
+						res.status(204);
+						res.end();
 					}
-					
-					res.status(204);
-					res.end();
 				} catch (e2) {
-					log.error('Model activated in the DB, but failed to activate it in the app!');
-					res.status(500);
-					res.end();
+					log.error(e2, 'Model activated in the DB, but failed to activate it in the app!');
+					handleServerError(e2, req, res);
 				}
 			});
 		}
