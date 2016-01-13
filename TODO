@@ -8,6 +8,5 @@
 - importance bar namesto barve (logreg)
 
 ZA REVIEW:
-- check if the prediction of an undesired state works as expected
 - check what happens when you try to build 2 models
 

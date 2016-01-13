@@ -824,7 +824,10 @@ function changeControlVal(stateId, ftrIdx, val) {
 						    success: function () {
 						    	viz.setStateName(stateId, shouldClear ? stateLabel : stateName);
 						    	viz.setTargetState(stateId, isUndesired);
-						    	$('#txt-name').val(stateLabel);
+						    	
+						    	if (shouldClear)
+						    		$('#txt-name').val(stateLabel);
+						    	
 						    	$('#div-button-save-state').addClass('hidden');
 						    	showAlert($('#alert-holder'), $('#alert-wrapper-save-state'), 'alert-success', 'Saved!', null, true);
 						    },
