@@ -1730,8 +1730,8 @@ function initServerApi() {
 									log.debug('Activating model with id %s', model.getId());
 								
 								if (isFromUi) {
-									var currModel = getModel(sessionId, session);
-									deactivateModel(currModel);
+//									var currModel = getModel(sessionId, session);
+//									deactivateModel(currModel);
 									session.model = model;
 								}
 								
