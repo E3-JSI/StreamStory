@@ -487,8 +487,8 @@ function pingProgress(isRealTime) {
 						
 						$('#select-controls').bootstrapDualListbox({
 							showFilterInputs: false,
-							selectedListLabel: 'State Atrtibutes',
-							nonSelectedListLabel: 'Transition Attributes'
+							nonSelectedListLabel: 'State Attributes',
+							selectedListLabel: 'Transition Atrtibutes'
 						});
 						$('#select-controls').bootstrapDualListbox('refresh');
 						
