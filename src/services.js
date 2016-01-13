@@ -1698,9 +1698,11 @@ function initServerApi() {
 	{
 		log.info('Registering activate model service ...');
 		
-		function activateModelById(req, res, modelId, activate) {
+		function activateModelById(req, res, modelId, activate, isFromUi) {
 			if (log.info())
 				log.info('Activating model %s: ' + activate, modelId);
+			
+			var session = req.session;
 			
 			db.activateModel({modelId: modelId, activate: activate}, function (e1) {
 				if (e1 != null) {
@@ -1726,6 +1728,12 @@ function initServerApi() {
 								
 								if (log.debug())
 									log.debug('Activating model with id %s', model.getId());
+								
+								if (isFromUi) {
+									var currModel = getModel(sessionId, session);
+									deactivateModel(currModel);
+									session.model = model;
+								}
 								
 								activateModel(model);
 							});
@@ -1958,17 +1966,17 @@ function initPipelineHandlers() {
 							type: 'exponential',
 							lambda: intensConfig.deviation_extreme_lambda		// degradation occurs once per month
 						};
-					} else if (zscore >= 4) {					// major deviation
+					} else if (zscore >= 4) {									// major deviation
 						pdf = {
 							type: 'exponential',
 							lambda: intensConfig.deviation_major_lambda			// degradation occurs once per two months
 						};
-					} else if (zscore >= 3) {					// significant deviation
+					} else if (zscore >= 3) {									// significant deviation
 						pdf = {
 							type: 'exponential',
 							lambda: intensConfig.deviation_significant_lambda	// degradation occurs once per year
 						};
-					} else {									// (zscore >= 2) minor deviation
+					} else {													// (zscore >= 2) minor deviation
 						pdf = {
 							type: 'exponential',
 							lambda: intensConfig.deviation_minor_lambda			// degradation occurs once per two years
