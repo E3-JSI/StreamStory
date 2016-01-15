@@ -154,7 +154,7 @@ var zoomVis = function (opts) {
 					$('#div-explain-' + data.id).html(unionStr);
 					api.reposition(undefined, false);
 				},
-				error: handleAjaxError
+				error: handleAjaxError()
 			});
 			
 			$.ajax('api/targetProperties', {
@@ -170,7 +170,7 @@ var zoomVis = function (opts) {
 					
 					api.reposition(undefined, false);
 				},
-				error: handleAjaxError
+				error: handleAjaxError()
 			});
 		}, 10);
 		

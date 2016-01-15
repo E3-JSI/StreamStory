@@ -38,11 +38,20 @@ function formatDateTime(date) {
 	return formatDate(date) + ' ' + hour + ':' + minute + ':' + second;
 }
 
-function handleAjaxError(xhr, status, err) {
-	if (xhr.readyState == 0) {
-		console.log('Ajax error with request not initialized!');
-	} else {
-		alert(xhr.responseText);
+function handleAjaxError(alertField, callback) {
+	return function (xhr, status, err) {
+		if (xhr.readyState == 0) {
+			console.log('Ajax error with request not initialized!');
+		} else {
+			if (xhr.status == 400 && alertField != null) {
+				showAlert($('#alert-holder'), alertField, 'alert-danger', xhr.responseText, null, false);
+			} else {
+				alert(xhr.responseText);
+			}
+			
+			if (callback != null)
+				callback();
+		}
 	}
 }
 

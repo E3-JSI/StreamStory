@@ -78,7 +78,7 @@
 				success: function (data, status, xhr) {
 					redirectToUI();
 				},
-				error: handleAjaxError
+				error: handleAjaxError()
 			});
 		});
 		

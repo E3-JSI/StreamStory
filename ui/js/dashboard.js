@@ -68,7 +68,7 @@ function fetchModelDetails(mid) {
 			
 			$('#div-model-details').removeClass('hidden');
 		},
-		error: handleAjaxError
+		error: handleAjaxError()
 	});
 }
 
@@ -93,7 +93,7 @@ function viewModel() {
 		success: function (data, status, xhr) {
 			redirectToUI();
 		},
-		error: handleAjaxError
+		error: handleAjaxError()
 	});
 	
 	return false;
@@ -128,7 +128,7 @@ function activate() {
 				if (oldBtn.hasClass('tbl-btn-offset'))
 					newBtn.addClass('tbl-btn-offset');
 			},
-			error: handleAjaxError
+			error: handleAjaxError()
 		});
 	});
 	
@@ -163,7 +163,7 @@ function deactivate() {
 				if (oldBtn.hasClass('tbl-btn-offset'))
 					newBtn.addClass('tbl-btn-offset');
 			},
-			error: handleAjaxError
+			error: handleAjaxError()
 		});
 	});
 	
@@ -198,7 +198,7 @@ function share() {
 				if (oldBtn.hasClass('tbl-btn-offset'))
 					newBtn.addClass('tbl-btn-offset');
 			},
-			error: handleAjaxError
+			error: handleAjaxError()
 		});
 	});
 	
@@ -233,7 +233,7 @@ function unshare() {
 				if (oldBtn.hasClass('tbl-btn-offset'))
 					newBtn.addClass('tbl-btn-offset');
 			},
-			error: handleAjaxError
+			error: handleAjaxError()
 		});
 	});
 	
@@ -326,15 +326,14 @@ function pingProgress(isRealTime) {
 								$('#progress-build-model').css('width', '0%');
 							}, 5000);
 						},
-						error: handleAjaxError
+						error: handleAjaxError()
 					});
 				}
 			}
 		},
-		error: function (xhr, status, e) {
-			handleAjaxError(xhr, status, e);
+		error: handleAjaxError(null, function () {
 			$('#div-model-progress').addClass('hidden');
-		}
+		})
 	});
 }
 
@@ -577,7 +576,7 @@ function pingProgress(isRealTime) {
 				$('#div-model-progress').removeClass('hidden');
 				pingProgress(isRealTime);
 			},
-			error: handleAjaxError
+			error: handleAjaxError()
 		});
 		
 		$('#btn-add-online,#btn-add-offline').attr('disabled', 'disabled');
@@ -664,14 +663,7 @@ function pingProgress(isRealTime) {
 				$('#div-model-details-btns').addClass('hidden');
 				showAlert($('#alert-holder'), $('#alert-wrapper-model-details'), 'alert-success', 'Details saved!', null, true);
 			},
-			error: function (xhr, status, err) {
-				if (xhr.status == 400) {
-					var responseText = xhr.responseText;
-					showAlert($('#alert-holder'), $('#alert-wrapper-model-details'), 'alert-danger', responseText, null, false);
-				} else {
-					alert(xhr.responseText);
-				}
-			}
+			error: handleAjaxError($('#alert-wrapper-model-details'))
 		});
 	});
 	

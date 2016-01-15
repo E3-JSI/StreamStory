@@ -12,7 +12,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 		success: function (data) {
 			viz.setModel(data);
 		},
-		error: handleAjaxError
+		error: handleAjaxError()
 	});
 }
 
@@ -450,7 +450,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 								showY: opts.showY
 							});
 						},
-						error: handleAjaxError
+						error: handleAjaxError()
 					});
 				}
 			} else {	// transition
@@ -464,7 +464,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 							showY: opts.showY
 						});
 					},
-					error: handleAjaxError
+					error: handleAjaxError()
 				});
 			}
 		}
@@ -485,7 +485,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 				success: function (data) {
 					viz.setModel(data);
 				},
-				error: handleAjaxError
+				error: handleAjaxError()
 			});
 		}
 		
@@ -508,7 +508,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 					viz.setProbDist(data);
 					$('#div-fut-time').html(time);
 				},
-				error: handleAjaxError
+				error: handleAjaxError()
 			});
 		}
 		
@@ -602,9 +602,8 @@ function changeControlVal(stateId, ftrIdx, val) {
 				method: 'POST',
 				success: function (data) {
 					showAlert($('#alert-holder'), $('#alert-wrapper-viz-config'), 'alert-success', 'Saved!', null, true);
-					console.log('Successfully saved!');
 				},
-				error: handleAjaxError
+				error: handleAjaxError($('#alert-wrapper-viz-config'))
 			});
 		});
 		
@@ -831,11 +830,11 @@ function changeControlVal(stateId, ftrIdx, val) {
 						    	$('#div-button-save-state').addClass('hidden');
 						    	showAlert($('#alert-holder'), $('#alert-wrapper-save-state'), 'alert-success', 'Saved!', null, true);
 						    },
-						    error: handleAjaxError
+						    error: handleAjaxError($('#alert-wrapper-save-state'))
 						});
 					});
 				},
-				error: handleAjaxError
+				error: handleAjaxError()
 			});
 		});
 		
@@ -928,7 +927,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 									viz.setModel(data);
 									valField.html(parseFloat(val).toPrecision(3));
 								},
-								error: handleAjaxError
+								error: handleAjaxError()
 							});
 						}
 					});
@@ -948,7 +947,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 				if (data.active)
 					$('#btn-reset-sim').removeClass('hidden');
 			},
-			error: handleAjaxError
+			error: handleAjaxError()
 		});
 				
 		return that;
