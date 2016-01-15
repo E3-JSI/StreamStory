@@ -3,7 +3,7 @@ var services = require('./src/services.js');
 var pipeline = require('./src/pipeline.js');
 var utils = require('./src/utils.js');
 var fields = require('./fields.js');
-var db = require('./src/dbaccess.js')();
+var db = require('./src/db/mysqldb.js')();
 
 function hackClasses() {
 	if (!String.prototype.startsWith) {

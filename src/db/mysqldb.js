@@ -1,6 +1,6 @@
 var mysql = require('mysql');
-var config = require('../config.js');
-var utils = require('./utils.js');
+var config = require('../../config.js');
+var utils = require('../utils.js');
 
 module.exports = function () {
 	log.info('Creating MySQL connection pool ...');
@@ -430,54 +430,25 @@ module.exports = function () {
 			});
 		},
 		countActiveModels: function (callback) {
-			pool.getConnection(function (e, conn) {
-				if (e != null) {
-					callback(e);
-					return;
-				}
-				
-				conn.query('SELECT COUNT(1) AS count FROM online_model WHERE is_active = 1', function (e1, result) {
-					conn.release();
-					
-					if (e1 != null) {
-						callback(e1);
-						return;
+			connection({
+				callback: callback,
+				nextOp: query({
+					sql: 'SELECT COUNT(1) AS count FROM online_model WHERE is_active = 1',
+					nextOp: function (conn, onsuccess, onerror, result) {
+						if (result.length == 0)
+							onerror(new Error('WTF? Did not get a result for count!'));
+						else
+							onsuccess(result[0]);
 					}
-					
-					if (result.length == 0) {
-						callback(new Error('WTF? Did not get a result for count!'));
-						return;
-					}
-					
-					callback(undefined, result[0]);
-				});
+				})
 			});
 		},
 		fetchActiveModels: function (callback) {
-			pool.getConnection(function (e, conn) {
-				if (e != null) {
-					callback(e);
-					return;
-				}
-				
-				var query = 'SELECT * FROM model NATURAL JOIN online_model ' + 
-								'WHERE is_active = 1';
-
-				conn.query(query, function (e1, result) {
-					conn.release();
-					
-					if (e1 != null) {
-						callback(e1);
-						return;
-					}
-					
-					if (result.length == null) {
-						callback(new Error('The model doesn\'t exist!'));
-						return;
-					}
-					
-					callback(undefined, result);
-				});
+			connection({
+				callback: callback,
+				nextOp: query({
+					sql: 'SELECT * FROM model NATURAL JOIN online_model WHERE is_active = 1'
+				})
 			});
 		},
 		activateModel: function (opts, callback) {
@@ -568,37 +539,34 @@ module.exports = function () {
 		//===============================================================
 		
 		getMultipleConfig: function (opts, callback) {
-			pool.getConnection(function (e, conn) {
-				if (e != null) {
-					callback(e);
-					return;
-				}
-				
-				conn.query("SELECT property, value FROM config WHERE property in (?)", [opts.properties], function (e1, result) {
-					conn.release();
-					if (e1 != null) {
-						callback(e1);
-					} else {
-						callback(undefined, result);
-					}
-				});
+			var props = opts.properties;
+			
+			if (props == null || props.length == 0) {
+				callback(undefined, []);
+				return;
+			}
+			
+			connection({
+				callback: callback,
+				nextOp: query({
+					sql: 'SELECT property, value FROM config WHERE property in (?)',
+					params: [opts.properties]
+				})
 			});
 		},
 		getConfig: function (property, callback) {
-			pool.getConnection(function (e, conn) {
-				if (e != null) {
-					callback(e);
-					return;
-				}
-				
-				conn.query("SELECT property, value FROM config WHERE property = ?", [property], function (e1, result) {
-					conn.release();
-					if (e1 != null) {
-						callback(e1);
-					} else {
-						callback(undefined, result.length == 1 ? result[0] : null);
+			connection({
+				callback: callback,
+				nextOp: query({
+					sql: 'SELECT property, value FROM config WHERE property = ?',
+					params: [property],
+					nextOp: function (conn, onsuccess, onerror, result) {
+						if (result.length == 0)
+							onerror(new Error('Could not find the configuration!'));
+						else
+							onsuccess(result[0]);
 					}
-				});
+				})
 			});
 		},
 		setConfig: function (config, callback) {
@@ -612,33 +580,25 @@ module.exports = function () {
 				return;
 			}
 			
-			pool.getConnection(function (e, conn) {
-				if (e != null) {
-					callback(e);
-					return;
-				}
-
-				var query = 'REPLACE INTO config (property, value) VALUES ';
-				var vals = [];
-				for (var i = 0; i < props.length; i++) {
-					var prop = props[i];
-					
-					query += '(?, ?)';
-					vals.push(prop);
-					vals.push(config[prop]);
-					
-					if (i < props.length - 1)
-						query += ', ';
-				}
+			var queryStr = 'REPLACE INTO config (property, value) VALUES ';
+			var vals = [];
+			for (var i = 0; i < props.length; i++) {
+				var prop = props[i];
 				
-				conn.query(query, vals, function (e1) {
-					conn.release();
-					if (e1 != null) {
-						callback(e1);
-					} else {
-						callback(undefined);
-					}
-				});
+				queryStr += '(?, ?)';
+				vals.push(prop);
+				vals.push(config[prop]);
+				
+				if (i < props.length - 1)
+					queryStr += ', ';
+			}
+			
+			connection({
+				callback: callback,
+				nextOp: query({
+					sql: queryStr,
+					params: vals
+				})
 			});
 		}
 	}
