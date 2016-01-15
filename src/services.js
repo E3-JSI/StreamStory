@@ -737,12 +737,28 @@ function initStreamStoryRestApi() {
 				
 				log.debug('Querying MHWirth multilevel model ...');
 				res.send(model.getVizState());
+				res.end();
 			} catch (e) {
-				log.error(e, 'Failed to query MHWirth multilevel visualization!');
-				res.status(500);	// internal server error
+				log.error(e, 'Failed to query for the model!');
+				handleServerError(e, req, res);
 			}
-			
-			res.end();
+		});
+		
+		// multilevel analysis
+		app.get(API_PATH + '/subModel', function (req, res) {
+			try {
+				var model = getModel(req.sessionID, req.session);
+				var stateId = parseInt(req.query.stateId);
+				
+				if (log.debug())
+					log.debug('Fetching sub model for state: %d ...', stateId);
+				
+				res.send(model.getModel().getSubModelJson(stateId));
+				res.end();
+			} catch (e) {
+				log.error(e, 'Failed to query for a sub-model!');
+				handleServerError(e, req, res);
+			}
 		});
 		
 		// multilevel analysis

@@ -218,7 +218,8 @@ var zoomVis = function (opts) {
 		stateSelected: function (stateId) {},
 		edgeSelected: function (sourceId, targetId) {},
 		zoomChanged: function (zoom) {},
-		heightChanged: function (height) {}
+		heightChanged: function (height) {},
+		onZoomIntoState: function (stateId) {}
 	}
 	
 	var maxNodeSize = 0;
@@ -1230,17 +1231,30 @@ var zoomVis = function (opts) {
 		ready: function() {
 			fetchUI();
 			
-			cy.on('click', 'node', function (event) {
+			cy.on('click', 'node', function (event) {	// left click
 				var node = event.cyTarget;
 				setSelectedState(node);
 			});
 			
-			cy.on('click', function (event) {
+			cy.on('click', function (event) {	// left click
 				var target = event.cyTarget;
 				if (target === cy) {
 					setSelectedState(null);
 				}
-			})
+			});
+			
+			// initialize the context menu
+			cy.cxtmenu({
+				selector: 'node',
+				commands: [
+					{
+						content: 'Zoom Into',
+						select: function (node) {
+							callbacks.onZoomIntoState(parseInt(node.id()));
+						}
+					}
+				]
+			});
 			
 			cy.on('mouseover', 'node', function (event) {
 				var node = event.cyTarget;
@@ -1373,6 +1387,10 @@ var zoomVis = function (opts) {
 		 */
 		setModel: function (data) {
 			setUI(data, false);
+		},
+		
+		setSubModel: function (data) {
+			setUI(data, true);
 		},
 		
 		setCurrentStates: function (currentStates) {
@@ -1622,6 +1640,10 @@ var zoomVis = function (opts) {
 		
 		onHeightChanged: function (callback) {
 			callbacks.heightChanged = callback;
+		},
+		
+		onZoomIntoState: function (callback) {
+			callbacks.onZoomIntoState = callback;
 		}
 	}
 	

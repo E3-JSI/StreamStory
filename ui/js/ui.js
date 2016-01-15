@@ -871,6 +871,20 @@ function changeControlVal(stateId, ftrIdx, val) {
 			}
 		});
 		
+		viz.onZoomIntoState(function (stateId) {
+			// get the sub model
+			$.ajax('api/subModel', {
+				dataType: 'json',
+				method: 'GET',
+				data: { stateId: stateId },
+				success: function (model) {
+					viz.setSubModel(model);
+					// TODO show a button to go back
+				},
+				error: handleAjaxError()
+			});
+		});
+		
 		var that = {
 			fetchHistogram: function (stateId, ftrId, openWindow, insertDiv, showY) {
 				privateFetchHistogram({ 
