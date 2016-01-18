@@ -1252,6 +1252,12 @@ var zoomVis = function (opts) {
 						select: function (node) {
 							callbacks.onZoomIntoState(parseInt(node.id()));
 						}
+					},
+					{
+						content: 'Show Path',
+						select: function (node) {
+							alert('Not implemented!');
+						}
 					}
 				]
 			});
