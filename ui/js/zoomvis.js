@@ -1244,8 +1244,8 @@ var zoomVis = function (opts) {
 			});
 			
 			// initialize the context menu
-			cy.cxtmenu({
-				selector: 'node',
+//			cy.cxtmenu({
+//				selector: 'node',
 				commands: [
 					{
 						content: 'Zoom Into',
@@ -1260,6 +1260,43 @@ var zoomVis = function (opts) {
 						}
 					}
 				]
+//			});
+			
+			cy.cxtmenu({
+				selector: 'node',
+				commands: function (node) {
+					var id = node.id();
+					
+					// check if the node is on the bottom level
+					var label = node.data().style.label;
+					var level = parseInt(label.split('\.')[0]);
+					
+					if (level > 1) {
+						return [
+							{
+								content: 'Zoom Into',
+								select: function (node) {
+									callbacks.onZoomIntoState(parseInt(node.id()));
+								}
+							},
+							{
+								content: 'Show Path',
+								select: function (node) {
+									alert('Not implemented!');
+								}
+							}
+						]
+					} else {
+						return [
+						    {
+								content: 'Show Path',
+								select: function (node) {
+									alert('Not implemented!');
+								}
+							}  
+						]
+					}
+				}
 			});
 			
 			cy.on('mouseover', 'node', function (event) {
