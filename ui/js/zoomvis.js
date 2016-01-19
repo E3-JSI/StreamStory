@@ -91,7 +91,7 @@ var zoomVis = function (opts) {
 			$.ajax('api/explanation', {
 				dataType: 'json',
 				method: 'GET',
-				data: { stateId: data.id },
+				data: { stateId: getServerNodeId(data.id) },
 				success: function (union) {
 					var score = function (interserct) {
 						return interserct.covered*interserct.purity;
@@ -160,7 +160,7 @@ var zoomVis = function (opts) {
 			$.ajax('api/targetProperties', {
 				dataType: 'json',
 				method: 'GET',
-				data: { stateId: data.id },
+				data: { stateId: getServerNodeId(data.id) },
 				success: function (props) {
 					if (props.isUndesired) {
 						$('#div-tooltip-undesired-' + data.id).html('Event id: ' + props.eventId);
@@ -219,7 +219,8 @@ var zoomVis = function (opts) {
 		edgeSelected: function (sourceId, targetId) {},
 		zoomChanged: function (zoom) {},
 		heightChanged: function (height) {},
-		onZoomIntoState: function (stateId) {}
+		onZoomIntoState: function (stateId) {},
+		onShowPath: function (stateId, height) {}
 	}
 	
 	var maxNodeSize = 0;
@@ -319,6 +320,10 @@ var zoomVis = function (opts) {
 	//===============================================================
 	// UTILITY FUNCTIONS
 	//===============================================================
+	
+	function getServerNodeId(id) {
+		return parseInt(id) & 0xFFFF;
+	}
 	
 	function getNodeLabel(node) {
 		return (node.name != null ? node.name : (node.label));
@@ -1037,7 +1042,7 @@ var zoomVis = function (opts) {
 		
 		// notify the handler
 		if (prevStateId != modeConfig.selected)
-			callbacks.stateSelected(stateId, hierarchy[currentLevel].height);
+			callbacks.stateSelected(getServerNodeId(stateId), hierarchy[currentLevel].height);
 	}
 	
 	//===============================================================
@@ -1090,7 +1095,29 @@ var zoomVis = function (opts) {
 		});
 	}
 	
+	function preprocessStateIds(data) {
+		for (var levelN = 0; levelN < data.length; levelN++) {
+			var stateIdH = {};
+			var states = data[levelN].states;
+			
+			for (var stateN = 0; stateN < states.length; stateN++) {
+				var id = states[stateN].id;
+				var step = 0;
+				while (id in stateIdH) {
+					id |= (++step) << 16;
+				}
+				
+				if (step != 0) {
+					states[stateN].id = id;
+				}
+				
+				stateIdH[id] = true;
+			}
+		}
+	}
+	
 	function setUI(data, isInit) {
+		preprocessStateIds(data);
 		cache.clear();
 		data.sort(function (a, b) {
 			return a.height - b.height;
@@ -1244,29 +1271,9 @@ var zoomVis = function (opts) {
 			});
 			
 			// initialize the context menu
-//			cy.cxtmenu({
-//				selector: 'node',
-				commands: [
-					{
-						content: 'Zoom Into',
-						select: function (node) {
-							callbacks.onZoomIntoState(parseInt(node.id()));
-						}
-					},
-					{
-						content: 'Show Path',
-						select: function (node) {
-							alert('Not implemented!');
-						}
-					}
-				]
-//			});
-			
 			cy.cxtmenu({
 				selector: 'node',
-				commands: function (node) {
-					var id = node.id();
-					
+				commands: function (node) {					
 					// check if the node is on the bottom level
 					var label = node.data().style.label;
 					var level = parseInt(label.split('\.')[0]);
@@ -1276,13 +1283,14 @@ var zoomVis = function (opts) {
 							{
 								content: 'Zoom Into',
 								select: function (node) {
-									callbacks.onZoomIntoState(parseInt(node.id()));
+									callbacks.onZoomIntoState(getServerNodeId(node.id()));
 								}
 							},
 							{
 								content: 'Show Path',
 								select: function (node) {
-									alert('Not implemented!');
+									var id = getServerNodeId(node.id());
+									callbacks.onShowPath(id, currentHeight);
 								}
 							}
 						]
@@ -1291,7 +1299,8 @@ var zoomVis = function (opts) {
 						    {
 								content: 'Show Path',
 								select: function (node) {
-									alert('Not implemented!');
+									var id = getServerNodeId(node.id());
+									callbacks.onShowPath(id, currentHeight);
 								}
 							}  
 						]
@@ -1687,6 +1696,10 @@ var zoomVis = function (opts) {
 		
 		onZoomIntoState: function (callback) {
 			callbacks.onZoomIntoState = callback;
+		},
+		
+		onShowPath: function (callback) {
+			callbacks.onShowPath = callback;
 		}
 	}
 	

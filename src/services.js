@@ -730,7 +730,7 @@ function initStreamStoryRestApi() {
 	{
 		log.info('Registering multilevel service at drilling/multilevel ...');
 		
-		// multilevel analysis
+		// get the StreamStory model
 		app.get(API_PATH + '/model', function (req, res) {
 			try {
 				var model = getModel(req.sessionID, req.session);
@@ -744,7 +744,7 @@ function initStreamStoryRestApi() {
 			}
 		});
 		
-		// multilevel analysis
+		// submodel
 		app.get(API_PATH + '/subModel', function (req, res) {
 			try {
 				var model = getModel(req.sessionID, req.session);
@@ -757,6 +757,26 @@ function initStreamStoryRestApi() {
 				res.end();
 			} catch (e) {
 				log.error(e, 'Failed to query for a sub-model!');
+				handleServerError(e, req, res);
+			}
+		});
+		
+		// path from state
+		app.get(API_PATH + '/path', function (req, res) {
+			try {
+				var model = getModel(req.sessionID, req.session);
+				var stateId = parseInt(req.query.stateId);
+				var height = parseFloat(req.query.height);
+				var length = parseInt(req.query.length);
+				var probThreshold = parseFloat(req.query.probThreshold);
+				
+				if (log.debug())
+					log.debug('Fetching state path for state: %d on height %d ...', stateId, height);
+				
+				res.send(model.getModel().getStatePath(stateId, height, length, probThreshold));
+				res.end();
+			} catch (e) {
+				log.error(e, 'Failed to query for state path!');
 				handleServerError(e, req, res);
 			}
 		});

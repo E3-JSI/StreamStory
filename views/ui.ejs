@@ -366,7 +366,7 @@
 					<div class="panel-heading clearfix">
 						<h4 class="panel-title pull-left">Visualization - <%= modelConfig.name %> <span id="span-zoom" class="component-title-additional">&nbsp;(Zoom: <span id="span-zoom-val">0</span>%)</span></h4>
 						<!-- toggler for the visualization options -->
-						<button id="vis-toggler" class="btn btn-default btn-xs pull-right" style="padding: 0px 5px;" aria-label="Left Align">
+						<button id="vis-toggler" class="btn btn-default btn-xs pull-right" aria-label="Left Align">
 						  	<span class="glyphicon glyphicon-align-justify" aria-hidden="true"></span>
 						</button>
 						<span class="pull-right component-title-additional">
@@ -375,6 +375,9 @@
 							<% } %> 
 							time unit:&nbsp;<span id="span-tu"><%= model.getModel().getTimeUnit() %></span>&nbsp;&nbsp;&nbsp;
 						</span>
+						<button id="btn-viz-back" class="btn btn-link btn-xs pull-right hidden" aria-label="Left Align">
+						  	<span class="glyphicon glyphicon glyphicon-menu-left" aria-hidden="true"></span> Back
+						</button>
 						<!-- options for the visualization component -->
 						<div id="content-options" class="popover fade bottom in">
 							<div class="arrow"></div>
@@ -507,11 +510,6 @@
 								</div>
 							</div>
 						</div>
-						<script type="application/javascript">
-							$('#vis-toggler').click(function () {
-								$('#content-options').slideToggle();
-							});
-						</script>
 					</div>
 					<div id="vis-wrapper" class="panel-body nopadding">
 						<div id="slider_container">

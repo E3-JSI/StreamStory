@@ -665,6 +665,23 @@ function changeControlVal(stateId, ftrIdx, val) {
 			}
 		});
 		
+		$('#vis-toggler').click(function () {
+			$('#content-options').slideToggle();
+		});
+		
+		$('#btn-viz-back').click(function () {
+			// fetch the whole model
+			$.ajax('api/model', {
+				dataType: 'json',
+				method: 'GET',
+				success: function (model) {
+					viz.setSubModel(model);
+					$('#btn-viz-back').addClass('hidden');
+				},
+				error: handleAjaxError()
+			});
+		});
+		
 		viz.onZoomChanged(function (zoom) {
 			$("#slider_item_div").slider('value', zoom);
 		});
@@ -879,7 +896,21 @@ function changeControlVal(stateId, ftrIdx, val) {
 				data: { stateId: stateId },
 				success: function (model) {
 					viz.setSubModel(model);
-					// TODO show a button to go back
+					$('#btn-viz-back').removeClass('hidden');
+				},
+				error: handleAjaxError()
+			});
+		});
+		
+		viz.onShowPath(function (stateId, height) {
+			// get the sub model
+			$.ajax('api/path', {
+				dataType: 'json',
+				method: 'GET',
+				data: { stateId: stateId, height: height, length: 4, probThreshold: .2 },
+				success: function (model) {
+					viz.setSubModel(model);
+					$('#btn-viz-back').removeClass('hidden');
 				},
 				error: handleAjaxError()
 			});
