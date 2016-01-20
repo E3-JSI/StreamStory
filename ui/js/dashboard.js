@@ -536,7 +536,7 @@ function pingProgress(isRealTime) {
 		
 		var data = {
 			username: $('#input-email').val(),
-			time: $('#radio-time').find('input:radio').val(),
+			time: $('#radio-time').find('input:checked').val(),
 			timeUnit: $('#select-tu').val(),
 			attrs: attrs,
 			controlAttrs: controlAttrs != null ? controlAttrs : [],
