@@ -7,6 +7,8 @@
 - moznost izpisa najbolj informativnih atributov na stanjih
 - importance bar namesto barve (logreg)
 
-ZA REVIEW:
-- check what happens when you try to build 2 models
+DATASETS:
+- dobi dataset MTA.info - poglej kaki so in kaj z njimi narediti
 
+ACTIVITY RECOGNITION:
+- dynamic time warping of two weighted strings

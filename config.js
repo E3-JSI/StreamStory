@@ -8,7 +8,7 @@ var confFile = process.argv[2];
 
 console.log('Reading configuration file: ' + confFile);
 var configStr = fs.readFileSync(confFile);
-var config = JSON.parse(configStr);
+var config = JSON.parse(configStr);	// use eval to allow comments inside the file
 
 //================================================================
 // LOG
@@ -42,13 +42,20 @@ exports.USE_CASE_MHWIRTH = 1;
 exports.USE_CASE = config.useCase == 'hella' ? exports.USE_CASE_HELLA : exports.USE_CASE_MHWIRTH;
 exports.USE_CASE_NAME = config.useCase;	// TODO remove one of the use case names
 
-if (exports.USE_CASE == exports.USE_CASE_MHWIRTH) {
-//	exports.STREAM_STORY_RESAMPLING_INTERVAL = 1000*60;	// 1 min
-	exports.STREAM_STORY_RESAMPLING_INTERVAL = 1000*20;	// 20s
-//	exports.STREAM_STORY_RESAMPLING_INTERVAL = 1000;	// 1s
+// resampling interval
+if (config.resampleInterval == null) {
+	log.warn('Resampling interval is not defined in the configuration! Using default ...');
+	if (exports.USE_CASE == exports.USE_CASE_MHWIRTH) {
+	//	exports.STREAM_STORY_RESAMPLING_INTERVAL = 1000*60;	// 1 min
+		exports.STREAM_STORY_RESAMPLING_INTERVAL = 1000*20;	// 20s
+	//	exports.STREAM_STORY_RESAMPLING_INTERVAL = 1000;	// 1s
+	} else {
+		exports.STREAM_STORY_RESAMPLING_INTERVAL = 1000*10;
+	}
 } else {
-	exports.STREAM_STORY_RESAMPLING_INTERVAL = 1000*10;
+	exports.STREAM_STORY_RESAMPLING_INTERVAL = config.resampleInterval;
 }
+
 
 //================================================================
 // INITIALIZATION

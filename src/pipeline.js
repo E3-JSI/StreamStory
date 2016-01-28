@@ -11,6 +11,10 @@ var statistics = qm.statistics;
 var base;
 var db;
 
+var enricherOutStore;
+var oaInStore;
+var streamStoryStore;
+
 var resamplerInitialized = false;
 
 var opts = { 
@@ -19,13 +23,32 @@ var opts = {
 	onValue: null
 };
 
+var aggregateConfigs = {
+	'hl > Threshold': {
+		tick: {
+			name: 'HlThresholdTick',
+			type: 'timeSeriesTick',
+			timestamp: 'time',
+			value: 'hook_load'
+		},
+		aggr: {
+			name: 'hookLoadThreshold',
+	    	type: 'threshold',
+	    	inAggr: 'HlThresholdTick',
+	    	threshold: 60
+		}
+	}
+};
+
+var aggregates = {};
+
 function initResampler() {
 	if (resamplerInitialized) return;
 	
 	var flds = fields.getStreamAggrFields();
 	
 	// create the resampler used by StreamStory
-	base.store(fields.OA_IN_STORE).addStreamAggr({
+	oaInStore.addStreamAggr({
 		type: 'resampler',
 		name: 'drilling_resampler',
 		outStore: fields.STREAM_STORY_STORE,
@@ -75,7 +98,20 @@ function initStreamAggregates() {
 		log.info('Inserting value %s ...', JSON.stringify(val));
 		
 		base.store(name).push(val);
-	} 
+	}
+	
+	log.info('Initializing stream aggregates ...');	
+	for (var aggrNm in aggregateConfigs) {
+		if (log.info())
+			log.info('Initializing aggregate: %s', aggrNm);
+		
+		var aggrConf = aggregateConfigs[aggrNm];
+		
+		var tick = oaInStore.addStreamAggr(aggrConf.tick);
+		var aggr = oaInStore.addStreamAggr(aggrConf.aggr);
+		
+		aggregates[aggrNm] = aggr;
+	}
 	
 	if (zeroFlds.length == 0) {
 		// if we initialize all stores with zeros, then the resampler should be
@@ -141,9 +177,7 @@ function initGC() {
 	log.info('GC initialized!');
 }
 
-function calcFriction() {
-	var oaInStore = base.store(fields.OA_IN_STORE);
-	
+function calcFriction() {	
 	// compute the friction coefficient
 	var BUFF_SIZE = 1;
 	var EXPONENTIAL_FIT = true;
@@ -330,7 +364,7 @@ function calcFriction() {
 	
 	var rpmStartTime = 0;
 	
-	// compute the friction coefficient
+	// compute the friction coefficient 
 	oaInStore.addTrigger({
 		onAdd: function (val) {
 			try {
@@ -430,10 +464,6 @@ function calcFriction() {
 }
 
 function initTriggers() {
-	var enricherOutStore = base.store(fields.ENRICHED_STORE);
-	var oaInStore = base.store(fields.OA_IN_STORE);
-	var streamStoryStore = base.store(fields.STREAM_STORY_STORE);
-
 	// add processing triggers
 	log.info('Initilizing triggers ...');
 	
@@ -465,6 +495,18 @@ function initTriggers() {
 					prevTime = currTime;
 				} catch (e) {
 					log.error(e, 'Failed to send enriched data!');
+				}
+			}
+		});
+	}
+	
+	{
+		oaInStore.addTrigger({
+			onAdd: function (rec) {
+				for (var fieldNm in aggregates) {
+					var aggr = aggregates[fieldNm];
+					var val = aggr.getFloat();
+					rec[fieldNm] = val;
 				}
 			}
 		});
@@ -533,6 +575,10 @@ exports.setCalcCoeff = function (calc) {
 exports.init = function (opts) {
 	base = opts.base;
 	db = opts.db;
+	
+	enricherOutStore = base.store(fields.ENRICHED_STORE);
+	oaInStore = base.store(fields.OA_IN_STORE);
+	streamStoryStore = base.store(fields.STREAM_STORY_STORE);
 	
 	initTriggers();
 	initStreamAggregates();

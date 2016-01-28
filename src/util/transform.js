@@ -21,6 +21,7 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 		'MHWirth.Ram.VelocityMeasuredValue': 'ram_vel_measured',
 		'MHWirth.Rig.MRUPosition': 'mru_pos',
 		'MHWirth.Rig.MRUVelocity': 'mru_vel'
+		// TODO activity recognition is not available yet
 	};
 
 	var tagToStoreIdMap = {
@@ -40,7 +41,12 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 		'1002128': 'mru_vel',
 		'1012923': 'ibop',
 		'1001378': 'hoist_press_A',
-		'1001379': 'hoist_press_B'
+		'1001379': 'hoist_press_B',
+		// activity recognition
+		'1012911': 'slips_closed',
+		'1012922': 'slips_closing',
+		'1012910': 'slips_open',
+		'1012920': 'slips_opening'
 	};
 	
 	var storeToSensorIdMap = {};

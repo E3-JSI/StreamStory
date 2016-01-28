@@ -5,26 +5,8 @@
 		"createPipeline": true,
 		"initializeZeros": false
 	},
-	"models": {
-		"StreamStoryParams": {
-			"transitions": {
-				"type": "continuous",
-				"timeUnit": "hour"
-			},
-			"clustering": {
-				"type": "dpmeans",
-				"lambda": 0.7,
-				"minClusts": 10,
-				"sample": 1,
-				"histogramBins": 20
-			},
-			"rndseed": 1,
-			"pastStates": 2,
-			"verbose": true
-		}
-	},
 	"server": {
-		"port": 8686,
+		"port": 8484,
 		"pingInterval": 10000
 	},
 	"log": {
@@ -41,13 +23,14 @@
 			"streamStory": 10000,
 			"stores": 100000,
 			"broker": 10000,
-			"coeff": 1000
+			"coeff": 10000
 		}
 	},
 	"database": {
 		"host": "localhost",
 		"user": "StreamStory",
-		"password": "StreamStory"
+		"password": "StreamStory",
+		"database": "StreamStoryImport"
 	},
 	"integration": {
 		"type": "http",
@@ -55,6 +38,8 @@
 		"zookeperPort": 2181,
 		"producerPort": 8090
 	},
-	"interpolation": "linear",
+	"useCase": "mhwirth",
+	"resampleInterval": 10000,
+	"interpolation": "current",
 	"dataPath": "/mnt/raidM2T/project-data/StreamStory/StreamStory-import/"
 }

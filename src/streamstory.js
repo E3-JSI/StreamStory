@@ -18,21 +18,31 @@ exports.StreamStory = function (opts) {
 	// create model and feature space
 	var mc;
 	var base = opts.base;
-	var obsFtrSpace;
-	var controlFtrSpace;
+	
+	var N_FTR_SPACES = 3;
+	var ftrSpaces = [];
+//	var obsFtrSpace;
+//	var controlFtrSpace;
+	
 	var id;
 	var active = false;
 	var online = false;
 
 	if (opts.base != null && opts.config != null) {
 		mc = new analytics._StreamStory(opts.config);
-		if (opts.obsFields != null && opts.contrFields != null) {
-    		obsFtrSpace = new qm.FeatureSpace(opts.base, opts.obsFields);
-    		controlFtrSpace = new qm.FeatureSpace(opts.base, opts.contrFields);
+		if (opts.obsFields != null && opts.contrFields != null && opts.ignoredFields != null) {
+    		ftrSpaces = [
+    		    new qm.FeatureSpace(opts.base, opts.obsFields),
+    		    new qm.FeatureSpace(opts.base, opts.contrFields),
+    		    new qm.FeatureSpace(opts.base, opts.ignoredFields)
+    		];
 		}
-		else if (opts.obsFtrSpace != null && opts.controlFtrSpace != null) {
-			obsFtrSpace = opts.obsFtrSpace;
-			controlFtrSpace = opts.controlFtrSpace;
+		else if (opts.obsFtrSpace != null && opts.controlFtrSpace != null && opts.ignoredFtrSpace != null) {
+			ftrSpaces = [
+			    opts.obsFtrSpace,
+			    opts.controlFtrSpace,
+			    opts.ignoredFtrSpace
+			];
 		}
 		else {
 			throw new Error('Missing feature space configuration!');
@@ -44,8 +54,9 @@ exports.StreamStory = function (opts) {
 		
 		mc = new analytics._StreamStory(fin);
 		log.info('Loading feature spaces ...');
-		obsFtrSpace = new qm.FeatureSpace(base, fin);
-		controlFtrSpace = new qm.FeatureSpace(base, fin);
+		for (var i = 0; i < N_FTR_SPACES; i++) {
+			ftrSpaces.push(new qm.FeatureSpace(base, fin));
+		}
 		log.info('Loaded!');
 	}
 	else {
@@ -56,6 +67,18 @@ exports.StreamStory = function (opts) {
 	// FEATURE HELPER FUNCTIONS
 	//===================================================
 
+	function getObsFtrSpace() {
+		return ftrSpaces[0];
+	}
+	
+	function getContrFtrSpace() {
+		return ftrSpaces[1];
+	}
+	
+	function getIgnoredFtrSpace() {
+		return ftrSpaces[2];
+	}
+	
 	function getFtrNames(ftrSpace) {
 		var names = [];
 		
@@ -79,90 +102,100 @@ exports.StreamStory = function (opts) {
 	}
 
 	function getObsFtrCount() {
-		return getFtrCount(obsFtrSpace);
+		return getFtrCount(getObsFtrSpace());
 	}
 
 	function getContrFtrCount() {
-		return getFtrCount(controlFtrSpace);
+		return getFtrCount(getContrFtrSpace());
+	}
+	
+	function getIgnoredFtrCount() {
+		return getFtrCount(getIgnoredFtrSpace());
+	}
+	
+	function getAllFtrCount() {
+		return getObsFtrCount() + getContrFtrCount() + getIgnoredFtrCount();
 	}
 
 	function getObsFtrNames() {
-		return getFtrNames(obsFtrSpace);
+		return getFtrNames(getObsFtrSpace());
 	}
 
 	function getControlFtrNames() {
-		return getFtrNames(controlFtrSpace);
+		return getFtrNames(getContrFtrSpace());
 	}
 
 	function getFtrDescriptions(stateId) {
-		var observations = [];
-		var controls = [];
-
-		var obsFtrCount = getObsFtrCount();
-
-		var coords = mc.fullCoords(stateId);
-		var obsFtrNames = getObsFtrNames();
-		var invObsCoords = obsFtrSpace.invertFeatureVector(coords);
-		for (var i = 0; i < invObsCoords.length; i++) {
-			observations.push({
-				name: obsFtrNames[i],
-				value: invObsCoords.at(i),
-				isControl: false,
-				bounds: getFtrBounds(i)
-			});
-		}
-
-		var controlCoords = mc.fullCoords(stateId, false);
-		var contrFtrNames = getControlFtrNames();
-		var invControlCoords = controlFtrSpace.invertFeatureVector(controlCoords);
-		for (var i = 0; i < invControlCoords.length; i++) {
-			controls.push({
-				name: contrFtrNames[i],
-				value: invControlCoords.at(i),
-				isControl: true,
-				bounds: getFtrBounds(i + obsFtrCount)
-			});
+		var result = [];
+		
+		var currFtrN = 0;
+		for (var ftrSpaceN = 0; ftrSpaceN < ftrSpaces.length; ftrSpaceN++) {
+			result.push([]);
+			
+			var ftrSpace = ftrSpaces[ftrSpaceN];
+			var coords = mc.fullCoords(stateId, ftrSpaceN);
+			var names = getFtrNames(ftrSpace);
+			var invCoords = ftrSpace.invertFeatureVector(coords);
+			
+			for (var ftrN = 0; ftrN < invCoords.length; ftrN++) {
+				result[ftrSpaceN].push({
+					name: names[ftrN],
+					value: invCoords[ftrN],
+					ftrSpaceN: ftrSpaceN,
+					bounds: getFtrBounds(currFtrN)
+				});
+				
+				currFtrN++;
+			}
 		}
 
 		return {
-			observations: observations,
-			controls: controls,
+			observations: result[0],
+			controls: result[1],
+			ignored: result[2],
 			isBottom: mc.isLeaf(stateId)
 		};
 	}
-
-	function getFtrCoord(stateId, ftrIdx) {
-		if (ftrIdx < obsFtrSpace.dims.length) {
-			return obsFtrSpace.invertFeatureVector(mc.fullCoords(stateId))[ftrIdx];
+	
+	function getFtrSpaceNFtrOffset(ftrId) {
+		var obsFtrCount = getObsFtrCount();
+		var contrFtrCount = getContrFtrCount();
+		
+		var ftrSpaceN;
+		var ftrOffset;
+		if (ftrId < obsFtrCount) {
+			ftrSpaceN = 0;
+			ftrOffset = 0;
+		} else if (ftrId < obsFtrCount + contrFtrCount) {
+			ftrSpaceN = 1;
+			ftrOffset = obsFtrCount;
 		} else {
-			return controlFtrSpace.invertFeatureVector(mc.fullCoords(stateId, false))[ftrIdx - obsFtrSpace.dims.length];
+			ftrSpaceN = 2;
+			ftrOffset = obsFtrCount + contrFtrCount;
 		}
+		
+		return { ftrSpaceN: ftrSpaceN, ftrOffset: ftrOffset };
+	}
+
+	function getFtrCoord(stateId, ftrId) {
+		var ftrConfig = getFtrSpaceNFtrOffset(ftrId);
+		
+		var coords = mc.fullCoords(stateId, ftrConfig.ftrSpaceN);
+		return ftrSpaces[ftrConfig.ftrSpaceN].invertFeatureVector(coords)[ftrId - ftrConfig.ftrOffset];
 	}
 	
 	function invertFeature(ftrId, val) {
-		var nObsFtrs = getObsFtrCount();
-
-		if (ftrId < nObsFtrs) {
-			return obsFtrSpace.invertFeature(ftrId, val);
-		} else {
-			return controlFtrSpace.invertFeature(ftrId - nObsFtrs, val);
-		}
+		var ftrConfig = getFtrSpaceNFtrOffset(ftrId);
+		return ftrSpaces[ftrConfig.ftrSpaceN].invertFeature(ftrId - ftrConfig.ftrOffset, val);
 	}
 
 	function getFtrBounds(ftrId) {
-		var obsFtrCount = getObsFtrCount();
+		var ftrConfig = getFtrSpaceNFtrOffset(ftrId);
 		var bounds = mc.getFtrBounds(ftrId);
 
-		if (ftrId < obsFtrCount) {
-			return {
-				min: obsFtrSpace.invertFeature(ftrId, bounds.min),
-				max: obsFtrSpace.invertFeature(ftrId, bounds.max)
-			}
-		} else {
-			return {
-				min: controlFtrSpace.invertFeature(ftrId - obsFtrCount, bounds.min),
-				max: controlFtrSpace.invertFeature(ftrId - obsFtrCount, bounds.max)
-			}
+		return {
+			min: ftrSpaces[ftrConfig.ftrSpaceN].invertFeature(ftrId - ftrConfig.ftrOffset, bounds.min),
+			max: ftrSpaces[ftrConfig.ftrSpaceN].invertFeature(ftrId - ftrConfig.ftrOffset, bounds.max)
 		}
 	}
 
@@ -172,16 +205,12 @@ exports.StreamStory = function (opts) {
 
 
 	function toServerHistogram(hist, ftrId) {
-		var nObsFtrs = getObsFtrCount();
-
-		if (ftrId < nObsFtrs) {
-			for (var i = 0; i < hist.binStartV.length; i++) {
-				hist.binStartV[i] = obsFtrSpace.invertFeature(ftrId, hist.binStartV[i]);
-			}
-		} else {
-			for (var i = 0; i < hist.binStartV.length; i++) {
-				hist.binStartV[i] = controlFtrSpace.invertFeature(ftrId - nObsFtrs, hist.binStartV[i]);
-			}
+		var ftrConfig = getFtrSpaceNFtrOffset(ftrId);
+		var ftrSpace = ftrSpaces[ftrConfig.ftrSpaceN];
+		var offset = ftrConfig.ftrOffset;
+		
+		for (var i = 0; i < hist.binStartV.length; i++) {
+			hist.binStartV[i] = ftrSpace.invertFeature(ftrId - offset, hist.binStartV[i]);
 		}
 
 		return hist;
@@ -195,25 +224,30 @@ exports.StreamStory = function (opts) {
 		if (opts.recSet == null && opts.recV == null) 
 			throw new Error('StreamStory.fit: missing parameters recSet or recV');
 		
-		var batchEndV = opts.batchEndV;
-		var timeField = opts.timeField;
-		
-		var obsColMat;
-		var contrColMat;
-		
 		if (opts.recV != null) {
 			var recV = opts.recV;
 			
-			async.parallel([
-			    function (callback) {
-			    	log.debug('Updating observation feature space ...');
-			    	obsFtrSpace.updateRecordsAsync(recV, callback);
-			    },
-			    function (callback) {
-			    	log.debug('Updating control feature space ...');
-			    	controlFtrSpace.updateRecordsAsync(recV, callback);
-			    }
-			], function (e) {
+			var parallelUpdates = [];
+			var parallelExtracts = [];
+			for (var i = 0; i < ftrSpaces.length; i++) {
+				(function () {
+					var ftrSpaceN = i;
+					var ftrSpace = ftrSpaces[i];
+					
+					parallelUpdates.push(function (callback) {
+						if (log.debug())
+							log.debug('Updating feature space %d ...', ftrSpaceN);
+						ftrSpace.updateRecordsAsync(recV, callback);
+					});
+					parallelExtracts.push(function (callback) {
+						if (log.debug())
+				    		log.debug('Extracting feature matrix %d ...', ftrSpaceN);
+						ftrSpace.extractMatrixAsync(recV, callback);
+					});
+				})();
+			}
+			
+			async.parallel(parallelUpdates, function (e) {
 				if (e != null) {
 					callback(e);
 					return;
@@ -221,18 +255,7 @@ exports.StreamStory = function (opts) {
 				
 				try {
 					log.debug('Feature spaces updated!');
-					async.parallel([
-					    function (callback) {
-					    	if (log.debug())
-					    		log.debug('Extracting observation feature matrix!');
-					    	obsFtrSpace.extractMatrixAsync(recV, callback);
-					    },
-					    function (callback) {
-					    	if (log.debug())
-					    		log.debug('Extracting control feature matrix!');
-					    	controlFtrSpace.extractMatrixAsync(recV, callback);
-					    }
-					], function (e, results) {
+					async.parallel(parallelExtracts, function (e, results) {
 						if (e != null) {
 							log.error(e, 'Exception while creating feature matrices!');
 							callback(e);
@@ -244,7 +267,8 @@ exports.StreamStory = function (opts) {
 						
 						callback(undefined, {
 		    				obsColMat: results[0],
-		    				contrColMat: results[1]
+		    				contrColMat: results[1],
+		    				ignoredColMat: results[2]
 		    			});
 					});
 				} catch (e) {
@@ -256,15 +280,25 @@ exports.StreamStory = function (opts) {
 			var recSet = opts.recSet;
 			
 			log.info('Updating feature spaces ...');
-			obsFtrSpace.updateRecords(recSet);
-			controlFtrSpace.updateRecords(recSet);
-			
-			obsColMat = obsFtrSpace.extractMatrix(recSet);
-			contrColMat = controlFtrSpace.extractMatrix(recSet);
+			var results = [];
+			for (var i = 0; i < ftrSpaces.length; i++) {
+				var ftrSpace = ftrSpaces[i];
+				
+				if (log.debug())
+					log.debug('Updating feature space %d ...', i);
+				
+				ftrSpace.updateRecords(recSet);
+				
+				if (log.debug())
+		    		log.debug('Extracting feature matrix %d ...', i);
+				
+				results.push(ftrSpace.extractMatrix(recSet));
+			}
 			
 			callback(undefined, {
-				obsColMat: obsColMat,
-				contrColMat: contrColMat
+				obsColMat: results[0],
+				contrColMat: results[1],
+				ignoredColMat: results[2]
 			});
 		}
 	}
@@ -319,6 +353,7 @@ exports.StreamStory = function (opts) {
     			mc.fit({
     				observations: data.obsColMat,
     				controls: data.contrColMat,
+    				ignored: data.ignoredColMat,
     				times: timeV,
     				batchV: batchEndV
     			});
@@ -340,6 +375,7 @@ exports.StreamStory = function (opts) {
     			mc.fitAsync({
     				observations: data.obsColMat,
     				controls: data.contrColMat,
+    				ignored: data.ignoredColMat,
     				times: timeV,
     				batchV: batchEndV
     			}, callback);
@@ -352,24 +388,27 @@ exports.StreamStory = function (opts) {
 		update: function (rec) {
 			if (rec == null) return;
 
-			var obsFtrVec = obsFtrSpace.extractVector(rec);
-			var contFtrVec = controlFtrSpace.extractVector(rec);
 			var timestamp = rec.time.getTime();
+			
+			var obsFtrSpace = getObsFtrSpace();
+			var contrFtrSpace = getContrFtrSpace();
 
-			mc.update(obsFtrVec, contFtrVec, timestamp);
+			mc.update(
+				obsFtrSpace.extractVector(rec),
+				contrFtrSpace.extractVector(rec),
+				timestamp
+			);
 		},
 		
 		project: function (rec) {
 			var result = {};
 			
-			var obsNames = getFtrNames(obsFtrSpace);
-			var contrNames = getFtrNames(controlFtrSpace);
-			
-			for (var i = 0; i < obsNames.length; i++) {
-				result[obsNames[i]] = rec[obsNames[i]];
-			}
-			for (var i = 0; i < contrNames.length; i++) {
-				result[contrNames[i]] = rec[contrNames[i]];
+			for (var ftrSpaceN = 0; ftrSpaceN < ftrSpaces.length; ftrSpaceN++) {
+				var names = getFtrNames(ftrSpaces[ftrSpaceN]);
+				
+				for (var ftrN = 0; ftrN < names.length; ftrN++) {
+					result[names[ftrN]] = rec[names[ftrN]];
+				}
 			}
 			
 			return result;
@@ -380,20 +419,23 @@ exports.StreamStory = function (opts) {
 		 */
 		save: function (fname) {
 			try {
-				console.log('Saving Markov chain ...');
+				if (log.info())
+					log.info('Saving StreamStory model to file %s ...', fname);
 
 				var fout = new qm.fs.FOut(fname);
 
     			mc.save(fout);
-    			obsFtrSpace.save(fout);
-    			controlFtrSpace.save(fout);
+    			for (var i = 0; i < ftrSpaces.length; i++) {
+    				ftrSpaces[i].save(fout);
+    			}
 
     			fout.flush();
     			fout.close();
 
-    			console.log('Done!');
+    			if (log.debug())
+    				log.debug('Done!');
 			} catch (e) {
-				console.log('Failed to save the model!!' + e.message);
+				log.error(e, 'Failed to save StreamStory model!');
 			}
 		},
 
@@ -410,13 +452,6 @@ exports.StreamStory = function (opts) {
 		 */
 		getModel: function () {
 			return mc;
-		},
-
-		/**
-		 * Returns the feature space.
-		 */
-		getFtrSpace: function () {
-			return { observations: obsFtrSpace, controls: controlFtrSpace };
 		},
 
 		/**
@@ -442,42 +477,35 @@ exports.StreamStory = function (opts) {
 		},
 
 		getFtrDesc: function (ftrId) {
-			var nObsFtrs = getObsFtrCount();
-
 			if (ftrId == null) {
-				var n = nObsFtrs + getContrFtrCount();
-
-				var obsFtrs = [];
-    			var contrFtrs = [];
-
-				for (var i = 0; i < n; i++) {
-					var ftrDesc = that.getFtrDesc(i);
-
-					if (i < nObsFtrs) {
-						obsFtrs.push(ftrDesc);
-					} else {
-						contrFtrs.push(ftrDesc);
-					}
+				var allFtrCount = getAllFtrCount();
+				
+				var result = [];
+				for (var i = 0; i < ftrSpaces.length; i++) {
+					result.push([]);
+				}
+    			
+				for (var ftrN = 0; ftrN < allFtrCount; ftrN++) {
+					var ftrConfig = getFtrSpaceNFtrOffset(ftrN);
+					var ftrDesc = that.getFtrDesc(ftrN);
+					
+					result[ftrConfig.ftrSpaceN].push(ftrDesc);
 				}
 
 				return {
-    				observation: obsFtrs,
-	        		control: contrFtrs
+    				observation: result[0],
+	        		control: result[1],
+	        		ignored: result[2]
 	        	}
 	    	}
 			else {
-				if (ftrId < nObsFtrs) {
-					var ftrNames = getObsFtrNames();
-					return {
-						name: ftrNames[ftrId],
-						bounds: getFtrBounds(ftrId)
-					}
-				} else {
-					var ftrNames = getControlFtrNames();
-					return {
-						name: ftrNames[ftrId - nObsFtrs],
-						bounds: getFtrBounds(ftrId)
-					}
+				var ftrConfig = getFtrSpaceNFtrOffset(ftrId);
+				var names = getFtrNames(ftrSpaces[ftrConfig.ftrSpaceN]);
+				var name = names[ftrId - ftrConfig.ftrOffset];
+				
+				return {
+					name: name,
+					bounds: getFtrBounds(ftrId)
 				}
 			}
 	    },
@@ -581,8 +609,8 @@ exports.StreamStory = function (opts) {
 		/**
 		 * Returns a histogram for the desired feature in the desired state.
 		 */
-		histogram: function (stateId, ftrId) {
-			var hist = mc.histogram(stateId, ftrId);
+		histogram: function (ftrId, stateId) {
+			var hist = mc.histogram(ftrId, stateId);
 			return toServerHistogram(hist, ftrId);
 		},
 
@@ -607,11 +635,12 @@ exports.StreamStory = function (opts) {
 
 		onOutlier: function (callback) {
 			mc.onOutlier(function (ftrV) {
-				var invFtrV = obsFtrSpace.invertFeatureVector(ftrV);
+				var ftrSpace = ftrSpaces[0];	// observation
+				var invFtrV = ftrSpace.invertFeatureVector(ftrV);
 
 				var features = [];
 				for (var i = 0; i < invFtrV.length; i++) {
-					features.push({name: obsFtrSpace.getFeature(i), value: invFtrV.at(i)});
+					features.push({name: ftrSpace.getFeature(i), value: invFtrV.at(i)});
 				}
 
 				callback(features);
@@ -626,13 +655,13 @@ exports.StreamStory = function (opts) {
 		 * Returns the distribution of features accross the states on the
 		 * specified height.
 		 */
-		getFtrDist: function (height, ftrIdx) {
+		getFtrDist: function (height, ftrId) {
 			var stateIds = mc.stateIds(height);
 
 			var result = [];
 			for (var i = 0; i < stateIds.length; i++) {
 				var stateId = stateIds[i];
-				var coord = getFtrCoord(stateId, ftrIdx);
+				var coord = getFtrCoord(stateId, ftrId);
 				result.push({ state: stateId, value: coord });
 			}
 
@@ -645,7 +674,7 @@ exports.StreamStory = function (opts) {
 
 			var params = {
 				ftrId: opts.ftrId,
-				val: controlFtrSpace.extractFeature(controlFtrId, opts.val)
+				val: ftrSpaces[1].extractFeature(controlFtrId, opts.val)
 			};
 
 			if (opts.stateId != null) params.stateId = opts.stateId;

@@ -15,8 +15,8 @@ var config = require('../config.js');
 var fields = require('../fields.js');
 var transform = require('./util/transform.js');
 
-var ModelStore = require('./util/servicesutil.js').RealTimeModelStore;
-var WebSocketWrapper = require('./util/servicesutil.js').WebSocketWrapper;
+var ModelStore = require('./util/modelstore.js');
+var WebSocketWrapper = require('./util/servicesutil.js');
 
 var qmutil = qm.qm_util;
 
@@ -365,6 +365,35 @@ function initStreamStoryHandlers(model, enable) {
 				log.error(e, 'Failed to send target state prediction!');
 			}
 		});
+		
+		log.info('Registering activity callback ...');
+		model.getModel().onActivity(function (startTm, endTm, activityName) {
+			if (log.info())
+				log.info('Detected activity %s at time %s to %s!', activityName, startTm.toString(), endTm.toString());
+			
+			var start = startTm.getTime();
+			var end = endTm.getTime();
+			
+			var uiMsg = {
+				type: 'activity',
+				content: {
+					start: start,
+					end: end,
+					name: activityName
+				}
+			};
+			
+			modelStore.sendMsg(model.getId(), JSON.stringify(uiMsg));
+			
+			try {
+				var fd = fs.openSync('activities.csv', 'a');
+				fs.writeSync(fd, '\n' + startTm.getTime() + ',' + endTm.getTime() + ',"' + activityName.replace(/\"/g, '\\"') + '"');
+				fs.closeSync(fd);
+				log.debug('Activity written!');
+			} catch (e) {
+				log.error(e, 'Exception while writing activity to file!');
+			}
+		});
 	} else {
 		log.debug('Removing StreamStory handlers for model %s ...', model.getId());
 		log.debug('Removing state changed callback ...');
@@ -374,7 +403,9 @@ function initStreamStoryHandlers(model, enable) {
 		log.debug('Removing outlier callback ...');
 		model.onOutlier(null);
 		log.debug('Removing prediction callback ...');
-		model.onPrediction();
+		model.onPrediction(null);
+		log.debug('Removing activity callback ...');
+		model.onActivity(null);
 	}
 }
 
@@ -1035,6 +1066,40 @@ function initStreamStoryRestApi() {
 			}
 		});
 		
+		app.post(API_PATH + '/activity', function (req, res) {			
+			try {
+				var model = getModel(req.sessionID, req.session);
+				var name = req.body.name;
+				var sequence = JSON.parse(req.body.sequence);
+				
+				if (log.debug())
+					log.debug('Setting setting activity %s for model %d with transitions %s', name, model.getId(), JSON.stringify(sequence));
+				
+				if (name == null || name == '') {
+					handleBadInput(res, 'Activity name missing!');
+					return;
+				}
+				if (sequence == null || sequence.length == 0) {
+					handleBadInput(res, 'Missing the sequence of states!');
+					return;
+				}
+				for (var i = 0; i < sequence.length; i++) {
+					var stateIds = sequence[i];
+					if (stateIds == null || stateIds.length == 0) {
+						handleBadInput(res, 'Empty states in sequence!');
+						return;
+					}
+				}
+				
+				model.getModel().setActivity(name, sequence);
+				res.status(204);	// no content
+				res.end();
+			} catch (e) {
+				log.error(e, 'Failed to set activity!');
+				handleServerError(e, req, res);
+			}
+		});
+		
 		app.get(API_PATH + '/targetProperties', function (req, res) {
 			try {
 				var stateId = parseInt(req.query.stateId);
@@ -1096,7 +1161,7 @@ function initStreamStoryRestApi() {
 				if (log.trace())
 					log.trace('Fetching histogram for state %d, feature %d ...', stateId, ftrIdx);
 				
-				res.send(model.histogram(stateId, ftrIdx));
+				res.send(model.histogram(ftrIdx, stateId));
 			} catch (e) {
 				log.error(e, 'Failed to query histogram!');
 				res.status(500);	// internal server error
@@ -1366,6 +1431,7 @@ function initDataUploadApi() {
 			var timeUnit = req.body.timeUnit;
 			var attrs = req.body.attrs;
 			var controlAttrs = req.body.controlAttrs;
+			var ignoredAttrs = req.body.ignoredAttrs;
 			var isRealTime = req.body.isRealTime;
 			var hierarchy = req.body.hierarchyType;
 			var clustConfig = req.body.clust;
@@ -1450,6 +1516,7 @@ function initDataUploadApi() {
 						hierarchyType: hierarchy,
 						attrs: attrs,
 						controlAttrs: controlAttrs,
+						ignoredAttrs: ignoredAttrs,
 						isRealTime: isRealTime,
 						fileBuff: fileBuff,
 						clustConfig: clustConfig,
@@ -1691,7 +1758,7 @@ function initServerApi() {
 		var imported = 0;
 		var printInterval = 10000;
 		
-		app.post(DATA_PATH + '/push', function (req, resp) {
+		app.post(DATA_PATH + '/push', function (req, res) {
 			var batch = req.body;
 			
 			try {
@@ -1704,8 +1771,8 @@ function initServerApi() {
 					addRawMeasurement(instance);
 				}
 				
-				resp.status(204);
-				resp.end();
+				res.status(204);
+				res.end();
 			} catch (e) {
 				log.error(e, 'Failed to process raw measurement!');
 				handleServerError(e, req, res);

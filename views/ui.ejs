@@ -1,37 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<meta charset="UTF-8">
-	<meta http-equiv="X-UA-Compatible" content="IE=edge">	<!-- latest IE rendering mode -->
-	<meta name="viewport" content="width=device-width, initial-scale=1">	<!-- mobile devices -->
-	<title>StreamStory</title>
-	
-	<link rel="stylesheet" href="css/style.css">
-	<link rel="stylesheet" href="lib/jquer-ui.css">	
-	<link rel="stylesheet" href="lib/bootstrap/css/bootstrap.min.css">
-	<link rel="stylesheet" href="lib/bootstrap/css/bootstrap-theme.min.css">
-	<link rel="stylesheet" href="lib/jquery.qtip.min.css">
-	
-	<script type="text/javascript" src="lib/jquery-1.11.1.min.js"></script>
-	<script type="text/javascript" src="lib/jquery-ui.min.js"></script>
-	<script type="text/javascript" src="lib/jquery.qtip.min.js"></script>
-	<script type="text/javascript" src="lib/bootstrap/js/bootstrap.min.js"></script>
-	<script type="text/javascript" src="lib/cytoscape.js"></script>
-	<script type="text/javascript" src="lib/cytoscape-qtip.js"></script>
-	<script type="text/javascript" src="lib/cytoscape-ctxmenu.js"></script>
-	<script src="https://cdn.rawgit.com/cpettitt/dagre/v0.7.4/dist/dagre.min.js"></script>
-	<script type="text/javascript" src="lib/highcharts.js"></script>
-	<script type="text/javascript" src="js/zoomvis.js"></script>
-	<script type="text/javascript" src="js/hist.js"></script>
-	<script type="text/javascript" src="js/utils.js"></script>
-	<script type="text/javascript" src="js/ui.js"></script>
-	
-    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
-    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
-    <!--[if lt IE 9]>
-        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
-        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
-    <![endif]-->
+    <% include partials/head %>
+    <link rel="stylesheet" href="lib/jquer-ui.css">	
+    <link rel="stylesheet" href="lib/jquery.qtip.min.css">
+    
+    <script type="text/javascript" src="lib/jquery-ui.min.js"></script>
+    <script type="text/javascript" src="lib/bootstrap/js/bootstrap.min.js"></script>
 
 	<style>
 		.dl-horizontal dt {
@@ -369,6 +344,9 @@
 						<button id="vis-toggler" class="btn btn-default btn-xs pull-right" aria-label="Left Align">
 						  	<span class="glyphicon glyphicon-align-justify" aria-hidden="true"></span>
 						</button>
+						<button id="btn-activity-conf" class="btn btn-default btn-xs pull-right" aria-label="Left Align">
+						  	<span class="glyphicon glyphicon-facetime-video" aria-hidden="true"></span>
+						</button>
 						<span class="pull-right component-title-additional">
 							<% if (model.isOnline()) { %>
 							<span id="span-no-active"></span> online models,
@@ -389,7 +367,8 @@
 											var ftrDesc = model.getFtrDesc();
 											var observations = ftrDesc.observation;
 											var controls = ftrDesc.control;
-											var featureInfo = observations.concat(controls);
+											var ignored = ftrDesc.ignored;
+											var featureInfo = observations.concat(controls).concat(ignored);
 											%>
 											<div class="form-group">
 												<h4>Show attribute</h4>
@@ -532,6 +511,10 @@
 										<label for="txt-name">State name</label>
 										<input id="txt-name" type="text" class="form-control" />
 									</div>
+									<div class="form-group">
+										<label for="txt-state-description">Description</label>
+										<textarea id="txt-state-description" class="form-control" rows="3"></textarea>
+									</div>
 									<% if (model.isOnline()) { %>
 									<div class="form-group">
 										<div class="checkbox">
@@ -577,7 +560,7 @@
 						<div id="div-thumbnail" style="display: none;">
 							<div class="col-md-6 thumb-col">
 								<div class="thumbnail">
-									<div class="container-hist"></div>
+									<div class="container-hist img-thumbnail" style="width: 100%;"></div>
 							      	<div class="caption">
 							        	<h6 class="attr-name" style="word-wrap: break-word;"></h6>
 							        	<p>
@@ -592,7 +575,6 @@
 					    </div>
 					</div>
 				</div>
-				
 			</div>
 		</div>
 		<% if (model.isOnline()) { %>
@@ -609,8 +591,35 @@
 		<% } %>
 		<div class="row">
 			<div class="col-md-8">
-				<div style="height: 300px;min-height: 300px;">
-					<div id="tree-wrapper" style="height: 100%;width: 100%;" class="nopadding"></div>
+				<div id="div-tree-wrapper" class="container-bottom">
+					<div id="div-tree-container" style="height: 100%;width: 100%;" class="nopadding"></div>
+				</div>
+				<div id="div-activity-wrapper" class="panel panel-default container-bottom hidden">
+					<div class="panel-heading">Configure Activity</div>
+					<div id="div-activity-conf" class="panel-body scrollable">
+						<div id="div-activity-currconf" class="row">
+							<div id="div-curr-activity-step" class="col-xs-4 col-md-2 step-wrapper">
+								<span class="thumbnail">
+									<ul></ul>
+								</span>
+							</div>
+						</div>
+						<div class="row">
+							<div class="col-md-4">
+								<div class="form-group">
+									<label for="txt-activity-name">Name</label>
+									<input id="txt-activity-name" type="text" class="form-control" />
+							  	</div>
+							  	<div id="alert-wrapper-activity" class="form-group"></div>
+								<div class="form-group">
+									<button id="btn-activity-add-step" type="button" class="btn btn-info">Add Step</button>
+									<button id="btn-activity-add-state" type="button" class="btn btn-primary">Add State</button>
+							  		<button id="btn-activity-add-state-cancel" type="button" class="btn btn-default hidden">Cancel</button>
+							  		<button id="btn-activity-save" type="button" class="btn btn-success">Save</button>
+							  	</div>
+							</div>
+						</div>
+					</div>
 				</div>
 			</div>
 			<div class="col-md-4">
@@ -633,6 +642,17 @@
 		<a class="glyphicon glyphicon-remove btn-close" onclick="$('#popover-pdf-hist').slideUp();"></a>
 		<div id="hist-pdf" style="width: 100%; height: 100%;"></div>
 	</div>
+	
+	<script type="text/javascript" src="lib/jquery.qtip.min.js"></script>
+	<script type="text/javascript" src="lib/cytoscape.js"></script>
+	<script type="text/javascript" src="lib/cytoscape-qtip.js"></script>
+	<script type="text/javascript" src="lib/cytoscape-ctxmenu.js"></script>
+	<script src="https://cdn.rawgit.com/cpettitt/dagre/v0.7.4/dist/dagre.min.js"></script>
+	<script type="text/javascript" src="lib/highcharts.js"></script>
+	<script type="text/javascript" src="js/zoomvis.js"></script>
+	<script type="text/javascript" src="js/hist.js"></script>
+	<script type="text/javascript" src="js/utils.js"></script>
+	<script type="text/javascript" src="js/ui.js"></script>
 	
 	<% include partials/alert %>
 </body>

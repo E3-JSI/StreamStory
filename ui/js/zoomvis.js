@@ -14,6 +14,11 @@ var zoomVis = function (opts) {
 	var DEFAULT_BORDER_COLOR = 'black';
 	var FONT_SIZE = '12';
 	
+	var BOLD_EDGE_COLOR = '#A0A0A0';
+	var MIDDLE_EDGE_COLOR = '#606060';
+	var SMALL_EDGE_COLOR = '#606060';
+	var EDGE_TEXT_COLOR = '#F0F0F0';
+	
 	var DEFAULT_BORDER_WIDTH = 5;
 	
 	var BACKGROUND_Z_INDEX = 0;
@@ -55,13 +60,14 @@ var zoomVis = function (opts) {
 	nodeQtipOpts.content = function (event, api) { 
 		var data = this.data();
 		var name = data.name;
+		var label = data.style.label;
 		
 		var tooltip = $('<div />');
 		
 		// name
 		if (name != null) {
 			var nameDiv = $('<h3 />');
-			nameDiv.html(name);
+			nameDiv.html(name + ' (' + label + ')');
 			tooltip.append(nameDiv);
 		}
 		
@@ -504,6 +510,7 @@ var zoomVis = function (opts) {
 			'text-transform': 'none',
 			'text-halign': 'center',
 			'text-valign': 'center',
+			'color': EDGE_TEXT_COLOR,
 			'font-style': 'normal',
 			'font-size': FONT_SIZE,
 			'font-family': 'inherit',
@@ -517,8 +524,8 @@ var zoomVis = function (opts) {
 			'text-valign': 'top',
 			'control-point-weight': 0.5,
 			'line-style': 'dotted',
-			'line-color': '#C0C0C0',	// light gray
-			'target-arrow-color': '#C0C0C0',
+			'line-color': SMALL_EDGE_COLOR,
+			'target-arrow-color': SMALL_EDGE_COLOR,
 			'width': Math.max(1, (val*10).toFixed()),
 			'z-index': 100,
 			'content': ''
@@ -762,8 +769,10 @@ var zoomVis = function (opts) {
 			
 			middle.css('line-style', 'solid');
 			middle.css('content', 'data(prob)');
-			bold.css('line-color', '#505050');
-			bold.css('target-arrow-color', '#505050');
+//			bold.css('line-color', '#505050');
+//			bold.css('target-arrow-color', '#505050');
+			bold.css('line-color', BOLD_EDGE_COLOR);
+			bold.css('target-arrow-color', BOLD_EDGE_COLOR);
 						
 			// remember for later
 			for (var i = 0; i < middle.length; i++) {
@@ -775,8 +784,8 @@ var zoomVis = function (opts) {
 				edge.css({ content: toUiPrecision(edge.data().prob) });
 			}
 			for (var i = 0; i < bold.length; i++) {
-				bold[i].data().style['line-color'] = '#505050';
-				bold[i].data().style['target-arrow-color'] = '#505050';
+				bold[i].data().style['line-color'] = BOLD_EDGE_COLOR;
+				bold[i].data().style['target-arrow-color'] = BOLD_EDGE_COLOR;
 			}
 		}
 	}

@@ -168,6 +168,44 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 	 			{"name": "value", "type": "float"}
 	 		],
 	 		"window": WINDOW_SIZE
+	 	},
+	 	
+	 	// for activity detection
+	 	{
+	 		"name" : "slips_closed",
+	 		"fields" : [
+	 			{"name": "time_ms", "type": "uint64"},
+	 			{"name": "time", "type": "datetime"},
+	 			{"name": "value", "type": "float"}
+	 		],
+	 		"window": WINDOW_SIZE
+	 	},
+	 	{
+	 		"name" : "slips_closing",
+	 		"fields" : [
+	 			{"name": "time_ms", "type": "uint64"},
+	 			{"name": "time", "type": "datetime"},
+	 			{"name": "value", "type": "float"}
+	 		],
+	 		"window": WINDOW_SIZE
+	 	},
+	 	{
+	 		"name" : "slips_open",
+	 		"fields" : [
+	 			{"name": "time_ms", "type": "uint64"},
+	 			{"name": "time", "type": "datetime"},
+	 			{"name": "value", "type": "float"}
+	 		],
+	 		"window": WINDOW_SIZE
+	 	},
+	 	{
+	 		"name" : "slips_opening",
+	 		"fields" : [
+	 			{"name": "time_ms", "type": "uint64"},
+	 			{"name": "time", "type": "datetime"},
+	 			{"name": "value", "type": "float"}
+	 		],
+	 		"window": WINDOW_SIZE
 	 	}
 	]
 	
@@ -205,7 +243,12 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 	 		{"name": "ram_pos_measured", "type": "float"},
 	 		{"name": "ram_pos_setpoint", "type": "float"},
 	 		{"name": "ram_vel_measured", "type": "float"},
-	 		{"name": "ram_vel_setpoint", "type": "float"}
+	 		{"name": "ram_vel_setpoint", "type": "float"},
+	 		// activity recognition
+	 		{"name": "slips_closed", "type": "float"},
+	 		{"name": "slips_closing", "type": "float"},
+	 		{"name": "slips_open", "type": "float"},
+	 		{"name": "slips_opening", "type": "float"}
 	 	]
 	};
 	
@@ -214,9 +257,10 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 	}
 	
 	// friction coefficients
-	onlineAnalyticsStores.fields.push({"name": "coeff_swivel", "type": "float", "null": true});
-	onlineAnalyticsStores.fields.push({"name": "coeff_gearbox", "type": "float", "null": true});
-	
+	onlineAnalyticsStores.fields.push({name: "coeff_swivel", type: "float", "null": true});
+	onlineAnalyticsStores.fields.push({name: "coeff_gearbox", type: "float", "null": true});
+	onlineAnalyticsStores.fields.push({name: "hl > Threshold", type: "float", "null": true});
+	 		
 	var streamStoryIgnoreFields = {}
 	
 	//==============================================================
@@ -271,8 +315,19 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 			
 			if (fieldNm == 'ibop')
 				interpolation = 'current';
+			if (fieldNm == 'hl > Threshold')
+				interpolation = 'current';
+			if (fieldNm == 'slips_closed')
+				interpolation = 'current';
+			if (fieldNm == 'slips_closing')
+				interpolation = 'current';
+			if (fieldNm == 'slips_open')
+				interpolation = 'current';
+			if (fieldNm == 'slips_opening')
+				interpolation = 'current';
 			
-			log.info('Field %s is using %s interpolation ...', fieldNm, interpolation);
+			if (log.info())
+				log.info('Field %s is using %s interpolation ...', fieldNm, interpolation);
 			
 			result.resampler.push({
 				name: fieldNm,
@@ -289,8 +344,19 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 			
 			if (fieldNm == 'ibop')
 				interpolation = 'current';
+			if (fieldNm == 'hl > Threshold')
+				interpolation = 'current';
+			if (fieldNm == 'slips_closed')
+				interpolation = 'current';
+			if (fieldNm == 'slips_closing')
+				interpolation = 'current';
+			if (fieldNm == 'slips_open')
+				interpolation = 'current';
+			if (fieldNm == 'slips_opening')
+				interpolation = 'current';
 			
-			log.info('Field %s is using %s interpolation ...', fieldNm, interpolation);
+			if (log.info())
+				log.info('Field %s is using %s interpolation ...', fieldNm, interpolation);
 			
 			if (fieldNm != 'coeff_swivel' && fieldNm != 'coeff_gearbox') {
 				result.merger.push({

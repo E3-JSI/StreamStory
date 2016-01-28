@@ -1,3 +1,8 @@
+html, body {
+	width: 100%;
+	height: 100%;
+}
+
 #content-options {
 	width: 320px;
 	max-width: 320px;
@@ -123,6 +128,23 @@
 	padding-left: 0;
 }
 
+.container-bottom {
+	height: 300px;
+	min-height: 300px;
+}
+
+/*===============================================================
+ 	BOTTOM PANEL
+===============================================================*/
+
+#div-activity-currconf {
+	height: 70px;
+}
+
+#div-activity-currconf .step-wrapper, #div-activity-currconf .step-wrapper .thumbnail {
+	height: 100%;
+}
+
 /*===============================================================
  	DASHBOARD
 ===============================================================*/
@@ -219,7 +241,7 @@
 #page-wrapper {
     padding: 0 15px;
     min-height: 568px;
-    background-color: #fff;
+    /*background-color: #fff;*/
 }
 
 @media(min-width:768px) {
@@ -227,8 +249,9 @@
         position: inherit;
         margin: 0 0 0 250px;
         width: calc(100% - 250px);
+        height: calc(100% - 52px);
         padding: 0 30px;
-        border-left: 1px solid #e7e7e7;
+        border-left: 1px solid rgba(0,0,0,0.6);
     }
 }
 
@@ -300,7 +323,7 @@
 }
 
 .sidebar ul li {
-    border-bottom: 1px solid #e7e7e7;
+    border-bottom: 1px solid rgba(0,0,0,0.6);
 }
 
 .sidebar ul li a.active {

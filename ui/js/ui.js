@@ -17,9 +17,10 @@ function changeControlVal(stateId, ftrIdx, val) {
 }
 
 (function () {
+	var MODE_SELECT_ACTIVITY_STATE = false;
 	
 	function visualizeDecisionTree(root) {
-		$('#tree-wrapper').removeClass('hidden');
+		$('#div-tree-wrapper').removeClass('hidden');
 		
 		var totalExamples = root.examples;
 		
@@ -135,7 +136,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 		var edgeColor = 'darkgray';
 		
 		var cy = cytoscape({
-			container: document.getElementById('tree-wrapper'),
+			container: document.getElementById('div-tree-container'),
 			
 			boxSelectionEnabled: false,
 			autounselectify: true,
@@ -264,7 +265,10 @@ function changeControlVal(stateId, ftrIdx, val) {
 							drawStr += ', ';
 					}	
 				} else {
-					drawStr += contentKey + ': ' + (contentKey == 'time' ? formatDateTime(new Date(contentVal)) : contentVal);
+					if (contentKey == 'time' || contentKey == 'start' || contentKey == 'end') {
+						contentVal = formatDateTime(new Date(parseInt(contentVal)));
+					}
+					drawStr += contentKey + ': ' + contentVal;
 				}
 				
 				if (i < contentKeys.length - 1) {
@@ -324,7 +328,10 @@ function changeControlVal(stateId, ftrIdx, val) {
 				}
 				else if (msg.type == 'prediction') {
 					drawMsg(getMsgContent('Prediction', msg.content));
-				} 
+				}
+				else if (msg.type == 'activity') {
+					drawMsg(getMsgContent('Activity', msg.content));
+				}
 				else if (msg.type == 'coeff') {
 					drawMsg(getMsgContent('Coefficient', msg.content));
 				}
@@ -432,6 +439,10 @@ function changeControlVal(stateId, ftrIdx, val) {
 	UI = function (opts) {
 		var featureInfo = null;
 		var wsWrapper = null;
+		
+		function addActivityState(stateId) {
+			$('#div-curr-activity-step').find('.thumbnail ul').append('<li>' + stateId + '</li>');
+		}
 		
 		function privateFetchHistogram(opts) {
 			var container = opts.insertDiv != null ? opts.insertDiv : 'hist-wrapper';
@@ -669,6 +680,11 @@ function changeControlVal(stateId, ftrIdx, val) {
 			$('#content-options').slideToggle();
 		});
 		
+		$('#btn-activity-conf').click(function () {
+			$('#div-tree-wrapper').addClass('hidden');
+			$('#div-activity-wrapper').removeClass('hidden');
+		});
+		
 		$('#btn-viz-back').click(function () {
 			// fetch the whole model
 			$.ajax('api/model', {
@@ -682,177 +698,278 @@ function changeControlVal(stateId, ftrIdx, val) {
 			});
 		});
 		
+		$('#btn-activity-add-step').click(function () {
+			var currStep = $('#div-curr-activity-step');
+			var newStep = currStep.clone(true);
+			
+			currStep.removeAttr('id');
+			newStep.find('ul').html('');
+			
+			$('#div-activity-currconf').append(newStep);
+		});
+		
+		$('#btn-activity-add-state').click(function () {
+			MODE_SELECT_ACTIVITY_STATE = true;
+			$('#btn-activity-add-state').addClass('hidden');
+			$('#btn-activity-add-state-cancel').removeClass('hidden');
+		});
+		
+		$('#btn-activity-add-state-cancel').click(function () {
+			MODE_SELECT_ACTIVITY_STATE = false;
+			$('#btn-activity-add-state').removeClass('hidden');
+			$('#btn-activity-add-state-cancel').addClass('hidden');
+		});
+		
+		$('#btn-activity-save').click(function () {
+			// get the activity
+			var name = $('#txt-activity-name').val();
+			var sequence = [];
+			
+			var alertField = $('#alert-wrapper-activity');
+			
+			if (name == null || name == '') {
+				showAlert($('#alert-holder'), alertField, 'alert-warning', 'Missing activity name!', null, false);
+				// TODO show error
+				alert('Name missing!');
+				return;
+			}
+			
+			$.each($('#div-activity-currconf .step-wrapper'), function (i, div) {
+				var stateIds = [];
+				
+				var ul = $(div).find('ul');
+				$.each(ul.find('li'), function (j, li) {
+					stateIds.push(parseInt($(li).html()));
+				});
+				
+				sequence.push(stateIds);
+			});
+			
+			var data = {
+				name: name,
+				sequence: JSON.stringify(sequence)
+			};
+			
+			$.ajax('api/activity', {
+				dataType: 'json',
+			    type: 'POST',
+			    data: data,
+			    success: function () {
+			    	showAlert($('#alert-holder'), alertField, 'alert-success', 'Saved!', null, true);
+			    },
+			    error: handleAjaxError(alertField)
+			});
+		});
+		
 		viz.onZoomChanged(function (zoom) {
 			$("#slider_item_div").slider('value', zoom);
 		});
 		
 		viz.onStateSelected(function (stateId, height) {
-			$('#wrapper-transition-details').hide();
-			$('#wrapper-state-details').hide();
-			if ($('#chk-show-fut').is(':checked')) {
-				$('#chk-show-fut').attr('checked', false);
-				$('#chk-show-fut').change();
-			}
-			
-			if (stateId == null) return;
-			
-			// fetch state details
-			$.ajax('api/stateDetails', {
-				dataType: 'json',
-				data: { stateId: stateId, level: height },
-				success: function (data) {
-					$('#wrapper-state-details').show();
-					$('#txt-name').off('keyup');
-					
-					var stateLabel = data.label;
-					
-					// clear the panel
-					$('#txt-name').val(stateLabel);
-					$('#chk-target').removeAttr('checked');
-					$('#txt-event-id').val('');
-					$('#div-button-save-state').addClass('hidden');
-					$('#div-attrs').html('');
-					$('#div-future').html('');
-					$('#div-past').html('');
-					$('#tree-wrapper').html('');
-
-					visualizeDecisionTree(data.classifyTree);
-										
-					// populate
-					// basic info
-					if (data.name != null) $('#txt-name').val(data.name);
-					
-					$('#chk-target').off('change');	// remove the previous handlers
-					$('#chk-target').prop('checked', data.isTarget != null && data.isTarget);
-					if (data.isTarget != null && data.isTarget) {
-						$('#div-event-id').removeClass('hidden');
-					} else {
-						$('#div-event-id').addClass('hidden');
-					}
-					
-					$('#txt-name').keyup(function () {
-						$('#div-button-save-state').removeClass('hidden');
-					});
-					
-					$('#chk-target').change(function (event) {
-						$('#div-button-save-state').removeClass('hidden');
+			if (MODE_SELECT_ACTIVITY_STATE) {
+				addActivityState(stateId);
+			} else {
+				$('#wrapper-transition-details').hide();
+				$('#wrapper-state-details').hide();
+				if ($('#chk-show-fut').is(':checked')) {
+					$('#chk-show-fut').attr('checked', false);
+					$('#chk-show-fut').change();
+				}
+				
+				if (stateId == null) return;
+				
+				// fetch state details
+				$.ajax('api/stateDetails', {
+					dataType: 'json',
+					data: { stateId: stateId, level: height },
+					success: function (data) {
+						$('#wrapper-state-details').show();
+						$('#txt-name').off('keyup');
 						
-						var isUndesiredEvent = $('#chk-target').is(':checked');
-
-						if (isUndesiredEvent) {
+						var stateLabel = data.label;
+						
+						// clear the panel
+						$('#txt-name').val(stateLabel);
+						$('#chk-target').removeAttr('checked');
+						$('#txt-event-id').val('');
+						$('#div-button-save-state').addClass('hidden');
+						$('#div-attrs').html('');
+						$('#div-future').html('');
+						$('#div-past').html('');
+						$('#div-tree-container').html('');
+	
+						visualizeDecisionTree(data.classifyTree);
+											
+						// populate
+						// basic info
+						if (data.name != null) $('#txt-name').val(data.name);
+						
+						$('#chk-target').off('change');	// remove the previous handlers
+						$('#chk-target').prop('checked', data.isTarget != null && data.isTarget);
+						if (data.isTarget != null && data.isTarget) {
 							$('#div-event-id').removeClass('hidden');
 						} else {
 							$('#div-event-id').addClass('hidden');
 						}
-					});
-										
-					// features
-					// feature weights
-					var ftrWgts = data.featureWeights;
-					// find max and min weigts
-					var maxWgt = Number.NEGATIVE_INFINITY;
-					var minWgt = Number.POSITIVE_INFINITY;
-					
-					for (var i = 0; i < ftrWgts.length; i++) {
-						if (ftrWgts[i] > maxWgt) maxWgt = ftrWgts[i];
-						if (ftrWgts[i] < minWgt) minWgt = ftrWgts[i];
-					}
-					
-					// fetch histograms
-					$.each(data.features.observations, function (idx, val) {
-						var histContainerId = 'container-hist-' + idx;
 						
-						var color;
-						if (ftrWgts[idx] > 0)
-							color = 'rgb(0,' + Math.floor(255*ftrWgts[idx] / maxWgt) + ',0)';
-						else
-							color = 'rgb(' + Math.floor(255*ftrWgts[idx] / minWgt) + ',0,0)';
-												
-						var thumbnail = ui.createThumbnail({
-							name: val.name,
-							value: val.value,
-							valueColor: color,
-							histogramContainer: histContainerId
-						});
-						$('#div-attrs').append(thumbnail);
-						ui.fetchHistogram(stateId, idx, false, histContainerId, false);
-					});
-					
-					var nObsFtrs = data.features.observations.length;
-					
-					$.each(data.features.controls, function (idx, val) {
-						var ftrVal = val.value;
-						var bounds = val.bounds;
-						var ftrId = nObsFtrs + idx;
-						var histContainerId = 'container-hist-' + (nObsFtrs + idx);
-												
-						var thumbnail = ui.createThumbnail({
-							name: val.name,
-							value: ftrVal,
-							histogramContainer: histContainerId,
-							valueColor: null,
-							isLeaf: data.isLeaf,
-							ftrId: ftrId,
-							min: bounds.min,
-							max: bounds.max,
-							stateId: stateId
+						$('#txt-name').keyup(function () {
+							$('#div-button-save-state').removeClass('hidden');
 						});
 						
-						$('#div-attrs').append(thumbnail);
+						$('#chk-target').change(function (event) {
+							$('#div-button-save-state').removeClass('hidden');
+							
+							var isUndesiredEvent = $('#chk-target').is(':checked');
+	
+							if (isUndesiredEvent) {
+								$('#div-event-id').removeClass('hidden');
+							} else {
+								$('#div-event-id').addClass('hidden');
+							}
+						});
+											
+						// features
+						// feature weights
+						var ftrWgts = data.featureWeights;
+						// find max and min weigts
+						var maxWgt = Number.NEGATIVE_INFINITY;
+						var minWgt = Number.POSITIVE_INFINITY;
 						
-						ui.fetchHistogram(stateId, nObsFtrs + idx, false, 'container-hist-' + (nObsFtrs + idx), false);
-					});
-										
-					// add handlers
-					$('#txt-event-id').off('change');
-					
-					if (data.undesiredEventId != null) { $('#txt-event-id').val(data.undesiredEventId); }
-					
-					$('#txt-event-id').change(function () {
-						$('#div-button-save-state').removeClass('hidden');
-					});
-					
-					$('#btn-button-save-state').off('click');
-					$('#btn-button-save-state').click(function () {
-						var stateName = $('#txt-name').val();
-						var isUndesired = $('#chk-target').is(':checked');
-						var eventId = $('#txt-event-id').val();
-						
-						var data = {
-							id: stateId,
-							name: stateName,
-							isUndesired: isUndesired
-						};
-						
-						if (isUndesired && eventId != null && eventId != '') {
-							data.eventId = eventId;
+						for (var i = 0; i < ftrWgts.length; i++) {
+							if (ftrWgts[i] > maxWgt) maxWgt = ftrWgts[i];
+							if (ftrWgts[i] < minWgt) minWgt = ftrWgts[i];
 						}
 						
-						var shouldClear = stateName == '' || stateName == stateId;
-						if (shouldClear) {	// clear the state name
-							delete data.name;
-						}
-						
-						$.ajax('api/stateProperties', {
-							dataType: 'json',
-						    type: 'POST',
-						    data: data,
-						    success: function () {
-						    	viz.setStateName(stateId, shouldClear ? stateLabel : stateName);
-						    	viz.setTargetState(stateId, isUndesired);
-						    	
-						    	if (shouldClear)
-						    		$('#txt-name').val(stateLabel);
-						    	
-						    	$('#div-button-save-state').addClass('hidden');
-						    	showAlert($('#alert-holder'), $('#alert-wrapper-save-state'), 'alert-success', 'Saved!', null, true);
-						    },
-						    error: handleAjaxError($('#alert-wrapper-save-state'))
+						// fetch histograms
+						$.each(data.features.observations, function (idx, val) {
+							var histContainerId = 'container-hist-' + idx;
+							var ftrId = idx;
+							
+							var color;
+							if (ftrWgts[ftrId] > 0)
+								color = 'rgb(' + Math.floor(255 - 255*ftrWgts[ftrId] / maxWgt) + ',255,' + Math.floor(255 - 255*ftrWgts[ftrId] / maxWgt) + ')';
+							else
+								color = 'rgb(255,' + Math.floor(255 - 255*ftrWgts[ftrId] / minWgt) + ',' + Math.floor(255 - 255*ftrWgts[ftrId] / minWgt) + ')';
+													
+							var thumbnail = ui.createThumbnail({
+								name: val.name,
+								value: val.value,
+								valueColor: color,
+								histogramContainer: histContainerId
+							});
+							$('#div-attrs').append(thumbnail);
+							ui.fetchHistogram(stateId, idx, false, histContainerId, false);
 						});
-					});
-				},
-				error: handleAjaxError()
-			});
+						
+						var nObsFtrs = data.features.observations.length;
+						
+						$.each(data.features.controls, function (idx, val) {
+							var ftrVal = val.value;
+							var bounds = val.bounds;
+							var ftrId = nObsFtrs + idx;
+							var histContainerId = 'container-hist-' + (nObsFtrs + idx);
+							
+							var color;
+							if (ftrWgts[ftrId] > 0)
+								color = 'rgb(' + Math.floor(255 - 255*ftrWgts[ftrId] / maxWgt) + ',255,' + Math.floor(255 - 255*ftrWgts[ftrId] / maxWgt) + ')';
+							else
+								color = 'rgb(255,' + Math.floor(255 - 255*ftrWgts[ftrId] / minWgt) + ',' + Math.floor(255 - 255*ftrWgts[ftrId] / minWgt) + ')';
+													
+							var thumbnail = ui.createThumbnail({
+								name: val.name,
+								value: ftrVal,
+								histogramContainer: histContainerId,
+								valueColor: color,
+								isLeaf: data.isLeaf,
+								ftrId: ftrId,
+								min: bounds.min,
+								max: bounds.max,
+								stateId: stateId
+							});
+							
+							$('#div-attrs').append(thumbnail);
+							
+							ui.fetchHistogram(stateId, nObsFtrs + idx, false, 'container-hist-' + (nObsFtrs + idx), false);
+						});
+						
+						var nContrFtrs = data.features.controls.length;
+						
+						$.each(data.features.ignored, function (idx, val) {
+							var ftrId = nObsFtrs + nContrFtrs + idx;
+							var ftrVal = val.value;
+							var bounds = val.bounds;
+							var ftrId = nObsFtrs + nContrFtrs + idx;
+							var histContainerId = 'container-hist-' + ftrId;
+							
+							var color;
+							if (ftrWgts[ftrId] > 0)
+								color = 'rgb(' + Math.floor(255 - 255*ftrWgts[ftrId] / maxWgt) + ',255,' + Math.floor(255 - 255*ftrWgts[ftrId] / maxWgt) + ')';
+							else
+								color = 'rgb(255,' + Math.floor(255 - 255*ftrWgts[ftrId] / minWgt) + ',' + Math.floor(255 - 255*ftrWgts[ftrId] / minWgt) + ')';
+													
+							var thumbnail = ui.createThumbnail({
+								name: val.name,
+								value: ftrVal,
+								histogramContainer: histContainerId,
+								valueColor: color
+							});
+							
+							$('#div-attrs').append(thumbnail);
+							
+							ui.fetchHistogram(stateId, ftrId, false, 'container-hist-' + ftrId, false);
+						});
+											
+						// add handlers
+						$('#txt-event-id').off('change');
+						
+						if (data.undesiredEventId != null) { $('#txt-event-id').val(data.undesiredEventId); }
+						
+						$('#txt-event-id').change(function () {
+							$('#div-button-save-state').removeClass('hidden');
+						});
+						
+						$('#btn-button-save-state').off('click');
+						$('#btn-button-save-state').click(function () {
+							var stateName = $('#txt-name').val();
+							var isUndesired = $('#chk-target').is(':checked');
+							var eventId = $('#txt-event-id').val();
+							
+							var data = {
+								id: stateId,
+								name: stateName,
+								isUndesired: isUndesired
+							};
+							
+							if (isUndesired && eventId != null && eventId != '') {
+								data.eventId = eventId;
+							}
+							
+							var shouldClear = stateName == '' || stateName == stateId;
+							if (shouldClear) {	// clear the state name
+								delete data.name;
+							}
+							
+							$.ajax('api/stateProperties', {
+								dataType: 'json',
+							    type: 'POST',
+							    data: data,
+							    success: function () {
+							    	viz.setStateName(stateId, shouldClear ? stateLabel : stateName);
+							    	viz.setTargetState(stateId, isUndesired);
+							    	
+							    	if (shouldClear)
+							    		$('#txt-name').val(stateLabel);
+							    	
+							    	$('#div-button-save-state').addClass('hidden');
+							    	showAlert($('#alert-holder'), $('#alert-wrapper-save-state'), 'alert-success', 'Saved!', null, true);
+							    },
+							    error: handleAjaxError($('#alert-wrapper-save-state'))
+							});
+						});
+					},
+					error: handleAjaxError()
+				});
+			}
 		});
 		
 		viz.onEdgeSelected(function (sourceId, targetId) {

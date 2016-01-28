@@ -474,22 +474,63 @@ function pingProgress(isRealTime) {
 					
 					timeRadio.find('input:radio').change(function () {
 						var timeAttr = $(this).val();
-						var select = $('#select-controls');
+						var selectControls = $('#select-controls');
+						var selectIgnored = $('#select-ignored');
 						
 						// clear the attributes
-						select.html('');
+						selectControls.html('');
+						selectIgnored.html('');
 						for (var i = 0; i < selectedAttrs.length; i++) {
 							var attr = selectedAttrs[i];
-							if (attr != timeAttr)
-								select.append('<option value="' + attr + '">' + attr + '</option>');
+							if (attr != timeAttr) {
+								selectControls.append('<option value="' + attr + '">' + attr + '</option>');
+								selectIgnored.append('<option value="' + attr + '">' + attr + '</option>');
+							}
 						}
 						
-						$('#select-controls').bootstrapDualListbox({
+						selectControls.bootstrapDualListbox({
 							showFilterInputs: false,
 							nonSelectedListLabel: 'State Attributes',
 							selectedListLabel: 'Transition Atrtibutes'
 						});
-						$('#select-controls').bootstrapDualListbox('refresh');
+						selectIgnored.bootstrapDualListbox({
+							showFilterInputs: false,
+							nonSelectedListLabel: 'State Attributes',
+							selectedListLabel: 'Ignored Atrtibutes'
+						});
+						selectControls.change(function () {
+							var controlV = selectControls.val();
+//							var ignoredV = selectIgnored.val();
+							
+							var controlH = {};
+//							var ignoredH = {};
+							
+							for (var i = 0; i < controlV.length; i++) {
+								controlH[controlV[i]] = true;
+							}
+//							for (var i = 0; i < ignoredV.length; i++) {
+//								ignoredH[ignoredV[i]] = true;
+//							}
+							
+							for (var attrN = 0; attrN < selectedAttrs.length; attrN++) {
+								var attr = selectedAttrs[attrN];
+								
+								if (attr in controlH) {
+									selectIgnored.remove(attr);
+								}
+							}
+							selectIgnored.bootstrapDualListbox('refresh');
+						});
+						selectIgnored.change(function () {
+							var ignoredV = selectIgnored.val();
+							for (var i = 0; i < ignoredV.length; i++) {
+								var ignored = ignoredV[i];
+								selectControls.remove('option[value="' + ignored + '"]');
+							}
+							selectControls.bootstrapDualListbox('refresh');
+						});
+						selectControls.bootstrapDualListbox('refresh');
+						selectIgnored.bootstrapDualListbox('refresh');
 						
 						// show the attribute selection
 						$('#form-phase4').show();
@@ -528,6 +569,7 @@ function pingProgress(isRealTime) {
 	
 		var attrs = $('#select-attrs').val();
 		var controlAttrs = $('#select-controls').val();
+		var ignoredAttrs = $('#select-ignored').val();
 		var isRealTime = $('#check-realtime').is(':checked');
 		var clustAlg = $('#select-clust').val();
 		var hierarchyType = $('#select-hierarchy').val();
@@ -540,6 +582,7 @@ function pingProgress(isRealTime) {
 			timeUnit: $('#select-tu').val(),
 			attrs: attrs,
 			controlAttrs: controlAttrs != null ? controlAttrs : [],
+			ignoredAttrs: ignoredAttrs != null ? ignoredAttrs : [],
 			hierarchyType: hierarchyType,
 			isRealTime: isRealTime,
 			name: name,
