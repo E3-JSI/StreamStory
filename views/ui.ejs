@@ -17,109 +17,12 @@
 	</style>
     
     <script type="text/javascript">
-		function postParam(paramName, paramVal) {
-			$.ajax('api/param', {
-				dataType: 'json',
-				data: { paramName: paramName, paramVal: paramVal },
-				method: 'POST',
-				error: function (jqXHR, status) {
-					alert('Failed to set parameter value: ' + status);
-				}
-			});
-		}
-		
-		<% if (useCase == 'mhwirth') { %>
 		<% if (model.isOnline()) { %>
-		function fetchFricConfig() {
-			$.ajax('api/config', {
-				dataType: 'json',
-				method: 'GET',
-				data: { properties: [
-					'calc_coeff',
-					'deviation_extreme_lambda',
-					'deviation_major_lambda',
-					'deviation_minor_lambda',
-					'deviation_significant_lambda'
-				] },
-				success: function (data) {
-					var props = {};
-					for (var i = 0; i < data.length; i++) {
-						props[data[i].property] = data[i].value;
-					}
-					
-					$('#check-calc-coeff').attr('checked', props.calc_coeff == 'true');
-					$('#input-extreme-lambda').val(props.deviation_extreme_lambda);
-					$('#input-major-lambda').val(props.deviation_major_lambda);
-					$('#input-significant-lambda').val(props.deviation_significant_lambda);
-					$('#input-minor-lambda').val(props.deviation_minor_lambda);
-					$('#btn-fric-cancel, #btn-fric-ok').attr('disabled', 'disabled');
-					
-					$('#check-calc-coeff').change();
-				},
-				error: function (jqXHR, status) {
-					alert(status);
-				}
-			});
-		}
+		var PREDICTION_THRESHOLD = <%= predictionThreshold %>;
+		var TIME_HORIZON = <%= timeHorizon %>;
+		var PDF_BINS = <%= pdfBins %>;
+		var IS_MODEL_ACTIVE = <%= modelConfig.is_active == 1; %>;
 		<% } %>
-		
-		function fetchConfig() {
-			<% if (useCase == 'mhwirth' && model.isOnline()) { %>
-			fetchFricConfig();
-			<% } %>
-			
-			$.ajax('api/param', {
-				dataType: 'json',
-				data: { paramName: 'predictionThreshold' },
-				success: function (paramObj) {
-					$('#range-pred-threshold').slider("value", paramObj.value);
-				},
-				error: function (jqXHR, status) {
-					alert(status);
-				}
-			});
-			
-			$.ajax('api/param', {
-				dataType: 'json',
-				data: { paramName: 'timeHorizon' },
-				success: function (paramObj) {
-					$('#range-time-horizon').slider("value", paramObj.value);
-				},
-				error: function (jqXHR, status) {
-					alert(status);
-				}
-			});
-			
-			$.ajax('api/param', {
-				dataType: 'json',
-				data: { paramName: 'pdfBins' },
-				success: function (paramObj) {
-					$('#range-pdf-bins').slider("value", paramObj.value);
-				},
-				error: function (jqXHR, status) {
-					alert(status);
-				}
-			});
-		}
-		<% } %>
-		
-		var ui;
-	
-		$(document).ready(function () {
-			ui = UI();
-			fetchConfig();
-			
-			<% if (model.isOnline()) { %>
-			ui.initWebSockets();
-			<% } %>
-			
-			$.ajax('api/countActiveModels', {
-				dataType: 'json',
-				success: function (data) {
-					$('#span-no-active').html(data.count);
-				}
-			});
-		});
 	</script>
 </head>
 <body>
@@ -147,21 +50,9 @@
 								</div>
 							</div>
 						</div>
-        				<script type="text/javascript">
-	        				$('#lnk-msgs').click(function (event) {
-	       						event.preventDefault();
-	       						$('#content-msgs').slideToggle();
-	       					});
-       					</script>
         			</li>
         			<li>
         				<a id="lnk-config" href="#"><span class="glyphicon glyphicon-cog" aria-hidden="true"></span> Settings</a>
-        				<script type="text/javascript">
-        					$('#lnk-config').click(function (event) {
-        						event.preventDefault();
-        						$('#popup-config').modal({ show: true });
-        					});
-        				</script>
         			</li>
         			<% } %>
         			<% include partials/navmenus %>
@@ -169,6 +60,28 @@
     		</div><!-- /.navbar-collapse -->
   		</div><!-- /.container-fluid -->
 	</nav>
+	
+	<div class="navbar-default sidebar" role="navigation">
+        <div class="sidebar-nav navbar-collapse">
+            <ul class="nav nav-pills nav-stacked">
+                <li>
+                    <a id="a-default" href="#" data-target="#tab-tree, #tab-details" data-toggle="pill">
+                    	<span class="glyphicon glyphicon-search" aria-hidden="true"></span>
+                    	View
+                    </a>
+                </li>
+                <% if (model.isOnline()) { %>
+                <li>
+                    <a id="a-activities" href="#" data-target="#tab-add-activity, #tab-activities" data-toggle="pill">
+                    	<span class="glyphicon glyphicon-facetime-video" aria-hidden="true"></span>
+                    	Activities
+                    </a>
+                </li>
+                <% } %>
+            </ul>
+        </div>
+        <!-- /.sidebar-collapse -->
+    </div>
 	
 	<!-- Configuration popup -->
 	<div id="popup-config" class="modal fade" role="dialog" tabindex="-1">
@@ -196,19 +109,19 @@
   						</div>
 						<div id="div-config-params" class="row">
 							<div class="col-md-12">
-								<label for="range-pred-threshold">Prediciton threshold: <span id="span-pred-threshold"></span></label>
+								<label for="range-pred-threshold">Prediciton threshold: <span id="span-pred-threshold"><%= predictionThreshold %></span></label>
 								<div id="range-pred-threshold"></div>
 							</div>
 						</div>
 						<div id="div-config-params" class="row">
 							<div class="col-md-12">
-								<label for="range-time-horizon">Time horizon: <span id="span-time-horizon"></span></label>
+								<label for="range-time-horizon">Time horizon: <span id="span-time-horizon"><%= timeHorizon %></span></label>
 								<div id="range-time-horizon"></div>
 							</div>
 						</div>
 						<div id="div-config-params" class="row">
 							<div class="col-md-12">
-								<label for="range-pdf-bins">PDF bins: <span id="span-pdf-bins"></span></label>
+								<label for="range-pdf-bins">PDF bins: <span id="span-pdf-bins"><%= pdfBins %></span></label>
 								<div id="range-pdf-bins"></div>
 							</div>
 						</div>
@@ -216,37 +129,26 @@
 						<div>
 							<div class="checkbox">
    								<label>
-     									<input id="check-calc-coeff" type="checkbox" /> Calculate firction
+     								<input id="check-calc-coeff" type="checkbox" <%= config.calc_coeff == 'true' ? 'checked="checked"' : '' %> /> Calculate firction
    								</label>
- 								</div>
- 								<script type="text/javascript">
- 									$('#check-calc-coeff').change(function () {
- 										var isChecked = $(this).is(':checked');
- 										if (isChecked) {
- 											// fetch the configuration from the db
- 											$('#div-configure-coeff').show();
- 										}
- 										else
- 											$('#div-configure-coeff').hide();
- 									});
- 								</script>
+							</div>
 						</div>
-						<div id="div-configure-coeff" style="display: none;">
+						<div id="div-configure-coeff" class="<%= config.calc_coeff == 'true' ? '' : 'hidden' %>">
 							<div class="form-group">
 						    	<label for="input-extreme-lambda">Extreme deviation intensity</label>
-						    	<input id="input-extreme-lambda" type="number" class="form-control" />
+						    	<input id="input-extreme-lambda" type="number" value="<%= config.deviation_extreme_lambda %>" class="form-control" />
 						  	</div>
 						  	<div class="form-group">
 						    	<label for="input-major-lambda">Major deviation intensity</label>
-						    	<input id="input-major-lambda" type="number" class="form-control" />
+						    	<input id="input-major-lambda" type="number" value="<%= config.deviation_major_lambda %>" class="form-control" />
 						  	</div>
 						  	<div class="form-group">
 						    	<label for="input-significant-lambda">Significant deviation intensity</label>
-						    	<input id="input-significant-lambda" type="number" class="form-control" />
+						    	<input id="input-significant-lambda" type="number" value="<%= config.deviation_significant_lambda %>" class="form-control" />
 						  	</div>
 						  	<div class="form-group">
 						    	<label for="input-minor-lambda">Minor deviation intensity</label>
-						    	<input id="input-minor-lambda" type="number" class="form-control" />
+						    	<input id="input-minor-lambda" type="number" value="<%= config.deviation_minor_lambda %>" class="form-control" />
 						  	</div>
 						</div>
 						<% } %>
@@ -255,86 +157,13 @@
   				<div class="modal-footer">
   					<button id="config-cancel" type="button" class="btn btn-default">Cancel</button>
     				<button id="config-done" type="button" class="btn btn-success">Done</button>
-    				<script type="text/javascript">
-			  			$('#config-done').click(function () {
-			  				var predThreshold = $('#range-pred-threshold').slider('value');
-			  				var timeHorizon = $('#range-time-horizon').slider('value');
-			  				var pdfBins = $('#range-pdf-bins').slider('value');
-			  				
-			  				postParam('predictionThreshold', predThreshold);
-			  				postParam('timeHorizon', timeHorizon);
-			  				postParam('pdfBins', pdfBins);
-			  						  			
-			  				$.ajax('api/config', {
-								method: 'POST',
-								data: {
-									calc_coeff: $('#check-calc-coeff').is(':checked'),
-									deviation_extreme_lambda: $('#input-extreme-lambda').val(),
-									deviation_major_lambda: $('#input-major-lambda').val(),
-									deviation_minor_lambda: $('#input-significant-lambda').val(),
-									deviation_significant_lambda: $('#input-minor-lambda').val()
-								},
-								error: function (jqXHR, status) {
-									alert(status);
-								}
-							});
-			  			});
-			  			
-			  			$('#config-cancel').click(function () {
-			  				fetchConfig();
-			  			});
-			  			
-			  			$('#config-cancel, #config-done').click(function () {
-			  				$('#popup-config').modal('hide');
-			  			});
-			  			
-			  			// setup the configuration sliders
-						$('#range-pred-threshold').slider({
-							value: .5,
-							min: 0,
-							max: 1,
-							step: .05,
-							animate: true,
-							change: function (event, ui) {
-								var val = ui.value;
-								$('#span-pred-threshold').html(val);
-							}
-						});
-						
-						$('#range-time-horizon').slider({
-							value: 10,
-							min: 0,
-							max: 100,
-							step: .1,
-							animate: true,
-							change: function (event, ui) {
-								var val = ui.value;
-								$('#span-time-horizon').html(val + ' ' + getTimeUnit() + 's');
-							}
-						});
-						
-						$('#range-pdf-bins').slider({
-							value: 100,
-							min: 100,
-							max: 10000,
-							step: 10,
-							animate: true,
-							change: function (event, ui) {
-								var val = ui.value;
-								$('#span-pdf-bins').html(val);
-							}
-						});
-    				</script>
   				</div>
 			</div>
 		</div>
-		<script type="text/javascript">
-			$('#popup-config').modal({ show: false });
-		</script>
 	</div>
 	
 	<!-- Central components -->
-	<div class="container-fluid" style="margin-top: 20px;">
+	<div id="page-wrapper" class="container-fluid" style="padding-top: 30px;">
 		<div class="row">
 			<div class="col-md-8">
 				<div id="parent_container" class="panel panel-default main-vis">
@@ -344,12 +173,9 @@
 						<button id="vis-toggler" class="btn btn-default btn-xs pull-right" aria-label="Left Align">
 						  	<span class="glyphicon glyphicon-align-justify" aria-hidden="true"></span>
 						</button>
-						<button id="btn-activity-conf" class="btn btn-default btn-xs pull-right" aria-label="Left Align">
-						  	<span class="glyphicon glyphicon-facetime-video" aria-hidden="true"></span>
-						</button>
 						<span class="pull-right component-title-additional">
 							<% if (model.isOnline()) { %>
-							<span id="span-no-active"></span> online models,
+							<span id="span-no-active"><%= activeModelCount %></span> online models,
 							<% } %> 
 							time unit:&nbsp;<span id="span-tu"><%= model.getModel().getTimeUnit() %></span>&nbsp;&nbsp;&nbsp;
 						</span>
@@ -404,7 +230,7 @@
 															change: function (event, ui) {
 																var shouldFire = $('#chk-sim-inputs').is(':checked');
 																if (shouldFire) {
-																	var val = $(this).slider('value');//ui.value;
+																	var val = $(this).slider('value');
 																	var ftrId = $(this).attr('id');
 																	changeControlVal(null, ftrId, val);
 																}
@@ -435,51 +261,8 @@
 											<div class="form-group">
 												<% if (model.isOnline()) { %>
 												<input type="button" id="btn-activate" value="Activate Model" class="btn btn-success btn-block hidden" />
-												<script type="text/javascript">
-													{
-														var isActive = false;
-														
-														$.ajax('api/modelMode', {
-															dataType: 'json',
-															success: function (data) {
-																if (!data.isRealtime)
-																	return;
-																	
-																isActive = data.isActive;
-																var btn = $('#btn-activate');
-																
-																btn.removeClass('hidden');
-																if (isActive) {
-																	btn.val('Deactivate Model');
-																	btn.removeClass('btn-success');
-																	btn.addClass('btn-danger');
-																} else {
-																	btn.val('Activate Model');
-																	btn.removeClass('btn-danger');
-																	btn.addClass('btn-success');
-																}
-															},
-															error: function (jqXHR, status) {
-																alert(status);
-															}
-														});
-														$('#btn-activate').click(function () {
-															$.ajax('api/activateModelViz', {
-																dataType: 'json',
-																method: 'POST',
-																data: { activate: !isActive },
-																success: function () {
-																	window.location.reload();
-																},
-																error: function (jqXHR, status) {
-																	alert(status);
-																}
-															});
-														});
-													}
-												</script>
 												<% } %>
-												<input type="button" id="btn-reset-sim" value="Reset Simulation" class="btn btn-block btn-default hidden" style="margin-top: 5px;" />
+												<input type="button" id="btn-reset-sim" value="Reset Simulation" class="btn btn-block btn-default<%= model.getModel().isAnyControlFtrSet() ? ' hidden' : ' ' %>" style="margin-top: 5px;" />
 												<input type="button" id="btn-layout" value="Auto Layout" class="btn btn-default btn-block" />
 												<input type="button" id="btn-png" value="Save as PNG" class="btn btn-default btn-block" />
 												<input type="button" id="btn-save" value="Save Model" class="btn btn-primary btn-block" />
@@ -501,79 +284,111 @@
 
 			</div>
 			<div class="col-md-4">
-				<div id="container-details" class="panel panel-default main-vis">
-					<div class="panel-heading">Details</div>
-					<div id="div-details" class="panel-body nopadding scrollable">
-						<div id="wrapper-state-details" class="container-fluid" style="display: none;">
-							<div class="row">
-								<div id="div-ftrs" class="col-md-12">
-									<div class="form-group">
-										<label for="txt-name">State name</label>
-										<input id="txt-name" type="text" class="form-control" />
-									</div>
-									<div class="form-group">
-										<label for="txt-state-description">Description</label>
-										<textarea id="txt-state-description" class="form-control" rows="3"></textarea>
-									</div>
-									<% if (model.isOnline()) { %>
-									<div class="form-group">
-										<div class="checkbox">
-									    	<label>
-									      		<input id="chk-target" type="checkbox" /> Is undesired event
-									    	</label>
-									  	</div>
-									  	<div id="div-event-id" class="hidden">
-									  		<label for="txt-event-id">Event id (used for recommendations)</label>
-									  		<input id="txt-event-id" type="text" class="form-control" />
-									  	</div>
-								  	</div>
-								  	<% } %>
-								  	<div id="alert-wrapper-save-state" class="form-group"></div>
-								  	<div id="div-button-save-state" class="form-group" class="hidden">
-										<input id="btn-button-save-state" type="button" class="btn btn-success" value="Save" />
-									</div>
-								</div>
-							</div>
-							<div class="row">
-								<div id="div-ftrs" class="col-md-12">
-									<h3>Attributes</h3>
+				<div class="tab-content">
+					<div id="tab-details" role="tabpanel" class="tab-pane fade active">
+						<div id="container-details" class="panel panel-default main-vis">
+							<div class="panel-heading">Details</div>
+							<div id="div-details" class="panel-body nopadding scrollable">
+								<div id="wrapper-state-details" class="container-fluid" style="display: none;">
 									<div class="row">
-										<div id="div-attrs" class="col-md-12"></div>
+										<div id="div-ftrs" class="col-md-12">
+											<div class="form-group">
+												<label for="txt-name">State name</label>
+												<input id="txt-name" type="text" class="form-control" />
+											</div>
+											<div class="form-group">
+												<label for="txt-state-description">Description</label>
+												<textarea id="txt-state-description" class="form-control" rows="3"></textarea>
+											</div>
+											<% if (model.isOnline()) { %>
+											<div class="form-group">
+												<div class="checkbox">
+											    	<label>
+											      		<input id="chk-target" type="checkbox" /> Is undesired event
+											    	</label>
+											  	</div>
+											  	<div id="div-event-id" class="hidden">
+											  		<label for="txt-event-id">Event id (used for recommendations)</label>
+											  		<input id="txt-event-id" type="text" class="form-control" />
+											  	</div>
+										  	</div>
+										  	<% } %>
+										  	<div id="alert-wrapper-save-state" class="form-group"></div>
+										  	<div id="div-button-save-state" class="form-group" class="hidden">
+												<input id="btn-button-save-state" type="button" class="btn btn-success" value="Save" />
+											</div>
+										</div>
+									</div>
+									<div class="row">
+										<div id="div-ftrs" class="col-md-12">
+											<h3>Attributes</h3>
+											<div class="row">
+												<div id="div-attrs" class="col-md-12"></div>
+											</div>
+										</div>
 									</div>
 								</div>
-							</div>
-						</div>
-						<div id="wrapper-transition-details" class="container-fluid" style="display: none;">
-							<div class="row">
-								<div id="div-ftrs" class="col-md-12">
-									<h3>Transition from state <span id="span-trans-source"></span> to state <span id="span-trans-target"></span></h3>
+								<div id="wrapper-transition-details" class="container-fluid" style="display: none;">
+									<div class="row">
+										<div id="div-ftrs" class="col-md-12">
+											<h3>Transition from state <span id="span-trans-source"></span> to state <span id="span-trans-target"></span></h3>
+										</div>
+									</div>
+									<div class="row">
+										<div class="col-md-12">
+											<h3>Attributes</h3>
+											<div id="div-trans-ftrs" class="col-md-12"></div>
+										</div>
+									</div>
 								</div>
-							</div>
-							<div class="row">
-								<div class="col-md-12">
-									<h3>Attributes</h3>
-									<div id="div-trans-ftrs" class="col-md-12"></div>
-								</div>
-							</div>
-						</div>
-						<!-- thumbnail with the histograms for attributes -->
-						<div id="div-thumbnail" style="display: none;">
-							<div class="col-md-6 thumb-col">
-								<div class="thumbnail">
-									<div class="container-hist img-thumbnail" style="width: 100%;"></div>
-							      	<div class="caption">
-							        	<h6 class="attr-name" style="word-wrap: break-word;"></h6>
-							        	<p>
-							        		<span class="attr-val"></span>
-						        			<span class="div-ftr-range" style="display: none;">
-									        	<div class="range-contr-val"></div>
-									      	</span>
-						        		</p>
-							      	</div>
+								<!-- thumbnail with the histograms for attributes -->
+								<div id="div-thumbnail" style="display: none;">
+									<div class="col-md-6 thumb-col">
+										<div class="thumbnail">
+											<div class="container-hist img-thumbnail" style="width: 100%;"></div>
+									      	<div class="caption">
+									        	<h6 class="attr-name" style="word-wrap: break-word;"></h6>
+									        	<p>
+									        		<span class="attr-val"></span>
+								        			<span class="div-ftr-range" style="display: none;">
+											        	<div class="range-contr-val"></div>
+											      	</span>
+								        		</p>
+									      	</div>
+									    </div>
+								    </div>
 							    </div>
-						    </div>
-					    </div>
+							</div>
+						</div>
 					</div>
+					<% if (model.isOnline()) { %>
+					<div id="tab-activities" role="tabpanel" class="tab-pane fade active">
+						<div id="container-activities" class="panel panel-default main-vis">
+							<div class="panel-heading">Manage Activities</div>
+							<div id="div-activities" class="panel-body nopadding scrollable">
+								<div class="table-responsive">
+									<table id="table-activities" class="table table-striped table-hover table-models">
+										<thead>
+										</thead>
+										<tbody>
+											<% var activities = model.getModel().getActivities(); %>
+											<% for (var i = 0; i < activities.length; i++) { %>
+											<tr>
+												<td class="td-name"><%= activities[i].name %> (<%= activities[i].steps %>)</td>
+												<td class="td-btns">
+													<span class="pull-right span-btns">
+														<button class="btn btn-danger btn-xs btn-remove" aria-label="Left Align"><span class="glyphicon glyphicon-remove"></span> Remove</button>
+													</span>
+												</td>
+											</tr>
+											<% } %>	
+										</tbody>
+									</table>
+								</div>
+							</div>
+						</div>
+					</div>
+					<% } %>
 				</div>
 			</div>
 		</div>
@@ -591,35 +406,40 @@
 		<% } %>
 		<div class="row">
 			<div class="col-md-8">
-				<div id="div-tree-wrapper" class="container-bottom">
-					<div id="div-tree-container" style="height: 100%;width: 100%;" class="nopadding"></div>
-				</div>
-				<div id="div-activity-wrapper" class="panel panel-default container-bottom hidden">
-					<div class="panel-heading">Configure Activity</div>
-					<div id="div-activity-conf" class="panel-body scrollable">
-						<div id="div-activity-currconf" class="row">
-							<div id="div-curr-activity-step" class="col-xs-4 col-md-2 step-wrapper">
-								<span class="thumbnail">
-									<ul></ul>
-								</span>
-							</div>
+				<div class="tab-content">
+					<div id="tab-tree" role="tabpanel" class="tab-pane fade active">
+						<div id="div-tree-wrapper" class="container-bottom">
+							<div id="div-tree-container" style="height: 100%;width: 100%;" class="nopadding"></div>
 						</div>
-						<div class="row">
-							<div class="col-md-4">
-								<div class="form-group">
-									<label for="txt-activity-name">Name</label>
-									<input id="txt-activity-name" type="text" class="form-control" />
-							  	</div>
-							  	<div id="alert-wrapper-activity" class="form-group"></div>
-								<div class="form-group">
-									<button id="btn-activity-add-step" type="button" class="btn btn-info">Add Step</button>
-									<button id="btn-activity-add-state" type="button" class="btn btn-primary">Add State</button>
-							  		<button id="btn-activity-add-state-cancel" type="button" class="btn btn-default hidden">Cancel</button>
-							  		<button id="btn-activity-save" type="button" class="btn btn-success">Save</button>
-							  	</div>
+					</div>
+					<% if (model.isOnline()) { %>
+					<div id="tab-add-activity" role="tabpanel" class="tab-pane fade active">
+						<div id="div-activity-wrapper" class="panel panel-default container-bottom">
+							<div class="panel-heading">Configure Activity</div>
+							<div id="div-activity-conf" class="panel-body scrollable">
+								<div id="div-activity-currconf" class="row">
+									<div id="div-curr-activity-step" class="col-xs-4 col-md-2 step-wrapper">
+										<span class="thumbnail" style="overflow-y: auto;"></span>
+									</div>
+								</div>
+								<div class="row">
+									<div class="col-md-4">
+										<div class="form-group">
+											<label for="txt-activity-name">Name</label>
+											<input id="txt-activity-name" type="text" class="form-control" />
+									  	</div>
+									  	<div id="alert-wrapper-activity" class="form-group"></div>
+										<div class="form-group">
+											<button id="btn-activity-add-step" type="button" class="btn btn-info">Add Step</button>
+									  		<button id="btn-activity-cancel" type="button" class="btn btn-default">Cancel</button>
+									  		<button id="btn-activity-save" type="button" class="btn btn-success">Save</button>
+									  	</div>
+									</div>
+								</div>
 							</div>
 						</div>
 					</div>
+					<% } %>
 				</div>
 			</div>
 			<div class="col-md-4">
@@ -629,10 +449,6 @@
 				<div class="row">
 					<div id="div-msg-1-wrapper" class="col-md-12"></div>
 				</div>
-				<script type="text/javascript">
-					$('#div-msg-0, #div-msg-1').alert();
-					//$('#div-msg-0, #div-msg-1').alert('close');
-				</script>
 			</div>
 		</div>
 	</div>
@@ -654,5 +470,6 @@
 	<script type="text/javascript" src="js/utils.js"></script>
 	<script type="text/javascript" src="js/ui.js"></script>
 	
+	<% include partials/confirm %>
 	<% include partials/alert %>
 </body>

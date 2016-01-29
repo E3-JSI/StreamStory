@@ -225,8 +225,9 @@ var zoomVis = function (opts) {
 		edgeSelected: function (sourceId, targetId) {},
 		zoomChanged: function (zoom) {},
 		heightChanged: function (height) {},
-		onZoomIntoState: function (stateId) {},
-		onShowPath: function (stateId, height) {}
+//		onZoomIntoState: function (stateId) {},
+//		onShowPath: function (stateId, height) {},
+		onStateCtxMenu: function () {}
 	}
 	
 	var maxNodeSize = 0;
@@ -1284,36 +1285,11 @@ var zoomVis = function (opts) {
 				selector: 'node',
 				commands: function (node) {					
 					// check if the node is on the bottom level
+					var id = getServerNodeId(node.id());
 					var label = node.data().style.label;
 					var level = parseInt(label.split('\.')[0]);
 					
-					if (level > 1) {
-						return [
-							{
-								content: 'Zoom Into',
-								select: function (node) {
-									callbacks.onZoomIntoState(getServerNodeId(node.id()));
-								}
-							},
-							{
-								content: 'Show Path',
-								select: function (node) {
-									var id = getServerNodeId(node.id());
-									callbacks.onShowPath(id, currentHeight);
-								}
-							}
-						]
-					} else {
-						return [
-						    {
-								content: 'Show Path',
-								select: function (node) {
-									var id = getServerNodeId(node.id());
-									callbacks.onShowPath(id, currentHeight);
-								}
-							}  
-						]
-					}
+					return callbacks.onStateCtxMenu(id, label, level, currentHeight);
 				}
 			});
 			
@@ -1703,12 +1679,16 @@ var zoomVis = function (opts) {
 			callbacks.heightChanged = callback;
 		},
 		
-		onZoomIntoState: function (callback) {
-			callbacks.onZoomIntoState = callback;
-		},
+//		onZoomIntoState: function (callback) {
+//			callbacks.onZoomIntoState = callback;
+//		},
+//		
+//		onShowPath: function (callback) {
+//			callbacks.onShowPath = callback;
+//		},
 		
-		onShowPath: function (callback) {
-			callbacks.onShowPath = callback;
+		onStateCtxMenu: function (callback) {
+			callbacks.onStateCtxMenu = callback;
 		}
 	}
 	

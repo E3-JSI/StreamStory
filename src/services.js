@@ -1100,6 +1100,34 @@ function initStreamStoryRestApi() {
 			}
 		});
 		
+		app.post(API_PATH + '/removeActivity', function (req, res) {			
+			try {
+				var session = req.session;
+				var model = getModel(req.sessionID, session);
+				var name = req.body.name;
+				
+				if (log.debug())
+					log.debug('Removing activity %s for model %d ...', name, model.getId());
+				
+				if (name == null || name == '') {
+					handleBadInput(res, 'Activity name missing!');
+					return;
+				}
+				
+				model.getModel().removeActivity(name);
+				var fname = getModelFile(session);
+				if (log.debug())
+					log.debug('Saving model to file: %s', fname);
+				model.save(fname);
+				
+				res.status(204);	// no content
+				res.end();
+			} catch (e) {
+				log.error(e, 'Failed to set activity!');
+				handleServerError(e, req, res);
+			}
+		});
+		
 		app.get(API_PATH + '/targetProperties', function (req, res) {
 			try {
 				var stateId = parseInt(req.query.stateId);
@@ -1781,7 +1809,7 @@ function initServerApi() {
 	}
 	
 	{
-		log.info('Registering count active models service ...');
+		log.info('Registering count active models service ...');	// TODO remove after doing it with EJS
 		app.get(API_PATH + '/countActiveModels', function (req, res) {
 			log.debug('Fetching the number of active models from the DB ...');
 			
@@ -2426,12 +2454,45 @@ function prepDashboard() {
 	}
 }
 
+function addUseCaseOpts(opts, callback) {
+	if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
+		var properties = [
+			'calc_coeff',
+			'deviation_extreme_lambda',
+			'deviation_major_lambda',
+			'deviation_minor_lambda',
+			'deviation_significant_lambda'
+		];
+		
+		db.getMultipleConfig({properties: properties}, function (e, result) {
+   			if (e != null) {
+   				log.error(e, 'Failed to fetch properties from DB!');
+   				callback(e);
+   				return;
+   			}
+   			
+   			var props = {};
+			for (var i = 0; i < result.length; i++) {
+				props[result[i].property] = result[i].value;
+			}
+			
+			opts.config = props;
+			
+			callback(undefined, opts);
+   		});
+	} else {
+		callback(undefined, opts);
+	}
+}
+
 function prepMainUi() {
 	return function (req, res) {
 		var opts = getPageOpts(req, res);
 		var session = req.session;
 		
-		db.fetchModel(session.model.getId(), function (e, modelConfig) {
+		var model = session.model;
+		
+		db.fetchModel(model.getId(), function (e, modelConfig) {
 			if (e != null) {
 				log.error(e, 'Failed to fetch model configuration from the DB!');
 				handleServerError(e, req, res);
@@ -2439,7 +2500,33 @@ function prepMainUi() {
 			}
 			
 			opts.modelConfig = modelConfig;
-			res.render('ui', opts);
+			
+			addUseCaseOpts(opts, function (e, opts) {
+				if (e != null) {
+					log.error(e, 'Failed to fetch model configuration from the DB!');
+					handleServerError(e, req, res);
+					return;
+				}
+				
+				if (model.isOnline()) {
+					opts.predictionThreshold = model.getModel().getParam('predictionThreshold');
+					opts.timeHorizon = model.getModel().getParam('timeHorizon');
+					opts.pdfBins = model.getModel().getParam('pdfBins');
+										
+					db.countActiveModels(function (e1, result) {
+						if (e1 != null) {
+							log.error(e1, 'Failed to count the number of active models!');
+							handleServerError(e, req, res);
+							return;
+						}
+						
+						opts.activeModelCount = result.count;
+						res.render('ui', opts);
+					});
+				} else {
+					res.render('ui', opts);
+				}
+			});
 		});
 	}
 }

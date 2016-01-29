@@ -1,7 +1,7 @@
 {
 	"qminer": {
 		"path": "../qminer/",
-		"mode": "openReadOnly",
+		"mode": "createClean",
 		"createPipeline": true,
 		"initializeZeros": false
 	},
@@ -39,7 +39,7 @@
 		"producerPort": 8090
 	},
 	"useCase": "mhwirth",
-	"resampleInterval": 10000,
+	"resampleInterval": 1000,
 	"interpolation": "current",
 	"dataPath": "/mnt/raidM2T/project-data/StreamStory/StreamStory-import/"
 }
