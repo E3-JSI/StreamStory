@@ -264,10 +264,18 @@ function initStreamStoryHandlers(model, enable) {
 	
 	if (enable) {
 		log.info('Registering state changed callback ...');
-		model.onStateChanged(function (states) {
+		model.onStateChanged(function (date, states) {
 			if (log.debug())
 				log.debug('State changed: %s', JSON.stringify(states));
-					
+			
+//			//=================================================
+			// TODO remove this
+			utils.appendLine('states.txt', JSON.stringify({
+				time: date.getTime(),
+				states: states
+			}));
+//			//=================================================
+			
 			modelStore.sendMsg(model.getId(), JSON.stringify({
 				type: 'stateChanged',
 				content: states
@@ -385,14 +393,8 @@ function initStreamStoryHandlers(model, enable) {
 			
 			modelStore.sendMsg(model.getId(), JSON.stringify(uiMsg));
 			
-			try {
-				var fd = fs.openSync('activities.csv', 'a');
-				fs.writeSync(fd, '\n' + startTm.getTime() + ',' + endTm.getTime() + ',"' + activityName.replace(/\"/g, '\\"') + '"');
-				fs.closeSync(fd);
-				log.debug('Activity written!');
-			} catch (e) {
-				log.error(e, 'Exception while writing activity to file!');
-			}
+			// TODO remove this
+			utils.appendLine('activities.csv',  startTm.getTime() + ',' + endTm.getTime() + ',"' + activityName.replace(/\"/g, '\\"') + '"');
 		});
 	} else {
 		log.debug('Removing StreamStory handlers for model %s ...', model.getId());

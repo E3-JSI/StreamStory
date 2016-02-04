@@ -23,22 +23,12 @@ var opts = {
 	onValue: null
 };
 
-var aggregateConfigs = {
-	'hl > Threshold': {
-		tick: {
-			name: 'HlThresholdTick',
-			type: 'timeSeriesTick',
-			timestamp: 'time',
-			value: 'hook_load'
-		},
-		aggr: {
-			name: 'hookLoadThreshold',
-	    	type: 'threshold',
-	    	inAggr: 'HlThresholdTick',
-	    	threshold: 60
-		}
-	}
-};
+// initialize stream aggregates
+//var raw = fields.getRawStores();
+//for (var i = 0; i < raw.length; i++) {
+//	
+//}
+
 
 var aggregates = {};
 
@@ -100,7 +90,8 @@ function initStreamAggregates() {
 		base.store(name).push(val);
 	}
 	
-	log.info('Initializing stream aggregates ...');	
+	log.info('Initializing stream aggregates ...');
+	var aggregateConfigs = fields.getStreamAggregates();
 	for (var aggrNm in aggregateConfigs) {
 		if (log.info())
 			log.info('Initializing aggregate: %s', aggrNm);

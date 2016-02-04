@@ -225,8 +225,6 @@ var zoomVis = function (opts) {
 		edgeSelected: function (sourceId, targetId) {},
 		zoomChanged: function (zoom) {},
 		heightChanged: function (height) {},
-//		onZoomIntoState: function (stateId) {},
-//		onShowPath: function (stateId, height) {},
 		onStateCtxMenu: function () {}
 	}
 	

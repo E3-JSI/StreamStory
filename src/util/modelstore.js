@@ -82,7 +82,7 @@ module.exports = exports = function (opts) {
 				field: fieldNm,
 				source: storeNm,
 				type: 'numeric',
-				normalize: true
+				normalize: 'var'
 			});
 			usedFields[fieldNm] = true;
 		}
@@ -425,6 +425,10 @@ module.exports = exports = function (opts) {
 						
 						if (++lineN % 10000 == 0 && log.debug()) {
 							log.debug('Read %d lines ...', lineN);
+//							updateProgress(username, false, 20, 'Read ' + lineN + ' lines ...');
+						}
+						
+						if (lineN % 1000 == 0) {
 							updateProgress(username, false, 20, 'Read ' + lineN + ' lines ...');
 						}
 						

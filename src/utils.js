@@ -157,6 +157,17 @@ module.exports = {
 		}
 	},
 	
+	appendLine: function (fname, line) {
+		try {
+			var fd = fs.openSync(fname, 'a');
+			fs.writeSync(fd, line + '\n');
+			fs.closeSync(fd);
+			log.debug('Appended to file!');
+		} catch (e) {
+			log.error(e, 'Failed to append to file %s', fname);
+		}
+	},
+	
 	clone: function (obj) {
 		return JSON.parse(JSON.stringify(obj));
 	},

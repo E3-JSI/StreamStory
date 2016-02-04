@@ -252,6 +252,62 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 	 	]
 	};
 	
+	var aggregateConfigs = {
+		'hl > Threshold': {
+			tick: {
+				name: 'HlThresholdTick',
+				type: 'timeSeriesTick',
+				timestamp: 'time',
+				value: 'hook_load'
+			},
+			aggr: {
+				name: 'hookLoadThreshold',
+		    	type: 'threshold',
+		    	inAggr: 'HlThresholdTick',
+		    	threshold: 12
+			}
+		},
+		'RAM pos > Threshold': {
+			tick: {
+				name: 'RamPosThresholdTick',
+				type: 'timeSeriesTick',
+				timestamp: 'time',
+				value: 'ram_pos_setpoint'
+			},
+			aggr: {
+				name: 'ramPosThreshold',
+		    	type: 'threshold',
+		    	inAggr: 'RamPosThresholdTick',
+		    	threshold: 2e4
+			}
+		}
+	};
+	
+	for (var i = 0; i < rawStores.length; i++) {
+		var storeConf = rawStores[i];
+		
+		var storeNm = storeConf.name;
+		var aggrNm = storeNm + ' (EMA)';
+		var tickNm = 'emaTick-' + i;
+		
+		aggregateConfigs[aggrNm] = {
+			tick: {
+				name: tickNm,
+				type: 'timeSeriesTick',
+				timestamp: 'time',
+				value: storeNm
+			},
+			aggr: {
+				name: 'ema-' + i,
+				type: 'ema',
+				emaType: 'linear',
+				inAggr: tickNm,
+				interval: 1000*60*10,
+				initWindow: 1000*60*9
+			}
+		};
+	}
+	
 	var onlineAnalyticsStores = {
 		fields: realTimeStores.fields.slice()
 	}
@@ -259,8 +315,11 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 	// friction coefficients
 	onlineAnalyticsStores.fields.push({name: "coeff_swivel", type: "float", "null": true});
 	onlineAnalyticsStores.fields.push({name: "coeff_gearbox", type: "float", "null": true});
-	onlineAnalyticsStores.fields.push({name: "hl > Threshold", type: "float", "null": true});
-	 		
+	
+	for (var aggrNm in aggregateConfigs) {
+		onlineAnalyticsStores.fields.push({name: aggrNm, type: 'float', 'null': true});
+	}
+	
 	var streamStoryIgnoreFields = {}
 	
 	//==============================================================
@@ -269,6 +328,10 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 	
 	exports.getRawStores = function () {
 		return rawStores;
+	}
+	
+	exports.getStreamAggregates = function () {
+		return aggregateConfigs;
 	}
 	
 	exports.getInitZeroFields = function () {

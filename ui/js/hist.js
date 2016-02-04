@@ -1,4 +1,4 @@
-var SERIES_COLORS = ['#5bc0de', '#555555', '#ED561B', '#DDDF00', '#24CBE5', '#64E572', 
+var SERIES_COLORS = ['#5bc0de', '#ED561B', '#555555', '#DDDF00', '#24CBE5', '#64E572', 
 	             '#FF9655', '#FFF263', '#6AF9C4'];
 
 $(document).ready(function () {
@@ -37,6 +37,12 @@ $(document).ready(function () {
 });
 
 function drawHistogram(opts) {
+	var HISTOGRAM_COLOR = SERIES_COLORS[0];
+	var PREV_STATE_COLOR = SERIES_COLORS[1];
+	var BACKGROUND_COLOR = SERIES_COLORS[2];
+	
+	var PROB_THRESHOLD = .05;
+	
 	var data = opts.data;
 	
 	var totalProb = data.probSum;
@@ -47,18 +53,47 @@ function drawHistogram(opts) {
 	var pointInterval = (max - min) / data.binStartV.length;
 	var start = min - pointInterval / 2;
 	
+	var probTransformFact = 1;
+	var targetTransformFact = 1;
+	
+	if (totalProb < PROB_THRESHOLD) {
+		probTransformFact = PROB_THRESHOLD / totalProb;
+		
+		for (var i = 0; i < data.probV.length; i++) {
+			data.probV[i] *= probTransformFact;
+		}
+	}
+	
 	var series = [{
         data: data.probV,
+        color: HISTOGRAM_COLOR,
         pointStart: start,
         cursor: 'pointer',
         pointInterval: pointInterval
     }];
 	
+	if (data.targetProbV != null) {
+		if (data.targetProbSum < PROB_THRESHOLD) {
+			targetTransformFact = PROB_THRESHOLD / data.targetProbSum;
+			for (var i = 0; i < data.targetProbV.length; i++) {
+				data.targetProbV *= targetTransformFact;
+			}
+		}
+		
+		series[0].color = PREV_STATE_COLOR;
+		series.push({
+	        data: data.targetProbV,
+	        color: HISTOGRAM_COLOR,
+	        pointStart: start,
+	        cursor: 'pointer',
+	        pointInterval: pointInterval
+	    });
+	}
+	
 	if (data.allProbV != null) {
-		series[0].color = SERIES_COLORS[0];
 		series.unshift({
 	        data: data.allProbV,
-	        color: SERIES_COLORS[1],
+	        color: BACKGROUND_COLOR,
 	        pointStart: start,
 	        showInLegend: false,
 	        animation: false,
@@ -98,9 +133,16 @@ function drawHistogram(opts) {
 	    },
 	    tooltip: {
 	    	formatter: function (data) {
-	    		var idx = this.point.index;
-	    		var y = series.length == 1 || this.series._i == 1 ? this.y : series[1].data[idx];
-	    		return 'x: ' + toUiPrecision(this.x) + ', y: ' + toUiPrecision(100*y / totalProb) + '%';
+	    		var seriesN = this.series._i;
+	    		
+	    		var y;
+	    		if (seriesN == 1) {
+	    			y = toUiPrecision(100*(this.y / probTransformFact) / totalProb);
+	    		} else if (seriesN == 2) {
+	    			y = toUiPrecision(100*(this.y / targetTransformFact) / data.targetProbSum);
+	    		}
+	    			    		
+	    		return 'x: ' + toUiPrecision(this.x) + ', y: ' + y + '%';
 	    	}
 	    },
 	    plotOptions: {

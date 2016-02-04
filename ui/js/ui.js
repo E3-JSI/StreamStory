@@ -19,6 +19,28 @@ function changeControlVal(stateId, ftrIdx, val) {
 	var ui;
 	var viz;
 	var act;
+	
+	//=======================================================
+	// SHARED
+	//=======================================================
+	
+	function getFeatureInfo() {
+		var result = [];
+		
+		var ul = $('#ul-ftrs-obs');
+		
+		$.each(ul.find('li'), function (i, li) {
+			var name = $(li).text().substring(1);
+			var id = $(li).find('input').val();
+			
+			result.push({
+				name: name,
+				id: parseInt(id)
+			});
+		});
+		
+		return result;
+	}
 
 	//=======================================================
 	// WEB SOCKETS
@@ -270,9 +292,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 	//=======================================================
 	
 	(function () {
-		UI = function (opts) {
-			var featureInfo = null;
-			
+		UI = function (opts) {			
 			function privateFetchHistogram(opts) {
 				var container = opts.insertDiv != null ? opts.insertDiv : 'hist-wrapper';
 				
@@ -866,6 +886,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 							'text-valign': 'bottom',
 							'text-halign': 'center',
 							'text-wrap': 'wrap',
+							'color': '#F0F0F0',
 							'background-color': 'rgb(124, 181, 236)',
 							'border-width': 5,
 							'font-size': 40,
@@ -1178,12 +1199,16 @@ function changeControlVal(stateId, ftrIdx, val) {
 			$('#span-trans-source').html(sourceId);
 			$('#span-trans-target').html(targetId);
 			
-			for (var ftrId = 0; ftrId < featureInfo.length; ftrId++) {
-				var ftr = featureInfo[ftrId];
+			var ftrV = getFeatureInfo();
+			
+			for (var ftrN = 0; ftrN < ftrV.length; ftrN++) {
+				var ftr = ftrV[ftrN];
+				var ftrId = ftr.id;
+				var ftrNm = ftr.name;
 				var containerId = 'container-transition-hist-' + ftrId;
 				
 				$('#div-trans-ftrs').append(ui.createThumbnail({
-					name: ftr.name,
+					name: ftrNm,
 					value: null,
 					valueColor: null,
 					histogramContainer: containerId
@@ -1237,7 +1262,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 			    {
 					content: 'Show Path',
 					select: function (node) {
-						onShowPath(id, height);
+						showPath(id, height);
 					}
 				}          
 			];
