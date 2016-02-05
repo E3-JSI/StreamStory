@@ -355,7 +355,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 					var valField = thumbnail.find('.attr-val');
 					
 					thumbnail.find('.attr-name').html(opts.name);
-					thumbnail.find('.container-hist').attr('id', opts.histogramContainer);
+					thumbnail.find('.container-chart').attr('id', opts.histogramContainer);
 					
 					if (opts.value != null)
 						valField.html(opts.value.toPrecision(3));
@@ -1063,7 +1063,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 					
 					// fetch histograms
 					$.each(data.features.observations, function (idx, val) {
-						var histContainerId = 'container-hist-' + idx;
+						var histContainerId = 'container-chart-' + idx;
 						var ftrId = idx;
 						
 						var color;
@@ -1088,7 +1088,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 						var ftrVal = val.value;
 						var bounds = val.bounds;
 						var ftrId = nObsFtrs + idx;
-						var histContainerId = 'container-hist-' + (nObsFtrs + idx);
+						var histContainerId = 'container-chart-' + (nObsFtrs + idx);
 						
 						var color;
 						if (ftrWgts[ftrId] > 0)
@@ -1110,7 +1110,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 						
 						$('#div-attrs').append(thumbnail);
 						
-						ui.fetchHistogram(stateId, nObsFtrs + idx, false, 'container-hist-' + (nObsFtrs + idx), false);
+						ui.fetchHistogram(stateId, nObsFtrs + idx, false, 'container-chart-' + (nObsFtrs + idx), false);
 					});
 					
 					var nContrFtrs = data.features.controls.length;
@@ -1120,7 +1120,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 						var ftrVal = val.value;
 						var bounds = val.bounds;
 						var ftrId = nObsFtrs + nContrFtrs + idx;
-						var histContainerId = 'container-hist-' + ftrId;
+						var histContainerId = 'container-chart-' + ftrId;
 						
 						var color;
 						if (ftrWgts[ftrId] > 0)
@@ -1137,7 +1137,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 						
 						$('#div-attrs').append(thumbnail);
 						
-						ui.fetchHistogram(stateId, ftrId, false, 'container-hist-' + ftrId, false);
+						ui.fetchHistogram(stateId, ftrId, false, 'container-chart-' + ftrId, false);
 					});
 										
 					// add handlers

@@ -67,11 +67,51 @@ html, body {
 }
 
 /*===============================================================
- 	DETAILS PANEL
+ 	CHARTS
 ===============================================================*/
 
-.container-hist {
+.container-chart {
 	height: 150px;
+}
+
+.container-chart .bar-foreground {
+  	fill: #5bc0de;
+}
+
+.container-chart .bar-background {
+  	fill: #555555;
+}
+
+.container-chart .bar-overlap {
+  	fill: #83A3A9;
+}
+
+.container-chart .bar-previous {
+  	fill: #ED561B;
+}
+
+.bar-foreground:hover {
+  	fill: 'white' !important;
+}
+
+.container-chart .bar-foreground, .container-chart .bar-background, .container-chart .bar-previous {
+	opacity: 0.6;
+}
+
+.container-chart text {
+  	fill: white;
+  	font: 10px sans-serif;
+  	text-anchor: end;
+}
+
+.axis line {
+	fill: none;
+	stroke: #000;
+	shape-rendering: crispEdges;
+}
+
+.x.axis path, .y.axis path {
+	display: none;
 }
 
 /*===============================================================
