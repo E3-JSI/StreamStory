@@ -264,7 +264,7 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 				name: 'hookLoadThreshold',
 		    	type: 'threshold',
 		    	inAggr: 'HlThresholdTick',
-		    	threshold: 12
+		    	threshold: 9
 			}
 		},
 		'RAM pos > Threshold': {
