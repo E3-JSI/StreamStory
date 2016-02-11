@@ -264,7 +264,7 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 				name: 'hookLoadThreshold',
 		    	type: 'threshold',
 		    	inAggr: 'HlThresholdTick',
-		    	threshold: 9
+		    	threshold: 12
 			}
 		},
 		'RAM pos > Threshold': {
@@ -580,6 +580,185 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 		
 		return rawStores.concat([enrichedStore, oaInStore, streamStoryStore]);
 	};
+} else if (config.USE_CASE == config.USE_CASE_NRG) {
+
+	betterNames = {
+		//All
+		"timestamp": "time",
+		"dayOfWeek": "day_of_week",
+		"dayOfYear": "day_of_year",
+		"monthOfYear": "month_of_year",
+		"weekEnd": "weekend",
+		//CSI 
+		"turin-building-CSI_BUILDING-buildingtotalconsumption": "csi_total_consumption",
+		"turin-building-CSI_BUILDING-buildingcooling": "csi_cooling",
+		"turin-building-CSI_BUILDING-buildingconsumptionnocooling": "csi_no_cooling_consumption",
+		"turin-building-CSI_BUILDING-datacentrecooling": "csi_datacenter_cooling",
+		"FIO-Turin-FIO-temperature": "csi_temperature",
+		"FIO-Turin-FIO-humidity": "csi_humudity",
+		"FIO-Turin-FIO-windSpeed": "csi_wind_speed",
+		"FIO-Turin-FIO-windBearing": "csi_wind_bearing",
+		"FIO-Turin-FIO-cloudCover": "csi_cloud_cover",
+		"dayAfterHolidayTurin": "csi_day_after_holiday",
+		"holidayTurin": "csi_holiday",
+		"dayBeforeHolidayTurin": "csi_day_before_holiday",
+		"heatingSeasonTurin": "csi_heating_season",
+		//Iren
+		"nubi-plant-IREN_THERMAL-Thermal_Production": "iren_thermal_production",
+		"FIO-ReggioEmilia-FIO-temperature": "iren_temperature",
+		"FIO-ReggioEmilia-FIO-humidity": "iren_humidity",
+		"FIO-ReggioEmilia-FIO-windSpeed": "iren_wind_speed",
+		"FIO-ReggioEmilia-FIO-windBearing": "iren_wind_bearing",
+		"FIO-ReggioEmilia-FIO-cloudCover": "iren_cloud_cover",
+		"dayAfterHolidayReggioEmilia": "iren_day_after_holiday",
+		"holidayReggioEmilia": "iren_holiday",
+        "workingHoursTurin": "turin_working_hours",
+		"dayBeforeHolidayReggioEmilia": "iren_day_before_holiday",
+		"heatingSeasonReggioEmilia": "iren_heating_season",
+		// Ntua
+		"ntua-BUILDING-NTUA_LAMPADARIO-energy": "ntua_energy",
+		"FIO-Athens-FIO-temperature": "ntua_temperature",
+		"FIO-Athens-FIO-humidity": "ntua_humidity",
+		"FIO-Athens-FIO-windSpeed": "ntua_wind_speed",
+		"FIO-Athens-FIO-windBearing": "ntua_wind_bearing",
+		"dayAfterHolidayAthens": "ntua_day_after_holiday",
+		"holidayAthens": "ntua_holiday",
+		"dayBeforeHolidayAthens": "ntua_day_before_holiday",
+		"workingHoursAthens": "ntua_working_hours",
+		// Miren
+		"miren-lamp-0025.0006.0019-MeasuredConsumption": "miren_lamp_consumption",
+		"miren-traffic-kromberk-0209-21-circulation": "miren_traffic_circulation",
+		"FIO-Miren-FIO-temperature": "miren_temperature",
+		"FIO-Miren-FIO-humidity": "miren_humidity",
+		"FIO-Miren-FIO-windSpeed": "miren_wind_speed",
+		"FIO-Miren-FIO-cloudCover": "miren_wind_bearing",
+		"dayAfterHolidayMiren": "miren_day_after_holiday",
+		"holidayMiren": "miren_holiday",
+		"dayBeforeHolidayMiren": "miren_day_before_holiday"		
+	}
+	console.log('Initializing fields for NRG4CAST ...');
+	
+	var rawStores = [];
+	
+	for (var key in betterNames) {
+		if (key !== "timestamp") {
+			rawStores.push({
+				"name" : betterNames[key],
+				"fields" : [
+					{"name": "time_ms", "type": "uint64"},
+					{"name": "time", "type": "datetime"},
+					{"name": "value", "type": "float"}
+				],
+				"window": WINDOW_SIZE
+			});
+		}
+	}
+	
+	var otherStores = [];
+	
+	var realTimeStores = {
+	 	fields : [
+	 		{"name": "time", "type": "datetime"}
+	 	]
+	};
+	
+	for (var i = 0; i < rawStores.length; i++) {
+		realTimeStores.fields.push({ "name": rawStores[i].name, "type":  rawStores[i].fields[2].type });
+		// console.log(rawStores[i].fields[2].type);
+	}
+	
+	var onlineAnalyticsStores = {
+		fields: realTimeStores.fields.slice()
+	}
+	
+	// friction coefficients
+	// onlineAnalyticsStores.fields.push({"name": "coeff_swivel", "type": "float", "null": true});
+	// onlineAnalyticsStores.fields.push({"name": "coeff_gearbox", "type": "float", "null": true});
+	
+	var streamStoryIgnoreFields = {}
+	
+	//==============================================================
+	// EXPORTS
+	//==============================================================
+	
+	exports.getRawStores = function () {
+		return rawStores;
+	}
+	
+	exports.getBetterNames = function() {return betterNames;};
+	
+	exports.getInitZeroFields = function () {
+		var flds = [];
+		if (config.INITIALIZE_ZERO) {
+			for (var i = 0; i < rawStores.length; i++) {
+				flds.push(rawStores[i].name);
+			}
+		}
+		return flds;
+	};
+	
+	exports.getQmSchema = function () {
+		var enrichedStore = JSON.parse(JSON.stringify(realTimeStores));
+	    var oaInStore = JSON.parse(JSON.stringify(onlineAnalyticsStores));
+	    var streamStoryStore = JSON.parse(JSON.stringify(onlineAnalyticsStores));
+	    
+	    enrichedStore.name = exports.ENRICHED_STORE;
+	    oaInStore.name = exports.OA_IN_STORE;
+	    streamStoryStore.name = exports.STREAM_STORY_STORE;
+	    
+	    enrichedStore.window = WINDOW_SIZE;
+	    oaInStore.window = WINDOW_SIZE;
+	    
+	    return rawStores.concat(otherStores)
+	    					  .concat([enrichedStore, oaInStore, streamStoryStore]);
+	}
+	
+	exports.getStreamAggrFields = function () {
+		var result = {
+			merger: [],
+			resampler: []
+		}
+		
+		var resamplerFields = onlineAnalyticsStores.fields;
+		var mergerFields = realTimeStores.fields;
+		
+		for (var i = 0; i < resamplerFields.length; i++) {
+			var fieldNm = resamplerFields[i].name;
+			
+			if (fieldNm == 'time') continue;
+			
+			var interpolation = config.INTERPOLATION;
+			
+			log.info('Field %s is using %s interpolation ...', fieldNm, interpolation);
+			
+			result.resampler.push({
+				name: fieldNm,
+				interpolator: interpolation
+			})
+		}
+		
+		for (var i = 0; i < mergerFields.length; i++) {
+			var fieldNm = mergerFields[i].name;
+			
+			if (fieldNm == 'time') continue;
+			
+			var interpolation = config.INTERPOLATION;
+
+			
+			log.info('Field %s is using %s interpolation ...', fieldNm, interpolation);
+
+			result.merger.push({
+				source: fieldNm,
+				inField: 'value',
+				outField: fieldNm,
+				interpolation: interpolation,
+				timestamp: 'time'
+			});
+
+		}
+		
+		return result;
+	}
 } else {
 	throw new Error('Invalid use case!');
 }

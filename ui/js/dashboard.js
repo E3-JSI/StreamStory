@@ -543,9 +543,7 @@ function pingProgress(isRealTime) {
 				
 				$('#form-phase2').show();
 			},
-			error: function (xhr, status) {
-				alert('Failed to upload file: ' + status + '!');
-			}
+			error: handleAjaxError()
 		});
 	});
 	

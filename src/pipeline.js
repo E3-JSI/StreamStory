@@ -148,21 +148,25 @@ function initGC() {
 		log.info('Adding print trigger to store %s ...', storeName);
 		
 		// print statistics on all the stores
-		store.addTrigger({
-			onAdd: function (val) {
-				try {
-					var len = val.$store.length;
-					
-					if (len % config.STORE_PRINT_INTERVAL == 0 && log.debug()) 
-						log.debug('Store %s has %d records ...', val.$store.name, len);
-					
-					if (log.trace())
-						log.trace('%s: %s', val.$store.name, JSON.stringify(val));
-				} catch (e) {
-					log.error(e, 'Exception while printing store statistics!');
+		try {
+			store.addTrigger({
+				onAdd: function (val) {
+					try {
+						var len = val.$store.length;
+						
+						if (len % config.STORE_PRINT_INTERVAL == 0 && log.debug()) 
+							log.debug('Store %s has %d records ...', val.$store.name, len);
+						
+						if (log.trace())
+							log.trace('%s: %s', val.$store.name, JSON.stringify(val));
+					} catch (e) {
+						log.error(e, 'Exception while printing store statistics!');
+					}
 				}
-			}
-		})
+			});
+		} catch (e) {
+			log.error(e, 'Failed to add print trigger to store: %s', storeName);
+		}
 	}
 	
 	log.info('GC initialized!');

@@ -419,8 +419,19 @@
 			<div class="col-md-8">
 				<div class="tab-content">
 					<div id="tab-tree" role="tabpanel" class="tab-pane fade active">
-						<div id="div-tree-wrapper" class="container-bottom">
-							<div id="div-tree-container" style="height: 100%;width: 100%;" class="nopadding"></div>
+						<ul id="tabs-viz-bottom" class="nav nav-tabs">
+						  	<li role="presentation" class="active">
+						  		<a href="#" data-target="#div-parallel-wrapper" data-toggle="tab">Coordinates</a>
+						  	</li>
+						  	<li role="presentation">
+						  		<a href="#" data-target="#div-tree-wrapper" data-toggle="tab">Explanation Tree</a>
+						  	</li>
+						</ul>
+						<div class="tab-content">
+							<div id="div-parallel-wrapper" class="tab-pane container-bottom parcoords"></div>
+							<div id="div-tree-wrapper" class="tab-pane container-bottom">
+								<div id="div-tree-container" style="height: 100%;width: 100%;" class="nopadding"></div>
+							</div>
 						</div>
 					</div>
 					<% if (model.isOnline()) { %>
@@ -475,6 +486,7 @@
 	<script type="text/javascript" src="lib/cytoscape-qtip.js"></script>
 	<script type="text/javascript" src="lib/cytoscape-ctxmenu.js"></script>
 	<script type="text/javascript" src="lib/d3.js"></script>
+	<script type="text/javascript" src="lib/d3.parcoords.js"></script>
 	<script src="https://cdn.rawgit.com/cpettitt/dagre/v0.7.4/dist/dagre.min.js"></script>
 	<script type="text/javascript" src="js/zoomvis.js"></script>
 	<script type="text/javascript" src="js/hist.js"></script>

@@ -257,6 +257,16 @@ module.exports = exports = function (opts) {
 					type: 'values',
 					content: outVal
 				}));
+				
+				if (config.SAVE_STATES) {
+					var ftrPred = model.predictNextState({ useFtrV: true, futureStateN: 5 });
+					var normalPred = model.predictNextState({ useFtrV: false, futureStateN: 5 });
+					
+					utils.appendLine('predictions.txt', JSON.stringify({
+						withFtrV: ftrPred,
+						without: normalPred
+					}));
+				}
 			}
 		},
 		
@@ -307,7 +317,7 @@ module.exports = exports = function (opts) {
 				});
 				
 				if (log.debug())
-					log.debug('Loading model from file: %s', modelFName)
+					log.debug('Loading model from file: %s', modelFName);
 				
 				loadModel(userBase, modelFName, function (e, model) {
 					if (e != null) {
@@ -340,6 +350,38 @@ module.exports = exports = function (opts) {
 				
 				callback(undefined, model);
 			});
+		},
+		loadSaveModel: function (modelConf) {
+			if (modelConf.is_realtime == 1) {
+				var fname = modelConf.model_file;
+				
+				var model = StreamStory({ 
+					base: base, 
+					fname: fname
+				});
+				
+				model.save(fname);
+			} else {
+				var baseDir = modelConf.base_dir;
+				var dbDir = utils.getDbDir(baseDir);
+				var fname = utils.getModelFName(baseDir);
+				
+				var userBase = new qm.Base({
+					mode: 'openReadOnly',
+					dbPath: utils.getDbDir(baseDir)
+				});
+				
+				if (log.debug())
+					log.debug('Loading model from file %s ...', fname);
+				
+				var model = StreamStory({ 
+					base: userBase, 
+					fname: fname
+				});
+				
+				model.save(fname);
+				userBase.close();
+			}
 		},
 		isBuildingModel: function (username) {
 			return username in buildingModelStore;

@@ -39,6 +39,8 @@
 		"producerPort": 8090
 	},
 	"useCase": "mhwirth",
+	"saveStates": true,
+	"saveActivities": true,
 	"interpolation": "current",
 	"dataPath": "/mnt/raidM2T/project-data/StreamStory-hella1/"
 }

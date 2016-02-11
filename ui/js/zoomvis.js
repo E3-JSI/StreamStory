@@ -331,7 +331,7 @@ var zoomVis = function (opts) {
 	}
 	
 	function getNodeLabel(node) {
-		return (node.name != null ? node.name : (node.label));
+		return (node.name != null ? node.name : node.autoName/*(node.label)*/);
 	}
 
 	function colorFromProb(prob) {

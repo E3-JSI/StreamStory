@@ -21,8 +21,7 @@ exports.StreamStory = function (opts) {
 	
 	var N_FTR_SPACES = 3;
 	var ftrSpaces = [];
-//	var obsFtrSpace;
-//	var controlFtrSpace;
+	var allFtrNames;
 	
 	var id;
 	var active = false;
@@ -123,6 +122,14 @@ exports.StreamStory = function (opts) {
 
 	function getControlFtrNames() {
 		return getFtrNames(getContrFtrSpace());
+	}
+	
+	function getIgnoredFtrNames() {
+		return getFtrNames(getIgno)
+	}
+	
+	function getFtrName(ftrId) {
+		return allFtrNames[ftrId];
 	}
 
 	function getFtrDescriptions(stateId) {
@@ -302,6 +309,12 @@ exports.StreamStory = function (opts) {
 			});
 		}
 	}
+	
+	//===================================================
+	// VARIABLE INITIALIZATION
+	//===================================================
+	
+	allFtrNames = getObsFtrNames().concat(getControlFtrNames().concat(getIgnoredFtrSpace()));
 
 	//===================================================
 	// PUBLIC METHODS
@@ -444,7 +457,24 @@ exports.StreamStory = function (opts) {
 		 */
 		getVizState: function () {
 			log.debug('Fetching visualization ...');
-			return mc.toJSON();
+			var json = mc.toJSON();
+						
+			// transform the automatic state names
+			for (var heightN = 0; heightN < json.length; heightN++) {
+				var level = json[heightN];
+				for (var stateN = 0; stateN < level.states.length; stateN++) {
+					var state = level.states[stateN];
+					var ftrId = state.autoName.ftrId;
+					
+					if (ftrId < 0) {
+						state.autoName = state.autoName.range;
+					} else {
+						state.autoName = getFtrName(state.autoName.ftrId) + ' ' + state.autoName.range;
+					}
+				}
+			}
+			
+			return json;
 		},
 
 		/**

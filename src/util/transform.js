@@ -85,7 +85,7 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 			]
 		}
 	}
-} else {
+} else if (config.USE_CASE == config.USE_CASE_HELLA) {
 	var MinTimeCalculator = function () {
 		var shuttleTimeH = {};
 		var minTimeH = {"PM1":{"IMM2":77000,"IMM1":55000},"PM2":{"IMM4":117000,"IMM3":91000,"IMM5":137000}};
@@ -645,6 +645,58 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 			}
 		}
 	}
+} else if (config.USE_CASE == config.USE_CASE_NRG) {
+	log.info('Using CSI use case ...');
+
+	var betterName = fields.getBetterNames();
+	function sensorToStoreIdMap (name) {
+		if (!betterNames[name]) return name;
+		return betterNames[name];
+	};
+
+	// var tagToStoreIdMap = {
+		// '1000693': 'rpm'
+	// };
+	
+//	var storeToSensorIdMap = {};
+//
+//	for (var key in sensorToStoreIdMap) {
+//		storeToSensorIdMap[sensorToStoreIdMap(key)] = key;
+//	}
+	
+	function getStoreId(sensorId) {
+		return sensorId;
+	}
+	
+	// function storeFromTag(tag) {
+		// return tagToStoreIdMap[tag];
+	// }
+	
+	module.exports = {
+		transform: function (val) {
+			if (log.trace())
+				log.trace('Transforming event: %s', JSON.stringify(val));
+			
+			var storeNm = sensorToStoreIdMap(val["sensorId"]); // val.sensorId; // TODO 
+			var timestamp = val["time"];
+			var value = val["value"];
+
+			return [
+			    {
+			    	store: storeNm,
+			    	timestamp: timestamp,
+			    	value: {
+			    		time_ms: timestamp,
+			    		time: utils.dateToQmDate(new Date(timestamp)),
+			    		value: value
+			    	}
+			    }
+			]
+		}
+	}
+} else {
+	log.error('Invalid use case: ' + config.USE_CASE);
+	process.exit(1);
 }
 
 module.exports.toDerivedEvent = function (timestamp, val) {

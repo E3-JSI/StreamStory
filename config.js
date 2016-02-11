@@ -39,8 +39,20 @@ global.log = bunyan.createLogger({
 //================================================================
 exports.USE_CASE_HELLA = 0;
 exports.USE_CASE_MHWIRTH = 1;
-exports.USE_CASE = config.useCase == 'hella' ? exports.USE_CASE_HELLA : exports.USE_CASE_MHWIRTH;
-exports.USE_CASE_NAME = config.useCase;	// TODO remove one of the use case names
+exports.USE_CASE_NRG = 2;
+exports.USE_CASE_NAME = config.useCase;
+
+if (config.useCase == 'hella') {
+	exports.USE_CASE = exports.USE_CASE_HELLA;
+} else if (config.useCase == 'mhwirth') {
+	exports.USE_CASE = exports.USE_CASE_MHWIRTH;
+} else if (config.USE_CASE == 'nrg4cast') {
+	// NRG4Cast
+	exports.USE_CASE = exports.USE_CASE_NRG;
+} else {
+	log.error('Unknown use case: %s', config.USE_CASE);
+	process.exit(1);
+}
 
 // resampling interval
 if (config.resampleInterval == null) {
@@ -62,6 +74,22 @@ if (config.resampleInterval == null) {
 //================================================================
 exports.INITIALIZE_ZERO = config.qminer.initializeZeros;
 exports.INTERPOLATION = config.interpolation;
+
+//================================================================
+// SAVE OUTPUTS
+//================================================================
+exports.SAVE_STATES = false;
+exports.SAVE_ACTIVITIES = false;
+
+if (config.saveStates == true) {
+	log.info('Saving states ...');
+	exports.SAVE_STATES = true;
+}
+
+if (config.saveActivities == true) {
+	log.info('Saving activities ...');
+	exports.SAVE_ACTIVITIES = true;
+}
 
 //================================================================
 // SERVER

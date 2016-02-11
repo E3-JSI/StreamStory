@@ -600,6 +600,8 @@ function changeControlVal(stateId, ftrIdx, val) {
 		}
 		
 		function fetchStateProbDist(time) {
+			if (time == 0) time = 1e-4;	// FIXME, handle 0 on the server
+			
 			var stateId = viz.getSelectedState();
 			var level = viz.getCurrentHeight();
 			
@@ -748,6 +750,19 @@ function changeControlVal(stateId, ftrIdx, val) {
 		viz = zoomVis({
 			visContainer: 'vis_container'
 		});
+		
+		function visualizeParcoords(data) {
+			var parcoords = d3.parcoords()("#div-parallel-wrapper")
+			.data([
+			    [0,-0,0,0,0,1],
+			    [1,-1,1,2,1,1],
+			    [2,-2,4,4,0.5,1],
+			    [3,-3,9,6,0.33,1],
+			    [4,-4,16,8,0.25,1]
+			  ])
+			  .render()
+			  .createAxes();
+		}
 		
 		function visualizeDecisionTree(root) {
 			$('#div-tree-wrapper').removeClass('hidden');
@@ -1018,8 +1033,10 @@ function changeControlVal(stateId, ftrIdx, val) {
 					$('#div-future').html('');
 					$('#div-past').html('');
 					$('#div-tree-container').html('');
+					$('#div-parallel-wrapper').html('');
 
 					visualizeDecisionTree(data.classifyTree);
+					visualizeParcoords(null);
 										
 					// populate
 					// basic info
@@ -1408,9 +1425,12 @@ function changeControlVal(stateId, ftrIdx, val) {
 			TAB_ID = $(this).attr('id');
 			
 			if (TAB_ID == 'a-default') {
+				$('#tabs-viz-bottom').find('a')[0].click();
 				// TODO fetch the histograms
+				// TODO reload the decision tree
 			}
 		});
 		$('.nav-pills a')[0].click()
+		$('#tabs-viz-bottom').find('a')[0].click();
 	});
 })()

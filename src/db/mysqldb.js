@@ -443,6 +443,14 @@ module.exports = function () {
 				})
 			});
 		},
+		fetchAllModels: function (callback) {
+			connection({
+				callback: callback,
+				nextOp: query({
+					sql: 'SELECT m.*, onm.is_active, ofm.base_dir FROM model m LEFT JOIN offline_model ofm ON m.mid = ofm.mid LEFT JOIN online_model onm ON m.mid = onm.mid'
+				})
+			});
+		},
 		fetchActiveModels: function (callback) {
 			connection({
 				callback: callback,

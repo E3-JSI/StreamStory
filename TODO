@@ -12,3 +12,5 @@ DATASETS:
 
 ACTIVITY RECOGNITION:
 - dynamic time warping of two weighted strings
+
+AUTOMATIC NAMING: - tamperature HIGH/LOW/MEDIUM

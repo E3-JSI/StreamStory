@@ -268,18 +268,17 @@ function initStreamStoryHandlers(model, enable) {
 			if (log.debug())
 				log.debug('State changed: %s', JSON.stringify(states));
 			
-////			//=================================================
-//			// TODO remove this
-//			utils.appendLine('states.txt', JSON.stringify({
-//				time: date.getTime(),
-//				states: states
-//			}));
-////			//=================================================
-			
 			modelStore.sendMsg(model.getId(), JSON.stringify({
 				type: 'stateChanged',
 				content: states
 			}));
+			
+			if (config.SAVE_STATES) {
+				utils.appendLine('states.txt', JSON.stringify({
+					time: date.getTime(),
+					states: states
+				}));
+			}
 		});
 		
 		log.info('Registering anomaly callback ...');
@@ -393,10 +392,9 @@ function initStreamStoryHandlers(model, enable) {
 			
 			modelStore.sendMsg(model.getId(), JSON.stringify(uiMsg));
 			
-			//==========================================================
-			// TODO remove this
-//			utils.appendLine('activities.csv',  startTm.getTime() + ',' + endTm.getTime() + ',"' + activityName.replace(/\"/g, '\\"') + '"');
-			//==========================================================
+			if (config.SAVE_ACTIVITIES) {
+				utils.appendLine('activities.csv',  startTm.getTime() + ',' + endTm.getTime() + ',"' + activityName.replace(/\"/g, '\\"') + '"');
+			}
 		});
 	} else {
 		log.debug('Removing StreamStory handlers for model %s ...', model.getId());
@@ -700,12 +698,11 @@ function initStreamStoryRestApi() {
 				
 				model.save(modelFile);
 				res.status(204);
+				res.end();
 			} catch (e) {
 				log.error(e, 'Failed to save visualization model!');
-				res.status(500);	// internal server error
+				handleServerError(e, req, res);
 			}
-			
-			res.end();
 		});
 	}
 	
@@ -1770,17 +1767,17 @@ function initServerApi() {
 	
 	{
 		log.info('Registering exit service ...');
-		app.get(API_PATH + '/exit', function (req, resp) {
+		app.get(API_PATH + '/exit', function (req, res) {
 			try {
 				log.info(API_PATH + '/exit called. Exiting qminer and closing server ...');
 				utils.exit(base);
-				resp.status(204);
+				res.status(204);
 			} catch (e) {
 				log.error(e, 'Failed to exit!');
-				resp.status(500);	// internal server error
+				res.status(500);	// internal server error
 			}
 			
-			resp.end();
+			res.end();
 		});
 	}
 	
@@ -1980,7 +1977,7 @@ function initServerApi() {
 function initConfigRestApi() {
 	log.info('Initializing configuration REST API ...');
 	
-	app.get(API_PATH + '/config', function (req, resp) {
+	app.get(API_PATH + '/config', function (req, res) {
 		try {
 			var properties = req.query.properties;
 			
@@ -1991,18 +1988,18 @@ function initConfigRestApi() {
        		db.getMultipleConfig({properties: properties}, function (e, result) {
        			if (e != null) {
        				log.error(e, 'Failed to fetch properties from DB!');
-       				resp.status(500);	// internal server error
-       				resp.end();
+       				res.status(500);	// internal server error
+       				res.end();
        				return;
        			}
        			
-       			resp.send(result);
-       			resp.end();
+       			res.send(result);
+       			res.end();
        		});
 		} catch (e) {
 			log.error(e, 'Failed to query configuration!');
-			resp.status(500);	// internal server error
-			resp.end();
+			res.status(500);	// internal server error
+			res.end();
 		}
 	});
 	
@@ -2059,11 +2056,6 @@ function initPipelineHandlers() {
 	pipeline.onValue(function (val) {
 		if (log.trace())
 			log.trace('Inserting value into StreamStories ...');
-		
-		if (config.USE_CASE == config.USE_CASE_MHWIRTH && val.temp_ambient == null) {	// TODO remove this
-			log.warn('Not sending ambient temperature!');
-			throw new Error('Not sending ambient temperature!');
-		}
 		modelStore.updateModels(val);
 	});
 	
@@ -2265,6 +2257,23 @@ function initBroker() {
 			}
 		} catch (e) {
 			log.error(e, 'Exception while processing broker message!');
+		}
+	});
+}
+
+function loadSaveModels() {
+	db.fetchAllModels(function (e, models) {
+		if (e != null) {
+			log.error(e, 'Failed to fetch all models for saving!');
+			return;
+		}
+		
+		if (log.info())
+			log.info('There is a total of %d models ...', models.length);
+		
+		for (var i = 0; i < models.length; i++) {
+			log.info('Resaving model %s', JSON.stringify(models[i]));
+			modelStore.loadSaveModel(models[i]);
 		}
 	});
 }
@@ -2583,11 +2592,11 @@ function initServer(sessionStore, parseCookie) {
 	app.use(parseCookie);
 	app.use(excludeDirs([DATA_PATH], sess));
 	// automatically parse body on the API path
-	app.use(LOGIN_PATH + '/', bodyParser.urlencoded({ extended: false }));
-	app.use(LOGIN_PATH + '/', bodyParser.json());
-	app.use(API_PATH + '/', bodyParser.urlencoded({ extended: false }));
-	app.use(API_PATH + '/', bodyParser.json());
-	app.use(DATA_PATH + '/', bodyParser.json());
+	app.use(LOGIN_PATH + '/', bodyParser.urlencoded({ extended: false, limit: '50Mb' }));
+	app.use(LOGIN_PATH + '/', bodyParser.json({limit: '50Mb'}));
+	app.use(API_PATH + '/', bodyParser.urlencoded({ extended: false, limit: '50Mb' }));
+	app.use(API_PATH + '/', bodyParser.json({limit: '50Mb'}));
+	app.use(DATA_PATH + '/', bodyParser.json({limit: '50Mb'}));
 	
 	// when a session expires, redirect to index
 	app.use('/ui.html', function (req, res, next) {
@@ -2685,6 +2694,7 @@ exports.init = function (opts) {
 		}
 	});
 	
+	loadSaveModels();
 	loadActiveModels();
 	initPipelineHandlers();
 	initBroker();
