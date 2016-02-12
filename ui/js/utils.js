@@ -55,6 +55,22 @@ function handleAjaxError(alertField, callback) {
 	}
 }
 
+function addPressHandler(btn, callback) {
+	var timeoutId = 0;
+	var intervalId = 0;
+	
+	btn.click(callback);
+	btn.mousedown(function () {
+		timeoutId = setTimeout(function () {
+			// the button is pressed
+			intervalId = setInterval(callback, 50);
+		}, 1000);
+	}).bind('mouseup mouseleave', function () {
+		clearTimeout(timeoutId);
+		clearInterval(intervalId);
+	});
+}
+
 function toUiPrecision(val) {
 	if (val > 1000) {
 		return val.toFixed();

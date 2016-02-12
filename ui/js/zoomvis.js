@@ -5,19 +5,41 @@ var zoomVis = function (opts) {
 	var MODE_TARGET_FTR = 'ftr';
 	
 	// colors
-	var EDGE_COLOR = 'darkgray';
-	var DEFAULT_NODE_COLOR = 'rgb(120,120,120)';//'DodgerBlue';
+//	var DEFAULT_NODE_COLOR = 'rgb(120,120,120)';//'DodgerBlue';
+//	var VIZ_NODE_COLOR = 360;
+//	var VIZ_NODE_FTR_NEG_COLOR = 360;
+//	var VIZ_NODE_FTR_POS_COLOR = 117;
+//	var CURRENT_NODE_COLOR = 'green';
+//	var FUTURE_NODE_BASE_COLOR = 216;
+//	var DEFAULT_BORDER_COLOR = 'black';
+//	var FONT_SIZE = '12';
+//	
+//	var EDGE_COLOR = 'darkgray';
+//	var BOLD_EDGE_COLOR = '#A0A0A0';
+//	var MIDDLE_EDGE_COLOR = '#606060';
+//	var SMALL_EDGE_COLOR = '#606060';
+//	var EDGE_TEXT_COLOR = '#F0F0F0';
+//	var NODE_TEXT_COLOR = '#F0F0F0';
+	
+	var DEFAULT_NODE_COLOR = '#073642';
+	var CURRENT_NODE_COLOR = '#FFA500';
+	var PREVIOUS_NODE_EDGE_COLOR = CURRENT_NODE_COLOR;
+	var FUTURE_NODE_BASE_COLOR = 216;	// green
+	var DEFAULT_BORDER_COLOR = 'rgb(150, 150, 150)';
+	
 	var VIZ_NODE_COLOR = 360;
 	var VIZ_NODE_FTR_NEG_COLOR = 360;
 	var VIZ_NODE_FTR_POS_COLOR = 117;
-	var CURRENT_NODE_COLOR = 'green';
-	var DEFAULT_BORDER_COLOR = 'black';
+	
+	
 	var FONT_SIZE = '12';
 	
+	var EDGE_COLOR = 'darkgray';
 	var BOLD_EDGE_COLOR = '#A0A0A0';
 	var MIDDLE_EDGE_COLOR = '#606060';
 	var SMALL_EDGE_COLOR = '#606060';
 	var EDGE_TEXT_COLOR = '#F0F0F0';
+	var NODE_TEXT_COLOR = '#F0F0F0';
 	
 	var DEFAULT_BORDER_WIDTH = 5;
 	
@@ -232,6 +254,7 @@ var zoomVis = function (opts) {
 	
 	var minCyZoom = .3;
 	var maxCyZoom = 1.3;
+	var fontFactor = 1;
 	
 	var ZOOM_STEPS = 100;
 	var heightStep;// = 0.01;
@@ -314,6 +337,11 @@ var zoomVis = function (opts) {
 				prevLevelNodeCache = {};
 				currLevelNodeCache = {};
 				addedNodes = [];
+			},
+			updateCss: function (property, value) {
+				for (var nodeId in nodeCache) {
+					nodeCache[nodeId].css[property] = value;
+				}
 			}
 		};
 		
@@ -636,8 +664,10 @@ var zoomVis = function (opts) {
 					'text-halign': 'center',
 					'text-valign': 'center',
 					'text-wrap': 'wrap',
+					'color': NODE_TEXT_COLOR,
 					'font-style': 'normal',
 					'font-size': 10000,	// hack, for automatic font size
+					'font-factor': fontFactor,
 					'font-family': 'inherit',
 					'font-weight': 'normal',
 					'shape': 'ellipse',
@@ -768,8 +798,6 @@ var zoomVis = function (opts) {
 			
 			middle.css('line-style', 'solid');
 			middle.css('content', 'data(prob)');
-//			bold.css('line-color', '#505050');
-//			bold.css('target-arrow-color', '#505050');
 			bold.css('line-color', BOLD_EDGE_COLOR);
 			bold.css('target-arrow-color', BOLD_EDGE_COLOR);
 						
@@ -881,7 +909,7 @@ var zoomVis = function (opts) {
 			node.css('backgroundColor', CURRENT_NODE_COLOR);
 		}
 		if (nodeId in modeConfig.past) {
-			node.css('border-color', 'red');
+			node.css('border-color', PREVIOUS_NODE_EDGE_COLOR);
 		}
 		
 		if (modeConfig.mode.type == MODE_PROBS) {
@@ -908,23 +936,12 @@ var zoomVis = function (opts) {
 				var val = 2*(middleVal - ftrVal) / ftrRange;
 				color = 'hsla(' + VIZ_NODE_FTR_NEG_COLOR + ',' + Math.floor(100*colorFromProb(val)) + '%, 55%, 1)';
 			}
-//			
-//			var minColor = 64;
-//			var maxColor = 208;
-//			
-//			var range = maxColor - minColor;
-//			var relValue = 1 - (ftrVal - config.minVal) / ftrRange;
-//			
-//			var colorVal = (minColor + relValue*range).toFixed()
-//			var color = 'rgb(' + colorVal + ',' + colorVal + ',' + colorVal + ')';
 						
 			node.css('backgroundColor', color);
 		} 
 		else if (nodeId in modeConfig.future) {
-			var baseColor = 216;//nodeId in specialStates.probs ? 307 : ;
-			
 			var prob = futureColorFromProb(modeConfig.future[nodeId]);
-			var color = 'hsla(' + baseColor + ',' + (15 + Math.floor((100-15)*prob)) + '%, 55%, 1)';
+			var color = 'hsla(' + FUTURE_NODE_BASE_COLOR + ',' + (15 + Math.floor((100-15)*prob)) + '%, 55%, 1)';
 			node.css('backgroundColor', color);
 		}
 		
@@ -1564,6 +1581,18 @@ var zoomVis = function (opts) {
 			})
 		},
 		
+		setFontFactor: function (factor) {
+			fontFactor = factor;
+			// update the font factor in the cache and update the 
+			// currently drawn nodes
+			cache.updateCss('font-factor', factor);
+			
+			cy.batch(function () {
+				var nodes = cy.nodes();
+				cy.nodes().style('font-factor', factor);
+			});
+		},
+		
 		autoLayout: function () {
 			var center = { x: 0, y: 0 };
 			var newCenter = { x: 0, y: 0 };
@@ -1676,14 +1705,6 @@ var zoomVis = function (opts) {
 		onHeightChanged: function (callback) {
 			callbacks.heightChanged = callback;
 		},
-		
-//		onZoomIntoState: function (callback) {
-//			callbacks.onZoomIntoState = callback;
-//		},
-//		
-//		onShowPath: function (callback) {
-//			callbacks.onShowPath = callback;
-//		},
 		
 		onStateCtxMenu: function (callback) {
 			callbacks.onStateCtxMenu = callback;

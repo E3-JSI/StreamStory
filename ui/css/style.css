@@ -29,6 +29,12 @@ html, body {
 	width: 100%;
 }
 
+#div-font-zoom {
+	position: absolute;
+	right: 30px;
+	top: 57px;
+}
+
 .main-vis {
 	height: 600px;
 }
@@ -90,8 +96,8 @@ html, body {
   	fill: #ED561B;
 }
 
-.bar-foreground:hover {
-  	fill: 'white' !important;
+.container-chart .bar-foreground rect:hover {
+  	fill: 'white';
 }
 
 .container-chart .bar-foreground, .container-chart .bar-background, .container-chart .bar-previous {

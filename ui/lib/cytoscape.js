@@ -24,7 +24,8 @@ function _getTextSize(el) {
 	var style = el._private.style;
 	if (el.group() == 'nodes') {
 		var val = style['font-size'].pxValue;
-		if (val != 10000) return val;
+		var factor = style['font-factor'].value;
+		if (val != 10000) return val*factor;
 		
 		var nodeW = style['width'].pxValue;
 		
@@ -32,14 +33,14 @@ function _getTextSize(el) {
 		
 		var fontH;
 		if (content.length > 7) {
-			fontH = parseInt((nodeW / (content.length - 3)).toFixed());
-			if (fontH < 6) fontH = 6;
+			fontH = parseInt((nodeW / (content.length - 5)).toFixed());
+			if (fontH < 8) fontH = 8;
 		} else {
 			fontH = parseInt((nodeW / 4).toFixed());
 			if (fontH < 10) fontH = 10;
 		}
 		
-		return fontH;
+		return Math.max(0, fontH*factor);
 	} else {
 		return style['font-size'].pxValue;
 	}
@@ -5058,6 +5059,7 @@ this.cytoscape = cytoscape;
       // { name: 'font-variant', type: t.fontVariant }, // not useful
       { name: 'font-weight', type: t.fontWeight },
       { name: 'font-size', type: t.size },
+      { name: 'font-factor', type: t.number },
       { name: 'min-zoomed-font-size', type: t.size },
       { name: 'edge-text-rotation', type: t.textRotation },
 

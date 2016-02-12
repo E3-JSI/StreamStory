@@ -125,7 +125,7 @@ exports.StreamStory = function (opts) {
 	}
 	
 	function getIgnoredFtrNames() {
-		return getFtrNames(getIgno)
+		return getFtrNames(getIgnoredFtrSpace());
 	}
 	
 	function getFtrName(ftrId) {
@@ -216,8 +216,8 @@ exports.StreamStory = function (opts) {
 		var ftrSpace = ftrSpaces[ftrConfig.ftrSpaceN];
 		var offset = ftrConfig.ftrOffset;
 		
-		for (var i = 0; i < hist.binStartV.length; i++) {
-			hist.binStartV[i] = ftrSpace.invertFeature(ftrId - offset, hist.binStartV[i]);
+		for (var i = 0; i < hist.binValV.length; i++) {
+			hist.binValV[i] = ftrSpace.invertFeature(ftrId - offset, hist.binValV[i]);
 		}
 
 		return hist;
@@ -314,7 +314,7 @@ exports.StreamStory = function (opts) {
 	// VARIABLE INITIALIZATION
 	//===================================================
 	
-	allFtrNames = getObsFtrNames().concat(getControlFtrNames().concat(getIgnoredFtrSpace()));
+	allFtrNames = getObsFtrNames().concat(getControlFtrNames().concat(getIgnoredFtrNames()));
 
 	//===================================================
 	// PUBLIC METHODS

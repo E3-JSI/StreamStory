@@ -747,6 +747,9 @@ function changeControlVal(stateId, ftrIdx, val) {
 	//=======================================================
 	
 	(function () {
+		var fontFactor = 1;
+		var DELTA_FONT_FACTOR = .1;
+		
 		viz = zoomVis({
 			visContainer: 'vis_container'
 		});
@@ -982,6 +985,20 @@ function changeControlVal(stateId, ftrIdx, val) {
 				viz.setZoom(ui.value);
 			}
 		});
+		
+		(function () {
+			addPressHandler($('#btn-font-increase'), function () {
+				fontFactor += DELTA_FONT_FACTOR;
+				viz.setFontFactor(fontFactor);
+			});
+			addPressHandler($('#btn-font-decrease'), function () {
+				fontFactor -= DELTA_FONT_FACTOR;
+				
+				if (fontFactor < 0) fontFactor = 0;
+				
+				viz.setFontFactor(fontFactor);
+			});
+		})();
 		
 		$('#vis-toggler').click(function () {
 			$('#content-options').slideToggle();
