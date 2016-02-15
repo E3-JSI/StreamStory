@@ -724,12 +724,11 @@ function initStreamStoryRestApi() {
 				
 				model.getModel().setParams(paramObj);
 				res.status(204);	// no content
+				res.end();
 			} catch (e) {
 				log.error(e, 'Failed to query MHWirth multilevel visualization!');
-				res.status(500);	// internal server error
+				handleServerError(e, req, res);
 			}
-			
-			res.end();
 		});
 		
 		app.get(API_PATH + '/param', function (req, res) {
@@ -739,23 +738,22 @@ function initStreamStoryRestApi() {
 				
 				var val = model.getModel().getParam(param);
 				res.send({ parameter: param, value: val });
+				res.end();
 			} catch (e) {
 				log.error(e, 'Failed to query MHWirth multilevel visualization!');
-				res.status(500);	// internal server error
+				handleServerError(e, req, res);
 			}
-			
-			res.end();
 		});
 		
 		app.get(API_PATH + '/timeUnit', function (req, res) {
 			try {
 				var model = getModel(req.sessionID, req.session);
 				res.send({ value: model.getModel().getTimeUnit() });
+				res.end();
 			} catch (e) {
 				log.error(e, 'Failed to query MHWirth multilevel visualization!');
-				res.status(500);	// internal server error
+				handleServerError(e, req, res);
 			}
-			res.end();
 		});
 	}
 	
@@ -819,12 +817,11 @@ function initStreamStoryRestApi() {
 				var model = getModel(req.sessionID, req.session);
 				log.debug('Fetching all the features ...');
 				res.send(model.getFtrDesc());
+				res.end();
 			} catch (e) {
 				log.error(e, 'Failed to query MHWirth multilevel visualization!');
-				res.status(500);	// internal server error
+				handleServerError(e, req, res);
 			}
-			
-			res.end();
 		});
 	}
 	
@@ -841,12 +838,11 @@ function initStreamStoryRestApi() {
 					log.debug('Fetching transition model for level: %.3f', level);
 				
 				res.send(model.getModel().getTransitionModel(level));
+				res.end();
 			} catch (e) {
 				log.error(e, 'Failed to query MHWirth multilevel visualization!');
-				res.status(500);	// internal server error
+				handleServerError(e, req, res);
 			}
-			
-			res.end();
 		});
 	}
 	
@@ -868,12 +864,11 @@ function initStreamStoryRestApi() {
 					log.info("Current state: %s", JSON.stringify(result));
 				
 				res.send(result);
+				res.end();
 			} catch (e) {
 				log.error(e, 'Failed to query MHWirth multilevel visualization!');
-				res.status(500);	// internal server error
+				handleServerError(e, req, res);
 			}
-			
-			res.end();
 		});
 		
 		// multilevel analysis
@@ -887,17 +882,17 @@ function initStreamStoryRestApi() {
 				if (req.query.time == null) {
 					log.debug('Fetching future states currState: %d, height: %d', currState, level);
 					res.send(model.futureStates(level, currState));
+					res.end();
 				} else {
 					var time = parseFloat(req.query.time);
 					log.debug('Fetching future states, currState: %d, level: %d, time: %d', currState, level, time);
 					res.send(model.futureStates(level, currState, time));
+					res.end();
 				}
 			} catch (e) {
 				log.error(e, 'Failed to query MHWirth multilevel visualization!');
-				res.status(500);	// internal server error
+				handleServerError(e, req, res);
 			}
-			
-			res.end();
 		});
 		
 		app.get(API_PATH + '/pastStates', function (req, res) {
@@ -910,17 +905,17 @@ function initStreamStoryRestApi() {
 				if (req.query.time == null) {
 					log.debug('Fetching past states currState: %d, height: %d', currState, level);
 					res.send(model.pastStates(level, currState));
+					res.end();
 				} else {
 					var time = parseFloat(req.query.time);
 					log.debug('Fetching past states, currState: %d, level: %d, time: %d', currState, level, time);
 					res.send(model.pastStates(level, currState, time));
+					res.end();
 				}
 			} catch (e) {
 				log.error(e, 'Failed to query MHWirth multilevel visualization!');
-				res.status(500);	// internal server error
+				handleServerError(e, req, res);
 			}
-			
-			res.end();
 		});
 		
 		app.get(API_PATH + '/timeDist', function (req, res) {
@@ -935,12 +930,11 @@ function initStreamStoryRestApi() {
 					log.debug('Fetching probability distribution of states at height %d from state %d at time %d ...', height, stateId, time);
 				
 				res.send(model.getModel().probsAtTime(stateId, height, time));
+				res.end();
 			} catch (e) {
 				log.error(e, 'Failed to query MHWirth multilevel visualization!');
-				res.status(500);	// internal server error
+				handleServerError(e, req, res);
 			}
-			
-			res.end();
 		});
 		
 		app.get(API_PATH + '/history', function (req, res) {
@@ -952,12 +946,11 @@ function initStreamStoryRestApi() {
 					log.debug('Fetching history for level %d', level);
 				
 				res.send(model.getModel().histStates(level));
+				res.end();
 			} catch (e) {
 				log.error(e, 'Failed to query MHWirth multilevel visualization!');
-				res.status(500);	// internal server error
+				handleServerError(e, req, res);
 			}
-			
-			res.end();
 		});
 	}
 	
@@ -1171,12 +1164,11 @@ function initStreamStoryRestApi() {
 					log.debug('Fetching explanation for state: %d', stateId);
 				
 				res.send(model.explainState(stateId));
+				res.end();
 			} catch (e) {
 				log.error(e, 'Failed to query state details!');
-				res.status(500);	// internal server error
+				handleServerError(e, req, res);
 			}
-			
-			res.end();
 		});
 		
 		// histograms
@@ -1191,12 +1183,11 @@ function initStreamStoryRestApi() {
 					log.trace('Fetching histogram for state %d, feature %d ...', stateId, ftrIdx);
 				
 				res.send(model.histogram(ftrIdx, stateId));
+				res.end();
 			} catch (e) {
 				log.error(e, 'Failed to query histogram!');
-				res.status(500);	// internal server error
+				handleServerError(e, req, res);
 			}
-			
-			res.end();
 		});
 		
 		app.get(API_PATH + '/transitionHistogram', function (req, res) {
@@ -1211,12 +1202,27 @@ function initStreamStoryRestApi() {
 					log.trace('Fetching transition histogram for transition %d -> %d, feature %d ...', sourceId, targetId, ftrId);
 				
 				res.send(model.transitionHistogram(sourceId, targetId, ftrId));
+				res.end();
 			} catch (e) {
 				log.error(e, 'Failed to query histogram!');
-				res.status(500);	// internal server error
+				handleServerError(e, req, res);
 			}
-			
-			res.end();
+		});
+		
+		app.get(API_PATH + '/timeHistogram', function (req, res) {
+			try {
+				var model = getModel(req.sessionID, req.session);
+				var stateId = parseInt(req.query.stateId);
+				
+				if (log.trace())
+					log.trace('Fetching time histogram for state %d ...', stateId);
+				
+				res.send(model.getModel().timeHistogram(stateId));
+				res.end();
+			} catch (e) {
+				log.error(e, 'Failed to query histogram!');
+				handleServerError(e, req, res);
+			}
 		});
 		
 		app.get(API_PATH + '/targetFeature', function (req, res) {
@@ -1230,12 +1236,11 @@ function initStreamStoryRestApi() {
 					log.debug('Fetching distribution for feature "%d" for height %d ...', ftrIdx, height);
 				
 				res.send(model.getFtrDist(height, ftrIdx));
+				res.end();
 			} catch (e) {
 				log.error(e, 'Failed to fetch the distribution of a feature!');
-				res.status(500);	// internal server error
+				handleServerError(e, req, res);
 			}
-			
-			res.end();
 		});
 		
 		app.post(API_PATH + '/stateProperties', function (req, res) {
@@ -1344,12 +1349,11 @@ function initStreamStoryRestApi() {
 				
 				model.setControlVal({ ftrId: ftrId, val: val, stateId: stateId});
 				res.send(model.getVizState());
+				res.end();
 			} catch (e) {
 				log.error(e, 'Failed to control %d by factor %d', ftrId, val);
-				res.status(500);	// internal server error
+				handleServerError(e, req, res);
 			}
-			
-			res.end();
 		});
 		
 		app.post(API_PATH + '/resetControl', function (req, res) {
@@ -1366,13 +1370,11 @@ function initStreamStoryRestApi() {
 				
 				model.resetControlVal({ ftrId: ftrId, stateId: stateId});
 				res.send(model.getVizState());
-				
+				res.end();
 			} catch (e) {
 				log.error(e, 'Failed to reset control!');
-				res.status(500);	// internal server error
+				handleServerError(e, req, res);
 			}
-			
-			res.end();
 		});
 		
 		app.get(API_PATH + '/controlsSet', function (req, res) {
@@ -1383,12 +1385,11 @@ function initStreamStoryRestApi() {
 					log.debug('Fetching the state of any control features ...');
 				
 				res.send({ active: model.getModel().isAnyControlFtrSet() });
+				res.end();
 			} catch (e) {
 				log.error(e, 'Failed to query the state of control features!');
-				res.status(500);	// internal server error
+				handleServerError(e, req, res);
 			}
-			
-			res.end();
 		});
 	}
 }
@@ -1438,9 +1439,9 @@ function initDataUploadApi() {
 				res.end();
 			},
 			onError: function () {
-				log.error(new Error(), 'Exception while reading CSV headers!');
-				res.status(500);	// internal server error
-				res.end();
+				var e = new Error('Exception while reading headers!');
+				log.error(e, 'Exception while reading CSV headers!');
+				handleServerError(e, req, res);
 			}
 		});
 	});
@@ -1486,7 +1487,7 @@ function initDataUploadApi() {
 			mkdirp(dbDir, function (e) {
 				if (e != null) {
 					log.error(e, 'Failed to create base directory!');
-					res.status(500);	// internal server error
+					handleServerError(e, req, res);
 					return;
 				}
 				
@@ -1577,8 +1578,7 @@ function initDataUploadApi() {
 			});
 		} catch (e) {
 			log.error(e, 'Exception while building model!');
-			res.status(500);	// internal server error
-			res.end();
+			handleServerError(e, req, res);
 		}
 	}
 	
@@ -1683,8 +1683,7 @@ function initDataUploadApi() {
 				fs.mkdir(userDirNm, function (e) {
 					if (e != null) {
 						log.error(e, 'Failed to create directory!');
-						res.status(500);	// internal server error
-						res.end();
+						handleServerError(e, req, res);
 						return;
 					}
 					createModel(req, res);
@@ -1755,8 +1754,7 @@ function initDataUploadApi() {
 				}
 			} catch (e1) {
 				log.error(e1, 'Failed to initialize model!');
-				res.status(500);	// internal server error
-				res.end();
+				handleServerError(e1, req, res);
 			}
 		});
 	});
@@ -1772,12 +1770,11 @@ function initServerApi() {
 				log.info(API_PATH + '/exit called. Exiting qminer and closing server ...');
 				utils.exit(base);
 				res.status(204);
+				res.end();
 			} catch (e) {
 				log.error(e, 'Failed to exit!');
-				res.status(500);	// internal server error
+				handleServerError(e1, req, res);
 			}
-			
-			res.end();
 		});
 	}
 	
@@ -1900,8 +1897,7 @@ function initServerApi() {
 				activateModelById(req, res, modelId, activate, false);
 			} catch (e) {
 				log.error(e, 'Failed to process raw measurement!');
-				res.status(500);
-				res.end();
+				handleServerError(e, req, res);
 			}
 		});
 		
@@ -1917,8 +1913,7 @@ function initServerApi() {
 				activateModelById(req, res, model.getId(), activate, true);
 			} catch (e) {
 				log.error(e, 'Failed to process raw measurement!');
-				res.status(500);
-				res.end();
+				handleServerError(e, req, res);
 			}
 		});
 	}
@@ -1968,8 +1963,7 @@ function initServerApi() {
 			});
 		} catch (e) {
 			log.error(e, 'Failed to process raw measurement!');
-			res.status(500);
-			res.end();
+			handleServerError(e, req, res);
 		}
 	});
 }
@@ -1988,8 +1982,7 @@ function initConfigRestApi() {
        		db.getMultipleConfig({properties: properties}, function (e, result) {
        			if (e != null) {
        				log.error(e, 'Failed to fetch properties from DB!');
-       				res.status(500);	// internal server error
-       				res.end();
+       				handleServerError(e, req, res);
        				return;
        			}
        			
@@ -1998,8 +1991,7 @@ function initConfigRestApi() {
        		});
 		} catch (e) {
 			log.error(e, 'Failed to query configuration!');
-			res.status(500);	// internal server error
-			res.end();
+			handleServerError(e, req, res);
 		}
 	});
 	
@@ -2013,8 +2005,7 @@ function initConfigRestApi() {
        		db.setConfig(config, function (e, result) {
        			if (e != null) {
        				log.error(e, 'Failed to update settings!');
-       				res.status(500);	// internal server error
-       				res.end();
+       				handleServerError(e, req, res);
        				return;
        			}
        			
@@ -2029,8 +2020,7 @@ function initConfigRestApi() {
        		});
 		} catch (e) {
 			log.error(e, 'Failed to set configuration!');
-			res.status(500);	// internal server error
-			res.end();
+			handleServerError(e, req, res);
 		}
 	});
 }

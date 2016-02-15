@@ -554,6 +554,7 @@ exports.StreamStory = function (opts) {
 			var label = mc.getStateLabel(stateId);
 			var centroids = mc.getStateCentroids(stateId);
 			var allCentroids = mc.getStateCentroids();
+			var timeHistogram = mc.timeHistogram(stateId);
 			
 			if (log.trace())
 				log.trace('Tree: %s', JSON.stringify(classifyTree));
@@ -623,7 +624,8 @@ exports.StreamStory = function (opts) {
 				featureWeights: wgts,
 				classifyTree: classifyTree,
 				centroids: centroids,
-				allCentroids: allCentroids
+				allCentroids: allCentroids,
+				timeHistogram: timeHistogram
 			};
 		},
 		

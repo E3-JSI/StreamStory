@@ -754,53 +754,6 @@ function changeControlVal(stateId, ftrIdx, val) {
 			visContainer: 'vis_container'
 		});
 		
-		function visualizeParcoords(centroids, allCentroids, ftrNames) {
-			var opts = {
-				color: '#5bc0de',
-				alpha: .6
-			};
-			
-			var backgroundData = [];
-			var foregroundData = [];
-			
-			for (var centroidN = 0; centroidN < allCentroids.length; centroidN++) {
-				var centroid = allCentroids[centroidN];
-				var row = {};
-				for (var ftrN = 0; ftrN < centroid.length; ftrN++) {
-					row[ftrNames[ftrN]] = centroid[ftrN];
-				}
-				backgroundData.push(row);
-			}
-			
-			for (var centroidN = 0; centroidN < centroids.length; centroidN++) {
-				var centroid = centroids[centroidN];
-				var row = {};
-				for (var ftrN = 0; ftrN < centroid.length; ftrN++) {
-					row[ftrNames[ftrN]] = centroid[ftrN];
-				}
-				foregroundData.push(row);
-			} 
-			
-			var parcoords = d3.parcoords(opts)("#div-parallel-wrapper")
-				.data(backgroundData)
-			  	.render()
-			  	.createAxes()
-			  	.interactive();
-			
-			parcoords.highlight(foregroundData);
-			
-			parcoords.on("brush", function(d) {
-			    d3.select("#grid")
-			      .datum(d.slice(0,10))
-			      .call(grid)
-			      .selectAll(".row")
-			      .on({
-			        "mouseover": function(d) { parcoords.highlight([d]) },
-			        "mouseout": parcoords.unhighlight
-			      });
-			  });
-		}
-		
 		function visualizeDecisionTree(root) {
 			$('#div-tree-wrapper').removeClass('hidden');
 			
@@ -980,6 +933,66 @@ function changeControlVal(stateId, ftrIdx, val) {
 			});
 		}
 		
+		function visualizeParcoords(centroids, allCentroids, ftrNames) {
+			var opts = {
+				color: '#5bc0de',
+				alpha: .6
+			};
+			
+			var backgroundData = [];
+			var foregroundData = [];
+			
+			for (var centroidN = 0; centroidN < allCentroids.length; centroidN++) {
+				var centroid = allCentroids[centroidN];
+				var row = {};
+				for (var ftrN = 0; ftrN < centroid.length; ftrN++) {
+					row[ftrNames[ftrN]] = centroid[ftrN];
+				}
+				backgroundData.push(row);
+			}
+			
+			for (var centroidN = 0; centroidN < centroids.length; centroidN++) {
+				var centroid = centroids[centroidN];
+				var row = {};
+				for (var ftrN = 0; ftrN < centroid.length; ftrN++) {
+					row[ftrNames[ftrN]] = centroid[ftrN];
+				}
+				foregroundData.push(row);
+			} 
+			
+			var parcoords = d3.parcoords(opts)("#div-parallel-wrapper")
+				.data(backgroundData)
+			  	.render()
+			  	.createAxes()
+			  	.interactive();
+			
+			parcoords.highlight(foregroundData);
+			
+			parcoords.on("brush", function(d) {
+			    d3.select("#grid")
+			      .datum(d.slice(0,10))
+			      .call(grid)
+			      .selectAll(".row")
+			      .on({
+			        "mouseover": function(d) { parcoords.highlight([d]) },
+			        "mouseout": parcoords.unhighlight
+			      });
+			  });
+		}
+		
+		function visualizeTimeHist(data) {
+			drawHistogram({
+				data: data,
+				container: 'div-timehist-wrapper',
+				showY: true,
+				xTicks: 10,
+				formatX: function (d) {
+					return formatDateTime(new Date(d));
+				},
+				rotateX: 90
+			});
+		}
+		
 		(function () {
 			var prevVal = 1;
 			
@@ -1085,6 +1098,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 					$('#div-past').html('');
 					$('#div-tree-container').html('');
 					$('#div-parallel-wrapper').html('');
+					$('#div-timehist-wrapper').html('');
 					
 					var ftrNames = [];
 					for (var i = 0; i < data.features.observations.length; i++) {
@@ -1099,6 +1113,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 
 					visualizeDecisionTree(data.classifyTree);
 					visualizeParcoords(data.centroids, data.allCentroids, ftrNames);
+					visualizeTimeHist(data.timeHistogram);
 										
 					// populate
 					// basic info
