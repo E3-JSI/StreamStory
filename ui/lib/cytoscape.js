@@ -24,7 +24,7 @@ function _getTextSize(el) {
 	var style = el._private.style;
 	if (el.group() == 'nodes') {
 		var val = style['font-size'].pxValue;
-		var factor = style['font-factor'].value;
+		var factor = 'font-factor' in style ? style['font-factor'].value : 1;
 		if (val != 10000) return val*factor;
 		
 		var nodeW = style['width'].pxValue;

@@ -121,7 +121,7 @@ html, body {
 }
 
 /*===============================================================
- 	CHARTS
+ 	PARALLEL COORDINATES
 ===============================================================*/
 
 .parcoords > svg, .parcoords > canvas { 
@@ -130,6 +130,10 @@ html, body {
 }
 .parcoords > canvas {
   	pointer-events: none;
+}
+
+.parcoords text, .parcoords text.label {
+	fill: rgb(200, 200, 200);
 }
 
 .parcoords text.label {
@@ -306,7 +310,7 @@ html, body {
 }
 
 /*===============================================================
- 	HACKS
+ 	HACKS & FIXES
 ===============================================================*/
 
 .btn-close {
@@ -330,6 +334,21 @@ html, body {
 
 .navbar {
 	margin-bottom: 0px !important;
+}
+
+#div-tree-wrapper, #div-parallel-wrapper {
+	display: block !important;
+	width: 100%;
+	visibility: hidden;
+	position: absolute;
+	top: -100000px;
+	left: -100000px;
+}
+
+#div-tree-wrapper.active, #div-parallel-wrapper.active {
+	display: block !important;
+	visibility: visible;
+	position: static;
 }
 
 

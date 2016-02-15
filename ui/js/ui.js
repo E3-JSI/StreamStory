@@ -754,17 +754,51 @@ function changeControlVal(stateId, ftrIdx, val) {
 			visContainer: 'vis_container'
 		});
 		
-		function visualizeParcoords(data) {
-			var parcoords = d3.parcoords()("#div-parallel-wrapper")
-			.data([
-			    [0,-0,0,0,0,1],
-			    [1,-1,1,2,1,1],
-			    [2,-2,4,4,0.5,1],
-			    [3,-3,9,6,0.33,1],
-			    [4,-4,16,8,0.25,1]
-			  ])
-			  .render()
-			  .createAxes();
+		function visualizeParcoords(centroids, allCentroids, ftrNames) {
+			var opts = {
+				color: '#5bc0de',
+				alpha: .6
+			};
+			
+			var backgroundData = [];
+			var foregroundData = [];
+			
+			for (var centroidN = 0; centroidN < allCentroids.length; centroidN++) {
+				var centroid = allCentroids[centroidN];
+				var row = {};
+				for (var ftrN = 0; ftrN < centroid.length; ftrN++) {
+					row[ftrNames[ftrN]] = centroid[ftrN];
+				}
+				backgroundData.push(row);
+			}
+			
+			for (var centroidN = 0; centroidN < centroids.length; centroidN++) {
+				var centroid = centroids[centroidN];
+				var row = {};
+				for (var ftrN = 0; ftrN < centroid.length; ftrN++) {
+					row[ftrNames[ftrN]] = centroid[ftrN];
+				}
+				foregroundData.push(row);
+			} 
+			
+			var parcoords = d3.parcoords(opts)("#div-parallel-wrapper")
+				.data(backgroundData)
+			  	.render()
+			  	.createAxes()
+			  	.interactive();
+			
+			parcoords.highlight(foregroundData);
+			
+			parcoords.on("brush", function(d) {
+			    d3.select("#grid")
+			      .datum(d.slice(0,10))
+			      .call(grid)
+			      .selectAll(".row")
+			      .on({
+			        "mouseover": function(d) { parcoords.highlight([d]) },
+			        "mouseout": parcoords.unhighlight
+			      });
+			  });
 		}
 		
 		function visualizeDecisionTree(root) {
@@ -1051,9 +1085,20 @@ function changeControlVal(stateId, ftrIdx, val) {
 					$('#div-past').html('');
 					$('#div-tree-container').html('');
 					$('#div-parallel-wrapper').html('');
+					
+					var ftrNames = [];
+					for (var i = 0; i < data.features.observations.length; i++) {
+						ftrNames.push(data.features.observations[i].name);
+					}
+					for (var i = 0; i < data.features.controls.length; i++) {
+						ftrNames.push(data.features.controls[i].name);
+					}
+					for (var i = 0; i < data.features.ignored.length; i++) {
+						ftrNames.push(data.features.ignored[i].name);
+					}
 
 					visualizeDecisionTree(data.classifyTree);
-					visualizeParcoords(null);
+					visualizeParcoords(data.centroids, data.allCentroids, ftrNames);
 										
 					// populate
 					// basic info

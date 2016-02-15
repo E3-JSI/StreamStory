@@ -552,7 +552,9 @@ exports.StreamStory = function (opts) {
 			var wgts = mc.getStateWgtV(stateId);
 			var classifyTree = mc.getClassifyTree(stateId);
 			var label = mc.getStateLabel(stateId);
-
+			var centroids = mc.getStateCentroids(stateId);
+			var allCentroids = mc.getStateCentroids();
+			
 			if (log.trace())
 				log.trace('Tree: %s', JSON.stringify(classifyTree));
 			
@@ -593,6 +595,20 @@ exports.StreamStory = function (opts) {
     			}
     		})(classifyTree);
 			
+			for (var centroidN = 0; centroidN < centroids.length; centroidN++) {
+				var centroid = centroids[centroidN];
+				for (var ftrN = 0; ftrN < centroid.length; ftrN++) {
+					centroid[ftrN] = invertFeature(ftrN, centroid[ftrN]);
+				}
+			}
+			
+			for (var centroidN = 0; centroidN < allCentroids.length; centroidN++) {
+				var centroid = allCentroids[centroidN];
+				for (var ftrN = 0; ftrN < centroid.length; ftrN++) {
+					centroid[ftrN] = invertFeature(ftrN, centroid[ftrN]);
+				}
+			}
+			
 			var features = getFtrDescriptions(stateId);
 
 			return {
@@ -605,7 +621,9 @@ exports.StreamStory = function (opts) {
 				futureStates: futureStates,
 				pastStates: pastStates,
 				featureWeights: wgts,
-				classifyTree: classifyTree
+				classifyTree: classifyTree,
+				centroids: centroids,
+				allCentroids: allCentroids
 			};
 		},
 		
