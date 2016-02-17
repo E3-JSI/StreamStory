@@ -359,7 +359,24 @@ var zoomVis = function (opts) {
 	}
 	
 	function getNodeLabel(node) {
-		return (node.name != null ? node.name : node.autoName/*(node.label)*/);
+		var label = node.name != null ? node.name : node.autoName;
+		var spl = label.split(/\s+/);
+		var maxLineLen = 10;
+		
+		var result = '';
+		var lineLen = 0;
+		for (var i = 0; i < spl.length; i++) {
+			result += spl[i];
+			lineLen += spl[i].length;
+			if (lineLen > maxLineLen && i < spl.length - 1) {
+				result += '\n';
+				lineLen = 0;
+			} else if (i < spl.length - 1) {
+				result += ' ';
+			}
+		}
+		
+		return result;
 	}
 
 	function colorFromProb(prob) {

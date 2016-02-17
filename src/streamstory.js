@@ -554,7 +554,11 @@ exports.StreamStory = function (opts) {
 			var label = mc.getStateLabel(stateId);
 			var centroids = mc.getStateCentroids(stateId);
 			var allCentroids = mc.getStateCentroids();
-			var timeHistogram = mc.timeHistogram(stateId);
+			var timeHistogram = mc.timeHistogram(stateId, 'global');
+			var yearHistogram = mc.timeHistogram(stateId, 'year');
+			var monthHistogram = mc.timeHistogram(stateId, 'month');
+			var weekHistogram = mc.timeHistogram(stateId, 'week');
+			var dayHistogram = mc.timeHistogram(stateId, 'day');
 			
 			if (log.trace())
 				log.trace('Tree: %s', JSON.stringify(classifyTree));
@@ -611,7 +615,7 @@ exports.StreamStory = function (opts) {
 			}
 			
 			var features = getFtrDescriptions(stateId);
-
+			
 			return {
 				id: stateId,
 				name: stateNm.length > 0 ? stateNm : null,
@@ -625,7 +629,11 @@ exports.StreamStory = function (opts) {
 				classifyTree: classifyTree,
 				centroids: centroids,
 				allCentroids: allCentroids,
-				timeHistogram: timeHistogram
+				timeHistogram: timeHistogram,
+				yearHistogram: yearHistogram,
+				monthHistogram: monthHistogram,
+				weekHistogram: weekHistogram,
+				dayHistogram: dayHistogram
 			};
 		},
 		

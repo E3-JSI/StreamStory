@@ -747,6 +747,9 @@ function changeControlVal(stateId, ftrIdx, val) {
 	//=======================================================
 	
 	(function () {
+		var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+		var DAYS_OF_WEEK = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+		
 		var fontFactor = 1;
 		var DELTA_FONT_FACTOR = .1;
 		
@@ -980,16 +983,56 @@ function changeControlVal(stateId, ftrIdx, val) {
 			  });
 		}
 		
-		function visualizeTimeHist(data) {
+		function visualizeTimeHist(opts) {
+			if (opts.rotate == null) opts.rotate = 0;
+			if (opts.xTicks == null) opts.xTicks = 10;
+			if (opts.labelXOffsetPerc == null) opts.labelXOffsetPerc = 0;
+			
+			var data = opts.data;
+			var container = opts.container;
+			var formatX = opts.formatX;
+			var rotate = opts.rotate;
+			
+			$('#' + container).html('');
+			
 			drawHistogram({
 				data: data,
-				container: 'div-timehist-wrapper',
+				container: container,
 				showY: true,
-				xTicks: 10,
-				formatX: function (d) {
-					return formatDateTime(new Date(d));
+				xTicks: opts.xTicks,
+				formatX: formatX,
+				rotateX: rotate,
+				topPadding: 10,
+				bottomPadding: opts.bottomPadding,
+				labelXOffsetPerc: opts.labelXOffsetPerc
+			});
+		}
+		
+		function onZoomIntoState(stateId) {
+			// get the sub model
+			$.ajax('api/subModel', {
+				dataType: 'json',
+				method: 'GET',
+				data: { stateId: stateId },
+				success: function (model) {
+					viz.setSubModel(model);
+					$('#btn-viz-back').removeClass('hidden');
 				},
-				rotateX: 90
+				error: handleAjaxError()
+			});
+		}
+		
+		function showPath(stateId, height) {
+			// get the sub model
+			$.ajax('api/path', {
+				dataType: 'json',
+				method: 'GET',
+				data: { stateId: stateId, height: height, length: 4, probThreshold: .2 },
+				success: function (model) {
+					viz.setSubModel(model);
+					$('#btn-viz-back').removeClass('hidden');
+				},
+				error: handleAjaxError()
 			});
 		}
 		
@@ -1030,6 +1073,33 @@ function changeControlVal(stateId, ftrIdx, val) {
 			orientation: "vertical",
 			slide: function (event, ui) {
 				viz.setZoom(ui.value);
+			}
+		});
+		
+		$('#btns-timescale button').click(function () {
+			$('#btns-timescale button').removeClass('active');
+			$(this).addClass('active');
+			$('.timehist').addClass('hidden');
+			
+			var btnId = $(this).attr('id');
+			switch (btnId) {
+			case 'btn-toggle-timehist-global':
+				$('#div-timehist-global').removeClass('hidden');
+				break;
+			case 'btn-toggle-timehist-yearly':
+				$('#div-timehist-yearly').removeClass('hidden');
+				break;
+			case 'btn-toggle-timehist-monthly':
+				$('#div-timehist-monthly').removeClass('hidden');
+				break;
+			case 'btn-toggle-timehist-weekly':
+				$('#div-timehist-weekly').removeClass('hidden');
+				break;
+			case 'btn-toggle-timehist-daily':
+				$('#div-timehist-daily').removeClass('hidden');
+				break;
+			default:
+				alert('Unknown button id: ' + btnId);
 			}
 		});
 		
@@ -1098,7 +1168,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 					$('#div-past').html('');
 					$('#div-tree-container').html('');
 					$('#div-parallel-wrapper').html('');
-					$('#div-timehist-wrapper').html('');
+					
 					
 					var ftrNames = [];
 					for (var i = 0; i < data.features.observations.length; i++) {
@@ -1113,7 +1183,46 @@ function changeControlVal(stateId, ftrIdx, val) {
 
 					visualizeDecisionTree(data.classifyTree);
 					visualizeParcoords(data.centroids, data.allCentroids, ftrNames);
-					visualizeTimeHist(data.timeHistogram);
+					visualizeTimeHist({
+						data: data.timeHistogram,
+						container: 'div-timehist-global',
+						formatX: function (d) {
+							return formatDateTime(new Date(d));
+						},
+						rotate: -10,
+						bottomPadding: 40
+					});
+					visualizeTimeHist({
+						data: data.yearHistogram,
+						container: 'div-timehist-yearly',
+						formatX: function (monthN) {
+							return MONTHS[monthN-1];
+						},
+						xTicks: 12,
+						labelXOffsetPerc: .5
+					});
+					visualizeTimeHist({
+						data: data.monthHistogram,
+						container: 'div-timehist-monthly',
+						xTicks: 31,
+						labelXOffsetPerc: .5
+					});
+					visualizeTimeHist({
+						data: data.weekHistogram,
+						container: 'div-timehist-weekly',
+						formatX: function (dayN) {
+							return DAYS_OF_WEEK[dayN];
+						},
+						xTicks: 7,
+						labelXOffsetPerc: .5
+					});
+					visualizeTimeHist({
+						data: data.dayHistogram,
+						container: 'div-timehist-daily',
+						xTicks: 24,
+						labelXOffsetPerc: .5
+					});
+					
 										
 					// populate
 					// basic info
@@ -1323,34 +1432,6 @@ function changeControlVal(stateId, ftrIdx, val) {
 			}
 		});
 		
-		function onZoomIntoState(stateId) {
-			// get the sub model
-			$.ajax('api/subModel', {
-				dataType: 'json',
-				method: 'GET',
-				data: { stateId: stateId },
-				success: function (model) {
-					viz.setSubModel(model);
-					$('#btn-viz-back').removeClass('hidden');
-				},
-				error: handleAjaxError()
-			});
-		}
-		
-		function showPath(stateId, height) {
-			// get the sub model
-			$.ajax('api/path', {
-				dataType: 'json',
-				method: 'GET',
-				data: { stateId: stateId, height: height, length: 4, probThreshold: .2 },
-				success: function (model) {
-					viz.setSubModel(model);
-					$('#btn-viz-back').removeClass('hidden');
-				},
-				error: handleAjaxError()
-			});
-		}
-		
 		viz.onStateCtxMenu(function (id, label, level, height) {
 			var result = [
 			    {
@@ -1507,7 +1588,17 @@ function changeControlVal(stateId, ftrIdx, val) {
 				// TODO reload the decision tree
 			}
 		});
+		
+		$('#tabs-viz-bottom a').click(function () {
+			var tabId = $(this).attr('id');
+			
+			if (tabId == 'a-timehist') {
+				$('#btns-timescale button')[0].click();
+			}
+		});
+		
 		$('.nav-pills a')[0].click()
+		
 		$('#tabs-viz-bottom').find('a')[0].click();
 	});
 })()

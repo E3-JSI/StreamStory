@@ -248,6 +248,19 @@ html, body {
 	height: 100%;
 }
 
+#btns-timescale {
+	position: absolute;
+	right: 20px;
+	top: 62px;
+}
+
+#div-timehist-global, #div-timehist-yearly, #div-timehist-monthly, #div-timehist-weekly, #div-timehist-daily {
+	width: 100%;
+	height: 100%;
+}
+
+
+
 /*===============================================================
  	DASHBOARD
 ===============================================================*/
@@ -336,19 +349,27 @@ html, body {
 	margin-bottom: 0px !important;
 }
 
-#div-tree-wrapper, #div-parallel-wrapper {
+#div-tree-wrapper, #div-parallel-wrapper, #div-timehist-wrapper {
 	display: block !important;
-	width: 100%;
+	width: calc(100% - 30px);
 	visibility: hidden;
 	position: absolute;
 	top: -100000px;
 	left: -100000px;
 }
 
-#div-tree-wrapper.active, #div-parallel-wrapper.active {
+#div-tree-wrapper.active, #div-parallel-wrapper.active, #div-timehist-wrapper.active {
 	display: block !important;
 	visibility: visible;
 	position: static;
+}
+
+#div-timehist-global.hidden, #div-timehist-yearly.hidden, #div-timehist-monthly.hidden, #div-timehist-weekly.hidden, #div-timehist-daily.hidden {
+	display: block !important;
+	visibility: hidden;
+	position: absolute;
+	top: -100000px;
+	left: -100000px;
 }
 
 

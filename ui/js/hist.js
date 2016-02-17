@@ -23,6 +23,9 @@ function drawHistogram(opts) {
 
 	if (opts.xTicks == null) opts.xTicks = 4;
 	if (opts.rotateX == null) opts.rotateX = 0;
+	if (opts.topPadding == null) opts.topPadding = 0;
+	if (opts.bottomPadding == null) opts.bottomPadding = 20;
+	if (opts.labelXOffsetPerc == null) opts.labelXOffsetPerc = 0;
 	
 	var probV, prevProbV;
 	if (opts.data.targetProbV != null) {
@@ -61,14 +64,15 @@ function drawHistogram(opts) {
 	var margin = {
 		left: 0,
 		right: 0,
-		top: 0,
-		bottom: 20
+		top: opts.topPadding,
+		bottom: opts.bottomPadding
 	}
 	
-	var width = container.width() - margin.left - margin.right;
+	var width = container.width() - margin.left - margin.right - 2;
 	var height = container.height() - margin.top - margin.bottom;
 	
 	var binW = width / (data.length + 1);
+	var recW = binW - 1;
 	
 	var x = d3.scale.linear().range([0, width]);
 	var y = d3.scale.linear().range([height, 0]);
@@ -103,14 +107,20 @@ function drawHistogram(opts) {
         .attr("transform", "translate(0," + height + ")")
         .call(xAxis)
         .selectAll("text")
+        .attr('x', function (d) {
+        	return opts.labelXOffsetPerc*binW;
+        })
+        .attr('y', function () {
+        	return opts.bottomPadding/2;
+        })
+        .attr("text-anchor", "middle")
         .attr("transform", "rotate(" + opts.rotateX + ")");
 	
-	function getX(d) {
-		return x(d.val);// - dx; // - x(dx);
-	}
 	
-	function getY(d) {
-		return y(d.prob);
+	
+	function getX(d) {
+		console.log('dx: ' + dx + ', x(dx): ' + x(dx));
+		return x(d.val + dx/2) - recW / 2;// - dx; // - x(dx);
 	}
 	
 	var enter = chart.selectAll(".bar").data(data).enter();
@@ -119,7 +129,7 @@ function drawHistogram(opts) {
 		enter.append("rect")
 			.attr("class", "bar-background")
 			.attr("x", getX)
-			.attr("width", binW - 1)
+			.attr("width", recW)
 			.attr("y", function (d) { return y(d.totalProb); })
 			.attr("height", function(d) { return height - y(d.totalProb); });
 	}
@@ -127,22 +137,26 @@ function drawHistogram(opts) {
 	enter.append("rect")
       	.attr("class", "bar-foreground")
       	.attr("x", getX)
-      	.attr("width", binW)//Math.max(1, binW - 1))
-      	.attr("y", getY)
-      	.attr("height", function(d) { return height - getY(d); });
+      	.attr("width", recW)//Math.max(1, binW - 1))
+      	.attr("y", function (d) {
+      		return y(d.prob);
+      	})
+      	.attr("height", function(d) {
+      		return height - y(d.prob);
+      	});
 	
 	if (prevProbV != null) {
 		enter.append("rect")
       		.attr("class", "bar-previous")
       		.attr("x", getX)
-      		.attr("width", binW - 1)
+      		.attr("width", recW)
       		.attr("y", function (d) { return y(d.prevProb); })
       		.attr("height", function(d) { return height - y(d.prevProb); });
 		
 		enter.append("rect")
       		.attr("class", "bar-overlap")
       		.attr("x", getX)
-      		.attr("width", binW - 1)
+      		.attr("width", recW)
       		.attr("y", function (d) { return y(d.overlap); })
       		.attr("height", function(d) { return height - y(d.overlap); });
 	}

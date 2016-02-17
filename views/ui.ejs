@@ -423,22 +423,40 @@
 			<div class="col-md-8">
 				<div class="tab-content">
 					<div id="tab-tree" role="tabpanel" class="tab-pane fade active">
-						<ul id="tabs-viz-bottom" class="nav nav-tabs">
-						  	<li role="presentation" class="active">
-						  		<a href="#" data-target="#div-parallel-wrapper" data-toggle="tab">Coordinates</a>
-						  	</li>
-						  	<li role="presentation">
-						  		<a href="#" data-target="#div-timehist-wrapper" data-toggle="tab">Time</a>
-						  	</li>
-						  	<li role="presentation">
-						  		<a href="#" data-target="#div-tree-wrapper" data-toggle="tab">Explanation Tree</a>
-						  	</li>
-						</ul>
-						<div class="tab-content">
-							<div id="div-parallel-wrapper" class="tab-pane container-bottom parcoords active"></div>
-							<div id="div-timehist-wrapper" class="tab-pane container-bottom parcoords container-chart"></div>
-							<div id="div-tree-wrapper" class="tab-pane container-bottom">
-								<div id="div-tree-container" style="height: 100%;width: 100%;" class="nopadding"></div>
+						<div class="panel panel-default">
+							<div class="panel-body nopadding">
+								<ul id="tabs-viz-bottom" class="nav nav-tabs">
+								  	<li role="presentation" class="active">
+								  		<a href="#" data-target="#div-parallel-wrapper" data-toggle="tab">Coordinates</a>
+								  	</li>
+								  	<li role="presentation">
+								  		<a id="a-timehist" href="#" data-target="#div-timehist-wrapper" data-toggle="tab">Time</a>
+								  	</li>
+								  	<li role="presentation">
+								  		<a href="#" data-target="#div-tree-wrapper" data-toggle="tab">Explanation Tree</a>
+								  	</li>
+								</ul>
+								<div class="tab-content">
+									<div id="div-parallel-wrapper" class="tab-pane container-bottom parcoords active"></div>
+									<div id="div-timehist-wrapper" class="tab-pane container-bottom parcoords container-chart">
+										<div id="btns-timescale" class="btn-group btn-group-xs" role="group" aria-label="...">
+											<button id="btn-toggle-timehist-global" type="button" class="btn btn-default active">Global</button>
+											<button id="btn-toggle-timehist-yearly" type="button" class="btn btn-default">Yearly</button>
+											<button id="btn-toggle-timehist-monthly" type="button" class="btn btn-default">Monthly</button>
+											<button id="btn-toggle-timehist-weekly" type="button" class="btn btn-default">Weekly</button>
+											<button id="btn-toggle-timehist-daily" type="button" class="btn btn-default">Daily</button>
+										</div>
+										
+										<div id="div-timehist-global" class="timehist"></div>
+										<div id="div-timehist-yearly" class="timehist hidden"></div>
+										<div id="div-timehist-monthly" class="timehist hidden"></div>
+										<div id="div-timehist-weekly" class="timehist hidden"></div>
+										<div id="div-timehist-daily" class="timehist hidden"></div>
+									</div>
+									<div id="div-tree-wrapper" class="tab-pane container-bottom">
+										<div id="div-tree-container" style="height: 100%;width: 100%;" class="nopadding"></div>
+									</div>
+								</div>
 							</div>
 						</div>
 					</div>
