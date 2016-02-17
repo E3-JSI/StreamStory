@@ -291,8 +291,8 @@
 						<div id="vis_container" class="nopadding"></div>						
 						<div id="threshold_slider"></div>
 						<div id="div-font-zoom">
-							<button id="btn-font-increase" type="button" class="btn btn-info btn-xs"><span class="glyphicon glyphicon-plus"></span> Font</button><br />
-							<button id="btn-font-decrease" type="button" class="btn btn-info btn-xs"><span class="glyphicon glyphicon-minus"></span> Font</button>
+							<button id="btn-font-increase" type="button" class="btn btn-default btn-xs"><span class="glyphicon glyphicon-plus"></span> Font</button><br />
+							<button id="btn-font-decrease" type="button" class="btn btn-default btn-xs"><span class="glyphicon glyphicon-minus"></span> Font</button>
 						</div>
 					</div>
 				</div>
@@ -436,7 +436,7 @@
 								  		<a href="#" data-target="#div-tree-wrapper" data-toggle="tab">Explanation Tree</a>
 								  	</li>
 								</ul>
-								<div class="tab-content">
+								<div id="tab-content-bottom" class="tab-content">
 									<div id="div-parallel-wrapper" class="tab-pane container-bottom parcoords active"></div>
 									<div id="div-timehist-wrapper" class="tab-pane container-bottom parcoords container-chart">
 										<div id="btns-timescale" class="btn-group btn-group-xs" role="group" aria-label="...">
@@ -447,11 +447,13 @@
 											<button id="btn-toggle-timehist-daily" type="button" class="btn btn-default">Daily</button>
 										</div>
 										
-										<div id="div-timehist-global" class="timehist"></div>
-										<div id="div-timehist-yearly" class="timehist hidden"></div>
-										<div id="div-timehist-monthly" class="timehist hidden"></div>
-										<div id="div-timehist-weekly" class="timehist hidden"></div>
-										<div id="div-timehist-daily" class="timehist hidden"></div>
+										<div id="div-timehist-container">
+											<div id="div-timehist-global" class="timehist"></div>
+											<div id="div-timehist-yearly" class="timehist hidden"></div>
+											<div id="div-timehist-monthly" class="timehist hidden"></div>
+											<div id="div-timehist-weekly" class="timehist hidden"></div>
+											<div id="div-timehist-daily" class="timehist hidden"></div>
+										</div>
 									</div>
 									<div id="div-tree-wrapper" class="tab-pane container-bottom">
 										<div id="div-tree-container" style="height: 100%;width: 100%;" class="nopadding"></div>

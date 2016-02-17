@@ -240,6 +240,11 @@ html, body {
  	BOTTOM PANEL
 ===============================================================*/
 
+#div-timehist-container {
+	width: 100%;
+	height: 300px;
+}
+
 #div-activity-currconf {
 	height: 70px;
 }
@@ -252,6 +257,7 @@ html, body {
 	position: absolute;
 	right: 20px;
 	top: 62px;
+    z-index: 100;
 }
 
 #div-timehist-global, #div-timehist-yearly, #div-timehist-monthly, #div-timehist-weekly, #div-timehist-daily {
@@ -350,8 +356,8 @@ html, body {
 }
 
 #div-tree-wrapper, #div-parallel-wrapper, #div-timehist-wrapper {
-	display: block !important;
-	width: calc(100% - 30px);
+	display: initial !important;
+	width: 100%;
 	visibility: hidden;
 	position: absolute;
 	top: -100000px;
@@ -364,12 +370,23 @@ html, body {
 	position: static;
 }
 
+#div-timehist-global, #div-timehist-yearly, #div-timehist-monthly, #div-timehist-weekly, #div-timehist-daily {
+	display: block !important;
+	visibility: visible;
+	position: static;
+}
+
 #div-timehist-global.hidden, #div-timehist-yearly.hidden, #div-timehist-monthly.hidden, #div-timehist-weekly.hidden, #div-timehist-daily.hidden {
 	display: block !important;
 	visibility: hidden;
 	position: absolute;
 	top: -100000px;
 	left: -100000px;
+}
+
+.fullstretch {
+	width: 100%;
+	height: 100%;
 }
 
 

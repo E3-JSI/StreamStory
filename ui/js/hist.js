@@ -68,8 +68,11 @@ function drawHistogram(opts) {
 		bottom: opts.bottomPadding
 	}
 	
-	var width = container.width() - margin.left - margin.right - 2;
-	var height = container.height() - margin.top - margin.bottom;
+	var containerW = opts.width != null ? opts.width : container.width();
+	var containerH = opts.height != null ? opts.height : container.height();
+	
+	var width = containerW - margin.left - margin.right// - 1;
+	var height = containerH - margin.top - margin.bottom;
 	
 	var binW = width / (data.length + 1);
 	var recW = binW - 1;
@@ -105,6 +108,7 @@ function drawHistogram(opts) {
 	chart.append("g")         // Add the X Axis
         .attr("class", "x axis")
         .attr("transform", "translate(0," + height + ")")
+        .attr('width', width)
         .call(xAxis)
         .selectAll("text")
         .attr('x', function (d) {

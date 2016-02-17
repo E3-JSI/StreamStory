@@ -1004,7 +1004,9 @@ function changeControlVal(stateId, ftrIdx, val) {
 				rotateX: rotate,
 				topPadding: 10,
 				bottomPadding: opts.bottomPadding,
-				labelXOffsetPerc: opts.labelXOffsetPerc
+				labelXOffsetPerc: opts.labelXOffsetPerc,
+				width: $('#tab-content-bottom').width(),
+				height: $('#tab-content-bottom').height()
 			});
 		}
 		
