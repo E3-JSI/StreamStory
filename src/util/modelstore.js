@@ -258,15 +258,15 @@ module.exports = exports = function (opts) {
 					content: outVal
 				}));
 				
-				if (config.SAVE_STATES) {
-					var ftrPred = model.predictNextState({ useFtrV: true, futureStateN: 5 });
-					var normalPred = model.predictNextState({ useFtrV: false, futureStateN: 5 });
-					
-					utils.appendLine('predictions.txt', JSON.stringify({
-						withFtrV: ftrPred,
-						without: normalPred
-					}));
-				}
+//				if (config.SAVE_STATES) {
+//					var ftrPred = model.predictNextState({ useFtrV: true, futureStateN: 5 });
+//					var normalPred = model.predictNextState({ useFtrV: false, futureStateN: 5 });
+//					
+//					utils.appendLine('predictions.txt', JSON.stringify({
+//						withFtrV: ftrPred,
+//						without: normalPred
+//					}));
+//				}
 			}
 		},
 		
