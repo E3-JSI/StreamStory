@@ -27,9 +27,11 @@ function changeControlVal(stateId, ftrIdx, val) {
 	function getFeatureInfo() {
 		var result = [];
 		
-		var ul = $('#ul-ftrs-obs');
+		var ulObs = $('#ul-ftrs-obs');
+		var ulContr = $('#ul-ftrs-contr');
+		var ulIgn = $('#ul-ftrs-ign');
 		
-		$.each(ul.find('li'), function (i, li) {
+		function addToResult(i, li) {
 			var name = $(li).text().substring(1);
 			var id = $(li).find('input').val();
 			
@@ -37,7 +39,11 @@ function changeControlVal(stateId, ftrIdx, val) {
 				name: name,
 				id: parseInt(id)
 			});
-		});
+		}
+		
+		$.each(ulObs.find('li'), addToResult);
+		$.each(ulContr.find('li'), addToResult);
+		$.each(ulIgn.find('li'), addToResult);
 		
 		return result;
 	}
@@ -624,22 +630,25 @@ function changeControlVal(stateId, ftrIdx, val) {
 			});
 		}
 		
-		$('#ul-ftrs-obs').find('input[type=checkbox]').change(function (event) {
-			var ul = $('#ul-ftrs-obs');
-			var el = $(event.target);
-			var checked = el.prop('checked');
-			
-			if (checked) {
-				// uncheck the other elements
-				ul.find('input[type=checkbox]').removeAttr('checked');
-				el.prop('checked', true);
+		(function () {
+			var ftrLists = $('#ul-ftrs-obs,#ul-ftrs-contr,#ul-ftrs-ign');
+			ftrLists.find('input[type=checkbox]').change(function (event) {
+				var ul = $('#ul-ftrs-obs');
+				var el = $(event.target);
+				var checked = el.prop('checked');
 				
-				var ftrIdx = el.val();
-				viz.setTargetFtr(ftrIdx);
-			} else {
-				viz.setTargetFtr(null);
-			}
-		});
+				if (checked) {
+					// uncheck the other elements
+					ftrLists.find('input[type=checkbox]').removeAttr('checked');
+					el.prop('checked', true);
+					
+					var ftrId = el.val();
+					viz.setTargetFtr(ftrId);
+				} else {
+					viz.setTargetFtr(null);
+				}
+			});
+		})();
 		
 		$('#chk-sim-inputs').change(function (event) {
 			if (event.target.checked) {

@@ -296,7 +296,7 @@ html, body {
 	line-height: 11px;
 }
 
-#ul-ftrs-obs {
+.ul-show-ftrs {
 	list-style: none;
 	padding-left: 0;
 }

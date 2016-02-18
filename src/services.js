@@ -393,7 +393,7 @@ function initStreamStoryHandlers(model, enable) {
 			modelStore.sendMsg(model.getId(), JSON.stringify(uiMsg));
 			
 			if (config.SAVE_ACTIVITIES) {
-				utils.appendLine('activities.csv',  startTm.getTime() + ',' + endTm.getTime() + ',"' + activityName.replace(/\"/g, '\\"') + '"');
+				utils.appendLine('activities-' + model.getId() + '.csv',  startTm.getTime() + ',' + endTm.getTime() + ',"' + activityName.replace(/\"/g, '\\"') + '"');
 			}
 		});
 	} else {

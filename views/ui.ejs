@@ -205,11 +205,27 @@
 											%>
 											<div class="form-group">
 												<h4>Show attribute</h4>
-												<ul id="ul-ftrs-obs">
-												<% for (var ftrN = 0; ftrN < featureInfo.length; ftrN++) { %>
-													<li><input type="checkbox" value="<%= ftrN %>" /> <%= featureInfo[ftrN].name %></li>
+												<ul id="ul-ftrs-obs" class="ul-show-ftrs">
+												<% for (var ftrN = 0; ftrN < observations.length; ftrN++) { %>
+													<li><input type="checkbox" value="<%= ftrN %>" /> <%= observations[ftrN].name %></li>
 												<% } %>
 												</ul>
+												<% if (controls.length > 0) { %>
+													<h5>Control Attributes</h5>
+													<ul id="ul-ftrs-contr" class="ul-show-ftrs">
+													<% for (var ftrN = 0; ftrN < controls.length; ftrN++) { %>
+														<li><input type="checkbox" value="<%= ftrN + observations.length %>" /> <%= controls[ftrN].name %></li>
+													<% } %>
+													</ul>
+												<% } %>
+												<% if (ignored.length > 0) { %>
+													<h5>Ignored Attributes</h5>
+													<ul id="ul-ftrs-ign" class="ul-show-ftrs">
+													<% for (var ftrN = 0; ftrN < ignored.length; ftrN++) { %>
+														<li><input type="checkbox" value="<%= ftrN + observations.length + controls.length %>" /> <%= ignored[ftrN].name %></li>
+													<% } %>
+													</ul>
+												<% } %>
 											</div>
 											<% if (controls.length > 0) { %>
 											<div class="form-group">
