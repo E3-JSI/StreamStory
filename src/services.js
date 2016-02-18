@@ -407,7 +407,7 @@ function initStreamStoryHandlers(model, enable) {
 		log.debug('Removing prediction callback ...');
 		model.onPrediction(null);
 		log.debug('Removing activity callback ...');
-		model.onActivity(null);
+		model.getModel().onActivity(null);
 	}
 }
 
