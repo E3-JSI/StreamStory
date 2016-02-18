@@ -40,6 +40,9 @@ function drawHistogram(opts) {
 	var bins = opts.data.binValV;
 	var dx = bins[1] - bins[0];
 	
+	var totalProb = 0;
+	var prevTotalProb = 0;
+	
 	var data = [];
 	for (var i = 0; i < probV.length; i++) {
 		var el = {
@@ -54,9 +57,11 @@ function drawHistogram(opts) {
 		if (prevProbV != null) {
 			el.prevProb = prevProbV[i];
 			el.overlap = Math.min(el.prevProb, el.prob);
+			prevTotalProb += el.prevProb;
 		}
 		
 		data.push(el);
+		totalProb += el.prob;
 	}
 	
 	var container = $(document.getElementById(opts.container));
@@ -120,15 +125,35 @@ function drawHistogram(opts) {
         .attr("text-anchor", "middle")
         .attr("transform", "rotate(" + opts.rotateX + ")");
 	
+	// create tooltips
+	var tip = d3.tip()
+		  .attr('class', 'd3-tip')
+		  .offset([-10, 0])
+		  .html(function(d) {
+			  return '<span>' + toUiPrecision(d.prob / totalProb) + '</span>';
+		  });
 	
+	
+	chart.call(tip);
+	
+	if (prevProbV != null) {
+		var prevTip = d3.tip()
+			.attr('class', 'd3-tip')
+			.offset([-10, 0])
+			.html(function(d) {
+				return '<span>' + toUiPrecision(d.prevProb / prevTotalProb) + '</span>';
+			});
+		chart.call(prevTip);
+	}
 	
 	function getX(d) {
 		console.log('dx: ' + dx + ', x(dx): ' + x(dx));
 		return x(d.val + dx/2) - recW / 2;// - dx; // - x(dx);
 	}
 	
+	// create the bars
 	var enter = chart.selectAll(".bar").data(data).enter();
-	
+
 	if (allProbV != null) {
 		enter.append("rect")
 			.attr("class", "bar-background")
@@ -147,7 +172,8 @@ function drawHistogram(opts) {
       	})
       	.attr("height", function(d) {
       		return height - y(d.prob);
-      	});
+      	}).on('mouseover', tip.show)
+		.on('mouseout', tip.hide);
 	
 	if (prevProbV != null) {
 		enter.append("rect")
@@ -155,7 +181,9 @@ function drawHistogram(opts) {
       		.attr("x", getX)
       		.attr("width", recW)
       		.attr("y", function (d) { return y(d.prevProb); })
-      		.attr("height", function(d) { return height - y(d.prevProb); });
+      		.attr("height", function(d) { return height - y(d.prevProb); })
+      		.on('mouseover', prevTip.show)
+      		.on('mouseout', prevTip.hide);
 		
 		enter.append("rect")
       		.attr("class", "bar-overlap")
