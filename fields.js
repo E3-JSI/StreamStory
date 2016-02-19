@@ -300,6 +300,8 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 				type: 'javaScript',
 				name: 'hlMeanDiffRel',
 				create: function () {
+					var MAX_VAL = 1e3;
+					
 					var val = 0;
 					
 					return {
@@ -317,7 +319,12 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 						onAdd: function (rec) {
 							var mean = rec['Hook load 3h mean'];
 							var hl = rec['hook_load'];
+							
 							val = (hl - mean) / mean;
+							
+							if (isNaN(val)) { val = 0; }
+							else if (val > MAX_VAL) { val = MAX_VAL; }
+							else if (val < -MAX_VAL) { val = -MAX_VAL; }
 						},
 						getFloat: function () {
 							return val;
