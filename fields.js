@@ -280,6 +280,49 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 		    	inAggr: 'RamPosThresholdTick',
 		    	threshold: 2e4
 			}
+		},
+		'Hook load 3h mean': {
+			tick: {
+				name: 'hlMaWindow',
+				type: 'timeSeriesWinBuf',
+				timestamp: 'time',
+				value: 'hook_load',
+				winsize: 1000*60*60*3
+			},
+			aggr: {
+				name: 'HlMA',
+				type: 'ma',
+				inAggr: 'hlMaWindow'
+			}
+		},
+		'Hook load mean diff': {
+			aggr: {
+				type: 'javaScript',
+				name: 'hlMeanDiff',
+				create: function () {
+					var val = 0;
+					
+					return {
+						type: 'javaScript',
+						name: 'hlMeanDiff',
+						saveJson: function () {
+							return { val: val };
+						},
+						save: function (fout) {
+							fout.write(val + '');
+						},
+						load: function (fin) {
+							val = parseFloat(fin.readString());
+						},
+						onAdd: function (rec) {
+							val = rec['hook_load'] - rec['Hook load 3h mean'];
+						},
+						getFloat: function () {
+							return val;
+						}
+					}
+				}
+			}
 		}
 	};
 	
@@ -302,7 +345,7 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 				type: 'ema',
 				emaType: 'linear',
 				inAggr: tickNm,
-				interval: 1000*60*10,
+				interval: 1000*60*60*3,
 				initWindow: 1000*60*9
 			}
 		};

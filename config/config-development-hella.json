@@ -6,7 +6,7 @@
 		"initializeZeros": true
 	},
 	"server": {
-		"port": 8383,
+		"port": 8484,
 		"pingInterval": 10000
 	},
 	"log": {
@@ -30,7 +30,7 @@
 		"host": "localhost",
 		"user": "StreamStory",
 		"password": "StreamStory",
-		"database": "StreamStoryDashboard"
+		"database": "StreamStoryDevelopment"
 	},
 	"integration": {
 		"type": "http",
@@ -42,5 +42,5 @@
 	"saveStates": true,
 	"saveActivities": true,
 	"interpolation": "current",
-	"dataPath": "/mnt/raidM2T/project-data/StreamStory-hella1/"
+	"dataPath": "/mnt/raidM2T/project-data/StreamStory-hella2/"
 }

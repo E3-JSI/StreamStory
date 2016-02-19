@@ -98,8 +98,13 @@ function initStreamAggregates() {
 		
 		var aggrConf = aggregateConfigs[aggrNm];
 		
-		var tick = oaInStore.addStreamAggr(aggrConf.tick);
-		var aggr = oaInStore.addStreamAggr(aggrConf.aggr);
+		var aggr;
+		if (aggrConf.aggr.type != 'javaScript') {
+			var tick = oaInStore.addStreamAggr(aggrConf.tick);
+			aggr = oaInStore.addStreamAggr(aggrConf.aggr);
+		} else {
+			aggr = oaInStore.addStreamAggr(aggrConf.aggr.create());
+		}
 		
 		aggregates[aggrNm] = aggr;
 	}
