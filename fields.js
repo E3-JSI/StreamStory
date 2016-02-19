@@ -295,16 +295,16 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 				inAggr: 'hlMaWindow'
 			}
 		},
-		'Hook load mean diff': {
+		'HL rel mean diff': {
 			aggr: {
 				type: 'javaScript',
-				name: 'hlMeanDiff',
+				name: 'hlMeanDiffRel',
 				create: function () {
 					var val = 0;
 					
 					return {
 						type: 'javaScript',
-						name: 'hlMeanDiff',
+						name: 'hlMeanDiffRel',
 						saveJson: function () {
 							return { val: val };
 						},
@@ -315,10 +315,43 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 							val = parseFloat(fin.readString());
 						},
 						onAdd: function (rec) {
-							val = rec['hook_load'] - rec['Hook load 3h mean'];
+							var mean = rec['Hook load 3h mean'];
+							var hl = rec['hook_load'];
+							val = (hl - mean) / mean;
 						},
 						getFloat: function () {
 							return val;
+						}
+					}
+				}
+			},
+			'HL mean diff': {
+				aggr: {
+					type: 'javaScript',
+					name: 'hlMeanDiff',
+					create: function () {
+						var val = 0;
+						
+						return {
+							type: 'javaScript',
+							name: 'hlMeanDiff',
+							saveJson: function () {
+								return { val: val };
+							},
+							save: function (fout) {
+								fout.write(val + '');
+							},
+							load: function (fin) {
+								val = parseFloat(fin.readString());
+							},
+							onAdd: function (rec) {
+								var mean = rec['Hook load 3h mean'];
+								var hl = rec['hook_load'];
+								val = hl - mean;
+							},
+							getFloat: function () {
+								return val;
+							}
 						}
 					}
 				}
