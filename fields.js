@@ -2,7 +2,7 @@ var config = require('./config.js');
 
 console.log('Initializing fields ...');
 
-var WINDOW_SIZE = 10000;
+var WINDOW_SIZE = 100000;
 
 exports.ENRICHED_STORE = 'enriched';
 exports.OA_IN_STORE = 'oa_in';
