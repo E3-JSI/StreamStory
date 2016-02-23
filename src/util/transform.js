@@ -639,8 +639,12 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 				
 				return retVal;
 			}
+			else if (sensorId == 'moulding') {
+				log.warn('Unknown moulding sensor: %s', JSON.stirngify(val));
+				return [];
+			}
 			else {
-				log.warn('Unknown sensorId: %s', sensorId);
+				log.warn('Unknown sensorId: %s', JSON.stirngify(val));
 				return [];
 			}
 		}

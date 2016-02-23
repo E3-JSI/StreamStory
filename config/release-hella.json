@@ -19,9 +19,9 @@
 			}
 		},
 		"print": {
-			"rawData": 10000,
+			"rawData": 1000,
 			"streamStory": 10,
-			"stores": 100000,
+			"stores": 10000,
 			"broker": 1000,
 			"coeff": 1000
 		}
@@ -38,7 +38,9 @@
 		"zookeperPort": 2181,
 		"producerPort": 8090
 	},
-	"useCase": "mhwirth",
+	"useCase": "hella",
+	"saveStates": false,
+	"saveActivities": false,
 	"interpolation": "current",
 	"dataPath": "/root/StreamStory/db-review/"
 }
