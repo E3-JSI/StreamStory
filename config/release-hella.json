@@ -42,5 +42,5 @@
 	"saveStates": false,
 	"saveActivities": false,
 	"interpolation": "current",
-	"dataPath": "/root/StreamStory/db-review/"
+	"dataPath": "../StreamStory-db/"
 }
