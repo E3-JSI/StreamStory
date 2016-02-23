@@ -713,6 +713,10 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 		return realTimeFields;
 	}
 	
+	exports.getStreamAggregates = function () {
+		return {};
+	}
+	
 	exports.getInitZeroFields = function () {
 		if (config.INITIALIZE_ZERO)
 			return ['LACQUERING'].concat(montracFields.concat(environmentFields));
