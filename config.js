@@ -58,11 +58,9 @@ if (config.useCase == 'hella') {
 if (config.resampleInterval == null) {
 	log.warn('Resampling interval is not defined in the configuration! Using default ...');
 	if (exports.USE_CASE == exports.USE_CASE_MHWIRTH) {
-	//	exports.STREAM_STORY_RESAMPLING_INTERVAL = 1000*60;	// 1 min
 		exports.STREAM_STORY_RESAMPLING_INTERVAL = 1000*20;	// 20s
-	//	exports.STREAM_STORY_RESAMPLING_INTERVAL = 1000;	// 1s
-	} else {
-		exports.STREAM_STORY_RESAMPLING_INTERVAL = 1000*10;
+	} else {	// hella
+		exports.STREAM_STORY_RESAMPLING_INTERVAL = 1000*10;	// 10s
 	}
 } else {
 	exports.STREAM_STORY_RESAMPLING_INTERVAL = config.resampleInterval;
