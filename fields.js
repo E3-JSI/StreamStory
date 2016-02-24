@@ -719,7 +719,7 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 	
 	exports.getInitZeroFields = function () {
 		if (config.INITIALIZE_ZERO)
-			return ['LACQUERING'].concat(montracFields.concat(environmentFields));
+			return ['LACQUERING'].concat(montracFields.concat(environmentFields.concat(moldingFields)));
 		else {
 			return ['SW1_SW2', 'SW8_SW9', 'SW9_SW1'];
 		}
