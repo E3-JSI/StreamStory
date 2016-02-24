@@ -503,6 +503,8 @@ function initTriggers() {
 	{
 		oaInStore.addTrigger({
 			onAdd: function (rec) {
+				if (log.debug())
+					log.debug('Received record in OA in store ...');
 				for (var fieldNm in aggregates) {
 					var aggr = aggregates[fieldNm];
 					var val = aggr.getFloat();
