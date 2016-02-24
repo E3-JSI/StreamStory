@@ -236,7 +236,7 @@ function addRawMeasurement(val) {
 		var prevTimestamp = storeLastTm[storeNm];
 		
 		if (totalCounts++ % config.RAW_PRINT_INTERVAL == 0 && log.debug())
-			log.debug('Received raw data, inserting into store %s ...', storeNm);
+			log.debug('Received raw data, inserting into store %s, time: %d ...', storeNm, timestamp);
 		if (timestamp <= prevTimestamp)
 			throw new Error('Invalid time for a single measurement: ' + timestamp + ' <= ' + prevTimestamp);
 		if (timestamp < lastRawTime)
