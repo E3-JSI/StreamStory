@@ -727,7 +727,7 @@ module.exports.parseDerivedEvent = function (event) {
 	var props = event.eventProperties;
 	
 	var val = utils.clone(props);
-	val.time = utils.dateToQmDate(new Date(timestamp));
+	val.timestamp = utils.dateToQmDate(new Date(timestamp));
 	
 	return val;
 }
