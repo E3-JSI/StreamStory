@@ -60,7 +60,7 @@ if (config.resampleInterval == null) {
 	if (exports.USE_CASE == exports.USE_CASE_MHWIRTH) {
 		exports.STREAM_STORY_RESAMPLING_INTERVAL = 1000*20;	// 20s
 	} else {	// hella
-		exports.STREAM_STORY_RESAMPLING_INTERVAL = 1000*10;	// 10s
+		exports.STREAM_STORY_RESAMPLING_INTERVAL = 1000*30;	// 10s
 	}
 } else {
 	exports.STREAM_STORY_RESAMPLING_INTERVAL = config.resampleInterval;
