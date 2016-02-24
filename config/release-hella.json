@@ -34,7 +34,7 @@
 	},
 	"integration": {
 		"type": "broker",
-		"brokerUrl": "192.168.84.39",
+		"brokerUrl": "127.0.0.1",
 		"zookeperPort": 2181,
 		"producerPort": 8090
 	},
