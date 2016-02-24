@@ -2044,8 +2044,8 @@ function initPipelineHandlers() {
 	log.info('Initializing pipeline callbacks ...');
 	
 	pipeline.onValue(function (val) {
-		if (log.trace())
-			log.trace('Inserting value into StreamStories ...');
+		if (log.debug())
+			log.debug('Inserting value into StreamStories ...');
 		modelStore.updateModels(val);
 	});
 	
