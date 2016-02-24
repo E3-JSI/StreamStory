@@ -19,7 +19,7 @@
 			}
 		},
 		"print": {
-			"rawData": 100,
+			"rawData": 1,
 			"streamStory": 1,
 			"stores": 10000,
 			"broker": 1000,
