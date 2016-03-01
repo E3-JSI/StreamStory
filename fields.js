@@ -551,7 +551,118 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
         'IMM5_SW11'
 	];
 	
-	var environmentFields = ['Temperature - 9.11.0', 'Humidity - 9.11.1', 'Humidity - 3.11.1', 'Bin1(0,5um) - 18.13.1', 'Temperature - 11.11.0', 'Bin10(6,5um) - 20.13.10', 'Humidity - 12.11.1', 'Flow_rate - 19.13.17', 'Flow_rate - 18.13.17', 'Humidity - 15.11.1', 'Bin8(4um) - 19.13.8', 'Temperature - 4.11.0', 'Bin11(8um) - 19.13.11', 'Bin15(16um-17um) - 19.13.15', 'Humidity - 5.11.1', 'Bin2(0,8um) - 18.13.2', 'Bin13(12um) - 19.13.13', 'Humidity - 17.11.1', 'Temperature - 2.11.0', 'Humidity - 13.11.1', 'IRtemp - 15.12.0', 'Bin12(10um) - 20.13.12', 'Bin14(14um) - 19.13.14', 'Temperature - 12.11.0', 'Temperature - 13.11.0', 'Bin8(4um) - 18.13.8', 'Temperature - 5.11.0', 'Bin10(6,5um) - 18.13.10', 'Bin6(2,1um) - 19.13.6', 'IRtemp - 6.12.0', 'Humidity - 4.11.1', 'Bin9(5um) - 20.13.9', 'Flow_rate - 20.13.17', 'Bin0(0,4um) - 20.13.0', 'Bin5(1,6um) - 19.13.5', 'Sampling_period - 18.13.16', 'Bin0(0,4um) - 18.13.0', 'Bin12(10um) - 19.13.12', 'Temperature - 18.11.0', 'Bin1(0,5um) - 19.13.1', 'Humidity - 11.11.1', 'Bin7(3um) - 20.13.7', 'Humidity - 8.11.1', 'Bin0(0,4um) - 19.13.0', 'IRtemp - 17.12.0', 'IRtemp - 4.12.0', 'Bin4(1,3um) - 19.13.4', 'Humidity - 14.11.1', 'Bin2(0,8um) - 20.13.2', 'Bin3(1um) - 19.13.3', 'Temperature - 20.11.0', 'Bin3(1um) - 18.13.3', 'Bin1(0,5um) - 20.13.1', 'Bin15(16um-17um) - 18.13.15', 'Bin11(8um) - 20.13.11', 'Bin15(16um-17um) - 20.13.15', 'Sampling_period - 20.13.16', 'Temperature - 7.11.0', 'Temperature - 1.11.0', 'Bin10(6,5um) - 19.13.10', 'Bin5(1,6um) - 18.13.5', 'Humidity - 20.11.1', 'Bin2(0,8um) - 19.13.2', 'Bin9(5um) - 18.13.9', 'Bin6(2,1um) - 18.13.6', 'Humidity - 7.11.1', 'IRtemp - 14.12.0', 'Bin8(4um) - 20.13.8', 'Temperature - 16.11.0', 'Humidity - 2.11.1', 'Humidity - 1.11.1', 'Humidity - 6.11.1', 'Bin11(8um) - 18.13.11', 'Humidity - 19.11.1', 'Bin13(12um) - 18.13.13', 'Humidity - 10.11.1', 'Bin13(12um) - 20.13.13', 'Humidity - 16.11.1', 'Temperature - 6.11.0', 'Temperature - 8.11.0', 'Temperature - 17.11.0', 'Bin6(2,1um) - 20.13.6', 'Temperature - 15.11.0', 'Bin7(3um) - 19.13.7', 'IRtemp - 16.12.0', 'Bin5(1,6um) - 20.13.5', 'Temperature - 3.11.0', 'Bin3(1um) - 20.13.3', 'Bin12(10um) - 18.13.12', 'Bin4(1,3um) - 20.13.4', 'Bin14(14um) - 20.13.14', 'Sampling_period - 19.13.16', 'Temperature - 10.11.0', 'Temperature - 19.11.0', 'Humidity - 18.11.1', 'Bin9(5um) - 19.13.9', 'Temperature - 14.11.0', 'Bin7(3um) - 18.13.7', 'Bin4(1,3um) - 18.13.4', 'Bin14(14um) - 18.13.14'];
+	var environmentFields = [
+	    'Temperature - 9.11.0',
+	    'Humidity - 9.11.1',
+	    'Humidity - 3.11.1',
+	    'Bin1(0,5um) - 18.13.1',
+	    'Temperature - 11.11.0',
+	    'Bin10(6,5um) - 20.13.10',
+	    'Humidity - 12.11.1',
+	    'Flow_rate - 19.13.17',
+	    'Flow_rate - 18.13.17',
+	    'Humidity - 15.11.1',
+	    'Bin8(4um) - 19.13.8',
+	    'Temperature - 4.11.0',
+	    'Bin11(8um) - 19.13.11',
+	    'Bin15(16um-17um) - 19.13.15',
+	    'Humidity - 5.11.1',
+	    'Bin2(0,8um) - 18.13.2',
+	    'Bin13(12um) - 19.13.13',
+	    'Humidity - 17.11.1',
+	    'Temperature - 2.11.0',
+	    'Humidity - 13.11.1',
+	    'IRtemp - 15.12.0',
+	    'Bin12(10um) - 20.13.12',
+	    'Bin14(14um) - 19.13.14',
+	    'Temperature - 12.11.0',
+	    'Temperature - 13.11.0',
+	    'Bin8(4um) - 18.13.8',
+	    'Temperature - 5.11.0',
+	    'Bin10(6,5um) - 18.13.10',
+	    'Bin6(2,1um) - 19.13.6',
+	    'IRtemp - 6.12.0',
+	    'Humidity - 4.11.1',
+	    'Bin9(5um) - 20.13.9',
+	    'Flow_rate - 20.13.17',
+	    'Bin0(0,4um) - 20.13.0',
+	    'Bin5(1,6um) - 19.13.5',
+	    'Sampling_period - 18.13.16',
+	    'Bin0(0,4um) - 18.13.0',
+	    'Bin12(10um) - 19.13.12',
+	    'Temperature - 18.11.0',
+	    'Bin1(0,5um) - 19.13.1',
+	    'Humidity - 11.11.1',
+	    'Bin7(3um) - 20.13.7',
+	    'Humidity - 8.11.1',
+	    'Bin0(0,4um) - 19.13.0',
+	    'IRtemp - 17.12.0',
+	    'IRtemp - 4.12.0',
+	    'Bin4(1,3um) - 19.13.4',
+	    'Humidity - 14.11.1',
+	    'Bin2(0,8um) - 20.13.2',
+	    'Bin3(1um) - 19.13.3',
+	    'Temperature - 20.11.0',
+	    'Bin3(1um) - 18.13.3',
+	    'Bin1(0,5um) - 20.13.1',
+	    'Bin15(16um-17um) - 18.13.15',
+	    'Bin11(8um) - 20.13.11',
+	    'Bin15(16um-17um) - 20.13.15',
+	    'Sampling_period - 20.13.16',
+	    'Temperature - 7.11.0',
+	    'Temperature - 1.11.0',
+	    'Bin10(6,5um) - 19.13.10',
+	    'Bin5(1,6um) - 18.13.5',
+	    'Humidity - 20.11.1',
+	    'Bin2(0,8um) - 19.13.2',
+	    'Bin9(5um) - 18.13.9',
+	    'Bin6(2,1um) - 18.13.6',
+	    'Humidity - 7.11.1',
+	    'IRtemp - 14.12.0',
+	    'Bin8(4um) - 20.13.8',
+	    'Temperature - 16.11.0',
+	    'Humidity - 2.11.1',
+	    'Humidity - 1.11.1',
+	    'Humidity - 6.11.1',
+	    'Bin11(8um) - 18.13.11',
+	    'Humidity - 19.11.1',
+	    'Bin13(12um) - 18.13.13',
+	    'Humidity - 10.11.1',
+	    'Bin13(12um) - 20.13.13',
+	    'Humidity - 16.11.1',
+	    'Temperature - 6.11.0',
+	    'Temperature - 8.11.0',
+	    'Temperature - 17.11.0',
+	    'Bin6(2,1um) - 20.13.6',
+	    'Temperature - 15.11.0',
+	    'Bin7(3um) - 19.13.7',
+	    'IRtemp - 16.12.0',
+	    'Bin5(1,6um) - 20.13.5',
+	    'Temperature - 3.11.0',
+	    'Bin3(1um) - 20.13.3',
+	    'Bin12(10um) - 18.13.12',
+	    'Bin4(1,3um) - 20.13.4',
+	    'Bin14(14um) - 20.13.14',
+	    'Sampling_period - 19.13.16',
+	    'Temperature - 10.11.0',
+	    'Temperature - 19.11.0',
+	    'Humidity - 18.11.1',
+	    'Bin9(5um) - 19.13.9',
+	    'Temperature - 14.11.0',
+	    'Bin7(3um) - 18.13.7',
+	    'Bin4(1,3um) - 18.13.4',
+	    'Bin14(14um) - 18.13.14'
+	];
+	
+	var moldingFields = [
+	    'movementDifferential',
+	    'meltCushion',
+	    'jetTemperation',
+	    'dosingTime',
+	    'injectionTime',
+	    'cycleTime',
+	    'cavityPressure'
+    ];
 	
 	var rawStores = [{
 		name: 'LACQUERING',
@@ -581,6 +692,16 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 			]
 		});
 	}
+	for (var i = 0; i < moldingFields.length; i++) {
+		rawStores.push({
+			name: moldingFields[i],
+			fields: [
+			    {name: 'time_ms', type: 'uint64'},
+			    {name: "time", type: "datetime"},
+	 			{name: "value", type: "float"}
+			]
+		});
+	}
 	
 	function getRealTimeFields() {
 		var realTimeFields = [{name: "time", type: "datetime"}];
@@ -592,9 +713,13 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 		return realTimeFields;
 	}
 	
+	exports.getStreamAggregates = function () {
+		return {};
+	}
+	
 	exports.getInitZeroFields = function () {
 		if (config.INITIALIZE_ZERO)
-			return ['LACQUERING'].concat(montracFields.concat(environmentFields));
+			return ['LACQUERING'].concat(montracFields.concat(environmentFields.concat(moldingFields)));
 		else {
 			return ['SW1_SW2', 'SW8_SW9', 'SW9_SW1'];
 		}

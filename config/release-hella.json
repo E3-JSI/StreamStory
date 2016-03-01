@@ -19,9 +19,9 @@
 			}
 		},
 		"print": {
-			"rawData": 10000,
-			"streamStory": 10,
-			"stores": 100000,
+			"rawData": 1,
+			"streamStory": 1,
+			"stores": 10000,
 			"broker": 1000,
 			"coeff": 1000
 		}
@@ -34,11 +34,13 @@
 	},
 	"integration": {
 		"type": "broker",
-		"brokerUrl": "192.168.84.39",
+		"brokerUrl": "127.0.0.1",
 		"zookeperPort": 2181,
 		"producerPort": 8090
 	},
-	"useCase": "mhwirth",
+	"useCase": "hella",
+	"saveStates": false,
+	"saveActivities": false,
 	"interpolation": "current",
-	"dataPath": "/root/StreamStory/db-review/"
+	"dataPath": "../StreamStory-db/"
 }
