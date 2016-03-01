@@ -698,8 +698,32 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 			]
 		}
 	}
-} else {
-	log.error('Invalid use case: ' + config.USE_CASE);
+} else if (config.USE_CASE == config.USE_CASE_SIMULATION) {
+	module.exports = {
+		transform: function (val) {
+			if (log.trace())
+				log.trace('Transforming event: %s', JSON.stringify(val));
+			
+			var storeNm = val.store;
+			var timestamp = val.timestamp;
+			var value = val.value;
+			
+			return [
+			    {
+			    	store: storeNm,
+			    	timestamp: timestamp,
+			    	value: {
+			    		time_ms: timestamp,
+			    		time: utils.dateToQmDate(new Date(timestamp)),
+			    		value: value
+			    	}
+			    }    
+			];
+		}	
+	};
+} 
+else {
+	log.error(new Error('Exception in transform!'), 'Invalid use case: %d', config.USE_CASE);
 	process.exit(1);
 }
 

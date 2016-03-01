@@ -40,16 +40,23 @@ global.log = bunyan.createLogger({
 exports.USE_CASE_HELLA = 0;
 exports.USE_CASE_MHWIRTH = 1;
 exports.USE_CASE_NRG = 2;
+exports.USE_CASE_SIMULATION = 3;
 exports.USE_CASE_NAME = config.useCase;
 
 if (config.useCase == 'hella') {
 	exports.USE_CASE = exports.USE_CASE_HELLA;
-} else if (config.useCase == 'mhwirth') {
+} 
+else if (config.useCase == 'mhwirth') {
 	exports.USE_CASE = exports.USE_CASE_MHWIRTH;
-} else if (config.USE_CASE == 'nrg4cast') {
+}
+else if (config.useCase == 'nrg4cast') {
 	// NRG4Cast
 	exports.USE_CASE = exports.USE_CASE_NRG;
-} else {
+} 
+else if (config.useCase == 'simulation') {
+	exports.USE_CASE = exports.USE_CASE_SIMULATION;
+}
+else {
 	log.error('Unknown use case: %s', config.USE_CASE);
 	process.exit(1);
 }

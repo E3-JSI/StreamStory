@@ -517,7 +517,8 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 		
 		return result;
 	}
-} else if (config.USE_CASE == config.USE_CASE_HELLA) {
+} 
+else if (config.USE_CASE == config.USE_CASE_HELLA) {
 	console.log('Initializing fields for Hella ...');
 	
 	var montracFields = [
@@ -760,7 +761,7 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 				outField: fieldNm,
 				interpolation: interpolation,
 				timestamp: 'time'
-			})
+			});
 		}
 		
 		return result;
@@ -788,7 +789,8 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 		
 		return rawStores.concat([enrichedStore, oaInStore, streamStoryStore]);
 	};
-} else if (config.USE_CASE == config.USE_CASE_NRG) {
+} 
+else if (config.USE_CASE == config.USE_CASE_NRG) {
 
 	betterNames = {
 		//All
@@ -967,6 +969,107 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 		
 		return result;
 	}
-} else {
+} 
+else if (config.USE_CASE == config.USE_CASE_SIMULATION) {
+	var fields = [
+        'Torque',
+        'Angular Acceleration',
+        'Angular Speed',
+        'Power',
+        'Temperature',
+        'Switch On'
+	];
+	
+	var rawStores = [];
+	for (var i = 0; i < fields.length; i++) {
+		rawStores.push({
+			name: fields[i],
+			fields: [
+			    {name: 'time_ms', type: 'uint64'},
+			    {name: "time", type: "datetime"},
+	 			{name: "value", type: "float"}
+			]
+		});
+	}
+	
+	function getRealTimeFields() {
+		var realTimeFields = [{name: "time", type: "datetime"}];
+		
+		for (var i = 0; i < rawStores.length; i++) {
+			realTimeFields.push({ name: rawStores[i].name, type:  rawStores[i].fields[2].type });
+		}
+		
+		return realTimeFields;
+	}
+	
+	exports.getStreamAggregates = function () {
+		return {};
+	}
+	
+	exports.getInitZeroFields = function () {
+		return fields;
+	};
+	
+	exports.getRawStores = function () {
+		return rawStores;
+	};
+	
+	exports.getStreamAggrFields = function () {
+		var result = {
+			merger: [],
+			resampler: []
+		}
+		
+		var fields = getRealTimeFields();
+		
+		for (var i = 0; i < fields.length; i++) {
+			var fieldNm = fields[i].name;
+			
+			if (fieldNm == 'time') continue;
+			
+			var interpolation = config.INTERPOLATION;
+			
+			log.info('Field %s is using %s interpolation ...', fieldNm, interpolation);
+			
+			result.resampler.push({
+				name: fieldNm,
+				interpolator: interpolation
+			});
+			result.merger.push({
+				source: fieldNm,
+				inField: 'value',
+				outField: fieldNm,
+				interpolation: interpolation,
+				timestamp: 'time'
+			});
+		}
+		
+		return result;
+	}
+	
+	exports.getQmSchema = function () {
+		var realTimeFields = getRealTimeFields();
+		
+		var enrichedStore = {
+			name: exports.ENRICHED_STORE,
+			fields: realTimeFields,
+			window: WINDOW_SIZE
+		}
+		
+		var oaInStore = {
+			name: exports.OA_IN_STORE,
+			fields: realTimeFields,
+			window: WINDOW_SIZE
+		}
+		
+		var streamStoryStore = {
+			name: exports.STREAM_STORY_STORE,
+			fields: realTimeFields
+		}
+		
+		return rawStores.concat([enrichedStore, oaInStore, streamStoryStore]);
+	};
+}
+else {
 	throw new Error('Invalid use case!');
 }

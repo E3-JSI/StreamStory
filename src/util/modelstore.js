@@ -257,16 +257,6 @@ module.exports = exports = function (opts) {
 					type: 'values',
 					content: outVal
 				}));
-				
-//				if (config.SAVE_STATES) {
-//					var ftrPred = model.predictNextState({ useFtrV: true, futureStateN: 5 });
-//					var normalPred = model.predictNextState({ useFtrV: false, futureStateN: 5 });
-//					
-//					utils.appendLine('predictions.txt', JSON.stringify({
-//						withFtrV: ftrPred,
-//						without: normalPred
-//					}));
-//				}
 			}
 		},
 		
@@ -487,7 +477,7 @@ module.exports = exports = function (opts) {
 						for (var i = 0; i < headers.length; i++) {
 							var attr = headers[i].name;
 							if (attr == timeAttr) {
-								var date = new Date(parseInt(lineArr[i]));
+								var date = new Date(parseFloat(lineArr[i]));
 								var qmDate = utils.dateToQmDate(date);
 								if (log.trace())
 									log.trace('Parsed date: %s', date.toString());
