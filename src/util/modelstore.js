@@ -270,6 +270,15 @@ module.exports = exports = function (opts) {
 			}
 		},
 		
+		getActiveModels: function () {
+			var result = [];
+			for (var modelId in store) {
+				var model = getModel(modelId);
+				result.push(model);
+			}
+			return result;
+		},
+		
 		//====================================================
 		// MESSAGES
 		//====================================================

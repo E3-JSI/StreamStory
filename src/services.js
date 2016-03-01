@@ -411,6 +411,126 @@ function initStreamStoryHandlers(model, enable) {
 	}
 }
 
+function sendPrediction(msg, timestamp) {
+	var msgStr = JSON.stringify(msg);
+	
+	var perMonth = msg.content.pdf.lambda;
+	var perHour = perMonth / (30*24);
+	
+	var brokerMsg = transform.genExpPrediction(perHour, 'hour', timestamp);
+	
+	if (log.debug())
+		log.debug('Sending prediction: %s', JSON.stringify(brokerMsg))
+	
+	broker.send(broker.PREDICTION_PRODUCER_TOPIC, JSON.stringify(brokerMsg));
+	modelStore.distributeMsg(msgStr);
+}
+
+function initPipelineHandlers() {
+	log.info('Initializing pipeline callbacks ...');
+	
+	pipeline.onValue(function (val) {
+		if (log.trace())
+			log.trace('Inserting value into StreamStories ...');
+		modelStore.updateModels(val);
+		
+		if (config.SAVE_STATES) {
+			var models = modelStore.getActiveModels();
+			for (var modelN = 0; modelN < models.length; modelN++) {
+				var model = models[modelN];
+				var ftrPred = model.predictNextState({
+					useFtrV: true,
+					futureStateN: 3
+				});
+				var mcPred = model.predictNextState({
+					useFtrV: false,
+					futureStateN: 3
+				});
+				
+				var baseFName = 'predictions-' + model.getId();
+				
+				utils.appendLine(baseFName + '-pred.json', JSON.stringify(ftrPred));
+				utils.appendLine(baseFName + '-nopred.json', JSON.stringify(mcPred));
+			}
+		}
+	});
+	
+	// configure coefficient callback
+	{
+		log.info('Fetching intensities from DB ...');
+		var lambdaProps = [
+		    'deviation_extreme_lambda',
+		    'deviation_major_lambda',
+		    'deviation_significant_lambda',
+		    'deviation_minor_lambda'
+		];
+		db.getMultipleConfig({properties: lambdaProps}, function (e, result) {
+			if (e != null) {
+				log.error(e, 'Failed to fetch intensities from DB!');
+				return;
+			}
+			
+			for (var i = 0; i < result.length; i++) {
+				var entry = result[i];
+				var property = entry.property;
+				var val = parseFloat(entry.value);
+				
+				intensConfig[property] = val;
+			}
+					
+			// friction coefficient
+			log.info('Creating coefficient callback ...');
+			pipeline.onCoefficient(function (opts) {
+				var pdf = null;
+				
+				var zscore = opts.zScore;
+				
+				if (zscore >= 2) {
+					if (zscore >= 5) {
+						pdf = {
+							type: 'exponential',
+							lambda: intensConfig.deviation_extreme_lambda		// degradation occurs once per month
+						};
+					} else if (zscore >= 4) {									// major deviation
+						pdf = {
+							type: 'exponential',
+							lambda: intensConfig.deviation_major_lambda			// degradation occurs once per two months
+						};
+					} else if (zscore >= 3) {									// significant deviation
+						pdf = {
+							type: 'exponential',
+							lambda: intensConfig.deviation_significant_lambda	// degradation occurs once per year
+						};
+					} else {													// (zscore >= 2) minor deviation
+						pdf = {
+							type: 'exponential',
+							lambda: intensConfig.deviation_minor_lambda			// degradation occurs once per two years
+						};
+					}
+					
+					modelStore.distributeMsg(JSON.stringify({
+						type: 'coeff',
+						content: opts
+					}));
+					
+					if (pdf != null) {
+						var msg = {
+							type: 'prediction',
+							content: {
+								time: opts.time,
+								eventId: opts.eventId,
+								pdf: pdf
+							}
+						};
+						
+						sendPrediction(msg, opts.time);
+					}
+				}
+			});
+		});
+	}
+}
+
 function initLoginRestApi() {
 	log.info('Initializing Login REST services ...');
 	
@@ -2023,106 +2143,6 @@ function initConfigRestApi() {
 			handleServerError(e, req, res);
 		}
 	});
-}
-
-function sendPrediction(msg, timestamp) {
-	var msgStr = JSON.stringify(msg);
-	
-	var perMonth = msg.content.pdf.lambda;
-	var perHour = perMonth / (30*24);
-	
-	var brokerMsg = transform.genExpPrediction(perHour, 'hour', timestamp);
-	
-	if (log.debug())
-		log.debug('Sending prediction: %s', JSON.stringify(brokerMsg))
-	
-	broker.send(broker.PREDICTION_PRODUCER_TOPIC, JSON.stringify(brokerMsg));
-	modelStore.distributeMsg(msgStr);
-}
-
-function initPipelineHandlers() {
-	log.info('Initializing pipeline callbacks ...');
-	
-	pipeline.onValue(function (val) {
-		if (log.trace())
-			log.trace('Inserting value into StreamStories ...');
-		modelStore.updateModels(val);
-	});
-	
-	// configure coefficient callback
-	{
-		log.info('Fetching intensities from DB ...');
-		var lambdaProps = [
-		    'deviation_extreme_lambda',
-		    'deviation_major_lambda',
-		    'deviation_significant_lambda',
-		    'deviation_minor_lambda'
-		];
-		db.getMultipleConfig({properties: lambdaProps}, function (e, result) {
-			if (e != null) {
-				log.error(e, 'Failed to fetch intensities from DB!');
-				return;
-			}
-			
-			for (var i = 0; i < result.length; i++) {
-				var entry = result[i];
-				var property = entry.property;
-				var val = parseFloat(entry.value);
-				
-				intensConfig[property] = val;
-			}
-					
-			// friction coefficient
-			log.info('Creating coefficient callback ...');
-			pipeline.onCoefficient(function (opts) {
-				var pdf = null;
-				
-				var zscore = opts.zScore;
-				
-				if (zscore >= 2) {
-					if (zscore >= 5) {
-						pdf = {
-							type: 'exponential',
-							lambda: intensConfig.deviation_extreme_lambda		// degradation occurs once per month
-						};
-					} else if (zscore >= 4) {									// major deviation
-						pdf = {
-							type: 'exponential',
-							lambda: intensConfig.deviation_major_lambda			// degradation occurs once per two months
-						};
-					} else if (zscore >= 3) {									// significant deviation
-						pdf = {
-							type: 'exponential',
-							lambda: intensConfig.deviation_significant_lambda	// degradation occurs once per year
-						};
-					} else {													// (zscore >= 2) minor deviation
-						pdf = {
-							type: 'exponential',
-							lambda: intensConfig.deviation_minor_lambda			// degradation occurs once per two years
-						};
-					}
-					
-					modelStore.distributeMsg(JSON.stringify({
-						type: 'coeff',
-						content: opts
-					}));
-					
-					if (pdf != null) {
-						var msg = {
-							type: 'prediction',
-							content: {
-								time: opts.time,
-								eventId: opts.eventId,
-								pdf: pdf
-							}
-						};
-						
-						sendPrediction(msg, opts.time);
-					}
-				}
-			});
-		});
-	}
 }
 
 function initBroker() {

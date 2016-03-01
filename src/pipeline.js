@@ -23,13 +23,6 @@ var opts = {
 	onValue: null
 };
 
-// initialize stream aggregates
-//var raw = fields.getRawStores();
-//for (var i = 0; i < raw.length; i++) {
-//	
-//}
-
-
 var aggregates = {};
 
 function initResampler() {

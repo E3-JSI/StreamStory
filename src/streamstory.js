@@ -205,6 +205,16 @@ exports.StreamStory = function (opts) {
 			max: ftrSpaces[ftrConfig.ftrSpaceN].invertFeature(ftrId - ftrConfig.ftrOffset, bounds.max)
 		}
 	}
+	
+	function genAutoName(nameConf) {
+		var ftrId = nameConf.ftrId;
+
+		if (ftrId < 0) {
+			return nameConf.range;
+		} else {
+			return getFtrName(ftrId) + ' ' + nameConf.range;
+		}
+	}
 
 	//===================================================
 	// HISTOGRAM
@@ -463,14 +473,8 @@ exports.StreamStory = function (opts) {
 			for (var heightN = 0; heightN < json.length; heightN++) {
 				var level = json[heightN];
 				for (var stateN = 0; stateN < level.states.length; stateN++) {
-					var state = level.states[stateN];
-					var ftrId = state.autoName.ftrId;
-					
-					if (ftrId < 0) {
-						state.autoName = state.autoName.range;
-					} else {
-						state.autoName = getFtrName(state.autoName.ftrId) + ' ' + state.autoName.range;
-					}
+					var state = level.states[stateN];					
+					state.autoName = genAutoName(state.autoName);
 				}
 			}
 			
@@ -549,9 +553,10 @@ exports.StreamStory = function (opts) {
 			var isTarget = mc.isTarget(stateId);
 			var isLeaf = mc.isLeaf(stateId);
 			var stateNm = mc.getStateName(stateId);
+			var label = mc.getStateLabel(stateId);
+			var autoNm = genAutoName(mc.getStateAutoName(stateId));
 			var wgts = mc.getStateWgtV(stateId);
 			var classifyTree = mc.getClassifyTree(stateId);
-			var label = mc.getStateLabel(stateId);
 			var centroids = mc.getStateCentroids(stateId);
 			var allCentroids = mc.getStateCentroids();
 			var timeHistogram = mc.timeHistogram(stateId, 'global');
@@ -620,6 +625,7 @@ exports.StreamStory = function (opts) {
 				id: stateId,
 				name: stateNm.length > 0 ? stateNm : null,
 				label: label,
+				autoName: autoNm,
 				isTarget: isTarget,
 				isLeaf: isLeaf,
 				features: features,
