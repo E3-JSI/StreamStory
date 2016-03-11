@@ -11,7 +11,7 @@
 	},
 	"log": {
 		"logger": {
-			"level": "trace",
+			"level": "debug",
 			"outputMode": "short",
 			"stream": {
 				"type": "stdout",
@@ -38,7 +38,7 @@
 		"zookeperPort": 2181,
 		"producerPort": 8090
 	},
-	"resampleInterval": 60000,
+	"resampleInterval": 100,
 	"useCase": "simulation",
 	"saveStates": true,
 	"saveActivities": true,

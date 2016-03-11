@@ -65,7 +65,7 @@ function initStreamAggregates() {
 	new qm.StreamAggr(base, mergerConfig);
 	
 	// insert zeros now, so they won't get resampled
-	var startTm = 100000;
+	var startTm = 0;
 	for (var i = 0; i < zeroFlds.length; i++) {
 		var name = zeroFlds[i];
 		
@@ -496,8 +496,8 @@ function initTriggers() {
 	{
 		oaInStore.addTrigger({
 			onAdd: function (rec) {
-				if (log.debug())
-					log.debug('Received record in OA in store ...');
+				if (log.trace())
+					log.trace('Received record in OA in store ...');
 				
 				for (var fieldNm in aggregates) {
 					var aggr = aggregates[fieldNm];

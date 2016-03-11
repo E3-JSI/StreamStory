@@ -53,7 +53,7 @@ var counts = {};
 var storeLastTm = {};
 var totalCounts = 0;
 
-var lastRawTime = 0;
+var lastRawTime = -1;
 
 var intensConfig = {};
 
@@ -438,13 +438,13 @@ function initPipelineHandlers() {
 			var models = modelStore.getActiveModels();
 			for (var modelN = 0; modelN < models.length; modelN++) {
 				var model = models[modelN];
-				var ftrPred = model.predictNextState({
+				var ftrPred = model.getModel().predictNextState({
 					useFtrV: true,
-					futureStateN: 3
+					futureStateN: -1
 				});
-				var mcPred = model.predictNextState({
+				var mcPred = model.getModel().predictNextState({
 					useFtrV: false,
-					futureStateN: 3
+					futureStateN: -1
 				});
 				
 				var baseFName = 'predictions-' + model.getId();

@@ -706,19 +706,25 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 			
 			var storeNm = val.store;
 			var timestamp = val.timestamp;
-			var value = val.value;
 			
-			return [
-			    {
-			    	store: storeNm,
-			    	timestamp: timestamp,
-			    	value: {
-			    		time_ms: timestamp,
+			var result = [];
+			for (var key in val) {
+				if (key == 'timestamp') continue;
+				
+				var value = val[key];
+				
+				result.push({
+					store: key,
+					timestamp: timestamp,
+					value: {
+						time_ms: timestamp,
 			    		time: utils.dateToQmDate(new Date(timestamp)),
 			    		value: value
-			    	}
-			    }    
-			];
+					}
+				});
+			}
+			
+			return result;
 		}	
 	};
 } 

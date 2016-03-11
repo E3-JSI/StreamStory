@@ -162,7 +162,10 @@ module.exports = {
 			var fd = fs.openSync(fname, 'a');
 			fs.writeSync(fd, line + '\n');
 			fs.closeSync(fd);
-			log.debug('Appended to file!');
+			
+			if (log.trace())
+				log.trace('Appended to file!');
+			
 		} catch (e) {
 			log.error(e, 'Failed to append to file %s', fname);
 		}
