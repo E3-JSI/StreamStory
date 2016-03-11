@@ -106,3 +106,7 @@ function showAlert(holder, wrapper, clazz, title, msg, close) {
 function redirectToUI() {
 	window.location.replace('ui.html');
 }
+
+function reloadWindow() {
+	window.location.reload();
+}

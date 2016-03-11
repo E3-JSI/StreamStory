@@ -5,42 +5,43 @@ var zoomVis = function (opts) {
 	var MODE_TARGET_FTR = 'ftr';
 	
 	// colors
-//	var DEFAULT_NODE_COLOR = 'rgb(120,120,120)';//'DodgerBlue';
-//	var VIZ_NODE_COLOR = 360;
-//	var VIZ_NODE_FTR_NEG_COLOR = 360;
-//	var VIZ_NODE_FTR_POS_COLOR = 117;
-//	var CURRENT_NODE_COLOR = 'green';
-//	var FUTURE_NODE_BASE_COLOR = 216;
-//	var DEFAULT_BORDER_COLOR = 'black';
-//	var FONT_SIZE = '12';
-//	
-//	var EDGE_COLOR = 'darkgray';
-//	var BOLD_EDGE_COLOR = '#A0A0A0';
-//	var MIDDLE_EDGE_COLOR = '#606060';
-//	var SMALL_EDGE_COLOR = '#606060';
-//	var EDGE_TEXT_COLOR = '#F0F0F0';
-//	var NODE_TEXT_COLOR = '#F0F0F0';
-	
-	var DEFAULT_NODE_COLOR = '#073642';
-	var CURRENT_NODE_COLOR = '#FFA500';
-	var PREVIOUS_NODE_EDGE_COLOR = CURRENT_NODE_COLOR;
-	var FUTURE_NODE_BASE_COLOR = 216;	// green
-	var DEFAULT_BORDER_COLOR = 'rgb(150, 150, 150)';
-	
-	var VIZ_NODE_COLOR = 360;
-	var VIZ_NODE_FTR_NEG_COLOR = 360;
-	var VIZ_NODE_FTR_POS_COLOR = 117;
-	
+	if (THEME == 'light') {
+		var DEFAULT_NODE_COLOR = 'rgb(120,120,120)';//'DodgerBlue';
+		var CURRENT_NODE_COLOR = 'green';
+		var FUTURE_NODE_BASE_COLOR = 216;
+		
+		var DEFAULT_BORDER_COLOR = '#5A5A5A';
+		
+		var VIZ_NODE_COLOR = 360;
+		var VIZ_NODE_FTR_NEG_COLOR = 360;
+		var VIZ_NODE_FTR_POS_COLOR = 117;
+		
+		var EDGE_COLOR = 'darkgray';
+		var BOLD_EDGE_COLOR = '#A0A0A0';
+		var MIDDLE_EDGE_COLOR = '#606060';
+		var SMALL_EDGE_COLOR = '#707070';
+		var EDGE_TEXT_COLOR = '#000000';
+		var NODE_TEXT_COLOR = '#000000';
+	} else {
+		var DEFAULT_NODE_COLOR = '#073642';
+		var CURRENT_NODE_COLOR = '#FFA500';
+		var PREVIOUS_NODE_EDGE_COLOR = CURRENT_NODE_COLOR;
+		var FUTURE_NODE_BASE_COLOR = 216;	// green
+		var DEFAULT_BORDER_COLOR = 'rgb(150, 150, 150)';
+		
+		var VIZ_NODE_COLOR = 360;
+		var VIZ_NODE_FTR_NEG_COLOR = 360;
+		var VIZ_NODE_FTR_POS_COLOR = 117;
+		
+		var EDGE_COLOR = 'darkgray';
+		var BOLD_EDGE_COLOR = '#A0A0A0';
+		var MIDDLE_EDGE_COLOR = '#606060';
+		var SMALL_EDGE_COLOR = '#606060';
+		var EDGE_TEXT_COLOR = '#F0F0F0';
+		var NODE_TEXT_COLOR = '#F0F0F0';
+	}
 	
 	var FONT_SIZE = '12';
-	
-	var EDGE_COLOR = 'darkgray';
-	var BOLD_EDGE_COLOR = '#A0A0A0';
-	var MIDDLE_EDGE_COLOR = '#606060';
-	var SMALL_EDGE_COLOR = '#606060';
-	var EDGE_TEXT_COLOR = '#F0F0F0';
-	var NODE_TEXT_COLOR = '#F0F0F0';
-	
 	var DEFAULT_BORDER_WIDTH = 5;
 	
 	var BACKGROUND_Z_INDEX = 0;

@@ -903,7 +903,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 							'text-valign': 'bottom',
 							'text-halign': 'center',
 							'text-wrap': 'wrap',
-							'color': '#F0F0F0',
+							'color': TEXT_COLOR,//'#F0F0F0',
 							'background-color': 'rgb(124, 181, 236)',
 							'border-width': 5,
 							'font-size': 40,
@@ -1275,17 +1275,27 @@ function changeControlVal(stateId, ftrIdx, val) {
 						if (ftrWgts[i] < minWgt) minWgt = ftrWgts[i];
 					}
 					
+					function getWeightColor(wgt, minWgt, maxWgt) {
+						if (THEME == 'dark') {
+							if (wgt > 0)
+								return 'rgb(' + Math.floor(255 - 255*wgt / maxWgt) + ',255,' + Math.floor(255 - 255*wgt / maxWgt) + ')';
+							else
+								return 'rgb(255,' + Math.floor(255 - 255*wgt / minWgt) + ',' + Math.floor(255 - 255*wgt / minWgt) + ')';
+						} else {
+							if (wgt > 0)
+								return 'rgb(0,' + Math.floor(255*wgt / maxWgt) + ',0)';
+							else
+								return 'rgb(' + Math.floor(255*wgt / minWgt) + ',0,0)';
+						}
+					}
+					
 					// fetch histograms
 					$.each(data.features.observations, function (idx, val) {
 						var histContainerId = 'container-chart-' + idx;
 						var ftrId = idx;
 						
-						var color;
-						if (ftrWgts[ftrId] > 0)
-							color = 'rgb(' + Math.floor(255 - 255*ftrWgts[ftrId] / maxWgt) + ',255,' + Math.floor(255 - 255*ftrWgts[ftrId] / maxWgt) + ')';
-						else
-							color = 'rgb(255,' + Math.floor(255 - 255*ftrWgts[ftrId] / minWgt) + ',' + Math.floor(255 - 255*ftrWgts[ftrId] / minWgt) + ')';
-												
+						var color = getWeightColor(ftrWgts[ftrId], minWgt, maxWgt);
+									
 						var thumbnail = ui.createThumbnail({
 							name: val.name,
 							value: val.value,
@@ -1304,11 +1314,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 						var ftrId = nObsFtrs + idx;
 						var histContainerId = 'container-chart-' + (nObsFtrs + idx);
 						
-						var color;
-						if (ftrWgts[ftrId] > 0)
-							color = 'rgb(' + Math.floor(255 - 255*ftrWgts[ftrId] / maxWgt) + ',255,' + Math.floor(255 - 255*ftrWgts[ftrId] / maxWgt) + ')';
-						else
-							color = 'rgb(255,' + Math.floor(255 - 255*ftrWgts[ftrId] / minWgt) + ',' + Math.floor(255 - 255*ftrWgts[ftrId] / minWgt) + ')';
+						var color = getWeightColor(ftrWgts[ftrId], minWgt, maxWgt);
 												
 						var thumbnail = ui.createThumbnail({
 							name: val.name,
@@ -1336,11 +1342,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 						var ftrId = nObsFtrs + nContrFtrs + idx;
 						var histContainerId = 'container-chart-' + ftrId;
 						
-						var color;
-						if (ftrWgts[ftrId] > 0)
-							color = 'rgb(' + Math.floor(255 - 255*ftrWgts[ftrId] / maxWgt) + ',255,' + Math.floor(255 - 255*ftrWgts[ftrId] / maxWgt) + ')';
-						else
-							color = 'rgb(255,' + Math.floor(255 - 255*ftrWgts[ftrId] / minWgt) + ',' + Math.floor(255 - 255*ftrWgts[ftrId] / minWgt) + ')';
+						var color = getWeightColor(ftrWgts[ftrId], minWgt, maxWgt);
 												
 						var thumbnail = ui.createThumbnail({
 							name: val.name,

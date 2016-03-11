@@ -34,6 +34,30 @@
 			clearResetPassword();
 		});
 		
+		$('#btn-theme-submit').click(function () {
+			$.ajax('api/theme', {
+				dataType: 'json',
+				method: 'POST',
+				data: { theme: $('#select-theme').val() },
+				success: function () {
+					reloadWindow();
+				},
+				error: handleAjaxError($('#alert-wrapper-theme'))
+			});
+		});
+		
+		$('#btn-theme-cancel').click(function () {
+			$.ajax('api/theme', {
+				dataType: 'json',
+				method: 'GET',
+				success: function (data) {
+					$('#select-theme').val(data.theme);
+					showAlert($('#alert-holder'), $('#alert-wrapper'), 'alert-success', 'Password reset!', null, true);
+				},
+				error: handleAjaxError($('#alert-wrapper-theme'))
+			});
+		});
+		
 	   	$('.nav-pills a')[0].click();
 	});
 })()

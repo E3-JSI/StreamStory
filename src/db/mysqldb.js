@@ -290,6 +290,29 @@ module.exports = function () {
 			});
 		},
 		
+		fetchUserByEmail: function (email, callback) {
+			connection({
+				callback: callback,
+				nextOp: query({
+					sql: 'SELECT * FROM user WHERE email = ?',
+					params: [email],
+					nextOp: function (conn, onsuccess, onerror, results) {
+						onsuccess(results.length > 0 ? results[0] : null);
+					}
+				})
+			});
+		},
+		
+		updateTheme: function (email, theme, callback) {
+			connection({
+				callback: callback,
+				nextOp: query({
+					sql: 'UPDATE user SET theme = ? WHERE email = ?',
+					params: [theme, email]
+				})
+			});
+		},
+		
 		userExists: function (email, callback) {
 			connection({
 				callback: callback,

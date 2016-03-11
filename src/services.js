@@ -135,8 +135,12 @@ function cleanUpSession(sessionId, session) {
 	delete session.username;
 }
 
-function loginUser(session, username) {
-	session.username = username;
+function loginUser(session, opts) {
+	if (opts.username == null) throw new Error('Usetname missing when logging in!');
+	if (opts.theme == null) throw new Error('Theme missing when logging in!');
+	
+	session.username = opts.username;
+	session.theme = opts.theme;
 }
 
 function isLoggedIn(session) {
@@ -556,37 +560,32 @@ function initLoginRestApi() {
 				return;
 			}
 			
-			db.userExists(username, function (e, exists) {
+			db.fetchUserByEmail(username, function (e, user) {
 				if (e != null) {
 					log.error(e, 'Exception while checking if user exists!');
 					handleServerError(e, req, res);
 					return;
 				}
 				
-				if (!exists) {
+				if (user == null) {
 					session.warning = 'Invalid email or password!';
 					redirect(res, '../login.html');
 					return;
 				}
 				
-				db.fetchUserPassword(username, function (e1, storedHash) {
-					if (e1 != null) {
-						log.error(e1, 'Exception while checking if user exists!');
-						handleServerError(e1, req, res);
-						return;
-					}
-					
-					var hash = utils.hashPassword(password);
-					
-					if (hash != storedHash) {
-						session.warning = 'Invalid email or password!';
-						redirect(res, '../login.html');
-						return;
-					} else {
-						loginUser(session, username);
-						redirect(res, '../dashboard.html');
-					}
-				});
+				var hash = utils.hashPassword(password);
+				
+				if (hash != user.passwd) {
+					session.warning = 'Invalid email or password!';
+					redirect(res, '../login.html');
+					return;
+				} else {
+					loginUser(session, {
+						username: user.email,
+						theme: user.theme
+					});
+					redirect(res, '../dashboard.html');
+				}
 			});
 		} catch (e) {
 			handleServerError(e, req, res);
@@ -654,7 +653,7 @@ function initLoginRestApi() {
 							return;
 						}
 						
-						loginUser(session, username);
+						loginUser(session, { username: username, theme: 'dark' });
 						redirect(res, '../dashboard.html');
 					});
 				}
@@ -1909,6 +1908,45 @@ function initServerApi() {
 	}
 	
 	{
+		app.get(API_PATH + '/theme', function (req, res) {
+			try {
+				var session = req.session;
+				res.send({ theme: session.theme });
+				res.end();
+			} catch (e) {
+				log.error(e, 'Failed fetch theme!');
+				handleServerError(e1, req, res);
+			}
+		});
+		
+		app.post(API_PATH + '/theme', function (req, res) {
+			var batch = req.body;
+			
+			try {
+				var session = req.session;
+				var username = session.username;
+				
+				var theme = req.body.theme;
+				
+				db.updateTheme(username, theme, function (e) {
+					if (e != null) {
+						log.error(e, 'Exception while setting theme!');
+						handleServerError(e, req, res);
+						return;
+					}
+					
+					session.theme = theme;
+					res.status(204);
+					res.end();
+				});
+			} catch (e) {
+				log.error(e, 'Failed to set theme!');
+				handleServerError(e, req, res);
+			}
+		});
+	}
+	
+	{
 		log.info('Registering push data service ...');
 		
 		var imported = 0;
@@ -2398,6 +2436,7 @@ function getPageOpts(req, res) {
 	var opts = {
 		utils: utils,
 		username: null,
+		theme: session.theme,
 		model: session.model,
 		modelConfig: null,
 		models: null,

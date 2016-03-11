@@ -43,6 +43,12 @@
                     	Change Password
                     </a>
                 </li>
+                <li>
+                    <a href="#tab-theme" data-toggle="pill">
+                    	<span class="glyphicon glyphicon-user" aria-hidden="true"></span>
+                    	Change Theme
+                    </a>
+                </li>
             </ul>
         </div>
         <!-- /.sidebar-collapse -->
@@ -71,6 +77,26 @@
 						  	<div class="form-group">
 						  		<button id="btn-password-cancel" type="button" class="btn btn-default">Cancel</button>
 						    	<button id="btn-password-submit" type="button" class="btn btn-success">Reset</button>
+						  	</div>
+						</form>
+					</div>
+				</div>
+	        </div>
+	        <div id="tab-theme" role="tabpanel" class="tab-pane fade active">
+       			<div class="row">
+       				<div class="col-md-4">
+			            <form role="form">
+			            	<h2>Select theme</h2>
+							<div class="form-group">
+								<select id="select-theme" class="form-control">
+									<option value="dark" <%= theme == 'dark' ? 'selected="selected"' : '' %>>Dark</option>
+									<option value="light" <%= theme == 'light' ? 'selected="selected"' : '' %>>Light</option>
+								</select>
+						  	</div>
+						  	<div id="alert-wrapper-theme" class="form-group"></div>
+						  	<div class="form-group">
+						  		<button id="btn-theme-cancel" type="button" class="btn btn-default">Cancel</button>
+						    	<button id="btn-theme-submit" type="button" class="btn btn-success">Save</button>
 						  	</div>
 						</form>
 					</div>
