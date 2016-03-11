@@ -18550,7 +18550,8 @@ this.cytoscape = cytoscape;
 
       if( style['text-wrap'].value === 'wrap' ){ //console.log('draw wrap');
         var lines = rscratch.labelWrapCachedLines;
-        var lineHeight = rstyle.labelHeight / lines.length;
+        var lineHeight = _getTextSize(element);
+//        var lineHeight = rstyle.labelHeight / lines.length;
 
         //console.log('lines', lines);
 
