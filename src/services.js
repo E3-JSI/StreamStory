@@ -902,7 +902,7 @@ function initStreamStoryRestApi() {
 				if (log.debug())
 					log.debug('Fetching sub model for state: %d ...', stateId);
 				
-				res.send(model.getModel().getSubModelJson(stateId));
+				res.send(model.getSubModelJson(stateId));
 				res.end();
 			} catch (e) {
 				log.error(e, 'Failed to query for a sub-model!');
@@ -922,7 +922,7 @@ function initStreamStoryRestApi() {
 				if (log.debug())
 					log.debug('Fetching state path for state: %d on height %d ...', stateId, height);
 				
-				res.send(model.getModel().getStatePath(stateId, height, length, probThreshold));
+				res.send(model.getStatePath(stateId, height, length, probThreshold));
 				res.end();
 			} catch (e) {
 				log.error(e, 'Failed to query for state path!');

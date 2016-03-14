@@ -215,6 +215,18 @@ exports.StreamStory = function (opts) {
 			return getFtrName(ftrId) + ' ' + nameConf.range;
 		}
 	}
+	
+	function convertAutoNames(json) {
+		for (var heightN = 0; heightN < json.length; heightN++) {
+			var heightJson = json[heightN];
+			var states = heightJson.states;
+			
+			for (var stateN = 0; stateN < states.length; stateN++) {
+				var state = states[stateN];
+				state.autoName = genAutoName(state.autoName);
+			}
+		}
+	}
 
 	//===================================================
 	// HISTOGRAM
@@ -466,19 +478,21 @@ exports.StreamStory = function (opts) {
 		 * Returns the state used in the visualization.
 		 */
 		getVizState: function () {
-			log.debug('Fetching visualization ...');
 			var json = mc.toJSON();
-						
-			// transform the automatic state names
-			for (var heightN = 0; heightN < json.length; heightN++) {
-				var level = json[heightN];
-				for (var stateN = 0; stateN < level.states.length; stateN++) {
-					var state = level.states[stateN];					
-					state.autoName = genAutoName(state.autoName);
-				}
-			}
-			
+			convertAutoNames(json);
 			return json;
+		},
+		
+		getStatePath: function (stateId, height, length, probThreshold) {
+			var pathModel = mc.getStatePath(stateId, height, length, probThreshold);
+			convertAutoNames(pathModel);
+			return pathModel;
+		},
+		
+		getSubModelJson: function (stateId) {
+			var submodel = mc.getSubModelJson(stateId);
+			convertAutoNames(submodel);
+			return submodel;
 		},
 
 		/**

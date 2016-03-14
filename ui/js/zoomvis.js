@@ -6,8 +6,8 @@ var zoomVis = function (opts) {
 	
 	// colors
 	if (THEME == 'light') {
-		var DEFAULT_NODE_COLOR = 'rgb(120,120,120)';//'DodgerBlue';
-		var CURRENT_NODE_COLOR = 'green';
+		var DEFAULT_NODE_COLOR = '#A9A9A9';
+		var CURRENT_NODE_COLOR = '#33CC00';
 		var FUTURE_NODE_BASE_COLOR = 216;
 		
 		var DEFAULT_BORDER_COLOR = '#5A5A5A';
