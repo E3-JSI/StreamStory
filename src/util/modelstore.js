@@ -485,12 +485,23 @@ module.exports = exports = function (opts) {
 								recJson[attr] = qmDate;
 								timeV.push(date.getTime());
 							} else {
-								recJson[attr] = parseFloat(lineArr[i]);
+								var val = lineArr[i];
+								if (attr in attrSet && isNaN(val)) { 
+									log.warn('Invalid line: %s', JSON.stringify(lineArr));
+									throw new Error('Received non-numeric for field: ' + attr + ', val: ' + val);
+								}
+								
+								val = parseFloat(lineArr[i]);
+								
+								if (isNaN(val)) { val = 0; }
+								
+								recJson[attr] = parseFloat(val);
 							}
 						}
 						
 						if (log.trace())
 							log.trace('Inserting value: %s', JSON.stringify(recJson));
+						
 						
 						// create the actual record and update the feature spaces
 						recs.push(store.newRecord(recJson));
