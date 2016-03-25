@@ -19,6 +19,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 	var ui;
 	var viz;
 	var act;
+	var firstBottomVizTab = null;
 	
 	//=======================================================
 	// SHARED
@@ -1159,6 +1160,8 @@ function changeControlVal(stateId, ftrIdx, val) {
 			
 			if (stateId == null) return;
 			
+			firstBottomVizTab.click();
+			
 			// fetch state details
 			$.ajax('api/stateDetails', {
 				dataType: 'json',
@@ -1590,6 +1593,8 @@ function changeControlVal(stateId, ftrIdx, val) {
 	})();
 	
 	$(document).ready(function () {
+		firstBottomVizTab = $('#tabs-viz-bottom').find('a')[0];
+		
 		$('#div-msg-0, #div-msg-1').alert();
 		
 		$('.nav-pills a').click(function () {
@@ -1612,6 +1617,6 @@ function changeControlVal(stateId, ftrIdx, val) {
 		
 		$('.nav-pills a')[0].click()
 		
-		$('#tabs-viz-bottom').find('a')[0].click();
+		firstBottomVizTab.click();
 	});
 })()
