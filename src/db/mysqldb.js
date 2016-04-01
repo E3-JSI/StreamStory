@@ -27,7 +27,7 @@ module.exports = function () {
 	
 	function releaseConnectionErr(conn, callback) {
 		return function (e) {
-			log.error(e, 'Exception during a connection! Releasing connection and calling callback ...');
+			log.debug('Exception in a connection, releasing ...');
 			
 			if (conn != null)
 				conn.release();
@@ -514,54 +514,64 @@ module.exports = function () {
 		// MODEL QUERIES
 		//===============================================================
 		
-		setUndesiredEventId: function (mid, sid, eventId, callback) {
+		setStateProperties: function (mid, stateId, props, callback) {
+			var propsCpy = utils.clone(props);
+			
+			propsCpy.mid = mid;
+			propsCpy.sid = stateId;
+			
+			connection({
+				callback: callback,
+				nextOp: transaction({
+					nextOp: query({
+						sql: 'INSERT INTO state_properties SET ? ON DUPLICATE KEY UPDATE ?',
+						params: [propsCpy, props],
+						nextOp: query({	// cleanup
+							sql: 'DELETE FROM state_properties WHERE eventId IS NULL AND description IS NULL'
+						})
+					})
+				})
+			});
+		},
+		
+		fetchStateProperties: function (mid, sid, props, callback) {
+			if (props.length == 0) {
+				callback(undefined, {});
+				return;
+			}
+			
+			var select = props[0];
+			for (var i = 1; i < props.length; i++) {
+				select += ',' + props[i];
+			}
+			
 			connection({
 				callback: callback,
 				nextOp: query({
-					sql: 'SELECT EXISTS(SELECT 1 FROM state_properties WHERE mid = ? AND sid = ?) AS ex',
+					sql: 'SELECT ' + select + ' FROM state_properties WHERE mid = ? AND sid = ?',
 					params: [mid, sid],
 					nextOp: function (conn, onsuccess, onerror, results) {
-						var exists = results[0].ex;
-						
-						if (!exists) {
-							query({
-								sql: 'INSERT INTO state_properties SET ?',
-								params: { mid: mid, sid: sid, eventId: eventId }
-							})(conn, onsuccess, onerror);
-						} else {
-							query({
-								sql: 'UPDATE state_properties SET eventId = ? WHERE mid = ? AND sid = ?',
-								params: [eventId, mid, sid]
-							})(conn, onsuccess, onerror);
+						if (results.length == 0) {
+							var result = {};
+							for (var i = 0; i < props.length; i++) {
+								result[props[i]] = undefined;
+							}
+							onsuccess(result);
 						}
-					}
-				})
-			});
-		},
-		
-		getUndesiredEventId: function (mid, sid, callback) {
-			connection({
-				callback: callback,
-				nextOp: query({
-					sql: 'SELECT eventId FROM state_properties WHERE mid = ? AND sid = ?',
-					params: [mid, sid],
-					nextOp: function (conn, onsuccess, onerror, results) {
-						if (results.length == 0)
-							onsuccess(undefined);
 						else
-							onsuccess(results[0].eventId);
+							onsuccess(results[0]);
 					}
 				})
 			});
 		},
 		
-		clearUndesiredEventId: function (mid, sid, callback) {
-			connection({
-				callback: callback,
-				nextOp: query({
-					sql: 'DELETE FROM state_properties WHERE mid = ? AND sid = ?',
-					params: [mid, sid]
-				})
+		fetchStateProperty: function (mid, sid, prop, callback) {
+			that.fetchStateProperties(mid, sid, [prop], function (e, props) {
+				if (e != null) {
+					callback(e);
+				} else {
+					callback(undefined, props[prop]);
+				}
 			});
 		},
 		

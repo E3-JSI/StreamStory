@@ -317,7 +317,7 @@ function initStreamStoryHandlers(model, enable) {
 				var currStateNm = _model.getStateName(currState);
 				var targetStateNm = _model.getStateName(targetState);
 				
-				db.getUndesiredEventId(model.getId(), targetState, function (e, eventId) {
+				db.fetchStateProperty(model.getId(), targetState, 'eventId', function (e, eventId) {
 					if (e != null) {
 						log.error(e, 'Failed to fetch event ID from the database!');
 						return;
@@ -1074,18 +1074,6 @@ function initStreamStoryRestApi() {
 	}
 	
 	{
-		function fetchUndesiredEventId(mid, stateId, callback) {
-			db.getUndesiredEventId(mid, stateId, function (e, eventId) {
-				if (e != null) {
-					log.error(e, 'Failed to fetch undesired event ID!');
-					callback(e);
-					return;
-				}
-				
-				callback(undefined, eventId);
-			});
-		}
-		
 		log.info('Registering state details service ...');
 		
 		// state details
@@ -1101,13 +1089,15 @@ function initStreamStoryRestApi() {
 				
 				var details = model.stateDetails(stateId, height);
 				
-				fetchUndesiredEventId(model.getId(), stateId, function (e, eventId) {
+				db.fetchStateProperties(model.getId(), stateId, ['eventId', 'description'], function (e, stateProps) {
 					if (e != null) {
 						handleServerError(e, req, res);
 						return;
 					}
 					
-					details.undesiredEventId = eventId;
+					details.undesiredEventId = stateProps.eventId;
+					details.description = stateProps.description;
+					
 					res.send(details);
 					res.end();
 				});
@@ -1253,7 +1243,7 @@ function initStreamStoryRestApi() {
 				var isUndesired = model.getModel().isTarget(stateId);
 				
 				if (isUndesired) {
-					fetchUndesiredEventId(model.getId(), stateId, function (e, eventId) {
+					db.fetchStateProperty(model.getId(), stateId, 'eventId', function (e, eventId) {
 						if (e != null) {
 							handleServerError(e, req, res);
 							return;
@@ -1373,6 +1363,7 @@ function initStreamStoryRestApi() {
 				
 				stateId = parseInt(req.body.id);
 				stateNm = req.body.name;
+				var description = req.body.description;
 				
 				if (stateNm != null) {
 					if (log.debug()) 
@@ -1386,6 +1377,7 @@ function initStreamStoryRestApi() {
 					
 					model.getModel().clearStateName(stateId);
 				}
+				
 				if (!model.isOnline()) {
 					var fname = getModelFile(session);
 					if (log.debug())
@@ -1416,36 +1408,50 @@ function initStreamStoryRestApi() {
 					var fname = getModelFile(session);
 					model.save(fname);
 					
-					if (!isUndesired) {
-						if (log.debug())
-							log.debug('Clearing undesired event id ...');
-						
-						// clear the event id from the database
-						db.clearUndesiredEventId(mid, stateId, function (e) {
-							if (e != null) {
-								log.error(e, 'Failed to clear undesired event ID!');
-								handleServerError(e, req, res);
-								return;
-							}
-							
-							res.status(204);	// no content
-							res.end();
-						});
-					} else {
-						if (log.debug())
-							log.debug('Setting undesired event id to "%s" ...', eventId);
-							
-						db.setUndesiredEventId(mid, stateId, eventId, function (e) {
-							if (e != null) {
-								log.error(e, 'Failed to set undesired event ID!');
-								handleServerError(e, req, res);
-								return;
-							}
-							
-							res.status(204);	// no content
-							res.end();
-						});
+					var props = {
+						eventId: isUndesired ? eventId : undefined,
+						description: description	
 					}
+					db.setStateProperties(mid, stateId, props, function (e) {
+						if (e != null) {
+							handleServerError(e, req, res);
+							return;
+						}
+						
+						res.status(204);	// no content
+						res.end();
+					})
+					
+//					if (!isUndesired) {
+//						if (log.debug())
+//							log.debug('Clearing undesired event id ...');
+//						
+//						// clear the event id from the database
+//						db.clearUndesiredEventId(mid, stateId, function (e) {
+//							if (e != null) {
+//								log.error(e, 'Failed to clear undesired event ID!');
+//								handleServerError(e, req, res);
+//								return;
+//							}
+//							
+//							res.status(204);	// no content
+//							res.end();
+//						});
+//					} else {
+//						if (log.debug())
+//							log.debug('Setting undesired event id to "%s" ...', eventId);
+//						
+//						db.setUndesiredEventId(mid, stateId, eventId, function (e) {
+//							if (e != null) {
+//								log.error(e, 'Failed to set undesired event ID!');
+//								handleServerError(e, req, res);
+//								return;
+//							}
+//							
+//							res.status(204);	// no content
+//							res.end();
+//						});
+//					}
 				}
 			} catch (e) {
 				log.error(e, 'Failed to set name of state %d to %s', stateId, stateNm);
@@ -2677,6 +2683,10 @@ function initServer(sessionStore, parseCookie) {
 	
 	app.use(excludeDirs(['/login', '/js', '/css', '/img', '/lib', '/popups'], excludeFiles(['index.html', 'login.html', 'register.html', 'resetpassword.html'], accessControl)));
 	
+	// the index page
+	app.get('/', prepPage('login'));
+	app.get('/index.html', prepPage('login'));
+	// the other pages
 	app.get('/login.html', prepPage('login'));
 	app.get('/register.html', prepPage('register'));
 	app.get('/resetpassword.html', prepPage('resetpassword'));

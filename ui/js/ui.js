@@ -1193,12 +1193,12 @@ function changeControlVal(stateId, ftrIdx, val) {
 				data: { stateId: stateId, level: height },
 				success: function (data) {
 					$('#wrapper-state-details').show();
-					$('#txt-name').off('keyup');
 					
 					var stateAutoNm = data.autoNm;
 					
 					// clear the panel
 					$('#txt-name').val(stateAutoNm);
+					$('#txt-state-description').val('');
 					$('#chk-target').removeAttr('checked');
 					$('#txt-event-id').val('');
 					$('#div-button-save-state').addClass('hidden');
@@ -1259,10 +1259,20 @@ function changeControlVal(stateId, ftrIdx, val) {
 						labelXOffsetPerc: .5
 					});
 					
-										
+					
 					// populate
 					// basic info
+					$('#txt-name').off('keyup');
 					if (data.name != null) $('#txt-name').val(data.name);
+					$('#txt-name').keyup(function () {
+						$('#div-button-save-state').removeClass('hidden');
+					});
+					
+					$('#txt-state-description').off('keyup');
+					if (data.description != null) $('#txt-state-description').val(data.description);
+					$('#txt-state-description').keyup(function () {
+						$('#div-button-save-state').removeClass('hidden');
+					});
 					
 					$('#chk-target').off('change');	// remove the previous handlers
 					$('#chk-target').prop('checked', data.isTarget != null && data.isTarget);
@@ -1271,10 +1281,6 @@ function changeControlVal(stateId, ftrIdx, val) {
 					} else {
 						$('#div-event-id').addClass('hidden');
 					}
-					
-					$('#txt-name').keyup(function () {
-						$('#div-button-save-state').removeClass('hidden');
-					});
 					
 					$('#chk-target').change(function (event) {
 						$('#div-button-save-state').removeClass('hidden');
@@ -1393,12 +1399,14 @@ function changeControlVal(stateId, ftrIdx, val) {
 					$('#btn-button-save-state').off('click');
 					$('#btn-button-save-state').click(function () {
 						var stateName = $('#txt-name').val();
+						var description = $('#txt-state-description').val();
 						var isUndesired = $('#chk-target').is(':checked');
 						var eventId = $('#txt-event-id').val();
 						
 						var data = {
 							id: stateId,
 							name: stateName,
+							description: description,
 							isUndesired: isUndesired
 						};
 						
@@ -1406,9 +1414,12 @@ function changeControlVal(stateId, ftrIdx, val) {
 							data.eventId = eventId;
 						}
 						
-						var shouldClear = stateName == '' || stateName == stateId;
-						if (shouldClear) {	// clear the state name
+						var shouldClearName = stateName == '' || stateName == stateId;
+						if (shouldClearName) {	// clear the state name
 							delete data.name;
+						}
+						if (description == null || description == '') {
+							delete data.description;
 						}
 						
 						$.ajax('api/stateProperties', {
@@ -1416,10 +1427,10 @@ function changeControlVal(stateId, ftrIdx, val) {
 						    type: 'POST',
 						    data: data,
 						    success: function () {
-						    	viz.setStateName(stateId, shouldClear ? stateAutoNm : stateName);
+						    	viz.setStateName(stateId, shouldClearName ? stateAutoNm : stateName);
 						    	viz.setTargetState(stateId, isUndesired);
 						    	
-						    	if (shouldClear)
+						    	if (shouldClearName)
 						    		$('#txt-name').val(stateAutoNm);
 						    	
 						    	$('#div-button-save-state').addClass('hidden');
