@@ -1012,7 +1012,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 			var formatX = opts.formatX;
 			var rotate = opts.rotate;
 			
-			$('#' + container).html('');
+//			$('#' + container).html('');
 			
 			drawHistogram({
 				data: data,
@@ -1055,6 +1055,22 @@ function changeControlVal(stateId, ftrIdx, val) {
 				},
 				error: handleAjaxError()
 			});
+		}
+		
+		function hideAdditionalVisPanels() {
+			// hide the right panel
+			$('#wrapper-transition-details').hide();
+			$('#wrapper-state-details').hide();
+			
+			// hide the bottom panel
+			$('#div-tree-container').html('');
+			$('#div-parallel-wrapper').html('');
+			// time histograms
+			$('#div-timehist-global').html('');
+			$('#div-timehist-yearly').html('');
+			$('#div-timehist-monthly').html('');
+			$('#div-timehist-weekly').html('');
+			$('#div-timehist-daily').html('');
 		}
 		
 		(function () {
@@ -1160,8 +1176,8 @@ function changeControlVal(stateId, ftrIdx, val) {
 		});
 		
 		viz.onStateSelected(function (stateId, height) {
-			$('#wrapper-transition-details').hide();
-			$('#wrapper-state-details').hide();
+			hideAdditionalVisPanels();
+			
 			if ($('#chk-show-fut').is(':checked')) {
 				$('#chk-show-fut').attr('checked', false);
 				$('#chk-show-fut').change();
@@ -1189,9 +1205,6 @@ function changeControlVal(stateId, ftrIdx, val) {
 					$('#div-attrs').html('');
 					$('#div-future').html('');
 					$('#div-past').html('');
-					$('#div-tree-container').html('');
-					$('#div-parallel-wrapper').html('');
-					
 					
 					var ftrNames = [];
 					for (var i = 0; i < data.features.observations.length; i++) {
