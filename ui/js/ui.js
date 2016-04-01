@@ -232,7 +232,15 @@ function changeControlVal(stateId, ftrIdx, val) {
 					else if (msg.type == 'statePrediction') {
 						var content = msg.content;
 						var eventId = content.eventId;
-						var msgStr = 'Undesired event prediction: ' + eventId + ', prob: ' + content.probability.toFixed(2);
+						var prob = content.probability;
+						
+						var msgStr;
+						if (prob == 1) {
+							msgStr = eventId;
+						} else {
+							msgStr = 100*(prob.toFixed(2)) + '% chance of arriving into ' + eventId;
+						}
+						
 						drawMsg(msgStr, function (event) {
 							// draw a histogram of the PDF
 							var timeV = content.pdf.timeV;

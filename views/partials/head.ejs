@@ -6,12 +6,12 @@
 	
 	<title>StreamStory<%= subtitle != null ? (' - ' + subtitle) : '' %></title>
 	
-	<% if (page == 'login.html' || theme == 'dark') { %>
-	<link rel="stylesheet" href="lib/bootstrap/css/bootstrap.min.css">
-	<link href="css/style-dark.css" rel="stylesheet" />
-	<% } else { %>
+	<% if (theme == 'light') { %>
 	<link rel="stylesheet" href="lib/bootstrap/css/bootstrap-orig.min.css">
 	<link href="css/style-light.css" rel="stylesheet" />
+	<% } else { %>
+	<link rel="stylesheet" href="lib/bootstrap/css/bootstrap.min.css">
+	<link href="css/style-dark.css" rel="stylesheet" />
 	<% } %>
 	<link href="lib/css/font-awesome.min.css" rel="stylesheet" />
 	<link href="css/style.css" rel="stylesheet" />

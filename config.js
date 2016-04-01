@@ -41,6 +41,7 @@ exports.USE_CASE_HELLA = 0;
 exports.USE_CASE_MHWIRTH = 1;
 exports.USE_CASE_NRG = 2;
 exports.USE_CASE_SIMULATION = 3;
+exports.USE_CASE_TRAFFIC = 4;
 exports.USE_CASE_NAME = config.useCase;
 
 if (config.useCase == 'hella') {
@@ -56,6 +57,9 @@ else if (config.useCase == 'nrg4cast') {
 else if (config.useCase == 'simulation') {
 	exports.USE_CASE = exports.USE_CASE_SIMULATION;
 }
+else if (config.useCase == 'traffic') {
+	exports.USE_CASE = exports.USE_CASE_TRAFFIC;
+}
 else {
 	log.error('Unknown use case: %s', config.USE_CASE);
 	process.exit(1);
@@ -66,7 +70,11 @@ if (config.resampleInterval == null) {
 	log.warn('Resampling interval is not defined in the configuration! Using default ...');
 	if (exports.USE_CASE == exports.USE_CASE_MHWIRTH) {
 		exports.STREAM_STORY_RESAMPLING_INTERVAL = 1000*20;	// 20s
-	} else {	// hella
+	}
+	else if (exports.USE_CASE == exports.USE_CASE_TRAFFIC) {
+		exports.STREAM_STORY_RESAMPLING_INTERVAL = 1000*60*60;	// 15min
+	} 
+	else {	// hella
 		exports.STREAM_STORY_RESAMPLING_INTERVAL = 1000*10;	// 10s
 	}
 } else {
