@@ -1397,7 +1397,8 @@ function initStreamStoryRestApi() {
 						res.status(204);	// no content
 						res.end();
 					});
-				} if (model.isOnline()) {
+				} 
+				else {
 					var isUndesired = JSON.parse(req.body.isUndesired);
 					var eventId = req.body.eventId;
 					
