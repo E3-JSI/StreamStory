@@ -934,6 +934,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 							'content': 'data(label)',
 							'width': 4,
 							'font-size': 50,
+							'color': TEXT_COLOR,
 							'target-arrow-shape': 'triangle',
 							'line-color': edgeColor,
 							'target-arrow-color': edgeColor,

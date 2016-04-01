@@ -356,6 +356,7 @@ var zoomVis = function (opts) {
 	//===============================================================
 	
 	function getServerNodeId(id) {
+		if (id == null) { return id; }
 		return parseInt(id) & 0xFFFF;
 	}
 	
