@@ -1383,8 +1383,20 @@ function initStreamStoryRestApi() {
 					if (log.debug())
 						log.debug('Saving model to file: %s', fname);
 					model.save(fname);
-					res.status(204);	// no content
-					res.end();
+					
+					var props = {
+						description: description	
+					};
+					
+					db.setStateProperties(mid, stateId, props, function (e) {
+						if (e != null) {
+							handleServerError(e, req, res);
+							return;
+						}
+						
+						res.status(204);	// no content
+						res.end();
+					});
 				} if (model.isOnline()) {
 					var isUndesired = JSON.parse(req.body.isUndesired);
 					var eventId = req.body.eventId;
@@ -1420,7 +1432,7 @@ function initStreamStoryRestApi() {
 						
 						res.status(204);	// no content
 						res.end();
-					})
+					});
 					
 //					if (!isUndesired) {
 //						if (log.debug())
