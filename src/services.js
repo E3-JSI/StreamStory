@@ -1334,6 +1334,22 @@ function initStreamStoryRestApi() {
 			}
 		});
 		
+		app.get(API_PATH + '/timeExplain', function (req, res) {
+			try {
+				var model = getModel(req.sessionID, req.session);
+				var stateId = parseInt(req.query.stateId);
+				
+				if (log.trace())
+					log.trace('Fetching time explanation for state %d ...', stateId);
+				
+				res.send(model.getModel().getStateTypTimes(stateId));
+				res.end();
+			} catch (e) {
+				log.error(e, 'Failed to query time explanation!');
+				handleServerError(e, req, res);
+			}
+		});
+		
 		app.get(API_PATH + '/targetFeature', function (req, res) {
 			try {
 				var height = parseFloat(req.query.height);

@@ -116,6 +116,14 @@ var zoomVis = function (opts) {
 		}
 		tooltip.append(explainDiv);
 		
+		var timeIntervalDiv = $('<div />');
+		timeIntervalDiv.attr('id', 'div-tminterval-' + data.id);
+		timeIntervalDiv.addClass('tooltip-div-tminterval');
+		if ($('#div-tminterval-' + data.id).html() != null) {
+			timeIntervalDiv.html($('#div-explain-' + data.id).html());
+		}
+		tooltip.append(timeIntervalDiv);
+		
 		setTimeout(function () {
 			$.ajax('api/explanation', {
 				dataType: 'json',
@@ -198,6 +206,39 @@ var zoomVis = function (opts) {
 					}
 					
 					api.reposition(undefined, false);
+				},
+				error: handleAjaxError()
+			});
+			
+			$.ajax('api/timeExplain', {
+				dataType: 'json',
+				method: 'GET',
+				data: { stateId: getServerNodeId(data.id) },
+				success: function (timeExplain) {
+					if (timeExplain == null || timeExplain.length == 0) return;
+					
+					var p = $('<p />');
+					var html = 'The state occurs ';
+					
+					for (var i = 0; i < timeExplain.length; i++) {
+						var item = timeExplain[i];
+						
+						var start = item.start;
+						var end = item.end;
+						
+						if (start != end) {
+							html += ' between ' + start + ' and ' + end
+						} else {
+							html += ' in ' + start;
+						}
+						
+						if (i < timeExplain.length - 1) {
+							html += ', ';
+						}
+					}
+					
+					p.html(html);
+					$('#div-tminterval-' + data.id).html('').append(p);
 				},
 				error: handleAjaxError()
 			});
