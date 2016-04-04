@@ -210,7 +210,7 @@ exports.StreamStory = function (opts) {
 		var ftrId = nameConf.ftrId;
 
 		if (ftrId < 0) {
-			return nameConf.range;
+			return undefined;
 		} else {
 			return getFtrName(ftrId) + ' ' + nameConf.range;
 		}
