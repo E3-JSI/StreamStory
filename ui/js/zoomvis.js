@@ -108,14 +108,6 @@ var zoomVis = function (opts) {
 		}
 		tooltip.append(undesiredDiv);
 		
-		var explainDiv = $('<div />');
-		explainDiv.attr('id', 'div-explain-' + data.id);
-		explainDiv.addClass('tooltip-div-explain');
-		if ($('#div-explain-' + data.id).html() != null) {
-			explainDiv.html($('#div-explain-' + data.id).html());
-		}
-		tooltip.append(explainDiv);
-		
 		var narrationDiv = $('<div />');
 		narrationDiv.attr('id', 'div-narration-' + data.id);
 		narrationDiv.addClass('tooltip-div-narration');
@@ -131,6 +123,14 @@ var zoomVis = function (opts) {
 			timeIntervalDiv.html($('#div-explain-' + data.id).html());
 		}
 		tooltip.append(timeIntervalDiv);
+		
+		var ruleExplainDiv = $('<div />');
+		ruleExplainDiv.attr('id', 'div-explain-' + data.id);
+		ruleExplainDiv.addClass('tooltip-div-explain');
+		if ($('#div-explain-' + data.id).html() != null) {
+			ruleExplainDiv.html($('#div-explain-' + data.id).html());
+		}
+		tooltip.append(ruleExplainDiv);
 		
 		setTimeout(function () {
 			$.ajax('api/explanation', {
@@ -196,7 +196,7 @@ var zoomVis = function (opts) {
 						}
 					}
 					
-					$('#div-explain-' + data.id).html(unionStr);
+					$('#div-explain-' + data.id).html('It can be characterized by the following rules:<br />' + unionStr);
 					api.reposition(undefined, false);
 				},
 				error: handleAjaxError()
@@ -235,9 +235,9 @@ var zoomVis = function (opts) {
 						var end = item.end;
 						
 						if (start != end) {
-							html += ' between ' + start + ' and ' + end
+							html += ' between <strong>' + start + '</strong> and <strong>' + end + '</strong>'
 						} else {
-							html += ' in ' + start;
+							html += ' in <strong>' + start + '</strong>';
 						}
 						
 						if (i < timeExplain.length - 1) {
@@ -268,7 +268,7 @@ var zoomVis = function (opts) {
 						var ftr = item.ftrId;
 						var level = item.ftrDesc;
 						
-						html += level + ' ' + ftr;
+						html += '<strong>' + level + ' ' + ftr + '</strong>';
 						
 						if (i < n - 2) {
 							html += ', ';

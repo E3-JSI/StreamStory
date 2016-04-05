@@ -30,7 +30,7 @@
 		"host": "localhost",
 		"user": "StreamStory",
 		"password": "StreamStory",
-		"database": "StreamStoryTraffic"
+		"database": "StreamStoryTrafficTest"
 	},
 	"integration": {
 		"type": "http",
