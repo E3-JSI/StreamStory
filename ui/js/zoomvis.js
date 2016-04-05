@@ -116,6 +116,14 @@ var zoomVis = function (opts) {
 		}
 		tooltip.append(explainDiv);
 		
+		var narrationDiv = $('<div />');
+		narrationDiv.attr('id', 'div-narration-' + data.id);
+		narrationDiv.addClass('tooltip-div-narration');
+		if ($('#div-narration-' + data.id).html() != null) {
+			narrationDiv.html($('#div-explain-' + data.id).html());
+		}
+		tooltip.append(narrationDiv);
+		
 		var timeIntervalDiv = $('<div />');
 		timeIntervalDiv.attr('id', 'div-tminterval-' + data.id);
 		timeIntervalDiv.addClass('tooltip-div-tminterval');
@@ -239,6 +247,38 @@ var zoomVis = function (opts) {
 					
 					p.html(html);
 					$('#div-tminterval-' + data.id).html('').append(p);
+				},
+				error: handleAjaxError()
+			});
+			
+			$.ajax('api/stateNarration', {
+				dataType: 'json',
+				method: 'GET',
+				data: { stateId: getServerNodeId(data.id) },
+				success: function (narration) {
+					if (narration.length == 0) return;
+					
+					var p = $('<p />');
+					var html = 'The state is characterized by ';
+					
+					var n = Math.min(3, narration.length);
+					for (var i = 0; i < n; i++) {
+						var item = narration[i];
+						
+						var ftr = item.ftrId;
+						var level = item.ftrDesc;
+						
+						html += level + ' ' + ftr;
+						
+						if (i < n - 2) {
+							html += ', ';
+						} else if (i == n - 2) {
+							html += ' and ';
+						}
+					}
+					
+					p.html(html);
+					$('#div-narration-' + data.id).html('').append(p);
 				},
 				error: handleAjaxError()
 			});

@@ -1280,6 +1280,22 @@ function initStreamStoryRestApi() {
 			}
 		});
 		
+		app.get(API_PATH + '/stateNarration', function (req, res) {
+			try {
+				var model = getModel(req.sessionID, req.session);
+				var stateId = parseInt(req.query.stateId);
+				
+				if (log.trace())
+					log.trace('Fetching time explanation for state %d ...', stateId);
+				
+				res.send(model.narrateState(stateId));
+				res.end();
+			} catch (e) {
+				log.error(e, 'Failed to query time explanation!');
+				handleServerError(e, req, res);
+			}
+		});
+		
 		// histograms
 		app.get(API_PATH + '/histogram', function (req, res) {
 			try {
@@ -1349,6 +1365,8 @@ function initStreamStoryRestApi() {
 				handleServerError(e, req, res);
 			}
 		});
+		
+		
 		
 		app.get(API_PATH + '/targetFeature', function (req, res) {
 			try {
