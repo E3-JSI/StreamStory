@@ -112,7 +112,7 @@ var zoomVis = function (opts) {
 		narrationDiv.attr('id', 'div-narration-' + data.id);
 		narrationDiv.addClass('tooltip-div-narration');
 		if ($('#div-narration-' + data.id).html() != null) {
-			narrationDiv.html($('#div-explain-' + data.id).html());
+			narrationDiv.html($('#div-narration-' + data.id).html());
 		}
 		tooltip.append(narrationDiv);
 		
@@ -120,7 +120,7 @@ var zoomVis = function (opts) {
 		timeIntervalDiv.attr('id', 'div-tminterval-' + data.id);
 		timeIntervalDiv.addClass('tooltip-div-tminterval');
 		if ($('#div-tminterval-' + data.id).html() != null) {
-			timeIntervalDiv.html($('#div-explain-' + data.id).html());
+			timeIntervalDiv.html($('#div-tminterval-' + data.id).html());
 		}
 		tooltip.append(timeIntervalDiv);
 		
