@@ -96,7 +96,7 @@ var zoomVis = function (opts) {
 		
 		// holding time
 		var timeDiv = $('<div />');
-		timeDiv.html(data.holdingTime.toPrecision(2) + ' ' + getTimeUnit() + 's');
+		timeDiv.html('Typically lasts <strong>' + data.holdingTime.toPrecision(2) + ' ' + getTimeUnit() + 's</strong>');
 		tooltip.append(timeDiv);
 		
 		// undesired event properties
@@ -1304,26 +1304,41 @@ var zoomVis = function (opts) {
 	// INITIALIZE
 	//===============================================================
 	
+	function internalToUiScale(scale) {
+		return 1 - (scale - minHeight) / (maxHeight - minHeight);
+	}
+	
+	function uiToInternalScale(scale) {
+		return (1 - scale)*(maxHeight - minHeight) + minHeight;
+	}
+	
+	function setScale(scale) {
+		var prevHeight = currentHeight;
+		currentHeight = Math.min(maxHeight, Math.max(minHeight, scale));
+		
+		if (currentLevel < levelHeights.length - 1) {
+			if (currentHeight >= levelHeights[currentLevel + 1]) {
+				setCurrentLevel(++currentLevel);
+			}
+		}
+		if (currentLevel > 0) {
+			if (currentHeight < levelHeights[currentLevel]) {
+				setCurrentLevel(--currentLevel);
+			}
+		}
+		
+		if (currentHeight != prevHeight) {
+			callbacks.heightChanged(internalToUiScale(currentHeight));
+		}
+	}
+	
 	function onMouseWheel(event) {
 		if (event.preventDefault) event.preventDefault();
 		
-		if (event.deltaY > 0) {		// scroll out
-			currentHeight = Math.min(maxHeight, currentHeight + heightStep);
-			
-			if (currentLevel < levelHeights.length - 1) {
-				if (currentHeight >= levelHeights[currentLevel + 1]) {
-					setCurrentLevel(++currentLevel);
-				}
-			}
-			
-		} else {					// scroll in
-			currentHeight = Math.max(minHeight, currentHeight - heightStep);
-			
-			if (currentLevel > 0) {
-				if (currentHeight < levelHeights[currentLevel]) {
-					setCurrentLevel(--currentLevel);
-				}
-			}
+		if (event.deltaY > 0) {
+			setScale(currentHeight + heightStep);
+		} else {
+			setScale(currentHeight - heightStep);
 		}
 		
 		if (scrollZoomEnabled) {
@@ -1333,8 +1348,6 @@ var zoomVis = function (opts) {
 			
 			setZoom(newZoom);
 		}
-		
-		callbacks.heightChanged((1 - (currentHeight - minHeight) / (maxHeight - minHeight)));
 	}
 	
 	// adding mouse wheel listener
@@ -1758,6 +1771,10 @@ var zoomVis = function (opts) {
 		
 		setWheelScroll: function (scroll) {
 			scrollZoomEnabled = scroll;
+		},
+		
+		setScale: function (scale) {
+			setScale(uiToInternalScale(scale / 100));
 		},
 		
 		setZoom: function (value) {

@@ -1102,14 +1102,15 @@ function changeControlVal(stateId, ftrIdx, val) {
 		})();
 	
 		$("#slider_item_div").slider({
-			value: viz.getZoom(),
-			min: viz.getMinZoom(),
-			max: viz.getMaxZoom(),
-			step: 0.01,
+			value: 0,//viz.getZoom(),
+			min: 0,//viz.getMinZoom(),
+			max: 100,//viz.getMaxZoom(),
+			step: 1,//0.01,
 			animate:"slow",
 			orientation: "vertical",
 			slide: function (event, ui) {
-				viz.setZoom(ui.value);
+//				viz.setZoom(ui.value);
+				viz.setScale(ui.value);
 			}
 		});
 		
@@ -1475,6 +1476,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 		
 		viz.onHeightChanged(function (height) {
 			$('#span-zoom-val').html((100*height).toFixed());
+			$("#slider_item_div").slider('value', height*100);
 			if ($('#chk-show-fut').is(':checked')) {
 				$('#chk-show-fut').attr('checked', false);
 				$('#chk-show-fut').change();
