@@ -1474,9 +1474,9 @@ function changeControlVal(stateId, ftrIdx, val) {
 			$('#wrapper-transition-details').show();
 		});
 		
-		viz.onHeightChanged(function (height) {
-			$('#span-zoom-val').html((100*height).toFixed());
-			$("#slider_item_div").slider('value', height*100);
+		viz.onHeightChanged(function (scale) {
+			$('#span-zoom-val').html(scale.toFixed());
+			$("#slider_item_div").slider('value', scale);
 			if ($('#chk-show-fut').is(':checked')) {
 				$('#chk-show-fut').attr('checked', false);
 				$('#chk-show-fut').change();

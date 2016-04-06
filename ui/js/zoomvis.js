@@ -1305,11 +1305,11 @@ var zoomVis = function (opts) {
 	//===============================================================
 	
 	function internalToUiScale(scale) {
-		return 1 - (scale - minHeight) / (maxHeight - minHeight);
+		return (1 - (scale - minHeight) / (maxHeight - minHeight)) * 100;
 	}
 	
 	function uiToInternalScale(scale) {
-		return (1 - scale)*(maxHeight - minHeight) + minHeight;
+		return (1 - scale / 100)*(maxHeight - minHeight) + minHeight;
 	}
 	
 	function setScale(scale) {
@@ -1774,7 +1774,7 @@ var zoomVis = function (opts) {
 		},
 		
 		setScale: function (scale) {
-			setScale(uiToInternalScale(scale / 100));
+			setScale(uiToInternalScale(scale));
 		},
 		
 		setZoom: function (value) {
