@@ -1468,37 +1468,6 @@ function initStreamStoryRestApi() {
 						res.status(204);	// no content
 						res.end();
 					});
-					
-//					if (!isUndesired) {
-//						if (log.debug())
-//							log.debug('Clearing undesired event id ...');
-//						
-//						// clear the event id from the database
-//						db.clearUndesiredEventId(mid, stateId, function (e) {
-//							if (e != null) {
-//								log.error(e, 'Failed to clear undesired event ID!');
-//								handleServerError(e, req, res);
-//								return;
-//							}
-//							
-//							res.status(204);	// no content
-//							res.end();
-//						});
-//					} else {
-//						if (log.debug())
-//							log.debug('Setting undesired event id to "%s" ...', eventId);
-//						
-//						db.setUndesiredEventId(mid, stateId, eventId, function (e) {
-//							if (e != null) {
-//								log.error(e, 'Failed to set undesired event ID!');
-//								handleServerError(e, req, res);
-//								return;
-//							}
-//							
-//							res.status(204);	// no content
-//							res.end();
-//						});
-//					}
 				}
 			} catch (e) {
 				log.error(e, 'Failed to set name of state %d to %s', stateId, stateNm);
@@ -2105,6 +2074,27 @@ function initServerApi() {
 				}
 			});
 		}
+		
+		app.post(API_PATH + '/removeModel', function (req, res) {
+			try {
+				var session = req.session;
+				var modelId = req.body.modelId;
+				
+				log.info('Removing model %d', modelId);
+				
+				db.deleteModel(modelId, function (e) {
+					if (e != null) {
+						return handleServerError(e, req, res);
+					}
+					
+					res.status(204);
+					res.end();
+				});
+			} catch (e) {
+				log.error(e, 'Failed to process raw measurement!');
+				handleServerError(e, req, res);
+			}
+		});
 		
 		app.post(API_PATH + '/activateModel', function (req, res) {
 			try {
