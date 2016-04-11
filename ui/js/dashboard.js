@@ -276,7 +276,7 @@ function pingProgress(isRealTime) {
 		method: 'GET',
 		contentType: 'application/json',
 		success: function (data, status, xhr) {
-			console.log('Gor ping result!');
+			console.log('Got ping result!');
 			
 			if (xhr.status == 204) {	// no content
 				pingProgress(isRealTime);
@@ -350,7 +350,9 @@ function pingProgress(isRealTime) {
 							
 							table.find('tbody').append(tr);
 							
+							console.log('Setting closing timeout ...');
 							setTimeout(function () {
+								console.log('Closing ...');
 								$('#div-model-progress').addClass('hidden');
 								$('#progress-build-model').css('width', '0%');
 							}, 5000);
@@ -436,9 +438,14 @@ function pingProgress(isRealTime) {
 
 		$('#progress-file-upload').css('width', '0%');
 		$('#progress-file-upload').html('0%');
+		
+		console.log('Uploading file:');
+		console.log('Enctype: ' + enctype);
+		console.log('Method: ' + method);
 
 		$.ajax(action, {
 			contentType: false,
+//			contentType: 'multipart/form-data',
 			enctype: enctype,
 			data: formData,
 			method: method,

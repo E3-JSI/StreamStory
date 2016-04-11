@@ -1011,9 +1011,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 			var container = opts.container;
 			var formatX = opts.formatX;
 			var rotate = opts.rotate;
-			
-//			$('#' + container).html('');
-			
+						
 			drawHistogram({
 				data: data,
 				container: container,

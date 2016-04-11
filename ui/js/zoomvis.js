@@ -1335,7 +1335,10 @@ var zoomVis = function (opts) {
 	function onMouseWheel(event) {
 		if (event.preventDefault) event.preventDefault();
 		
-		if (event.deltaY > 0) {
+		//console.log(event.wheelDelta);
+		var zoomIn = event.deltaY != null ? event.deltaY > 0 : event.wheelDelta < 0;
+		
+		if (zoomIn) {
 			setScale(currentHeight + heightStep);
 		} else {
 			setScale(currentHeight - heightStep);
@@ -1344,7 +1347,7 @@ var zoomVis = function (opts) {
 		if (scrollZoomEnabled) {
 			var zoom = cy.zoom();
 			var factor = 1.01;
-			var newZoom = zoom * (event.deltaY > 0 ? 1 / factor : factor);
+			var newZoom = zoom * (zoomIn ? 1 / factor : factor);
 			
 			setZoom(newZoom);
 		}

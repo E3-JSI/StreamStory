@@ -1543,7 +1543,7 @@ function initDataUploadApi() {
 		fileFilter: function (req, file, callback) {	// only accept csv files
 			var passes = qmutil.stringEndsWith(file.originalname, '.csv');
 			log.debug('Filtering uploaded file %s. File passess filter: ' + passes, JSON.stringify(file));
-			callback(null, passes);
+			callback(undefined, passes);
 		}
 	});
 	
@@ -1551,8 +1551,10 @@ function initDataUploadApi() {
 		var sessionId = req.sessionID;
 		var session = req.session;
 		
-		if (req.file == null)
-			throw new Error('File not uploaded in the upload request!');
+		if (req.file == null) {
+			handleServerError(new Error('File not uploaded in the upload request!'), req, res);
+			return;
+		}
 		
 		var fileBuff = req.file.buffer;
 		
