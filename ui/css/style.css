@@ -72,6 +72,20 @@ html, body {
 	
 }
 
+.info-panel, .info-panel-left {
+	top: 3px;
+}
+
+.info-panel {
+	float: right;
+}
+
+.info-panel-left {
+	top: 3px;
+	padding-right: 5px;
+	float: left;
+}
+
 
 /*===============================================================
  	VISUALIZATION PANEL
@@ -285,6 +299,14 @@ html, body {
 .fullstretch {
 	width: 100%;
 	height: 100%;
+}
+
+.ui-tooltip {
+	z-index: 100000000;
+}
+
+[rel=tooltip]:HOVER {
+	cursor: pointer;
 }
 
 

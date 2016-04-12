@@ -110,3 +110,21 @@ function redirectToUI() {
 function reloadWindow() {
 	window.location.reload();
 }
+
+$(document).ready(function () {
+	var tooltipElements = $('[rel=tooltip]');
+	
+	tooltipElements.qtip({
+		content: {
+			title: function (event, api) {
+				return $(this).attr('title');
+			},
+			text: function (event, api) {
+				return $(this).attr('content');
+			}
+		},
+		style: {
+			classes: 'qtip-bootstrap'
+		}
+	});
+});
