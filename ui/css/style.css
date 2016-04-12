@@ -253,7 +253,7 @@ html, body {
 
 #div-tree-wrapper, #div-parallel-wrapper, #div-timehist-wrapper {
 	display: initial !important;
-	width: 100%;
+	width: calc(100% - 32px);	/* inherits the width from col-md-8, which has 15px padding on both sides and a small border */
 	visibility: hidden;
 	position: absolute;
 	top: -100000px;
@@ -262,6 +262,7 @@ html, body {
 
 #div-tree-wrapper.active, #div-parallel-wrapper.active, #div-timehist-wrapper.active {
 	display: block !important;
+	width: 100% !important;
 	visibility: visible;
 	position: static;
 }

@@ -919,8 +919,6 @@ function changeControlVal(stateId, ftrIdx, val) {
 				var newZoom = zoom * (zoomIn ? 1 / factor : factor);
 				
 				cy.viewport({zoom: newZoom, pan: calcCyPan(newZoom)});
-//				setZoom(newZoom, false);
-//				setZoom(newZoom);
 			}
 			
 			var edgeColor = 'darkgray';
