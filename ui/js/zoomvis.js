@@ -1,5 +1,7 @@
 var zoomVis = function (opts) {
 	
+	var visContainer = document.getElementById(opts.visContainer);
+	
 	var MODE_NORMAL = 'normal';
 	var MODE_PROBS = 'probs';
 	var MODE_TARGET_FTR = 'ftr';
@@ -304,8 +306,6 @@ var zoomVis = function (opts) {
 		'background-fit': 'cover',
 		'border-style': 'double'
 	}
-	
-	var visContainer = document.getElementById(opts.visContainer);
 	
 	var hierarchy = null;
 	var modeConfig = {

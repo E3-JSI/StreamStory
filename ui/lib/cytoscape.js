@@ -9390,7 +9390,7 @@ this.cytoscape = cytoscape;
           x: -zoom2/zoom1 * (pos.x - pan1.x) + pos.x,
           y: -zoom2/zoom1 * (pos.y - pan1.y) + pos.y
         };
-
+        
         this._private.zoom = zoom;
         this._private.pan = pan2;
 
@@ -20961,10 +20961,10 @@ this.cytoscape = cytoscape;
         if( needsWheelFix ){ // fixes slow wheel events on ff/linux and ff/windows
           diff *= 33;
         }
-
+        
         cy.zoom({
-          level: cy.zoom() * Math.pow(10, diff),
-          renderedPosition: { x: rpos[0], y: rpos[1] }
+        	level: cy.zoom() * Math.pow(10, diff),
+        	renderedPosition: { x: rpos[0], y: rpos[1] }
         });
       }
 

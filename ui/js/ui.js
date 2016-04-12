@@ -776,6 +776,8 @@ function changeControlVal(stateId, ftrIdx, val) {
 		});
 		
 		function visualizeDecisionTree(root) {
+			var cy;
+			
 			$('#div-tree-wrapper').removeClass('hidden');
 			
 			var totalExamples = root.examples;
@@ -889,16 +891,65 @@ function changeControlVal(stateId, ftrIdx, val) {
 				}
 			})(root, { x: 0, y: 0 });
 			
+			function calcCyPan(newZoom) {
+				if (newZoom < 1e-50) newZoom = 1e-50;
+				if (newZoom > 1e50) newZoom = 1e50;
+				
+				var width = cy.width();
+				var height = cy.height();
+				var pan = cy.pan();
+				var zoom = cy.zoom();
+				
+				var centerX = (width - 2*pan.x) / zoom;
+				var centerY = (height - 2*pan.y) / zoom;
+				
+				return {
+					x: (width - newZoom*centerX) / 2,
+					y: (height - newZoom*centerY) / 2
+				}
+			}
+			
+			function onMouseWheel(event) {
+				if (event.preventDefault) event.preventDefault();
+				
+				var zoomIn = event.deltaY != null ? event.deltaY > 0 : event.wheelDelta < 0;
+				
+				var zoom = cy.zoom();
+				var factor = 1.01;
+				var newZoom = zoom * (zoomIn ? 1 / factor : factor);
+				
+				cy.viewport({zoom: newZoom, pan: calcCyPan(newZoom)});
+//				setZoom(newZoom, false);
+//				setZoom(newZoom);
+			}
+			
 			var edgeColor = 'darkgray';
 			
-			var cy = cytoscape({
-				container: document.getElementById('div-tree-container'),
+			var container = document.getElementById('div-tree-container');
+			
+			if (container.onwheel !== undefined) {
+				container.addEventListener('wheel', onMouseWheel)
+			} else if (container.onmousewheel !== undefined) {
+				container.addEventListener('mousewheel', onMouseWheel)
+			} else {
+				// unsupported browser
+				alert("your browser is unsupported");
+			}
+			
+			cy = cytoscape({
+				container: container,
 				
-				boxSelectionEnabled: false,
-				autounselectify: true,
 				fit: true,
-				wheelSensitivity: 0.01,
+				
+				autounselectify: true,
 				autoungrabify: true,
+				
+				userZoomingEnabled: false,
+				boxSelectionEnabled: false,
+				wheelSensitivity: 0.01,
+				
+				panningEnabled: true,
+				userPanningEnabled: true,
 				
 				layout: {
 					name: 'preset'
@@ -948,9 +999,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 				},
 				
 				ready: function () {
-	//				cy.fit(cy.nodes());
-	//				cy.panningEnabled(false);
-	//				cy.mapData('pie1', 0, 100, 0, 100)
+					console.log('Tree visualization ready!');
 				}
 			});
 		}
