@@ -252,7 +252,8 @@ html, body {
 }
 
 #div-tree-wrapper, #div-parallel-wrapper, #div-timehist-wrapper {
-	display: initial !important;
+	/*display: initial !important;*/
+	display: block !important;
 	width: calc(100% - 32px);	/* inherits the width from col-md-8, which has 15px padding on both sides and a small border */
 	visibility: hidden;
 	position: absolute;
