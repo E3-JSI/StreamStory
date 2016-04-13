@@ -2720,11 +2720,11 @@ function initServer(sessionStore, parseCookie) {
 	initConfigRestApi();
 	initDataUploadApi();
 	
-	app.use(excludeDirs(['/login', '/js', '/css', '/img', '/lib', '/popups'], excludeFiles(['index.html', 'login.html', 'register.html', 'resetpassword.html'], accessControl)));
+	app.use(excludeDirs(['/login', '/js', '/css', '/img', '/lib', '/popups', '/data'], excludeFiles(['index.html', 'login.html', 'register.html', 'resetpassword.html'], accessControl)));
 	
 	// the index page
-	app.get('/', prepPage('login'));
-	app.get('/index.html', prepPage('login'));
+	app.get('/', prepPage('landing'));
+	app.get('/index.html', prepPage('landing'));
 	// the other pages
 	app.get('/login.html', prepPage('login'));
 	app.get('/register.html', prepPage('register'));
