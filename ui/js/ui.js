@@ -165,7 +165,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 				
 				ws.onerror = function (e) {
 					console.log('Web socket error: ' + e.message);
-					alert('Web socket error!');
+					//alert('Web socket error!');
 				};
 				
 				ws.onmessage = function (msgStr) {
