@@ -6,7 +6,7 @@
 		"initializeZeros": false
 	},
 	"server": {
-		"port": 8484,
+		"port": 8888,
 		"pingInterval": 10000
 	},
 	"log": {
