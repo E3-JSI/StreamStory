@@ -38,7 +38,7 @@
 		"zookeperPort": 2181,
 		"producerPort": 8090
 	},
-	"useCase": "mhwirth",
+	"useCase": "traffic",
 	"interpolation": "current",
 	"dataPath": "/mnt/raidM2T/project-data/StreamStory/StreamStory-demo/"
 }

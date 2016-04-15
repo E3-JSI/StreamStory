@@ -209,8 +209,8 @@ exports.StreamStory = function (opts) {
 	function genAutoName(nameConf) {
 		var ftrId = nameConf.ftrId;
 
-		if (ftrId < 0) {
-			return nameConf.range;
+		if (ftrId < 0 || nameConf.range == null) {
+			return undefined;
 		} else {
 			return getFtrName(ftrId) + ' ' + nameConf.range;
 		}
@@ -682,6 +682,16 @@ exports.StreamStory = function (opts) {
 			}
 			
 			return unionV;
+		},
+		
+		narrateState: function (stateId) {
+			var narration = mc.narrateState(stateId);
+			
+			for (var i = 0; i < narration.length; i++) {
+				narration[i].ftrId = getFtrName(narration[i].ftrId);
+			}
+			
+			return narration;
 		},
 
 		/**

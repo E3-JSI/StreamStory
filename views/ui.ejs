@@ -3,7 +3,6 @@
 <head>
     <% include partials/head %>
     <link rel="stylesheet" href="lib/jquer-ui.css">	
-    <link rel="stylesheet" href="lib/jquery.qtip.min.css">
     
     <script type="text/javascript" src="lib/jquery-ui.min.js"></script>
     <script type="text/javascript" src="lib/bootstrap/js/bootstrap.min.js"></script>
@@ -31,7 +30,7 @@
 		
 		<% if (theme == 'dark') { %>
 		var THEME = 'dark';
-		var TEXT_COLOR = '#000000';
+		var TEXT_COLOR = 'rgb(200, 200, 200)';
 		<% } else { %>
 		var THEME = 'light';
 		var TEXT_COLOR = '#3A3A3A';
@@ -183,7 +182,8 @@
 			<div class="col-md-8">
 				<div id="parent_container" class="panel panel-default main-vis">
 					<div class="panel-heading clearfix">
-						<h4 class="panel-title pull-left">Visualization - <%= modelConfig.name %> <span id="span-zoom" class="component-title-additional">&nbsp;(Zoom: <span id="span-zoom-val">0</span>%)</span></h4>
+						<span class="glyphicon glyphicon-info-sign info-panel-left" rel="tooltip" title="Visualization Panel" content="This panel shows the dataset in a qualitative manner using a hierarchy of states and transitions.<br /><br />To browse through the hierarchy use either the mouse wheel or the vertical scroll bar on the left.<br /><br />Click on a state to view more details."></span>
+						<h4 class="panel-title pull-left" style="margin-top: 2px;">Visualization - <%= modelConfig.name %> <span id="span-zoom" class="component-title-additional">&nbsp;(Zoom: <span id="span-zoom-val">0</span>%)</span></h4>
 						<!-- toggler for the visualization options -->
 						<button id="vis-toggler" class="btn btn-default btn-xs pull-right" aria-label="Left Align">
 						  	<span class="glyphicon glyphicon-align-justify" aria-hidden="true"></span> Options
@@ -445,10 +445,10 @@
 		<% } %>
 		<div class="row">
 			<div class="col-md-8">
-				<div class="tab-content">
-					<div id="tab-tree" role="tabpanel" class="tab-pane fade active">
-						<div class="panel panel-default">
-							<div class="panel-body nopadding">
+				<div class="tab-content" style="width: 100%;">
+					<div id="tab-tree" role="tabpanel" class="tab-pane fade active" style="width: 100%;">
+						<div class="panel panel-default" style="width: 100%;">
+							<div class="panel-body nopadding" style="width: 100%;">
 								<ul id="tabs-viz-bottom" class="nav nav-tabs">
 								  	<li role="presentation" class="active">
 								  		<a href="#" data-target="#div-parallel-wrapper" data-toggle="tab">Coordinates</a>
@@ -460,7 +460,7 @@
 								  		<a href="#" data-target="#div-tree-wrapper" data-toggle="tab">Explanation Tree</a>
 								  	</li>
 								</ul>
-								<div id="tab-content-bottom" class="tab-content">
+								<div id="tab-content-bottom" class="tab-content" style="width: 100%;">
 									<div id="div-parallel-wrapper" class="tab-pane container-bottom parcoords active"></div>
 									<div id="div-timehist-wrapper" class="tab-pane container-bottom parcoords container-chart">
 										<div id="btns-timescale" class="btn-group btn-group-xs" role="group" aria-label="...">

@@ -72,20 +72,42 @@ function fetchModelDetails(mid) {
 	});
 }
 
-function fetchDetails() {
+function selectRow(tr) {
 	$('#table-models-active tbody tr,#table-models-inactive tbody tr,#table-models-offline tbody tr,#table-models-public tbody tr').removeClass('success');
-	
-	var tr = $(this);
 	tr.addClass('success');
-	
+}
+
+function fetchDetails() {
+	var tr = $(this);
 	var mid = getModelIdFromTr(tr);
 	fetchModelDetails(mid);
 }
 
-function viewModel() {
-	var btn = $(this);
-	var mid = getModelIdFromBtn(btn);
+function onFetchDetails(event) {
+	selectRow($(this));
 	
+	if (event.which == 1 || event.which == 3) {	// left or right button
+		fetchDetails.call(this, event);
+	}
+}
+
+function removeModel(mid, tr) {
+	var name = tr != null ? getModelNameFromTr(tr) : mid;
+	
+	$.ajax('api/removeModel', {
+		method: 'POST',
+		dataType: 'json',
+		data: { modelId: mid },
+		success: function (data, status, xhr) {
+			if (tr != null)
+				tr.remove();
+			showAlert($('#alert-holder'), $('#alert-wrapper-model-details'), 'alert-success', 'Model ' + name + ' removed!', null, true);
+		},
+		error: handleAjaxError()
+	});
+}
+
+function viewModel(mid) {
 	$.ajax('api/selectDataset', {
 		method: 'POST',
 		contentType: 'application/json',
@@ -95,6 +117,13 @@ function viewModel() {
 		},
 		error: handleAjaxError()
 	});
+}
+
+function onViewModel() {
+	var btn = $(this);
+	var mid = getModelIdFromBtn(btn);
+	
+	viewModel(mid);
 	
 	return false;
 }
@@ -247,7 +276,7 @@ function pingProgress(isRealTime) {
 		method: 'GET',
 		contentType: 'application/json',
 		success: function (data, status, xhr) {
-			console.log('Gor ping result!');
+			console.log('Got ping result!');
 			
 			if (xhr.status == 204) {	// no content
 				pingProgress(isRealTime);
@@ -282,7 +311,7 @@ function pingProgress(isRealTime) {
 							var tr = $('<tr />');
 							tr.attr('id', (isRealTime ? 'active-' : 'offline-') + data.mid);
 							tr.addClass('ui-sortable-handle');
-							tr.click(fetchDetails);
+							tr.mousedown(onFetchDetails);
 							
 							var nameTd = $('<td />');
 							var dateTd = $('<td />');
@@ -304,7 +333,7 @@ function pingProgress(isRealTime) {
 							var buttonSpan = $('<span class="pull-right span-btns" />');
 							
 							var btnView = $('<button class="btn btn-info btn-xs btn-view" aria-label="Left Align"><span class="glyphicon glyphicon-eye-open"></span> View</button>');
-							btnView.click(viewModel);
+							btnView.click(onViewModel);
 							
 							buttonSpan.append(btnView);
 							buttonsTd.append(buttonSpan);
@@ -321,7 +350,9 @@ function pingProgress(isRealTime) {
 							
 							table.find('tbody').append(tr);
 							
+							console.log('Setting closing timeout ...');
 							setTimeout(function () {
+								console.log('Closing ...');
 								$('#div-model-progress').addClass('hidden');
 								$('#progress-build-model').css('width', '0%');
 							}, 5000);
@@ -407,9 +438,14 @@ function pingProgress(isRealTime) {
 
 		$('#progress-file-upload').css('width', '0%');
 		$('#progress-file-upload').html('0%');
+		
+		console.log('Uploading file:');
+		console.log('Enctype: ' + enctype);
+		console.log('Method: ' + method);
 
 		$.ajax(action, {
 			contentType: false,
+//			contentType: 'multipart/form-data',
 			enctype: enctype,
 			data: formData,
 			method: method,
@@ -500,17 +536,12 @@ function pingProgress(isRealTime) {
 						});
 						selectControls.change(function () {
 							var controlV = selectControls.val();
-//							var ignoredV = selectIgnored.val();
 							
 							var controlH = {};
-//							var ignoredH = {};
 							
 							for (var i = 0; i < controlV.length; i++) {
 								controlH[controlV[i]] = true;
 							}
-//							for (var i = 0; i < ignoredV.length; i++) {
-//								ignoredH[ignoredV[i]] = true;
-//							}
 							
 							for (var attrN = 0; attrN < selectedAttrs.length; attrN++) {
 								var attr = selectedAttrs[attrN];
@@ -639,7 +670,38 @@ function pingProgress(isRealTime) {
 		}
 	});
 	
-	$('#table-models-active tbody tr,#table-models-inactive tbody tr,#table-models-offline tbody tr,#table-models-public tbody tr').click(fetchDetails);
+	(function () {
+		var tableRowsSelector = '#table-models-active tbody tr,#table-models-inactive tbody tr,#table-models-offline tbody tr,#table-models-public tbody tr';
+		var tableRows = $(tableRowsSelector);
+		
+		tableRows.mousedown(onFetchDetails);
+		
+		$.contextMenu({
+			selector: tableRowsSelector,
+			items: {
+				view: {
+					name: 'View',
+					callback: function (event) {
+						var tr = $(this);
+						var mid = getModelIdFromTr(tr);
+						viewModel(mid);
+					}
+				},
+				remove: {
+					name: 'Remove',
+					callback: function () {
+						var tr = $(this);
+						var mid = getModelIdFromTr(tr);
+						var name = getModelNameFromTr(tr);
+						
+						promptConfirm('Remove Model', 'Are you sure you wish to remove model ' + name + '?', function () {
+							removeModel(mid, tr);
+						});
+					}
+				}
+			}
+		});
+	})();
 	
 	//========================================================
 	// BUTTONS ON THE DASHBOARD
@@ -675,7 +737,7 @@ function pingProgress(isRealTime) {
 		newModelPopup.modal('show');
 	});
 	
-	$('.btn-view').click(viewModel);
+	$('.btn-view').click(onViewModel);
 	
 	// table buttons
 	$('.btn-activate').click(activate);

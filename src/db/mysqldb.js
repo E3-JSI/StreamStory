@@ -482,6 +482,29 @@ module.exports = function () {
 				})
 			});
 		},
+		deleteModel: function (mid, callback) {
+			connection({
+				callback: callback,
+				nextOp: transaction({
+					nextOp: query({
+						sql: 'DELETE FROM state_properties WHERE mid = ?',
+						params: [mid],
+						nextOp: query({	// cleanup
+							sql: 'DELETE FROM offline_model WHERE mid = ?',
+							params: [mid],
+							nextOp: query({
+								sql: 'DELETE FROM online_model WHERE mid = ?',
+								params: [mid],
+								nextOp: query({
+									sql: 'DELETE FROM model WHERE mid = ?',
+									params: [mid]
+								})
+							})
+						})
+					})
+				})
+			});
+		},
 		activateModel: function (opts, callback) {
 			connection({
 				callback: callback,

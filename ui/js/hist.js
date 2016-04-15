@@ -1,16 +1,22 @@
 var SERIES_COLORS = ['#5bc0de', '#ED561B', '#555555', '#DDDF00', '#24CBE5', '#64E572', 
 	             '#FF9655', '#FFF263', '#6AF9C4'];
 
-function preprocessProbV(probV) {
+function getProbV(countV) {
 	var PROB_THRESHOLD = .025;
 	
-	var probSum = 0;
-	for (var i = 0; i < probV.length; i++) {
-		probSum += probV[i];
+	var probV = new Array(countV.length);
+	
+	var sum = 0;
+	for (var i = 0; i < countV.length; i++) {
+		sum += countV[i];
 	}
 	
-	if (probSum < PROB_THRESHOLD) {
-		var ratio = PROB_THRESHOLD / probSum;
+	for (var i = 0; i < countV.length; i++) {
+		probV[i] = countV[i] / sum;
+	}
+	
+	if (sum < PROB_THRESHOLD) {
+		var ratio = PROB_THRESHOLD / sum;
 		for (var i = 0; i < probV.length; i++) {
 			probV[i] *= ratio;
 		}
@@ -27,41 +33,84 @@ function drawHistogram(opts) {
 	if (opts.bottomPadding == null) opts.bottomPadding = 20;
 	if (opts.labelXOffsetPerc == null) opts.labelXOffsetPerc = 0;
 	
+	var countV, prevCountV;
 	var probV, prevProbV;
-	if (opts.data.targetProbV != null) {
-		probV = preprocessProbV(opts.data.targetProbV);
-		prevProbV = preprocessProbV(opts.data.probV);
+	
+	if (opts.data.targetCountV != null) {
+		countV = opts.data.targetCountV;
+		prevCountV = opts.data.countV;
+		
+		probV = getProbV(countV);
+		prevProbV = getProbV(prevCountV);
 	} else {
-		probV = preprocessProbV(opts.data.probV);
+		countV = opts.data.countV;
+		prevCountV = null;
+		
+		probV = getProbV(countV);
 		prevProbV = null;
 	}
 	
-	var allProbV = opts.data.allProbV;
+	var allCountV = opts.data.allCountV;
+	var allProbV = allCountV != null ? getProbV(allCountV) : null;
+	
 	var bins = opts.data.binValV;
 	var dx = bins[1] - bins[0];
 	
-	var totalProb = 0;
-	var prevTotalProb = 0;
+	var totalProb = 1;
+	var prevTotalProb = 1;
+	
+	if (allCountV != null) {
+		var allTotalCount = 0;
+		var totalCount = opts.data.totalCount;
+		
+		for (var i = 0; i < allCountV.length; i++) {
+			allTotalCount += allCountV[i];
+		}
+		
+		var ratio = totalCount / allTotalCount;
+		for (var i = 0; i < probV.length; i++) {
+			probV[i] *= ratio;
+		}
+		
+		totalProb = ratio;
+		
+		if (prevCountV != null) {
+			var prevTotalCount = 0;
+			
+			for (var i = 0; i < prevCountV.length; i++) {
+				prevTotalCount += prevCountV[i];
+			}
+			
+			var prevRatio = prevTotalCount / allTotalCount;
+			
+			for (var i = 0; i < prevProbV.length; i++) {
+				prevProbV[i] *= prevRatio;
+			}
+			
+			prevTotalProb = prevRatio;
+		}
+	}
 	
 	var data = [];
 	for (var i = 0; i < probV.length; i++) {
 		var el = {
 			val: bins[i],
-			prob: probV[i]
+			prob: probV[i],// * totalProb,
+			count: countV[i]
 		};
 		
 		if (allProbV != null) {
 			el.totalProb = allProbV[i];
+			el.totalCount = allCountV[i];
 		}
 		
 		if (prevProbV != null) {
-			el.prevProb = prevProbV[i];
+			el.prevProb = prevProbV[i],
+			el.prevCount = prevCountV[i];
 			el.overlap = Math.min(el.prevProb, el.prob);
-			prevTotalProb += el.prevProb;
 		}
 		
 		data.push(el);
-		totalProb += el.prob;
 	}
 	
 	var container = $(document.getElementById(opts.container));
@@ -130,7 +179,7 @@ function drawHistogram(opts) {
 		  .attr('class', 'd3-tip')
 		  .offset([-10, 0])
 		  .html(function(d) {
-			  return '<span>' + toUiPrecision(d.prob / totalProb) + '</span>';
+			  return '<span>' + toUiPrecision(d.prob / totalProb) + ' (' + d.count + ')</span>';
 		  });
 	
 	
@@ -141,7 +190,7 @@ function drawHistogram(opts) {
 			.attr('class', 'd3-tip')
 			.offset([-10, 0])
 			.html(function(d) {
-				return '<span>' + toUiPrecision(d.prevProb / prevTotalProb) + '</span>';
+				return '<span>' + toUiPrecision(d.prevProb / prevTotalProb) + ' (' + d.prevCount + ')</span>';
 			});
 		chart.call(prevTip);
 	}

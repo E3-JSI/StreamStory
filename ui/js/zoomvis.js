@@ -1,5 +1,7 @@
 var zoomVis = function (opts) {
 	
+	var visContainer = document.getElementById(opts.visContainer);
+	
 	var MODE_NORMAL = 'normal';
 	var MODE_PROBS = 'probs';
 	var MODE_TARGET_FTR = 'ftr';
@@ -96,7 +98,7 @@ var zoomVis = function (opts) {
 		
 		// holding time
 		var timeDiv = $('<div />');
-		timeDiv.html(data.holdingTime.toPrecision(2) + ' ' + getTimeUnit() + 's');
+		timeDiv.html('Typically lasts <strong>' + data.holdingTime.toPrecision(2) + ' ' + getTimeUnit() + 's</strong>');
 		tooltip.append(timeDiv);
 		
 		// undesired event properties
@@ -108,13 +110,29 @@ var zoomVis = function (opts) {
 		}
 		tooltip.append(undesiredDiv);
 		
-		var explainDiv = $('<div />');
-		explainDiv.attr('id', 'div-explain-' + data.id);
-		explainDiv.addClass('tooltip-div-explain');
-		if ($('#div-explain-' + data.id).html() != null) {
-			explainDiv.html($('#div-explain-' + data.id).html());
+		var narrationDiv = $('<div />');
+		narrationDiv.attr('id', 'div-narration-' + data.id);
+		narrationDiv.addClass('tooltip-div-narration');
+		if ($('#div-narration-' + data.id).html() != null) {
+			narrationDiv.html($('#div-narration-' + data.id).html());
 		}
-		tooltip.append(explainDiv);
+		tooltip.append(narrationDiv);
+		
+		var timeIntervalDiv = $('<div />');
+		timeIntervalDiv.attr('id', 'div-tminterval-' + data.id);
+		timeIntervalDiv.addClass('tooltip-div-tminterval');
+		if ($('#div-tminterval-' + data.id).html() != null) {
+			timeIntervalDiv.html($('#div-tminterval-' + data.id).html());
+		}
+		tooltip.append(timeIntervalDiv);
+		
+		var ruleExplainDiv = $('<div />');
+		ruleExplainDiv.attr('id', 'div-explain-' + data.id);
+		ruleExplainDiv.addClass('tooltip-div-explain');
+		if ($('#div-explain-' + data.id).html() != null) {
+			ruleExplainDiv.html($('#div-explain-' + data.id).html());
+		}
+		tooltip.append(ruleExplainDiv);
 		
 		setTimeout(function () {
 			$.ajax('api/explanation', {
@@ -180,7 +198,7 @@ var zoomVis = function (opts) {
 						}
 					}
 					
-					$('#div-explain-' + data.id).html(unionStr);
+					$('#div-explain-' + data.id).html('It can be characterized by the following rules:<br />' + unionStr);
 					api.reposition(undefined, false);
 				},
 				error: handleAjaxError()
@@ -198,6 +216,71 @@ var zoomVis = function (opts) {
 					}
 					
 					api.reposition(undefined, false);
+				},
+				error: handleAjaxError()
+			});
+			
+			$.ajax('api/timeExplain', {
+				dataType: 'json',
+				method: 'GET',
+				data: { stateId: getServerNodeId(data.id) },
+				success: function (timeExplain) {
+					if (timeExplain == null || timeExplain.length == 0) return;
+					
+					var p = $('<p />');
+					var html = 'The state occurs ';
+					
+					for (var i = 0; i < timeExplain.length; i++) {
+						var item = timeExplain[i];
+						
+						var start = item.start;
+						var end = item.end;
+						
+						if (start != end) {
+							html += ' between <strong>' + start + '</strong> and <strong>' + end + '</strong>'
+						} else {
+							html += ' in <strong>' + start + '</strong>';
+						}
+						
+						if (i < timeExplain.length - 1) {
+							html += ', ';
+						}
+					}
+					
+					p.html(html);
+					$('#div-tminterval-' + data.id).html('').append(p);
+				},
+				error: handleAjaxError()
+			});
+			
+			$.ajax('api/stateNarration', {
+				dataType: 'json',
+				method: 'GET',
+				data: { stateId: getServerNodeId(data.id) },
+				success: function (narration) {
+					if (narration.length == 0) return;
+					
+					var p = $('<p />');
+					var html = 'The state is characterized by ';
+					
+					var n = Math.min(3, narration.length);
+					for (var i = 0; i < n; i++) {
+						var item = narration[i];
+						
+						var ftr = item.ftrId;
+						var level = item.ftrDesc;
+						
+						html += '<strong>' + level + ' ' + ftr + '</strong>';
+						
+						if (i < n - 2) {
+							html += ', ';
+						} else if (i == n - 2) {
+							html += ' and ';
+						}
+					}
+					
+					p.html(html);
+					$('#div-narration-' + data.id).html('').append(p);
 				},
 				error: handleAjaxError()
 			});
@@ -223,8 +306,6 @@ var zoomVis = function (opts) {
 		'background-fit': 'cover',
 		'border-style': 'double'
 	}
-	
-	var visContainer = document.getElementById(opts.visContainer);
 	
 	var hierarchy = null;
 	var modeConfig = {
@@ -362,6 +443,9 @@ var zoomVis = function (opts) {
 	
 	function getNodeLabel(node) {
 		var label = node.name != null ? node.name : node.autoName;
+		
+		if (label == null) label = node.label;
+		
 		var spl = label.split(/\s+/);
 		var maxLineLen = 10;
 		
@@ -1220,37 +1304,53 @@ var zoomVis = function (opts) {
 	// INITIALIZE
 	//===============================================================
 	
+	function internalToUiScale(scale) {
+		return (1 - (scale - minHeight) / (maxHeight - minHeight)) * 100;
+	}
+	
+	function uiToInternalScale(scale) {
+		return (1 - scale / 100)*(maxHeight - minHeight) + minHeight;
+	}
+	
+	function setScale(scale) {
+		var prevHeight = currentHeight;
+		currentHeight = Math.min(maxHeight, Math.max(minHeight, scale));
+		
+		if (currentLevel < levelHeights.length - 1) {
+			if (currentHeight >= levelHeights[currentLevel + 1]) {
+				setCurrentLevel(++currentLevel);
+			}
+		}
+		if (currentLevel > 0) {
+			if (currentHeight < levelHeights[currentLevel]) {
+				setCurrentLevel(--currentLevel);
+			}
+		}
+		
+		if (currentHeight != prevHeight) {
+			callbacks.heightChanged(internalToUiScale(currentHeight));
+		}
+	}
+	
 	function onMouseWheel(event) {
 		if (event.preventDefault) event.preventDefault();
 		
-		if (event.deltaY > 0) {		// scroll out
-			currentHeight = Math.min(maxHeight, currentHeight + heightStep);
-			
-			if (currentLevel < levelHeights.length - 1) {
-				if (currentHeight >= levelHeights[currentLevel + 1]) {
-					setCurrentLevel(++currentLevel);
-				}
-			}
-			
-		} else {					// scroll in
-			currentHeight = Math.max(minHeight, currentHeight - heightStep);
-			
-			if (currentLevel > 0) {
-				if (currentHeight < levelHeights[currentLevel]) {
-					setCurrentLevel(--currentLevel);
-				}
-			}
+		//console.log(event.wheelDelta);
+		var zoomIn = event.deltaY != null ? event.deltaY > 0 : event.wheelDelta < 0;
+		
+		if (zoomIn) {
+			setScale(currentHeight + heightStep);
+		} else {
+			setScale(currentHeight - heightStep);
 		}
 		
 		if (scrollZoomEnabled) {
 			var zoom = cy.zoom();
 			var factor = 1.01;
-			var newZoom = zoom * (event.deltaY > 0 ? 1 / factor : factor);
+			var newZoom = zoom * (zoomIn ? 1 / factor : factor);
 			
 			setZoom(newZoom);
 		}
-		
-		callbacks.heightChanged((1 - (currentHeight - minHeight) / (maxHeight - minHeight)));
 	}
 	
 	// adding mouse wheel listener
@@ -1674,6 +1774,10 @@ var zoomVis = function (opts) {
 		
 		setWheelScroll: function (scroll) {
 			scrollZoomEnabled = scroll;
+		},
+		
+		setScale: function (scale) {
+			setScale(uiToInternalScale(scale));
 		},
 		
 		setZoom: function (value) {

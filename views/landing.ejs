@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<% include partials/head %>
+	<link rel="stylesheet" href="css/landing-new.css" />
+</head>
+<body>
+	<nav class="navbar navbar-default">
+  		<div class="container-fluid">
+    		<!-- Collect the nav links, forms, and other content for toggling -->
+    		<div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+      			<ul class="nav navbar-nav navbar-right">
+        			<li>
+                        <a class="page-scroll" data-toggle="modal" title="A free Bootstrap video landing theme" href="#aboutModal">About</a>
+                    </li>
+      			</ul>
+    		</div><!-- /.navbar-collapse -->
+  		</div><!-- /.container-fluid -->
+	</nav>
+	
+	<div class="container">
+		<div class="row row-title even">
+			<div class="col col-md-12">
+				<div id="div-title">
+					<span id="span-title" class="center-block"><strong>Stream</strong><em>Story</em></span>
+					<span id="span-title-explanation" class="center-block">A <em>qualitative</em> data analysis tool</span>
+					<hr />
+					<a href="dashboard.html" id="a-dashboard" class="btn btn-info center-block">Go To Dashboard</a>
+				</div>
+			</div>
+		</div>
+		<div class="row row-title odd">
+			<div class="col-md-12">
+				<div class="section-content">
+					<div class="row" style="margin-top: 15px;">
+						<div class="col-sm-6 col-md-3">
+							<div class="thumbnail">
+								<img src="landing/img/explore.svg" alt="(exploratory)" />
+								<div class="caption">
+									<h4>Exploratory data mining</h4>
+									<p>
+										A system for the analysis of multivariate time series.
+										It computes and visualizes a hierarchical
+										Markov chain model which captures the qualitative behavior
+										of the systems’ dynamics.
+									</p>
+								</div>
+							</div>
+						</div>
+						<div class="col-sm-6 col-md-3">
+							<div class="thumbnail">
+								<img src="landing/img/multiscale.svg" alt="(multiscale)" />
+								<div class="caption">
+									<h4>Multi-scale representation</h4>
+									<p>
+										The hierarchical model allows users to interactively find suitable
+										scales for interpreting the data.
+									</p>
+								</div>
+							</div>
+						</div>
+						<div class="col-sm-6 col-md-3">
+							<div class="thumbnail">
+								<img src="landing/img/monitor.svg" alt="(monitoring)" />
+								<div class="caption">
+									<h4>Real-time monitoring</h4>
+									<p>
+										Visualizes streaming data by mapping it to the hierarchical model.
+										It can provide predictions and alarms for different behavior.
+									</p>
+								</div>
+							</div>
+						</div>
+						<div class="col-sm-6 col-md-3">
+							<div class="thumbnail">
+								<img src="landing/img/free.svg" alt="(free)" />
+								<div class="caption">
+									<h4>Free</h4>
+									<p>
+										<a href="login.html">Log in</a> and get started. Check out our 
+										<a href="material/streamstory.mp4">video presentation</a> to see how its
+										done and experiment with our <a href="material/weather.csv">example dataset</a>.
+									</p>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="row row-title even">
+			<div class="section-title middle">Examples</div>
+			<div class="col-lg-4 col-sm-6" style="height: 100%; margin-top: 30px;">
+				<img src="img/landing/weather-transparent.png" class="img-responsive">
+			</div>
+			<div class="col-lg-4 col-sm-6" style="height: 100%; margin-top: 98px;">
+				<img src="img/landing/tree-transparent.png" class="img-responsive">
+			</div>
+			<div class="col-lg-4 col-sm-6" style="height: 100%; margin-top: 42px;">
+				<img src="img/landing/geo-transparent.png" class="img-responsive">
+			</div>
+		</div>
+		<div class="row row-title odd">
+			<div class="col-md-12">
+				<div class="section-title right">Get in Touch</div>
+				<p class="right">
+					We love feedback. <a href="mailto:luka.stopar@ijs.si" target="_top">Contact us</a> and we'll get back to you as soon as possible.
+				</p>
+			</div>
+		</div>
+	</div>
+	
+	<div id="aboutModal" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog">
+        <div class="modal-content">
+        	<div class="modal-body">
+        		<h2 class="text-center"><strong>Stream</strong><em>Story</em></h2>
+        		<h5 class="text-center">
+        		    A qulitative multi-scale data analysis tool
+        		</h5>
+        		<p class="text-justify">
+        		    StreamStory is a multi-scale data analysis tool for multivariate continuously
+        		    time-varying data streams. It represents the data streams in a qualitative
+        		    manner using states and transitions. Users can upload their own dataset or
+        		    use one of the pre-loaded datasets.
+        		    <br />
+        		    StreamStory can also be used as a monitoring tool, showing in real-time the
+        		    state of the monitored process, activity and anomaly detection.
+        		</p>
+        		<br/>
+        		<button class="btn btn-info btn-lg center-block" data-dismiss="modal" aria-hidden="true"> OK </button>
+        	</div>
+        </div>
+        </div>
+    </div>
+	
+	<div id="footer" class="navbar">
+		<span class="bottom left">Icons made by <a href="http://www.freepik.com" title="Freepik">Freepik</a> from <a href="http://www.flaticon.com" title="Flaticon">www.flaticon.com</a> is licensed by <a href="http://creativecommons.org/licenses/by/3.0/" title="Creative Commons BY 3.0" target="_blank">CC 3.0 BY</a></span>
+		<span class="bottom right">Copyright © <a href="https://www.ijs.si/ijsw/V001/JSI">Jožef Stefan Institute</a> 2015. All Rights Reserved</span>
+	</div>
+    
+    <% include partials/includejs %>
+</body>

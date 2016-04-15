@@ -1280,6 +1280,22 @@ function initStreamStoryRestApi() {
 			}
 		});
 		
+		app.get(API_PATH + '/stateNarration', function (req, res) {
+			try {
+				var model = getModel(req.sessionID, req.session);
+				var stateId = parseInt(req.query.stateId);
+				
+				if (log.trace())
+					log.trace('Fetching time explanation for state %d ...', stateId);
+				
+				res.send(model.narrateState(stateId));
+				res.end();
+			} catch (e) {
+				log.error(e, 'Failed to query time explanation!');
+				handleServerError(e, req, res);
+			}
+		});
+		
 		// histograms
 		app.get(API_PATH + '/histogram', function (req, res) {
 			try {
@@ -1333,6 +1349,24 @@ function initStreamStoryRestApi() {
 				handleServerError(e, req, res);
 			}
 		});
+		
+		app.get(API_PATH + '/timeExplain', function (req, res) {
+			try {
+				var model = getModel(req.sessionID, req.session);
+				var stateId = parseInt(req.query.stateId);
+				
+				if (log.trace())
+					log.trace('Fetching time explanation for state %d ...', stateId);
+				
+				res.send(model.getModel().getStateTypTimes(stateId));
+				res.end();
+			} catch (e) {
+				log.error(e, 'Failed to query time explanation!');
+				handleServerError(e, req, res);
+			}
+		});
+		
+		
 		
 		app.get(API_PATH + '/targetFeature', function (req, res) {
 			try {
@@ -1434,37 +1468,6 @@ function initStreamStoryRestApi() {
 						res.status(204);	// no content
 						res.end();
 					});
-					
-//					if (!isUndesired) {
-//						if (log.debug())
-//							log.debug('Clearing undesired event id ...');
-//						
-//						// clear the event id from the database
-//						db.clearUndesiredEventId(mid, stateId, function (e) {
-//							if (e != null) {
-//								log.error(e, 'Failed to clear undesired event ID!');
-//								handleServerError(e, req, res);
-//								return;
-//							}
-//							
-//							res.status(204);	// no content
-//							res.end();
-//						});
-//					} else {
-//						if (log.debug())
-//							log.debug('Setting undesired event id to "%s" ...', eventId);
-//						
-//						db.setUndesiredEventId(mid, stateId, eventId, function (e) {
-//							if (e != null) {
-//								log.error(e, 'Failed to set undesired event ID!');
-//								handleServerError(e, req, res);
-//								return;
-//							}
-//							
-//							res.status(204);	// no content
-//							res.end();
-//						});
-//					}
 				}
 			} catch (e) {
 				log.error(e, 'Failed to set name of state %d to %s', stateId, stateNm);
@@ -1540,7 +1543,7 @@ function initDataUploadApi() {
 		fileFilter: function (req, file, callback) {	// only accept csv files
 			var passes = qmutil.stringEndsWith(file.originalname, '.csv');
 			log.debug('Filtering uploaded file %s. File passess filter: ' + passes, JSON.stringify(file));
-			callback(null, passes);
+			callback(undefined, passes);
 		}
 	});
 	
@@ -1548,8 +1551,10 @@ function initDataUploadApi() {
 		var sessionId = req.sessionID;
 		var session = req.session;
 		
-		if (req.file == null)
-			throw new Error('File not uploaded in the upload request!');
+		if (req.file == null) {
+			handleServerError(new Error('File not uploaded in the upload request!'), req, res);
+			return;
+		}
 		
 		var fileBuff = req.file.buffer;
 		
@@ -2071,6 +2076,27 @@ function initServerApi() {
 				}
 			});
 		}
+		
+		app.post(API_PATH + '/removeModel', function (req, res) {
+			try {
+				var session = req.session;
+				var modelId = req.body.modelId;
+				
+				log.info('Removing model %d', modelId);
+				
+				db.deleteModel(modelId, function (e) {
+					if (e != null) {
+						return handleServerError(e, req, res);
+					}
+					
+					res.status(204);
+					res.end();
+				});
+			} catch (e) {
+				log.error(e, 'Failed to process raw measurement!');
+				handleServerError(e, req, res);
+			}
+		});
 		
 		app.post(API_PATH + '/activateModel', function (req, res) {
 			try {
@@ -2694,11 +2720,14 @@ function initServer(sessionStore, parseCookie) {
 	initConfigRestApi();
 	initDataUploadApi();
 	
-	app.use(excludeDirs(['/login', '/js', '/css', '/img', '/lib', '/popups'], excludeFiles(['index.html', 'login.html', 'register.html', 'resetpassword.html'], accessControl)));
+	var sessionExcludeDirs = ['/login', '/js', '/css', '/img', '/lib', '/popups', '/material', '/landing'];
+	var sessionExcludeFiles = ['index.html', 'login.html', 'register.html', 'resetpassword.html'];
+	
+	app.use(excludeDirs(sessionExcludeDirs, excludeFiles(sessionExcludeFiles, accessControl)));
 	
 	// the index page
-	app.get('/', prepPage('login'));
-	app.get('/index.html', prepPage('login'));
+	app.get('/', prepPage('landing'));
+	app.get('/index.html', prepPage('landing'));
 	// the other pages
 	app.get('/login.html', prepPage('login'));
 	app.get('/register.html', prepPage('register'));
