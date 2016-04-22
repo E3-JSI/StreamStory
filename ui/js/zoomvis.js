@@ -268,9 +268,21 @@ var zoomVis = function (opts) {
 						var item = narration[i];
 						
 						var ftr = item.ftrId;
-						var level = item.ftrDesc;
-						
-						html += '<strong>' + level + ' ' + ftr + '</strong>';
+						var type = item.type;
+						switch (type) {
+						case 'numeric': {
+							var level = item.ftrDesc;
+							html += '<strong>' + level + ' ' + ftr + '</strong>';
+							break;
+						}
+						case 'categorical': {
+							html += '<strong>' + ftr + ' is ' + item.bin + '</strong>';
+							break;
+						}
+						default: {
+							throw new Error('Unknown feature type: ' + type);
+						}
+						}
 						
 						if (i < n - 2) {
 							html += ', ';

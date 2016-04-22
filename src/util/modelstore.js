@@ -72,22 +72,35 @@ module.exports = exports = function (opts) {
 		store[modelId].socketIds[socketId] = socketId;
 	}
 	
-	function initFtrSpace(fieldConfig, timeField, usedFields, base, storeNm) {
+	function initFieldV(fieldConfig, timeField, usedFields, storeNm, base) {
 		var fields = [];
 		for (var i = 0; i < fieldConfig.length; i++) {
-			var fieldNm = fieldConfig[i];
+			var field = fieldConfig[i];
+			var fieldNm = field.name;
+			var type = field.type;
 			if (fieldNm in usedFields || fieldNm == timeField) continue;
 			
-			fields.push({
-				field: fieldNm,
-				source: storeNm,
-				type: 'numeric',
-				normalize: 'var'
-			});
+			if (type == 'numeric') {
+				fields.push({
+					field: fieldNm,
+					source: storeNm,
+					type: 'numeric',
+					normalize: 'var'
+				});
+			} else if (type == 'nominal') {
+				fields.push({
+					field: fieldNm,
+					source: storeNm,
+					type: 'categorical'
+				});
+			} else {
+				throw new Error('Unknown field type: ' + type);
+			}
+			
 			usedFields[fieldNm] = true;
 		}
 		
-		return new qm.FeatureSpace(base, fields);
+		return fields;
 	}
 	
 	function loadModel(modelBase, fname, callback) {
@@ -439,16 +452,25 @@ module.exports = exports = function (opts) {
 				var clustConfig = opts.clustConfig;
 				var baseDir = opts.baseDir;
 				
+				var headerTypes = [];
+				
 				var attrSet = {};
+				var typeH = {};
 				for (var i = 0; i < attrs.length; i++) {
 					attrSet[attrs[i]] = true;
+					typeH[attrs[i].name] = attrs[i].type;
+				}
+				
+				for (var i = 0; i < headers.length; i++) {
+					var header = headers[i].name;
+					headerTypes.push(header in typeH ? typeH[header] : 'numeric');
 				}
 				
 				// initialize the feature spaces
 				var usedFields = {};
-				var controlFtrSpace = initFtrSpace(controlAttrs, timeAttr, usedFields, base, storeNm);
-				var ignoredFtrSpace = initFtrSpace(ignoredAttrs, timeAttr, usedFields, base, storeNm);
-				var obsFtrSpace = initFtrSpace(attrs, timeAttr, usedFields, base, storeNm);//new qm.FeatureSpace(base, obsFields);
+				var controlFieldV = initFieldV(controlAttrs, timeAttr, usedFields, storeNm, base);
+				var ignoredFieldV = initFieldV(ignoredAttrs, timeAttr, usedFields, storeNm, base);
+				var obsFieldV = initFieldV(attrs, timeAttr, usedFields, storeNm, base);
 				
 	    		var recs = new qm.RecordVector();
 	    		
@@ -466,7 +488,6 @@ module.exports = exports = function (opts) {
 						
 						if (++lineN % 10000 == 0 && log.debug()) {
 							log.debug('Read %d lines ...', lineN);
-//							updateProgress(username, false, 20, 'Read ' + lineN + ' lines ...');
 						}
 						
 						if (lineN % 1000 == 0) {
@@ -476,7 +497,9 @@ module.exports = exports = function (opts) {
 						var recJson = {};
 						for (var i = 0; i < headers.length; i++) {
 							var attr = headers[i].name;
-							if (attr == timeAttr) {
+							var type = headerTypes[i];
+														
+							if (type == 'time') {
 								var date = new Date(parseFloat(lineArr[i]));
 								var qmDate = utils.dateToQmDate(date);
 								if (log.trace())
@@ -484,8 +507,10 @@ module.exports = exports = function (opts) {
 								
 								recJson[attr] = qmDate;
 								timeV.push(date.getTime());
-							} else {
+							}
+							else if (type == 'numeric') {
 								var val = lineArr[i];
+								
 								if (attr in attrSet && isNaN(val)) { 
 									log.warn('Invalid line: %s', JSON.stringify(lineArr));
 									throw new Error('Received non-numeric for field: ' + attr + ', val: ' + val);
@@ -497,11 +522,17 @@ module.exports = exports = function (opts) {
 								
 								recJson[attr] = parseFloat(val);
 							}
+							else if (type == 'nominal') {
+								var val = lineArr[i];
+								recJson[attr] = val.toString();
+							}
+							else {
+								throw new Error('Unknown field type when parsing CSV: ' + type);
+							}
 						}
 						
 						if (log.trace())
 							log.trace('Inserting value: %s', JSON.stringify(recJson));
-						
 						
 						// create the actual record and update the feature spaces
 						recs.push(store.newRecord(recJson));
@@ -530,9 +561,9 @@ module.exports = exports = function (opts) {
 						var model = StreamStory({
 							base: base,
 							config: modelParams,
-							obsFtrSpace: obsFtrSpace,
-							ignoredFtrSpace: ignoredFtrSpace,
-							controlFtrSpace: controlFtrSpace
+							obsFieldV: obsFieldV,
+							controlFieldV: controlFieldV,
+							ignoredFieldV: ignoredFieldV
 						});
 						
 						// fit the model

@@ -1562,31 +1562,50 @@ function initDataUploadApi() {
 		fileBuffH[sessionId] = fileBuff;
 		
 		var headers = [];
-		qm.fs.readCsvLines(fileBuff, {
-			lineLimit: 1,
-			onLine: function (lineArr) {
-				// read the header and create the store
-				for (var i = 0; i < lineArr.length; i++) {
-					headers.push({ name: lineArr[i] });
-				}
+		qm.fs.readCsvAsync(fileBuff, { offset: 0, limit: 1 },
+		function onBatch(lines) {
+			if (lines.length != 1) throw new Error('Invalid number of lines returned while reading the header of a CSV!');
+			var lineArr = lines[0];
+			// read the header and create the store
+			for (var i = 0; i < lineArr.length; i++) {
+				headers.push({ name: lineArr[i] });
+			}
 
-				log.debug('Fields read!');
-			},
-			onEnd: function () {
-				log.debug('Headers read, sending them back to the UI ...');
-				if (log.trace()) 
-					log.trace('Read headers: %s', JSON.stringify(headers));
-				
-				session.headerFields = headers;
-				res.send(headers);
-				res.end();
-			},
-			onError: function () {
-				var e = new Error('Exception while reading headers!');
+			log.debug('Fields read!');
+		},
+		function onEnd(e) {
+			if (e != null) {
 				log.error(e, 'Exception while reading CSV headers!');
 				handleServerError(e, req, res);
+				return;
 			}
+			
+			log.debug('Headers read, sending them back to the UI ...');
+			if (log.trace()) 
+				log.trace('Read headers: %s', JSON.stringify(headers));
+			
+			session.headerFields = headers;
+			res.send(headers);
+			res.end();
 		});
+//		qm.fs.readCsvLines(fileBuff, {
+//			lineLimit: 1,
+//			onLine: function (lineArr) {
+//				// read the header and create the store
+//				for (var i = 0; i < lineArr.length; i++) {
+//					headers.push({ name: lineArr[i] });
+//				}
+//
+//				log.debug('Fields read!');
+//			},
+//			onEnd: function () {
+//				
+//			},
+//			onError: function () {
+//				var e = new Error('Exception while reading headers!');
+//				
+//			}
+//		});
 	});
 	
 	function createModel(req, res) {
@@ -1651,13 +1670,26 @@ function initDataUploadApi() {
 							log.debug('Creating new base and store ...');
 						
 						var storeFields = [];
-						for (var i = 0; i < headers.length; i++) {
-							var attr = headers[i].name;
-							storeFields.push({
-								name: attr,
-								type: attr == timeAttr ? 'datetime' : 'float',
+						for (var i = 0; i < attrs.length; i++) {
+							var attr = attrs[i];
+							
+							var fieldConf = {
+								name: attr.name,
 								'null': false
-							});
+							};
+							
+							if (attr.type == 'time') {
+								fieldConf.type = 'datetime';
+							} else if (attr.type == 'numeric') {
+								fieldConf.type = 'float';
+							} else if (attr.type == 'nominal') {
+								fieldConf.type = 'string';
+								fieldConf.codebook = true;
+							} else {
+								throw new Error('Invalid attribute type: ' + attr.type);
+							}
+							
+							storeFields.push(fieldConf);
 						}
 						
 						storeNm = config.QM_USER_DEFAULT_STORE_NAME;

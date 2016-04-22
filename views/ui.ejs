@@ -243,7 +243,7 @@
 												</div>
 												<div id="div-ftrs-control">
 												<% for (var controlN = 0; controlN < controls.length; controlN++) { 
-													var bounds = controls[controlN].bounds;
+													var values = controls[controlN].values;
 													var ftrId = observations.length + controlN; %>
 													<div class="form-group">
 														<label for="<%= ftrId %>"><%= controls[controlN].name + ' (' + bounds.min.toFixed(2) + ' to ' + bounds.max.toFixed(2) + ')' %></label>
@@ -251,10 +251,10 @@
 													</div>
 													<script type="text/javascript">
 														$('#<%= ftrId %>').slider({
-															value: <%= (bounds.min + bounds.max) / 2 %>,
-															min: <%= bounds.min %>,
-															max: <%= bounds.max %>,
-															step: <%= (bounds.max - bounds.min) / 100 %>,
+															value: <%= (values.min + values.max) / 2 %>,
+															min: <%= values.min %>,
+															max: <%= values.max %>,
+															step: <%= (values.max - values.min) / 100 %>,
 															animate:"slow",
 															orientation: "hotizontal",
 															disabled: true,

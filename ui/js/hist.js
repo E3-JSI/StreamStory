@@ -1,6 +1,11 @@
 var SERIES_COLORS = ['#5bc0de', '#ED561B', '#555555', '#DDDF00', '#24CBE5', '#64E572', 
 	             '#FF9655', '#FFF263', '#6AF9C4'];
 
+var HistogramType = {
+	CATEGORICAL: 'categorical',
+	NUMERIC: 'numeric'
+}
+
 function getProbV(countV) {
 	var PROB_THRESHOLD = .025;
 	
@@ -32,6 +37,19 @@ function drawHistogram(opts) {
 	if (opts.topPadding == null) opts.topPadding = 0;
 	if (opts.bottomPadding == null) opts.bottomPadding = 20;
 	if (opts.labelXOffsetPerc == null) opts.labelXOffsetPerc = 0;
+	if (opts.data.type == null) opts.data.type = HistogramType.NUMERIC;
+	
+	var histogramType = opts.data.type;
+	
+	// number of ticks on the x-axis
+	if (histogramType == HistogramType.CATEGORICAL) {
+		opts.xTicks = opts.data.countV.length;
+//		opts.formatX = function (val) { return 'A'; }
+	} else if (histogramType == HistogramType.NUMERIC) {
+		if (opts.xTicks == null) opts.xTicks = 4;
+	} else {
+		throw new Error('Unknown histogram type: ' + histogramType);
+	}
 	
 	var countV, prevCountV;
 	var probV, prevProbV;
@@ -53,8 +71,20 @@ function drawHistogram(opts) {
 	var allCountV = opts.data.allCountV;
 	var allProbV = allCountV != null ? getProbV(allCountV) : null;
 	
-	var bins = opts.data.binValV;
-	var dx = bins[1] - bins[0];
+	var bins;
+	var dx;
+	if (histogramType == HistogramType.CATEGORICAL) {
+		bins = [];
+		for (var label in opts.data.binValV) {
+			bins.push(label);
+		}
+		dx = 1;
+	}
+	else {
+		bins = opts.data.binValV;
+		dx = bins[1] - bins[0];
+	}
+	
 	
 	var totalProb = 1;
 	var prevTotalProb = 1;
@@ -131,17 +161,38 @@ function drawHistogram(opts) {
 	var binW = width / (data.length + 1);
 	var recW = binW - 1;
 	
-	var x = d3.scale.linear().range([0, width]);
-	var y = d3.scale.linear().range([height, 0]);
+	var yTicks = 5;
 	
-	var xAxis = d3.svg.axis()
-					.tickFormat(opts.formatX)
-					.scale(x)
-    				.orient("bottom")
-    				.ticks(opts.xTicks);
-	var yAxis = d3.svg.axis().scale(y)
-    				.orient("left").ticks(5);
-	
+	var x;
+	var y;
+	var xAxis;
+	var yAxis;
+	if (histogramType == HistogramType.NUMERIC) {
+		x = d3.scale.linear().range([0, width]);
+		y = d3.scale.linear().range([height, 0]);
+		
+		xAxis = d3.svg.axis()
+			.tickFormat(opts.formatX)
+			.scale(x)
+			.orient("bottom")
+			.ticks(opts.xTicks);
+		yAxis = d3.svg.axis().scale(y)
+			.orient("left").ticks(yTicks);	
+	}
+	else {
+		x = d3.scale.ordinal()
+			.rangeBands([0, width])
+	    	.domain(bins);
+		y = d3.scale.linear().range([height, 0]);
+		
+		xAxis = d3.svg.axis()
+			.tickFormat(opts.formatX)
+			.scale(x)
+			.orient("bottom")
+			.ticks(opts.xTicks);
+		yAxis = d3.svg.axis().scale(y)
+			.orient("left").ticks(yTicks);
+	}
 	
 	var chart = d3.select('#' + opts.container)
 			.append('svg')
@@ -154,9 +205,11 @@ function drawHistogram(opts) {
 	var getYForDomain = allProbV != null ? function (d) { return d.totalProb; } :
 										   function (d) { return d.prob; }
 	
-	var xDomain = d3.extent(data, function(d) { return d.val; });
-	xDomain[1] += dx;
-	x.domain(xDomain);
+	if (histogramType == HistogramType.NUMERIC) {
+		var xDomain = d3.extent(data, function(d) { return d.val; });
+		xDomain[1] += dx;
+		x.domain(xDomain);
+	}
     y.domain([0, d3.max(data, getYForDomain)]);
 	
 	chart.append("g")         // Add the X Axis
@@ -196,8 +249,13 @@ function drawHistogram(opts) {
 	}
 	
 	function getX(d) {
-		console.log('dx: ' + dx + ', x(dx): ' + x(dx));
-		return x(d.val + dx/2) - recW / 2;// - dx; // - x(dx);
+		if (histogramType == HistogramType.NUMERIC) {
+			return x(d.val + dx/2) - recW / 2;
+		} else if (histogramType == HistogramType.CATEGORICAL) {
+			return x(d.val);
+		} else {
+			throw new Error('Unknown histogram type: ' + histogramType);
+		}
 	}
 	
 	// create the bars

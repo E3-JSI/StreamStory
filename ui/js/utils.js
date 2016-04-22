@@ -71,11 +71,20 @@ function addPressHandler(btn, callback) {
 	});
 }
 
+function countDecimals(value) {
+    if(Math.floor(value) === value) return 0;
+    return value.toString().split(".")[1].length || 0; 
+}
+
 function toUiPrecision(val) {
 	if (val > 1000) {
 		return val.toFixed();
 	} else {
-		return val.toPrecision(3);
+		var decimals = countDecimals(val);
+		if (decimals == 0)
+			return val.toFixed();
+		else
+			return val.toPrecision(Math.min(decimals, 3));
 	}
 }
 

@@ -372,10 +372,42 @@ function changeControlVal(stateId, ftrIdx, val) {
 					thumbnail.find('.attr-name').html(opts.name);
 					thumbnail.find('.container-chart').attr('id', opts.histogramContainer);
 					
-					if (opts.value != null)
-						valField.html(opts.value.toPrecision(3));
-					if (opts.valueColor != null) 
-						thumbnail.find('.attr-val').css('color', opts.valueColor);
+					if (opts.type == 'numeric') {
+						if (opts.value != null)
+							valField.html(opts.value.toPrecision(3));
+						if (opts.valueColor != null) 
+							thumbnail.find('.attr-val').css('color', opts.valueColor);
+					}
+					else if (opts.type == 'categorical') {
+						if (opts.value != null) {
+							// TODO, the weights
+							var valStr = '';
+							for (var i = 0; i < opts.value.length; i++) {
+								var val = null;
+								var key = null;
+								for (var name in opts.value[i]) {
+									key = name;
+									val = opts.value[i][name];
+								}
+								
+								if (val == null || key == null) {
+									throw new Error('Could not find the key or value!');
+								}
+								
+								valStr += key + ': ' + toUiPrecision(val);
+								if (i < opts.value.length-1) {
+									valStr += ', ';
+								}
+							}
+							valField.html(valStr);
+						}
+						if (opts.valueColor != null)	// TODO what to do with this???
+							thumbnail.find('.attr-val').css('color', opts.valueColor);
+					}
+					else {
+						throw new Error('Invalid feature type: ' + opts.type);
+					}
+					
 					if (opts.isLeaf) {
 						thumbnail.find('.div-ftr-range').show();
 						
@@ -828,11 +860,24 @@ function changeControlVal(stateId, ftrIdx, val) {
 						label += '\n(' + alternatives[0].name + ')';
 					}
 					
-					if (cut.value > 1000) {
-						label += '\n\u2264 ' + node.cut.value.toFixed() + ' <';
-					} else {
-						label += '\n\u2264 ' + node.cut.value.toPrecision(3) + ' <';
+					switch (cut.ftrType) {
+					case 'numeric': {
+						if (cut.value > 1000) {
+							label += '\n\u2264 ' + cut.value.toFixed() + ' <';
+						} else {
+							label += '\n\u2264 ' + cut.value.toPrecision(3) + ' <';
+						}
+						break;
 					}
+					case 'categorical': {
+						label += '\n\u2260 ' + cut.value + ' =';
+						break;
+					}
+					default: {
+						throw new Error('Invalid feature type: ' + cut.ftrType);
+					}
+					}
+					
 					
 					data.label = label;
 				}
@@ -1002,7 +1047,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 			});
 		}
 		
-		function visualizeParcoords(centroids, allCentroids, ftrNames) {
+		function visualizeParcoords(centroids, allCentroids, ftrConfig) {
 			var opts = {
 				color: '#5bc0de',
 				alpha: .6
@@ -1015,7 +1060,11 @@ function changeControlVal(stateId, ftrIdx, val) {
 				var centroid = allCentroids[centroidN];
 				var row = {};
 				for (var ftrN = 0; ftrN < centroid.length; ftrN++) {
-					row[ftrNames[ftrN]] = centroid[ftrN];
+					var ftr = ftrConfig[ftrN];
+					
+					if (ftr.type == 'categorical') continue;	// TODO what to do with categorical features???
+					
+					row[ftr.name] = centroid[ftrN];
 				}
 				backgroundData.push(row);
 			}
@@ -1024,7 +1073,11 @@ function changeControlVal(stateId, ftrIdx, val) {
 				var centroid = centroids[centroidN];
 				var row = {};
 				for (var ftrN = 0; ftrN < centroid.length; ftrN++) {
-					row[ftrNames[ftrN]] = centroid[ftrN];
+					var ftr = ftrConfig[ftrN];
+					
+					if (ftr.type == 'categorical') continue;	// TODO what to do with categorical features???
+					
+					row[ftr.name] = centroid[ftrN];
 				}
 				foregroundData.push(row);
 			} 
@@ -1240,7 +1293,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 				success: function (data) {
 					$('#wrapper-state-details').show();
 					
-					var stateAutoNm = data.autoNm;
+					var stateAutoNm = data.autoName;
 					
 					// clear the panel
 					$('#txt-name').val(stateAutoNm);
@@ -1252,19 +1305,31 @@ function changeControlVal(stateId, ftrIdx, val) {
 					$('#div-future').html('');
 					$('#div-past').html('');
 					
-					var ftrNames = [];
+					var ftrConfig = [];
 					for (var i = 0; i < data.features.observations.length; i++) {
-						ftrNames.push(data.features.observations[i].name);
+						var ftr = data.features.observations[i];
+						ftrConfig.push({
+							name: ftr.name,
+							type: ftr.type
+						});
 					}
 					for (var i = 0; i < data.features.controls.length; i++) {
-						ftrNames.push(data.features.controls[i].name);
+						var ftr = data.features.controls[i];
+						ftrConfig.push({
+							name: ftr.name,
+							type: ftr.type
+						});
 					}
 					for (var i = 0; i < data.features.ignored.length; i++) {
-						ftrNames.push(data.features.ignored[i].name);
+						var ftr = data.features.ignored[i];
+						ftrConfig.push({
+							name: ftr.name,
+							type: ftr.type
+						});
 					}
 
 					visualizeDecisionTree(data.classifyTree);
-					visualizeParcoords(data.centroids, data.allCentroids, ftrNames);
+					visualizeParcoords(data.centroids, data.allCentroids, ftrConfig);
 					visualizeTimeHist({
 						data: data.timeHistogram,
 						container: 'div-timehist-global',
@@ -1375,12 +1440,13 @@ function changeControlVal(stateId, ftrIdx, val) {
 									
 						var thumbnail = ui.createThumbnail({
 							name: val.name,
+							type: val.type,
 							value: val.value,
 							valueColor: color,
 							histogramContainer: histContainerId
 						});
 						$('#div-attrs').append(thumbnail);
-						ui.fetchHistogram(stateId, idx, false, histContainerId, false);
+						ui.fetchHistogram(stateId, ftrId, false, histContainerId, false);
 					});
 					
 					var nObsFtrs = data.features.observations.length;
@@ -1395,6 +1461,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 												
 						var thumbnail = ui.createThumbnail({
 							name: val.name,
+							type: val.type,
 							value: ftrVal,
 							histogramContainer: histContainerId,
 							valueColor: color,
@@ -1423,6 +1490,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 												
 						var thumbnail = ui.createThumbnail({
 							name: val.name,
+							type: val.type,
 							value: ftrVal,
 							histogramContainer: histContainerId,
 							valueColor: color

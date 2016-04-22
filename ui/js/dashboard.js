@@ -512,7 +512,7 @@ function pingProgress(isRealTime) {
 						var timeAttr = $(this).val();
 						var selectControls = $('#select-controls');
 						var selectIgnored = $('#select-ignored');
-						
+												
 						// clear the attributes
 						selectControls.html('');
 						selectIgnored.html('');
@@ -522,6 +522,43 @@ function pingProgress(isRealTime) {
 								selectControls.append('<option value="' + attr + '">' + attr + '</option>');
 								selectIgnored.append('<option value="' + attr + '">' + attr + '</option>');
 							}
+						}
+						
+						// populate the attribute type section
+						var typeList = $('#ul-select-attr-types');
+						typeList.html('');
+						for (var i = 0; i < selectedAttrs.length; i++) {
+							var attr = selectedAttrs[i];
+							
+							if (attr == timeAttr) continue;
+							
+							var li = $('<li />');
+							var inputSpan = $('<span class="pull-right" />');
+							
+							var numLabel = $('<label>Numeric: </label>');
+							var nomLabel = $('<label>Categorical: </label>');
+							var inputNum = $('<input type="radio" value="numeric" />');
+							var inputNom = $('<input type="radio" value="nominal" />');
+							
+							inputNum.attr('id', 'radio-type-num-' + i);
+							inputNom.attr('id', 'radio-type-cat-' + i);
+							inputNum.attr('name', 'radio-type-' + i);
+							inputNom.attr('name', 'radio-type-' + i);
+							
+							numLabel.attr('for', 'radio-type-num-' + i);
+							nomLabel.attr('for', 'radio-type-cat-' + i);
+							
+							inputNum.attr('checked', 'checked');
+							
+							inputSpan.append(numLabel);
+							inputSpan.append(inputNum);
+							inputSpan.append(nomLabel);
+							inputSpan.append(inputNom);
+							
+							li.html(attr);
+							li.append(inputSpan);
+							
+							typeList.append(li);
 						}
 						
 						selectControls.bootstrapDualListbox({
@@ -597,6 +634,7 @@ function pingProgress(isRealTime) {
 		$('#progress-build-model-wrapper').show(0);
 	
 		var attrs = $('#select-attrs').val();
+		var timeAttr = $('#radio-time').find('input:checked').val();
 		var controlAttrs = $('#select-controls').val();
 		var ignoredAttrs = $('#select-ignored').val();
 		var isRealTime = $('#check-realtime').is(':checked');
@@ -605,13 +643,55 @@ function pingProgress(isRealTime) {
 		var name = $('#input-model-name').val();
 		var desc = $('#input-model-desc').val();
 		
+		if (controlAttrs == null) controlAttrs = [];
+		if (ignoredAttrs == null) ignoredAttrs = [];
+		
+		var typeH = {};
+		for (var i = 0; i < attrs.length; i++) {
+			var attr = attrs[i];
+			typeH[attr] = 'time';
+		}
+		
+		var typeList = $('#ul-select-attr-types');
+		$.each(typeList.children('li'), function (i, liEl) {
+			var li = $(liEl);
+			$('input[name=radio-type-4]:checked')
+			var checked = li.find('input[type=radio]:checked');
+			
+			var idx = checked.attr('id').split('-')[3];
+			var attr = attrs[idx];
+			var type = checked.val();
+			typeH[attr] = type;
+		});
+		
+		for (var i = 0; i < attrs.length; i++) {
+			attrs[i] = {
+				name: attrs[i],
+				type: typeH[attrs[i]]
+			}
+		}
+		
+		for (var i = 0; i < controlAttrs.length; i++) {
+			controlAttrs[i] = {
+				name: controlAttrs[i],
+				type: typeH[controlAttrs[i]]
+			}
+		}
+		
+		for (var i = 0; i < ignoredAttrs.length; i++) {
+			ignoredAttrs[i] = {
+				name: ignoredAttrs[i],
+				type: typeH[ignoredAttrs[i]]
+			}
+		}
+		
 		var data = {
 			username: $('#input-email').val(),
-			time: $('#radio-time').find('input:checked').val(),
+			time: timeAttr,
 			timeUnit: $('#select-tu').val(),
 			attrs: attrs,
-			controlAttrs: controlAttrs != null ? controlAttrs : [],
-			ignoredAttrs: ignoredAttrs != null ? ignoredAttrs : [],
+			controlAttrs: controlAttrs,
+			ignoredAttrs: ignoredAttrs,
 			hierarchyType: hierarchyType,
 			isRealTime: isRealTime,
 			name: name,

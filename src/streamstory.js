@@ -21,27 +21,28 @@ exports.StreamStory = function (opts) {
 	
 	var N_FTR_SPACES = 3;
 	var ftrSpaces = [];
-	var allFtrNames;
+	var allFtrNames = null;
 	
 	var id;
 	var active = false;
 	var online = false;
+	
+	var obsFtrConf = null;	// TODO these are not saved and loaded
+	var contrFtrConf = null;
+	var ignFtrConf = null;
 
 	if (opts.base != null && opts.config != null) {
 		mc = new analytics._StreamStory(opts.config);
-		if (opts.obsFields != null && opts.contrFields != null && opts.ignoredFields != null) {
+		if (opts.obsFieldV != null && opts.controlFieldV != null && opts.ignoredFieldV != null) {
     		ftrSpaces = [
-    		    new qm.FeatureSpace(opts.base, opts.obsFields),
-    		    new qm.FeatureSpace(opts.base, opts.contrFields),
-    		    new qm.FeatureSpace(opts.base, opts.ignoredFields)
+    		    new qm.FeatureSpace(opts.base, opts.obsFieldV),
+    		    new qm.FeatureSpace(opts.base, opts.controlFieldV),
+    		    new qm.FeatureSpace(opts.base, opts.ignoredFieldV)
     		];
-		}
-		else if (opts.obsFtrSpace != null && opts.controlFtrSpace != null && opts.ignoredFtrSpace != null) {
-			ftrSpaces = [
-			    opts.obsFtrSpace,
-			    opts.controlFtrSpace,
-			    opts.ignoredFtrSpace
-			];
+    		
+    		obsFtrConf = opts.obsFieldV;
+    		contrFtrConf = opts.controlFieldV;
+    		ignFtrConf = opts.ignoredFieldV;
 		}
 		else {
 			throw new Error('Missing feature space configuration!');
@@ -56,6 +57,8 @@ exports.StreamStory = function (opts) {
 		for (var i = 0; i < N_FTR_SPACES; i++) {
 			ftrSpaces.push(new qm.FeatureSpace(base, fin));
 		}
+		log.debug('Initializing feature names ...');
+		initFtrNames();
 		log.info('Loaded!');
 	}
 	else {
@@ -65,6 +68,38 @@ exports.StreamStory = function (opts) {
 	//===================================================
 	// FEATURE HELPER FUNCTIONS
 	//===================================================
+	
+	function genFtrInfo(fields, ftrSpace) {
+		var result = [];
+		
+		var dims = ftrSpace.dims;
+		
+		var offset = 0;
+		for (var i = 0; i < fields.length; i++) {
+			var field = fields[i];
+			var dim = dims[i];
+			
+			if (field.type == 'numeric') {
+				result.push({
+					type: 'numeric',
+					offset: offset,
+					length: dim
+				})
+			} else if (field.type == 'categorical') {
+				result.push({
+					type: 'nominal',
+					offset: offset,
+					length: dim
+				})
+			} else {
+				throw new Error('Invalid field type: ' + field.type);
+			}
+			
+			offset += dim;
+		}
+		
+		return result;
+	}
 
 	function getObsFtrSpace() {
 		return ftrSpaces[0];
@@ -82,8 +117,8 @@ exports.StreamStory = function (opts) {
 		var names = [];
 		
 		var dims = ftrSpace.dims;
-		for (var i = 0; i < dims.length; i++) {
-			var ftrDesc = ftrSpace.getFeature(i);
+		for (var ftrN = 0; ftrN < dims.length; ftrN++) {
+			var ftrDesc = ftrSpace.getFeatureExtractor(ftrN);
 			var match = ftrDesc.match(/\[[\W\w]*\]$/);	// remove Numeric[ ]
 
 			if (match != null) {
@@ -145,11 +180,13 @@ exports.StreamStory = function (opts) {
 			var invCoords = ftrSpace.invertFeatureVector(coords);
 			
 			for (var ftrN = 0; ftrN < invCoords.length; ftrN++) {
+				var ftrConfig = getFeatureConfig(currFtrN);
 				result[ftrSpaceN].push({
 					name: names[ftrN],
 					value: invCoords[ftrN],
 					ftrSpaceN: ftrSpaceN,
-					bounds: getFtrBounds(currFtrN)
+					range: getFtrRange(currFtrN),
+					type: ftrConfig.type
 				});
 				
 				currFtrN++;
@@ -164,7 +201,7 @@ exports.StreamStory = function (opts) {
 		};
 	}
 	
-	function getFtrSpaceNFtrOffset(ftrId) {
+	function getFeatureConfig(ftrId) {
 		var obsFtrCount = getObsFtrCount();
 		var contrFtrCount = getContrFtrCount();
 		
@@ -181,29 +218,91 @@ exports.StreamStory = function (opts) {
 			ftrOffset = obsFtrCount + contrFtrCount;
 		}
 		
-		return { ftrSpaceN: ftrSpaceN, ftrOffset: ftrOffset };
+		var ftrN = ftrId - ftrOffset;
+		var internalOffset = 0;
+		var dims = ftrSpaces[ftrSpaceN].dims;
+		
+		for (var i = 0; i < ftrN; i++) {
+			internalOffset += dims[i];
+		}
+		
+		return { 
+			ftrSpaceN: ftrSpaceN,				// index of the feature space
+			ftrN: ftrId - ftrOffset,			// index of the feature inside the feature space
+			dim: dims[ftrN],					// feature dimension
+			internalOffset: internalOffset,		// offset of the feature inside a feature vector (includes dimensions)
+			type: ftrSpaces[ftrSpaceN].getFeatureExtractorType(ftrN)				// feature type
+		};
 	}
 
 	function getFtrCoord(stateId, ftrId) {
-		var ftrConfig = getFtrSpaceNFtrOffset(ftrId);
+		var config = getFeatureConfig(ftrId);
 		
-		var coords = mc.fullCoords(stateId, ftrConfig.ftrSpaceN);
-		return ftrSpaces[ftrConfig.ftrSpaceN].invertFeatureVector(coords)[ftrId - ftrConfig.ftrOffset];
+		var coords = mc.fullCoords(stateId, config.ftrSpaceN);
+		return ftrSpaces[config.ftrSpaceN].invertFeatureVector(coords)[config.ftrN];
 	}
 	
 	function invertFeature(ftrId, val) {
-		var ftrConfig = getFtrSpaceNFtrOffset(ftrId);
-		return ftrSpaces[ftrConfig.ftrSpaceN].invertFeature(ftrId - ftrConfig.ftrOffset, val);
+		var offsets = getFeatureConfig(ftrId);
+		return ftrSpaces[offsets.ftrSpaceN].invertFeature(offsets.ftrN, val);
+	}
+	
+	function extractFeature(ftrV, ftrN) {
+		var config = getFeatureConfig(ftrN);
+		
+		if (config.dim == 1) {
+			return ftrV[config.internalOffset];
+		} else {
+			var result = [];
+			for (var i = 0; i < config.dim; i++) {
+				result.push(ftrV[config.internalOffset + i]);
+			}
+			return result;
+		}
+	}
+	
+	function getCategoricalBinNm(ftrId, binN) {
+		var config = getFeatureConfig(ftrId);
+		
+		if (config.type != 'categorical') throw new Error('Feature ' + ftrId + ' is not categorical!');
+		
+		var ftrSpace = ftrSpaces[config.ftrSpaceN];
+		var range = ftrSpace.getFeatureRange(config.ftrN);
+		
+		if (binN >= range.length) throw new Error('Invalid bin number: ' + binN);
+		
+		return range[binN];
+	}
+	
+	function getCategoricalLabel(ftrId, value) {
+		if (value instanceof Array) {
+			var config = getFeatureConfig(ftrId);
+			
+			if (config.type != 'categorical') throw new Error('Feature ' + ftrId + ' is not categorical!');
+			
+			var ftrSpace = ftrSpaces[config.ftrSpaceN];
+			var inverted = ftrSpace.invertFeature(config.ftrN, value);
+			
+			var targetKey = null;
+			for (var key in inverted) {
+				if (inverted[key] > 0) {
+					targetKey = key;
+					break;
+				}
+			}
+			
+			if (targetKey == null) throw new Error('Unable to find the label of feature ' + ftrId + ', value: ' + JSON.stringify(value));
+		
+			return targetKey;
+		}
+		else {
+			return getCategoricalBinNm(ftrId, value);
+		}
 	}
 
-	function getFtrBounds(ftrId) {
-		var ftrConfig = getFtrSpaceNFtrOffset(ftrId);
-		var bounds = mc.getFtrBounds(ftrId);
-
-		return {
-			min: ftrSpaces[ftrConfig.ftrSpaceN].invertFeature(ftrId - ftrConfig.ftrOffset, bounds.min),
-			max: ftrSpaces[ftrConfig.ftrSpaceN].invertFeature(ftrId - ftrConfig.ftrOffset, bounds.max)
-		}
+	function getFtrRange(ftrId) {
+		var config = getFeatureConfig(ftrId);
+		return ftrSpaces[config.ftrSpaceN].getFeatureRange(config.ftrN);
 	}
 	
 	function genAutoName(nameConf) {
@@ -234,12 +333,22 @@ exports.StreamStory = function (opts) {
 
 
 	function toServerHistogram(hist, ftrId) {
-		var ftrConfig = getFtrSpaceNFtrOffset(ftrId);
-		var ftrSpace = ftrSpaces[ftrConfig.ftrSpaceN];
-		var offset = ftrConfig.ftrOffset;
+		var config = getFeatureConfig(ftrId);
+		var ftrSpace = ftrSpaces[config.ftrSpaceN];
 		
-		for (var i = 0; i < hist.binValV.length; i++) {
-			hist.binValV[i] = ftrSpace.invertFeature(ftrId - offset, hist.binValV[i]);
+		hist.type = config.type;
+		
+		if (config.type == 'numeric') {
+			for (var i = 0; i < hist.binValV.length; i++) {
+				hist.binValV[i] = ftrSpace.invertFeature(config.ftrN, hist.binValV[i]);
+			}
+			
+		}
+		else if (config.type == 'categorical') {
+			hist.binValV = ftrSpace.invertFeature(config.ftrN, hist.binValV);
+		}
+		else {
+			throw new Error('Unknown feature type: ' + config.type);
 		}
 
 		return hist;
@@ -250,6 +359,9 @@ exports.StreamStory = function (opts) {
 	//===================================================
 	
 	function preprocessFit(opts, callback) {
+		if (log.debug())
+			log.debug('Preprocessing before fit ...');
+		
 		if (opts.recSet == null && opts.recV == null) 
 			throw new Error('StreamStory.fit: missing parameters recSet or recV');
 		
@@ -294,6 +406,8 @@ exports.StreamStory = function (opts) {
 						if (log.debug())
 							log.debug('Feature matrices extracted!');
 						
+						initFtrNames();
+						
 						callback(undefined, {
 		    				obsColMat: results[0],
 		    				contrColMat: results[1],
@@ -324,6 +438,8 @@ exports.StreamStory = function (opts) {
 				results.push(ftrSpace.extractMatrix(recSet));
 			}
 			
+			initFtrNames();
+			
 			callback(undefined, {
 				obsColMat: results[0],
 				contrColMat: results[1],
@@ -336,7 +452,11 @@ exports.StreamStory = function (opts) {
 	// VARIABLE INITIALIZATION
 	//===================================================
 	
-	allFtrNames = getObsFtrNames().concat(getControlFtrNames().concat(getIgnoredFtrNames()));
+	function initFtrNames() {
+		if (log.debug())
+			log.debug('Initializing feature names ...');
+		allFtrNames = getObsFtrNames().concat(getControlFtrNames().concat(getIgnoredFtrNames()));
+	}
 
 	//===================================================
 	// PUBLIC METHODS
@@ -390,7 +510,12 @@ exports.StreamStory = function (opts) {
     				controls: data.contrColMat,
     				ignored: data.ignoredColMat,
     				times: timeV,
-    				batchV: batchEndV
+    				batchV: batchEndV,
+    				ftrInfo: {
+    					observation: genFtrInfo(obsFtrConf, getObsFtrSpace()),
+    					control: genFtrInfo(contrFtrConf, getContrFtrSpace()),
+    					ignored: genFtrInfo(ignFtrConf, getIgnoredFtrSpace())
+    				}
     			});
     			log.info('Done!');
 			});
@@ -402,18 +527,28 @@ exports.StreamStory = function (opts) {
 			
 			var data = preprocessFit(opts, function (e, data) {
 				if (e != null) {
-					callback(e1);
+					callback(e);
 					return;
 				}
 				
-				log.info('Creating model asynchronously ...');
-    			mc.fitAsync({
-    				observations: data.obsColMat,
-    				controls: data.contrColMat,
-    				ignored: data.ignoredColMat,
-    				times: timeV,
-    				batchV: batchEndV
-    			}, callback);
+				try {					
+					log.info('Creating model asynchronously ...');
+	    			mc.fitAsync({
+	    				observations: data.obsColMat,
+	    				controls: data.contrColMat,
+	    				ignored: data.ignoredColMat,
+	    				times: timeV,
+	    				batchV: batchEndV,
+	    				ftrInfo: {
+							observation: genFtrInfo(obsFtrConf, getObsFtrSpace()),
+							control: genFtrInfo(contrFtrConf, getContrFtrSpace()),
+							ignored: genFtrInfo(ignFtrConf, getIgnoredFtrSpace())
+						}
+	    			}, callback);
+				} catch (e) {
+					log.error(e, 'Failed to fit model!');
+					callback(e);
+				}
 			});
 		},
 
@@ -534,7 +669,7 @@ exports.StreamStory = function (opts) {
 				}
     			
 				for (var ftrN = 0; ftrN < allFtrCount; ftrN++) {
-					var ftrConfig = getFtrSpaceNFtrOffset(ftrN);
+					var ftrConfig = getFeatureConfig(ftrN);
 					var ftrDesc = that.getFtrDesc(ftrN);
 					
 					result[ftrConfig.ftrSpaceN].push(ftrDesc);
@@ -547,13 +682,16 @@ exports.StreamStory = function (opts) {
 	        	}
 	    	}
 			else {
-				var ftrConfig = getFtrSpaceNFtrOffset(ftrId);
-				var names = getFtrNames(ftrSpaces[ftrConfig.ftrSpaceN]);
-				var name = names[ftrId - ftrConfig.ftrOffset];
+				var config = getFeatureConfig(ftrId);
+				var ftrSpace = ftrSpaces[config.ftrSpaceN];
+				
+				var names = getFtrNames(ftrSpace);
+				var name = names[config.ftrN];
 				
 				return {
 					name: name,
-					bounds: getFtrBounds(ftrId)
+					type: config.type,
+					values: ftrSpace.getFeatureRange(config.ftrN)
 				}
 			}
 	    },
@@ -583,26 +721,36 @@ exports.StreamStory = function (opts) {
 				log.trace('Tree: %s', JSON.stringify(classifyTree));
 			
 			(function annotateDecisionTree(node) {
-    			var features = node.features;
+    			var ftrV = node.features;
     			var children = node.children;
     			var cutFtr = node.cut;
     			
     			var names = getObsFtrNames();
     			
-    			for (var i = 0; i < features.length; i++) {
-    				var val = features[i];
-    				features[i] = {
-    					name: names[i],
-    					value: invertFeature(i, val)
-    				}
-    			}
-    			
     			if (cutFtr != null) {
-    				node.cut = {
-    					name: names[cutFtr.id],
-    					value: invertFeature(cutFtr.id, cutFtr.value)
+    				switch (cutFtr.ftrType) {
+    				case 'numeric': {
+    					node.cut = {
+	    					name: names[cutFtr.id],
+	    					ftrType: cutFtr.ftrType,
+	    					value: invertFeature(cutFtr.id, cutFtr.value)
+	    				}
+    					break;
     				}
-    				
+    				case 'categorical': {
+    					var value = getCategoricalLabel(cutFtr.id, cutFtr.value);
+    					node.cut = {
+	    					name: names[cutFtr.id],
+	    					ftrType: cutFtr.ftrType,
+	    					value: value
+	    				}
+    					break;
+    				}
+    				default: {
+    					throw new Error('Invalid feature type: ' + cutFtr.ftrType);
+    				}
+    				}
+ 
     				var alt = cutFtr.alternatives;
     				
     				if (alt != null) {
@@ -619,18 +767,17 @@ exports.StreamStory = function (opts) {
     			}
     		})(classifyTree);
 			
+			var obsFtrSpace = getObsFtrSpace();
+			var uiCentroids = [];
+			var uiAllCentroids = [];
 			for (var centroidN = 0; centroidN < centroids.length; centroidN++) {
-				var centroid = centroids[centroidN];
-				for (var ftrN = 0; ftrN < centroid.length; ftrN++) {
-					centroid[ftrN] = invertFeature(ftrN, centroid[ftrN]);
-				}
+				var uiCentroid = obsFtrSpace.invertFeatureVector(centroids[centroidN]);
+				uiCentroids.push(uiCentroid);
 			}
 			
 			for (var centroidN = 0; centroidN < allCentroids.length; centroidN++) {
-				var centroid = allCentroids[centroidN];
-				for (var ftrN = 0; ftrN < centroid.length; ftrN++) {
-					centroid[ftrN] = invertFeature(ftrN, centroid[ftrN]);
-				}
+				var uiCentroid = obsFtrSpace.invertFeatureVector(allCentroids[centroidN]);
+				uiAllCentroids.push(uiCentroid);
 			}
 			
 			var features = getFtrDescriptions(stateId);
@@ -647,8 +794,8 @@ exports.StreamStory = function (opts) {
 				pastStates: pastStates,
 				featureWeights: wgts,
 				classifyTree: classifyTree,
-				centroids: centroids,
-				allCentroids: allCentroids,
+				centroids: uiCentroids,
+				allCentroids: uiAllCentroids,
 				timeHistogram: timeHistogram,
 				yearHistogram: yearHistogram,
 				monthHistogram: monthHistogram,
@@ -668,15 +815,33 @@ exports.StreamStory = function (opts) {
 					var ftrN = term.ftrId;
 					
 					term.feature = names[ftrN];
-					if (term.le != Number.MAX_VALUE)
-						term.le = invertFeature(ftrN, term.le);
-					else
-						delete term.le;
-					if (term.gt != -Number.MAX_VALUE)
-						term.gt = invertFeature(ftrN, term.gt);
-					else
-						delete term.gt;
 					
+					switch (term.ftrType) {
+					case 'numeric': {
+						if (term.le != Number.MAX_VALUE)
+							term.le = invertFeature(ftrN, term.le);
+						else
+							delete term.le;
+						if (term.gt != -Number.MAX_VALUE)
+							term.gt = invertFeature(ftrN, term.gt);
+						else
+							delete term.gt;
+						break;
+					}
+					case 'categorical': {
+						if (term.eq != null) {
+							term.eq = getCategoricalLabel(ftrN, term.eq);
+						}
+						if (term.neq != null) {
+							term.neq = getCategoricalLabel(ftrN, term.neq);
+						}
+						break;
+					}
+					default: {
+						throw new Error('Invalid feature type: ' + term.ftrType);
+					}
+					}
+
 					delete term.ftrId;
 				}
 			}
@@ -688,7 +853,25 @@ exports.StreamStory = function (opts) {
 			var narration = mc.narrateState(stateId);
 			
 			for (var i = 0; i < narration.length; i++) {
-				narration[i].ftrId = getFtrName(narration[i].ftrId);
+				var ftrNarration = narration[i];
+				
+				switch (ftrNarration.type) {
+				case 'numeric': {
+					narration[i].ftrId = getFtrName(narration[i].ftrId);
+					break;
+				}
+				case 'categorical': {
+					var ftrId = ftrNarration.ftrId;
+					var binN = ftrNarration.bin;
+					
+					var binName = getCategoricalBinNm(ftrId, binN);
+					narration[i].ftrId = getFtrName(ftrId);
+					narration[i].bin = binName;
+					break;
+				}
+				default:
+					throw new Error('Unknown feature type: ' + ftrNarration.type);
+				}
 			}
 			
 			return narration;
