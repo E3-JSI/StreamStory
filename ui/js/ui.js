@@ -380,26 +380,18 @@ function changeControlVal(stateId, ftrIdx, val) {
 					}
 					else if (opts.type == 'categorical') {
 						if (opts.value != null) {
-							// TODO, the weights
+							var colors = opts.valueColor;
 							var valStr = '';
-							for (var i = 0; i < opts.value.length; i++) {
-								var val = null;
-								var key = null;
-								for (var name in opts.value[i]) {
-									key = name;
-									val = opts.value[i][name];
-								}
+							
+							for (var key in opts.value) {
+								var color = colors[key];
 								
-								if (val == null || key == null) {
-									throw new Error('Could not find the key or value!');
-								}
+								if (color == null) throw new Error('Could not find the color for a categorical feature!');
 								
-								valStr += key + ': ' + toUiPrecision(val);
-								if (i < opts.value.length-1) {
-									valStr += ', ';
-								}
+								valStr += '<span style="color: ' + color + ';">' + key + ': ' + toUiPrecision(opts.value[key]) + '</span>, ';
 							}
-							valField.html(valStr);
+							
+							valField.html(valStr.substring(0, valStr.length-2));
 						}
 						if (opts.valueColor != null)	// TODO what to do with this???
 							thumbnail.find('.attr-val').css('color', opts.valueColor);
@@ -1412,17 +1404,26 @@ function changeControlVal(stateId, ftrIdx, val) {
 					var maxWgt = Number.NEGATIVE_INFINITY;
 					var minWgt = Number.POSITIVE_INFINITY;
 					
-					for (var i = 0; i < ftrWgts.length; i++) {
-						if (ftrWgts[i] > maxWgt) maxWgt = ftrWgts[i];
-						if (ftrWgts[i] < minWgt) minWgt = ftrWgts[i];
+					for (var ftrId = 0; ftrId < ftrWgts.length; ftrId++) {
+						if (isNaN(ftrWgts[ftrId])) {
+							for (var key in ftrWgts[ftrId]) {
+								var wgt = ftrWgts[ftrId][key];
+								
+								if (wgt > maxWgt) maxWgt = wgt;
+								if (wgt < minWgt) minWgt = wgt;
+							}
+						} else {
+							if (ftrWgts[ftrId] > maxWgt) maxWgt = ftrWgts[ftrId];
+							if (ftrWgts[ftrId] < minWgt) minWgt = ftrWgts[ftrId];
+						}
 					}
 					
-					function getWeightColor(wgt, minWgt, maxWgt) {
+					function getSingleColor(wgt, minWgt, maxWgt) {
 						if (THEME == 'dark') {
 							if (wgt > 0)
-								return 'rgb(' + Math.floor(255 - 255*wgt / maxWgt) + ',255,' + Math.floor(255 - 255*wgt / maxWgt) + ')';
+								return 'rgb(' + Math.ceil(255 - 255*wgt / maxWgt) + ',255,' + Math.ceil(255 - 255*wgt / maxWgt) + ')';
 							else
-								return 'rgb(255,' + Math.floor(255 - 255*wgt / minWgt) + ',' + Math.floor(255 - 255*wgt / minWgt) + ')';
+								return 'rgb(255,' + Math.ceil(255 - 255*wgt / minWgt) + ',' + Math.ceil(255 - 255*wgt / minWgt) + ')';
 						} else {
 							if (wgt > 0)
 								return 'rgb(0,' + Math.floor(255*wgt / maxWgt) + ',0)';
@@ -1431,12 +1432,34 @@ function changeControlVal(stateId, ftrIdx, val) {
 						}
 					}
 					
+					function getWeightColor(ftr, wgtV, minWgt, maxWgt) {
+						var type = ftr.type;
+						
+						switch (type) {
+						case 'numeric': {
+							return getSingleColor(wgtV, minWgt, maxWgt);
+							break;
+						}
+						case 'categorical': {
+							var colorObj = {};
+							for (var key in wgtV) {
+								colorObj[key] = getSingleColor(wgtV[key], minWgt, maxWgt);
+							}
+							return colorObj;
+							break;
+						}
+						default: {
+							throw new Error('Invalid feature type: ' + type);
+						}
+						}
+					}
+					
 					// fetch histograms
 					$.each(data.features.observations, function (idx, val) {
 						var histContainerId = 'container-chart-' + idx;
 						var ftrId = idx;
 						
-						var color = getWeightColor(ftrWgts[ftrId], minWgt, maxWgt);
+						var color = getWeightColor(val, ftrWgts[ftrId], minWgt, maxWgt);
 									
 						var thumbnail = ui.createThumbnail({
 							name: val.name,
@@ -1457,7 +1480,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 						var ftrId = nObsFtrs + idx;
 						var histContainerId = 'container-chart-' + (nObsFtrs + idx);
 						
-						var color = getWeightColor(ftrWgts[ftrId], minWgt, maxWgt);
+						var color = getWeightColor(val, ftrWgts[ftrId], minWgt, maxWgt);
 												
 						var thumbnail = ui.createThumbnail({
 							name: val.name,
@@ -1486,7 +1509,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 						var ftrId = nObsFtrs + nContrFtrs + idx;
 						var histContainerId = 'container-chart-' + ftrId;
 						
-						var color = getWeightColor(ftrWgts[ftrId], minWgt, maxWgt);
+						var color = getWeightColor(val, ftrWgts[ftrId], minWgt, maxWgt);
 												
 						var thumbnail = ui.createThumbnail({
 							name: val.name,

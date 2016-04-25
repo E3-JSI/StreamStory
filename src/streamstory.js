@@ -345,9 +345,7 @@ exports.StreamStory = function (opts) {
 			
 		}
 		else if (config.type == 'categorical') {
-//			var origValV = hist.binValV;
 			hist.binValV = ftrSpace.getFeatureRange(config.ftrN)
-//			hist.binValV = ftrSpace.invertFeature(config.ftrN, hist.binValV);
 		}
 		else {
 			throw new Error('Unknown feature type: ' + config.type);
@@ -709,7 +707,7 @@ exports.StreamStory = function (opts) {
 			var stateNm = mc.getStateName(stateId);
 			var label = mc.getStateLabel(stateId);
 			var autoNm = genAutoName(mc.getStateAutoName(stateId));
-			var wgts = mc.getStateWgtV(stateId);
+			var wgts = mc.getWeights(stateId);
 			var classifyTree = mc.getClassifyTree(stateId);
 			var centroids = mc.getStateCentroids(stateId);
 			var allCentroids = mc.getStateCentroids();
@@ -782,6 +780,32 @@ exports.StreamStory = function (opts) {
 				uiAllCentroids.push(uiCentroid);
 			}
 			
+			// transform the weights
+			var outWeights = [];
+			for (var ftrId = 0; ftrId < wgts.length; ftrId++) {
+				var info = wgts[ftrId];
+				
+				switch (info.type) {
+				case 'numeric': {
+					outWeights.push(info.value);
+					break;
+				}
+				case 'categorical': {
+					var wgtObj = {};
+					var range = getFtrRange(ftrId);
+					for (var i = 0; i < range.length; i++) {
+						wgtObj[range[i]] = info.value[i];
+					}
+					outWeights.push(wgtObj);
+					break;
+				}
+				default: {
+					throw new Error('Unknown feature type: ' + info.type);
+				}
+				}
+			}
+			
+			
 			var features = getFtrDescriptions(stateId);
 			
 			return {
@@ -794,7 +818,7 @@ exports.StreamStory = function (opts) {
 				features: features,
 				futureStates: futureStates,
 				pastStates: pastStates,
-				featureWeights: wgts,
+				featureWeights: outWeights,
 				classifyTree: classifyTree,
 				centroids: uiCentroids,
 				allCentroids: uiAllCentroids,
