@@ -71,17 +71,12 @@ function drawHistogram(opts) {
 	var allCountV = opts.data.allCountV;
 	var allProbV = allCountV != null ? getProbV(allCountV) : null;
 	
-	var bins;
+	var bins = opts.data.binValV;
 	var dx;
 	if (histogramType == HistogramType.CATEGORICAL) {
-		bins = [];
-		for (var label in opts.data.binValV) {
-			bins.push(label);
-		}
 		dx = 1;
 	}
 	else {
-		bins = opts.data.binValV;
 		dx = bins[1] - bins[0];
 	}
 	

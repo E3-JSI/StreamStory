@@ -345,7 +345,9 @@ exports.StreamStory = function (opts) {
 			
 		}
 		else if (config.type == 'categorical') {
-			hist.binValV = ftrSpace.invertFeature(config.ftrN, hist.binValV);
+//			var origValV = hist.binValV;
+			hist.binValV = ftrSpace.getFeatureRange(config.ftrN)
+//			hist.binValV = ftrSpace.invertFeature(config.ftrN, hist.binValV);
 		}
 		else {
 			throw new Error('Unknown feature type: ' + config.type);

@@ -179,12 +179,23 @@ var zoomVis = function (opts) {
 							
 							intersectStr += '&#09;';
 							
-							if (term.le != null && term.gt != null) {
-								intersectStr += term.feature + ' &isin; (' + toUiPrecision(term.gt) + ', ' + toUiPrecision(term.le) + ']';
-							} else if (term.le != null) {
-								intersectStr += term.feature + ' \u2264 ' + toUiPrecision(term.le);
-							} else {
-								intersectStr += term.feature + ' > ' + toUiPrecision(term.gt);
+							if (term.le != null || term.gt != null) {
+								if (term.le != null && term.gt != null) {
+									intersectStr += term.feature + ' &isin; (' + toUiPrecision(term.gt) + ', ' + toUiPrecision(term.le) + ']';
+								} else if (term.le != null) {
+									intersectStr += term.feature + ' \u2264 ' + toUiPrecision(term.le);
+								} else {
+									intersectStr += term.feature + ' > ' + toUiPrecision(term.gt);
+								}
+							}
+							else if (term.eq != null) {
+								intersectStr += term.feature + ' = ' + term.eq;
+							}
+							else if (term.neq != null) {
+								intersectStr += term.feature + ' \u2260 ' + term.neq;
+							}
+							else {
+								throw new Error('Feature explanation le, gt, eq and neq are all NULL!');
 							}
 						
 							if (j < terms.length-1)
