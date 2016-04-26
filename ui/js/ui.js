@@ -1054,9 +1054,21 @@ function changeControlVal(stateId, ftrIdx, val) {
 				for (var ftrN = 0; ftrN < centroid.length; ftrN++) {
 					var ftr = ftrConfig[ftrN];
 					
-					if (ftr.type == 'categorical') continue;	// TODO what to do with categorical features???
-					
-					row[ftr.name] = centroid[ftrN];
+					switch (ftr.type) {
+					case 'numeric': {
+						row[ftr.name] = centroid[ftrN];
+						break;
+					}
+					case 'categorical': {
+						for (var key in centroid[ftrN]) {
+							row[ftr.name + ': ' + key] = (100*centroid[ftrN][key]).toFixed();
+						}
+						break;
+					}
+					default: {
+						throw new Error('Unknown feature type: ' + ftr.type);
+					}
+					}
 				}
 				backgroundData.push(row);
 			}
@@ -1067,9 +1079,21 @@ function changeControlVal(stateId, ftrIdx, val) {
 				for (var ftrN = 0; ftrN < centroid.length; ftrN++) {
 					var ftr = ftrConfig[ftrN];
 					
-					if (ftr.type == 'categorical') continue;	// TODO what to do with categorical features???
-					
-					row[ftr.name] = centroid[ftrN];
+					switch (ftr.type) {
+					case 'numeric': {
+						row[ftr.name] = centroid[ftrN];
+						break;
+					}
+					case 'categorical': {
+						for (var key in centroid[ftrN]) {
+							row[ftr.name + ': ' + key] = (100*centroid[ftrN][key]).toFixed();
+						}
+						break;
+					}
+					default: {
+						throw new Error('Unknown feature type: ' + ftr.type);
+					}
+					}
 				}
 				foregroundData.push(row);
 			} 
