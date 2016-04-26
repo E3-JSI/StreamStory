@@ -525,15 +525,15 @@ function pingProgress(isRealTime) {
 						}
 						
 						// populate the attribute type section
-						var typeList = $('#ul-select-attr-types');
-						typeList.html('');
+						var typeDiv = $('#div-select-attr-types');
+						typeDiv.html('');
 						for (var i = 0; i < selectedAttrs.length; i++) {
 							var attr = selectedAttrs[i];
 							
 							if (attr == timeAttr) continue;
 							
-							var li = $('<li />');
-							var inputSpan = $('<span class="pull-right" />');
+							var div = $('<div style="height: 27px;" />');
+							var inputSpan = $('<span class="pull-right" style="clear: both;" />');
 							
 							var numLabel = $('<label>Numeric: </label>');
 							var nomLabel = $('<label>Categorical: </label>');
@@ -552,13 +552,14 @@ function pingProgress(isRealTime) {
 							
 							inputSpan.append(numLabel);
 							inputSpan.append(inputNum);
+							inputSpan.append('&nbsp;');
 							inputSpan.append(nomLabel);
 							inputSpan.append(inputNom);
 							
-							li.html(attr);
-							li.append(inputSpan);
+							div.html(attr);
+							div.append(inputSpan);
 							
-							typeList.append(li);
+							typeDiv.append(div);
 						}
 						
 						selectControls.bootstrapDualListbox({
@@ -652,11 +653,11 @@ function pingProgress(isRealTime) {
 			typeH[attr] = 'time';
 		}
 		
-		var typeList = $('#ul-select-attr-types');
-		$.each(typeList.children('li'), function (i, liEl) {
-			var li = $(liEl);
+		var typeDiv = $('#div-select-attr-types');
+		$.each(typeDiv.children('div'), function (i, divEl) {
+			var div = $(divEl);
 			$('input[name=radio-type-4]:checked')
-			var checked = li.find('input[type=radio]:checked');
+			var checked = div.find('input[type=radio]:checked');
 			
 			var idx = checked.attr('id').split('-')[3];
 			var attr = attrs[idx];

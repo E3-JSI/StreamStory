@@ -388,10 +388,10 @@ function changeControlVal(stateId, ftrIdx, val) {
 								
 								if (color == null) throw new Error('Could not find the color for a categorical feature!');
 								
-								valStr += '<span style="color: ' + color + ';">' + key + ': ' + toUiPrecision(opts.value[key]) + '</span>, ';
+								valStr += '<span style="color: ' + color + ';">' + key + ': ' + (opts.value[key]*100).toFixed() + '%</span><br />';
 							}
 							
-							valField.html(valStr.substring(0, valStr.length-2));
+							valField.html(valStr.substring(0, valStr.length-7));
 						}
 						if (opts.valueColor != null)	// TODO what to do with this???
 							thumbnail.find('.attr-val').css('color', opts.valueColor);
