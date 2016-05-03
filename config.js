@@ -142,7 +142,7 @@ exports.STREAM_STORY_PARAMS = {
 	transitions: {
 		type: 'continuous'
 	},
-	rndseed: 1,
+	rndseed: 0,
 	pastStates: 2,
 	verbose: true
 }

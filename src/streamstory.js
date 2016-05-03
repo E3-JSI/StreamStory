@@ -307,11 +307,27 @@ exports.StreamStory = function (opts) {
 	
 	function genAutoName(nameConf) {
 		var ftrId = nameConf.ftrId;
-
-		if (ftrId < 0 || nameConf.range == null) {
-			return undefined;
-		} else {
-			return getFtrName(ftrId) + ' ' + nameConf.range;
+		var type = nameConf.type;
+		
+		if (ftrId < 0) return null;
+		
+		switch (type) {
+		case 'numeric': {
+			if (nameConf.range == null) {
+				return null;
+			} else {
+				return getFtrName(ftrId) + ' ' + nameConf.range;
+			}
+			break;
+		}
+		case 'categorical': {
+			var bin = nameConf.value;
+			return getFtrName(ftrId) + ' ' + getCategoricalBinNm(ftrId, bin);
+			break;
+		}
+		default: {
+			throw new Error('Unknown feature type: ' + type);
+		}
 		}
 	}
 	
