@@ -524,6 +524,9 @@ module.exports = exports = function (opts) {
 							}
 							else if (type == 'nominal') {
 								var val = lineArr[i];
+								
+								if (val == null || val == '') val = '(missing)';
+								
 								recJson[attr] = val.toString();
 							}
 							else {

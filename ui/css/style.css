@@ -282,13 +282,22 @@ html, body {
 	position: static;
 }
 
-#div-timehist-global, #div-timehist-yearly, #div-timehist-monthly, #div-timehist-weekly, #div-timehist-daily {
+#div-parallel-container, #div-parallel {
+	height: 100%;
+}
+
+#div-parallel-container {
+	position: relative;
+	overflow-x: auto;
+}
+
+#div-timehist-global, #div-timehist-yearly, #div-timehist-monthly, #div-timehist-weekly, #div-timehist-daily, #div-parallel {
 	display: block !important;
 	visibility: visible;
 	position: static;
 }
 
-#div-timehist-global.hidden, #div-timehist-yearly.hidden, #div-timehist-monthly.hidden, #div-timehist-weekly.hidden, #div-timehist-daily.hidden {
+#div-timehist-global.hidden, #div-timehist-yearly.hidden, #div-timehist-monthly.hidden, #div-timehist-weekly.hidden, #div-timehist-daily.hidden, #div-parallel.hidden {
 	display: block !important;
 	visibility: hidden;
 	position: absolute;

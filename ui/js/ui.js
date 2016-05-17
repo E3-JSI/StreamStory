@@ -383,6 +383,20 @@ function changeControlVal(stateId, ftrIdx, val) {
 							var colors = opts.valueColor;
 							var valStr = '';
 							
+							var valArr = [];
+							for (var key in opts.value) {
+								valArr.push({ value: key, prob: opts.value[key] });
+							}
+							
+							valArr.sort(function (v0, v1) {
+								return v1.prob - v0.prob;
+							});
+							
+							opts.value = {};
+							for (var i = 0; i < Math.min(10, valArr.length); i++) {
+								opts.value[valArr[i].value] = valArr[i].prob;
+							}
+							
 							for (var key in opts.value) {
 								var color = colors[key];
 								
@@ -1040,13 +1054,22 @@ function changeControlVal(stateId, ftrIdx, val) {
 		}
 		
 		function visualizeParcoords(centroids, allCentroids, ftrConfig) {
+			if (allCentroids.length == 0) return;
+			
+			var wrapper = $('#div-parallel-wrapper');
+			
 			var opts = {
 				color: '#5bc0de',
 				alpha: .6
 			};
 			
+			var minBinW = 60;
+			
 			var backgroundData = [];
 			var foregroundData = [];
+			
+			var dim = 0;
+			var dimInitialized = false;
 			
 			for (var centroidN = 0; centroidN < allCentroids.length; centroidN++) {
 				var centroid = allCentroids[centroidN];
@@ -1057,11 +1080,13 @@ function changeControlVal(stateId, ftrIdx, val) {
 					switch (ftr.type) {
 					case 'numeric': {
 						row[ftr.name] = centroid[ftrN];
+						if (!dimInitialized) dim++;
 						break;
 					}
 					case 'categorical': {
 						for (var key in centroid[ftrN]) {
 							row[ftr.name + ': ' + key] = (100*centroid[ftrN][key]).toFixed();
+							if (!dimInitialized) dim++;
 						}
 						break;
 					}
@@ -1071,6 +1096,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 					}
 				}
 				backgroundData.push(row);
+				dimInitialized = true;
 			}
 			
 			for (var centroidN = 0; centroidN < centroids.length; centroidN++) {
@@ -1096,9 +1122,17 @@ function changeControlVal(stateId, ftrIdx, val) {
 					}
 				}
 				foregroundData.push(row);
-			} 
+			}
 			
-			var parcoords = d3.parcoords(opts)("#div-parallel-wrapper")
+			var width = dim*minBinW;
+			if (width < wrapper.width()) {
+				$('#div-parallel').css('width', wrapper.width() + 'px');
+			} else {
+				$('#div-parallel').css('width', width + 'px');
+			}
+			
+			
+			var parcoords = d3.parcoords(opts)("#div-parallel")
 				.data(backgroundData)
 			  	.render()
 			  	.createAxes()
@@ -1178,7 +1212,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 			
 			// hide the bottom panel
 			$('#div-tree-container').html('');
-			$('#div-parallel-wrapper').html('');
+			$('#div-parallel').html('');
 			// time histograms
 			$('#div-timehist-global').html('');
 			$('#div-timehist-yearly').html('');
@@ -1807,6 +1841,13 @@ function changeControlVal(stateId, ftrIdx, val) {
 			
 			if (tabId == 'a-timehist') {
 				$('#btns-timescale button')[0].click();
+			}
+			
+			if (tabId == 'a-parcoords') {
+				$('#div-parallel-container').removeClass('hidden');
+			}
+			else {
+				$('#div-parallel-container').addClass('hidden');
 			}
 		});
 		

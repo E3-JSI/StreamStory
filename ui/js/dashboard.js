@@ -445,7 +445,6 @@ function pingProgress(isRealTime) {
 
 		$.ajax(action, {
 			contentType: false,
-//			contentType: 'multipart/form-data',
 			enctype: enctype,
 			data: formData,
 			method: method,
@@ -464,14 +463,21 @@ function pingProgress(isRealTime) {
 	            }
 	            return myXhr;
 			},
-			success: function (fields, status, xhr) {
+			success: function (data, status, xhr) {
+				var fields = data.headers;
+				var guessedTypes = {};
+				
+				for (var i = 0; i < data.types.length; i++) {
+					guessedTypes[fields[i].name] = data.types[i];
+				}
+				
 				var select = $('#select-attrs');
 					
 				// clear the attributes
 				select.html('');
 				for (var i = 0; i < fields.length; i++) {
 					var attr = fields[i].name;												
-					select.append('<option value="' + attr + '">' + attr + '</option>');
+					select.append('<option value="' + attr.replace(/\"/g, '&quot;') + '">' + attr + '</option>');
 				}
 				
 				select.bootstrapDualListbox({
@@ -519,8 +525,8 @@ function pingProgress(isRealTime) {
 						for (var i = 0; i < selectedAttrs.length; i++) {
 							var attr = selectedAttrs[i];
 							if (attr != timeAttr) {
-								selectControls.append('<option value="' + attr + '">' + attr + '</option>');
-								selectIgnored.append('<option value="' + attr + '">' + attr + '</option>');
+								selectControls.append('<option value="' + attr.replace(/\"/g, '&quot;') + '">' + attr + '</option>');
+								selectIgnored.append('<option value="' + attr.replace(/\"/g, '&quot;') + '">' + attr + '</option>');
 							}
 						}
 						
@@ -529,6 +535,7 @@ function pingProgress(isRealTime) {
 						typeDiv.html('');
 						for (var i = 0; i < selectedAttrs.length; i++) {
 							var attr = selectedAttrs[i];
+							var type = guessedTypes[attr];
 							
 							if (attr == timeAttr) continue;
 							
@@ -548,7 +555,11 @@ function pingProgress(isRealTime) {
 							numLabel.attr('for', 'radio-type-num-' + i);
 							nomLabel.attr('for', 'radio-type-cat-' + i);
 							
-							inputNum.attr('checked', 'checked');
+							if (type == 'numeric') {
+								inputNum.attr('checked', 'checked');
+							} else if (type == 'categorical') {
+								inputNom.attr('checked', 'checked');
+							}
 							
 							inputSpan.append(numLabel);
 							inputSpan.append(inputNum);
@@ -594,7 +605,7 @@ function pingProgress(isRealTime) {
 							var ignoredV = selectIgnored.val();
 							for (var i = 0; i < ignoredV.length; i++) {
 								var ignored = ignoredV[i];
-								selectControls.remove('option[value="' + ignored + '"]');
+								selectControls.remove('option[value="' + ignored.replace(/\"/g, '&quot;') + '"]');	// TODO
 							}
 							selectControls.bootstrapDualListbox('refresh');
 						});
@@ -667,21 +678,21 @@ function pingProgress(isRealTime) {
 		
 		for (var i = 0; i < attrs.length; i++) {
 			attrs[i] = {
-				name: attrs[i],
+				name: attrs[i].replace('&quot;', '"'),
 				type: typeH[attrs[i]]
 			}
 		}
 		
 		for (var i = 0; i < controlAttrs.length; i++) {
 			controlAttrs[i] = {
-				name: controlAttrs[i],
+				name: controlAttrs[i].replace('&quot;', '"'),
 				type: typeH[controlAttrs[i]]
 			}
 		}
 		
 		for (var i = 0; i < ignoredAttrs.length; i++) {
 			ignoredAttrs[i] = {
-				name: ignoredAttrs[i],
+				name: ignoredAttrs[i].replace('&quot;', '"'),
 				type: typeH[ignoredAttrs[i]]
 			}
 		}

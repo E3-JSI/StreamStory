@@ -120,7 +120,7 @@ function drawHistogram(opts) {
 	for (var i = 0; i < probV.length; i++) {
 		var el = {
 			val: bins[i],
-			prob: probV[i],// * totalProb,
+			prob: probV[i],
 			count: countV[i]
 		};
 		
@@ -136,6 +136,21 @@ function drawHistogram(opts) {
 		}
 		
 		data.push(el);
+	}
+	
+	
+	if (histogramType == HistogramType.CATEGORICAL) {
+		// only keep the 10 most probable elements
+		data.sort(function (el0, el1) {
+			return el1.prob - el0.prob;
+		});
+		
+		data.splice(10, data.length);
+		bins = [];
+		for (var i = 0; i < data.length; i++) {
+			data[i].val = (i+1) + '';
+			bins[i] = data[i].val;
+		}
 	}
 	
 	var container = $(document.getElementById(opts.container));

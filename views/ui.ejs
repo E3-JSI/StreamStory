@@ -451,7 +451,7 @@
 							<div class="panel-body nopadding" style="width: 100%;">
 								<ul id="tabs-viz-bottom" class="nav nav-tabs">
 								  	<li role="presentation" class="active">
-								  		<a href="#" data-target="#div-parallel-wrapper" data-toggle="tab">Coordinates</a>
+								  		<a id="a-parcoords" href="#" data-target="#div-parallel-wrapper" data-toggle="tab">Coordinates</a>
 								  	</li>
 								  	<li role="presentation">
 								  		<a id="a-timehist" href="#" data-target="#div-timehist-wrapper" data-toggle="tab">Time</a>
@@ -461,7 +461,11 @@
 								  	</li>
 								</ul>
 								<div id="tab-content-bottom" class="tab-content" style="width: 100%;">
-									<div id="div-parallel-wrapper" class="tab-pane container-bottom parcoords active"></div>
+									<div id="div-parallel-wrapper" class="tab-pane container-bottom active">
+										<div id="div-parallel-container" class="hidden">
+											<div id="div-parallel" class="parcoords"></div>
+										</div>
+									</div>
 									<div id="div-timehist-wrapper" class="tab-pane container-bottom parcoords container-chart">
 										<div id="btns-timescale" class="btn-group btn-group-xs" role="group" aria-label="...">
 											<button id="btn-toggle-timehist-global" type="button" class="btn btn-default active">Global</button>

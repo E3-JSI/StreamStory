@@ -1,6 +1,6 @@
 var async = require('async')
 
-var analytics = qm.analytics;
+var streamstory = qm.streamstory;
 
 /**
  * StreamStory.
@@ -32,7 +32,7 @@ exports.StreamStory = function (opts) {
 	var ignFtrConf = null;
 
 	if (opts.base != null && opts.config != null) {
-		mc = new analytics._StreamStory(opts.config);
+		mc = new streamstory._StreamStory(opts.config);
 		if (opts.obsFieldV != null && opts.controlFieldV != null && opts.ignoredFieldV != null) {
     		ftrSpaces = [
     		    new qm.FeatureSpace(opts.base, opts.obsFieldV),
@@ -52,7 +52,7 @@ exports.StreamStory = function (opts) {
 		log.info('Loading StreamStory from:%s ', opts.fname);
 		var fin = new qm.fs.FIn(opts.fname);
 		
-		mc = new analytics._StreamStory(fin);
+		mc = new streamstory._StreamStory(fin);
 		log.info('Loading feature spaces ...');
 		for (var i = 0; i < N_FTR_SPACES; i++) {
 			ftrSpaces.push(new qm.FeatureSpace(base, fin));
@@ -119,7 +119,7 @@ exports.StreamStory = function (opts) {
 		var dims = ftrSpace.dims;
 		for (var ftrN = 0; ftrN < dims.length; ftrN++) {
 			var ftrDesc = ftrSpace.getFeatureExtractor(ftrN);
-			var match = ftrDesc.match(/\[[\W\w]*\]$/);	// remove Numeric[ ]
+			var match = ftrDesc.match(/\[[\W\w]*\]$/);	// remove Numeric[ ], Categorical[ ], ...
 
 			if (match != null) {
 				match = match[0];

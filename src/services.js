@@ -24,6 +24,7 @@ var UI_PATH = '/';
 var LOGIN_PATH = '/login';
 var API_PATH = '/api';
 var DATA_PATH = '/data';
+var STREAM_PIPES_PATH = '/streampipes';
 var WS_PATH = '/ws';
 
 var LONG_REQUEST_TIMEOUT = 1000*60*60*24;
@@ -1562,13 +1563,27 @@ function initDataUploadApi() {
 		fileBuffH[sessionId] = fileBuff;
 		
 		var headers = [];
-		qm.fs.readCsvAsync(fileBuff, { offset: 0, limit: 1 },
+		var attrTypes = [];
+		qm.fs.readCsvAsync(fileBuff, { offset: 0, limit: 11 },
 		function onBatch(lines) {
-			if (lines.length != 1) throw new Error('Invalid number of lines returned while reading the header of a CSV!');
+			if (lines.length == 0) throw new Error('No lines in the uploaded CSV!');
 			var lineArr = lines[0];
 			// read the header and create the store
 			for (var i = 0; i < lineArr.length; i++) {
 				headers.push({ name: lineArr[i] });
+				attrTypes.push('numeric');
+			}
+			
+			// try guessing the field types
+			for (var i = 1; i < lines.length; i++) {
+				var lineArr = lines[i];
+				for (var j = 0; j < lineArr.length; j++) {
+					var val = lineArr[j];
+					
+					if (val == '' || isNaN(val)) {
+						attrTypes[j] = 'categorical';
+					}
+				}
 			}
 
 			log.debug('Fields read!');
@@ -1585,27 +1600,9 @@ function initDataUploadApi() {
 				log.trace('Read headers: %s', JSON.stringify(headers));
 			
 			session.headerFields = headers;
-			res.send(headers);
+			res.send({ headers: headers, types: attrTypes });
 			res.end();
 		});
-//		qm.fs.readCsvLines(fileBuff, {
-//			lineLimit: 1,
-//			onLine: function (lineArr) {
-//				// read the header and create the store
-//				for (var i = 0; i < lineArr.length; i++) {
-//					headers.push({ name: lineArr[i] });
-//				}
-//
-//				log.debug('Fields read!');
-//			},
-//			onEnd: function () {
-//				
-//			},
-//			onError: function () {
-//				var e = new Error('Exception while reading headers!');
-//				
-//			}
-//		});
 	});
 	
 	function createModel(req, res) {
@@ -2270,6 +2267,165 @@ function initConfigRestApi() {
 	});
 }
 
+function initStreamPipesApi() {
+	app.get(STREAM_PIPES_PATH + '/models', function (req, res) {
+		try {
+			var username = req.query.user;
+			var operation = req.query.analyticsOperation;
+			
+			log.info('Received StreamPipes request for models for user: %s', username);
+			
+			if (user == null || user == '') {
+				handleBadInput(res, 'User field missing!');
+				return;
+			}
+			
+			if (operation != 'activity' && operation != 'prediction') {
+				handleBadInput(res, 'Field analyticsOperation should be either "activity" or "prediction"!');
+				return;
+			}
+			
+			var activeModels = modelstore.getActiveModels();
+			
+			if (log.debug())
+				log.debug('%d active models in total', activeModels.length);
+			
+			var mids = [];
+			
+			if (operation  == 'activity') {
+				if (log.debug())
+					log.debug('Requested activities ...');
+
+				for (var i = 0; i < activeModels.length; i++) {
+					var model = activeModels[i];
+					
+					if (model.getModel().isActivityDetector()) {
+						mids.push(model.getId());
+					}
+				}
+			}
+			else {	// prediction
+				if (log.debug())
+					log.debug('Requested predictive models ...');
+				for (var i = 0; i < activeModels.length; i++) {
+					var model = activeModels[i];
+					
+					if (model.getModel().isPredictor()) {
+						mids.push(model.getId());
+					}
+					mids.push()
+				}
+			}
+			
+			db.fetchModelsByIds(mids, function (e, models) {
+				if (e != null) {
+					handleServerError(e, req, res);
+					return;
+				}
+				
+				var result = [];
+				
+				for (var i = 0; i < models.length; i++) {
+					var model = models[i];
+					
+					if (model.username != username) continue;
+					
+					result.push({
+						id: model.mid,
+						name: model.name,
+						description: model.description
+					})
+				}
+				
+				if (log.debug())
+					log.debug('Found %d activity models for user %s', result.length, username);
+				
+				res.send(result);
+       			res.end();
+			});
+		} catch (e) {
+			log.error(e, 'Failed to process StreamPipes models request!');
+			handleServerError(e, req, res);
+		}
+	});
+	
+	app.post(STREAM_PIPES_PATH + '/attach', function (req, res) {
+		try {
+			var config = req.body;
+			
+			var pipelineId = config.pipelineId;
+			var modelId = config.modelId;
+			var operation = config.analyticsOperation;
+			var zookeperHost = config.input.zookeperHost;
+			var zookeperPort = config.input.zookeperPort;
+			var inputTopic = config.input.inputTopic;
+			var kafkaHost = config.output.kafkaHost;
+			var kafkaPort = config.output.kafkaPort;
+			var outputTopic = config.output.outputTopic;
+			
+			if (pipelineId == null || pipelineId == '') {
+				handleBadInput(res, 'Pipeline ID required!');
+				return;
+			}
+			if (modelId == null || modelId == '') {
+				handleBadInput(res, 'Model ID required!');
+				// TODO also check if the model ID is valid!
+				return;
+			}
+			if (operation != 'activity' && operation != 'prediction') {
+				handleBadInput(res, 'Field analyticsOperation should be either "activity" or "prediction"!');
+				// TODO check if the model can handle this operation
+				return;
+			}
+			if (zookeperHost == null || zookeperHost == '') {
+				handleBadInput(res, 'Zookeper host missing!');
+				return;
+			}
+			if (zookeperPort == null || zookeperPort == '') {
+				handleBadInput(res, 'Zookeper port missing!');
+				return;
+			}
+			if (inputTopic == null || inputTopic == '') {
+				handleBadInput(res, 'Input topic missing!');
+				return;
+			}
+			if (kafkaHost == null || kafkaHost == '') {
+				handleBadInput(res, 'Kafka host missing!');
+				return;
+			}
+			if (kafkaPort == null || kafkaPort == '') {
+				handleBadInput(res, 'Kafka port missing!');
+				return;
+			}
+			if (outputTopic == null || outputTopic == '') {
+				handleBadInput(res, 'Input topic missing!');
+				return;
+			}
+			
+			// TODO
+			res.status(204);	// no content
+   			res.end();
+		} catch (e) {
+			log.error(e, 'Failed to attach model to StreamPipes!');
+			handleServerError(e, req, res);
+		}
+	});
+	
+	app.delete(STREAM_PIPES_PATH + '/detach', function (req, res) {
+		try {
+			var pipelineId = req.body.pipelineId;
+			var modelId = req.body.modelId;
+			
+			// TODO
+			res.status(204);	// no content
+   			res.end();
+		} catch (e) {
+			log.error(e, 'Failed to detach a model from StreamPipes!');
+			handleServerError(e, req, res);
+		}
+	});
+}
+
 function initBroker() {
 	broker.init();
 	
@@ -2733,7 +2889,8 @@ function initServer(sessionStore, parseCookie) {
 	app.use(API_PATH + '/', bodyParser.urlencoded({ extended: false, limit: '50Mb' }));
 	app.use(API_PATH + '/', bodyParser.json({limit: '50Mb'}));
 	app.use(DATA_PATH + '/', bodyParser.json({limit: '50Mb'}));
-	
+	app.use(STREAM_PIPES_PATH + '/', bodyParser.json({limit: '50Mb'}));
+		
 	// when a session expires, redirect to index
 	app.use('/ui.html', function (req, res, next) {
 		var model = getModel(req.sessionID, req.session);
@@ -2751,6 +2908,7 @@ function initServer(sessionStore, parseCookie) {
 	initStreamStoryRestApi();
 	initConfigRestApi();
 	initDataUploadApi();
+	initStreamPipesApi();
 	
 	var sessionExcludeDirs = ['/login', '/js', '/css', '/img', '/lib', '/popups', '/material', '/landing'];
 	var sessionExcludeFiles = ['index.html', 'login.html', 'register.html', 'resetpassword.html'];

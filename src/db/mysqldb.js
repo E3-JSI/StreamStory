@@ -474,6 +474,20 @@ module.exports = function () {
 				})
 			});
 		},
+		fetchModelsByIds: function (mids, callback) {
+			if (mids == null || mids.length == 0) {
+				callback(undefined, []);
+				return;
+			}
+			
+			connection({
+				callback: callback,
+				nextOp: query({
+					sql: 'SELECT * FROM model WHERE mid IN (?)',
+					params: [mids]
+				})
+			});
+		},
 		fetchActiveModels: function (callback) {
 			connection({
 				callback: callback,
