@@ -14,6 +14,7 @@ var broker = require('./broker.js');
 var config = require('../config.js');
 var fields = require('../fields.js');
 var transform = require('./util/transform.js');
+var fzi = require('./util/fzi_integration.js');
 
 var ModelStore = require('./util/modelstore.js');
 var WebSocketWrapper = require('./util/servicesutil.js');
@@ -24,7 +25,6 @@ var UI_PATH = '/';
 var LOGIN_PATH = '/login';
 var API_PATH = '/api';
 var DATA_PATH = '/data';
-var STREAM_PIPES_PATH = '/streampipes';
 var WS_PATH = '/ws';
 
 var LONG_REQUEST_TIMEOUT = 1000*60*60*24;
@@ -370,8 +370,16 @@ function initStreamStoryHandlers(model, enable) {
 						metadata
 					);
 					
-					broker.send(broker.PREDICTION_PRODUCER_TOPIC, JSON.stringify(brokerMsg));
+					var mid = model.getId();
 					modelStore.sendMsg(model.getId(), JSON.stringify(uiMsg));
+					
+					var brokerMsgStr = JSON.stringify(brokerMsg);
+					broker.send(broker.PREDICTION_PRODUCER_TOPIC, brokerMsgStr);
+					
+					var topics = fzi.getTopics(mid, fzi.PREDICTION_OPERATION);
+					for (var i = 0; i < topics.length; i++) {
+						broker.send(topics.output, brokerMsgStr);
+					}
 				});
 			} catch (e) {
 				log.error(e, 'Failed to send target state prediction!');
@@ -396,6 +404,20 @@ function initStreamStoryHandlers(model, enable) {
 			};
 			
 			modelStore.sendMsg(model.getId(), JSON.stringify(uiMsg));
+			
+			if (config.USE_BROKER) {
+				var brokerMsgStr = JSON.stringify({
+					activityId: activityName,
+					startTime: start,
+					endTime: end,
+					description: '(empty)'	// TODO description
+				});
+				
+				var topics = fzi.getTopics(model.getId(), fzi.ACTIVITY_OPERATION);
+				for (var i = 0; i < topics.length; i++) {
+					broker.send(topics.output, brokerMsgStr);
+				}
+			}
 			
 			if (config.SAVE_ACTIVITIES) {
 				utils.appendLine('activities-' + model.getId() + '.csv',  startTm.getTime() + ',' + endTm.getTime() + ',"' + activityName.replace(/\"/g, '\\"') + '"');
@@ -1570,7 +1592,13 @@ function initDataUploadApi() {
 			var lineArr = lines[0];
 			// read the header and create the store
 			for (var i = 0; i < lineArr.length; i++) {
-				headers.push({ name: lineArr[i] });
+				var name = lineArr[i];
+				
+				// remove double quotes
+				if (name.startsWith('"') && name.endsWith('"'))
+					name = name.substring(1, name.length-1);
+				
+				headers.push({ name: name });
 				attrTypes.push('numeric');
 			}
 			
@@ -2267,165 +2295,6 @@ function initConfigRestApi() {
 	});
 }
 
-function initStreamPipesApi() {
-	app.get(STREAM_PIPES_PATH + '/models', function (req, res) {
-		try {
-			var username = req.query.user;
-			var operation = req.query.analyticsOperation;
-			
-			log.info('Received StreamPipes request for models for user: %s', username);
-			
-			if (user == null || user == '') {
-				handleBadInput(res, 'User field missing!');
-				return;
-			}
-			
-			if (operation != 'activity' && operation != 'prediction') {
-				handleBadInput(res, 'Field analyticsOperation should be either "activity" or "prediction"!');
-				return;
-			}
-			
-			var activeModels = modelstore.getActiveModels();
-			
-			if (log.debug())
-				log.debug('%d active models in total', activeModels.length);
-			
-			var mids = [];
-			
-			if (operation  == 'activity') {
-				if (log.debug())
-					log.debug('Requested activities ...');
-
-				for (var i = 0; i < activeModels.length; i++) {
-					var model = activeModels[i];
-					
-					if (model.getModel().isActivityDetector()) {
-						mids.push(model.getId());
-					}
-				}
-			}
-			else {	// prediction
-				if (log.debug())
-					log.debug('Requested predictive models ...');
-				for (var i = 0; i < activeModels.length; i++) {
-					var model = activeModels[i];
-					
-					if (model.getModel().isPredictor()) {
-						mids.push(model.getId());
-					}
-					mids.push()
-				}
-			}
-			
-			db.fetchModelsByIds(mids, function (e, models) {
-				if (e != null) {
-					handleServerError(e, req, res);
-					return;
-				}
-				
-				var result = [];
-				
-				for (var i = 0; i < models.length; i++) {
-					var model = models[i];
-					
-					if (model.username != username) continue;
-					
-					result.push({
-						id: model.mid,
-						name: model.name,
-						description: model.description
-					})
-				}
-				
-				if (log.debug())
-					log.debug('Found %d activity models for user %s', result.length, username);
-				
-				res.send(result);
-       			res.end();
-			});
-		} catch (e) {
-			log.error(e, 'Failed to process StreamPipes models request!');
-			handleServerError(e, req, res);
-		}
-	});
-	
-	app.post(STREAM_PIPES_PATH + '/attach', function (req, res) {
-		try {
-			var config = req.body;
-			
-			var pipelineId = config.pipelineId;
-			var modelId = config.modelId;
-			var operation = config.analyticsOperation;
-			var zookeperHost = config.input.zookeperHost;
-			var zookeperPort = config.input.zookeperPort;
-			var inputTopic = config.input.inputTopic;
-			var kafkaHost = config.output.kafkaHost;
-			var kafkaPort = config.output.kafkaPort;
-			var outputTopic = config.output.outputTopic;
-			
-			if (pipelineId == null || pipelineId == '') {
-				handleBadInput(res, 'Pipeline ID required!');
-				return;
-			}
-			if (modelId == null || modelId == '') {
-				handleBadInput(res, 'Model ID required!');
-				// TODO also check if the model ID is valid!
-				return;
-			}
-			if (operation != 'activity' && operation != 'prediction') {
-				handleBadInput(res, 'Field analyticsOperation should be either "activity" or "prediction"!');
-				// TODO check if the model can handle this operation
-				return;
-			}
-			if (zookeperHost == null || zookeperHost == '') {
-				handleBadInput(res, 'Zookeper host missing!');
-				return;
-			}
-			if (zookeperPort == null || zookeperPort == '') {
-				handleBadInput(res, 'Zookeper port missing!');
-				return;
-			}
-			if (inputTopic == null || inputTopic == '') {
-				handleBadInput(res, 'Input topic missing!');
-				return;
-			}
-			if (kafkaHost == null || kafkaHost == '') {
-				handleBadInput(res, 'Kafka host missing!');
-				return;
-			}
-			if (kafkaPort == null || kafkaPort == '') {
-				handleBadInput(res, 'Kafka port missing!');
-				return;
-			}
-			if (outputTopic == null || outputTopic == '') {
-				handleBadInput(res, 'Input topic missing!');
-				return;
-			}
-			
-			// TODO
-			res.status(204);	// no content
-   			res.end();
-		} catch (e) {
-			log.error(e, 'Failed to attach model to StreamPipes!');
-			handleServerError(e, req, res);
-		}
-	});
-	
-	app.delete(STREAM_PIPES_PATH + '/detach', function (req, res) {
-		try {
-			var pipelineId = req.body.pipelineId;
-			var modelId = req.body.modelId;
-			
-			// TODO
-			res.status(204);	// no content
-   			res.end();
-		} catch (e) {
-			log.error(e, 'Failed to detach a model from StreamPipes!');
-			handleServerError(e, req, res);
-		}
-	});
-}
-
 function initBroker() {
 	broker.init();
 	
@@ -2889,8 +2758,9 @@ function initServer(sessionStore, parseCookie) {
 	app.use(API_PATH + '/', bodyParser.urlencoded({ extended: false, limit: '50Mb' }));
 	app.use(API_PATH + '/', bodyParser.json({limit: '50Mb'}));
 	app.use(DATA_PATH + '/', bodyParser.json({limit: '50Mb'}));
-	app.use(STREAM_PIPES_PATH + '/', bodyParser.json({limit: '50Mb'}));
-		
+	app.use(fzi.STREAM_PIPES_PATH + '/', bodyParser.json({limit: '50Mb'}));	// TODO
+	app.use(fzi.STREAM_PIPES_PATH + '/', bodyParser.urlencoded({ extended: false, limit: '50Mb' }));	
+	
 	// when a session expires, redirect to index
 	app.use('/ui.html', function (req, res, next) {
 		var model = getModel(req.sessionID, req.session);
@@ -2908,9 +2778,12 @@ function initServer(sessionStore, parseCookie) {
 	initStreamStoryRestApi();
 	initConfigRestApi();
 	initDataUploadApi();
-	initStreamPipesApi();
 	
-	var sessionExcludeDirs = ['/login', '/js', '/css', '/img', '/lib', '/popups', '/material', '/landing'];
+	if (config.USE_BROKER) {
+		fzi.initWs(app);
+	}
+	
+	var sessionExcludeDirs = ['/login', '/js', '/css', '/img', '/lib', '/popups', '/material', '/landing', '/streampipes', '/data'];
 	var sessionExcludeFiles = ['index.html', 'login.html', 'register.html', 'resetpassword.html'];
 	
 	app.use(excludeDirs(sessionExcludeDirs, excludeFiles(sessionExcludeFiles, accessControl)));
@@ -2999,6 +2872,10 @@ exports.init = function (opts) {
 	loadActiveModels();
 	initPipelineHandlers();
 	initBroker();
+	
+	fzi.init({
+		broker: broker
+	});
 	
 	log.info('Done!');
 };

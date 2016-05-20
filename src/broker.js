@@ -28,6 +28,8 @@ var client;
 var producer;
 var consumer;
 
+var fzi = null;
+
 var reconnectId = null;
 
 function reconnect() {
@@ -175,6 +177,8 @@ function initConsumer(callback) {
 		var nReceivedRaw = 0;
 		var nReceivedCep = 0;
 		
+		var nFromDominik = 0;
+		
 		consumer.on('message', function (msg) {
 			try {
 				var topic = msg.topic;
@@ -192,7 +196,14 @@ function initConsumer(callback) {
 						
 						msgCallback({type: 'cep', payload: payload});
 					} else {
-						log.warn('Invalid topic: %s', topic);
+						if (fzi.hasTopic(topic)) {
+							if (++nFromDominik % 100 == 0)
+								log.info("Received %d messages from dominik ...", nFromDominik);
+							// TODO
+						}
+						else {
+							log.warn('Invalid topic: %s, message: %s', topic, msg.value);
+						}
 					}
 				}
 			} catch (e) {
@@ -280,6 +291,91 @@ for (var topic in topics) {
 	exports[topic] = topics[topic];
 }
 
+exports.initInputTopic = function (topic, callback) {
+	if (callback == null) throw new Error('Callback undefined!');
+	
+	log.info('Adding input topic: ' + topic);
+	
+	if (topic in topics) {
+		log.info('Cannot add a system topic: %s', topic);
+		return;
+	}
+	
+	consumer.addTopics([topic], function (e, added) {
+		if (e != null) {
+			callback(e);
+			return;
+		}
+		
+		if (added) {
+			log.info('Input topic added!');
+			callback();
+		} else {
+			callback(new Error('Topic ' + topic + ' not added!'));
+		}
+	});
+}
+
+exports.initOutputTopic = function (topic, callback) {
+	if (callback == null) throw new Error('Callback undefined!');
+	
+	log.info('Adding output topic: ' + topic);
+	
+	if (topic in topics) {
+		log.info('Cannot add a system topic: %s', topic);
+		callback();
+		return;
+	}
+	
+	producer.createTopics([topic], false, function (e, data) {
+		if (e != null) {
+			callback(e);
+		} else {
+			log.info('Producer topics ready: %s!', JSON.stringify(data));
+			callback();
+		}
+	});
+}
+
+exports.removeInputTopic = function (topic, callback) {
+	if (callback == null) throw new Error('Callback not defined!');
+	
+	log.info('Removing input topic: ' + topic);
+	
+	if (topic in topics) {
+		log.info('Cannot remove a system topic: %s', topic);
+		return;
+	}
+	
+	consumer.removeTopics([topic], function (e, removed) {
+		if (e != null) {
+			log.error(e, 'Error while removing topic: %s', topic);
+			callback(e);
+			return;
+		}
+		
+		if (removed) {
+			callback();
+		} else {
+			callback(new Error('Topic not removed!'));
+		}
+	});
+}
+
+exports.removeOutputTopic = function (topic, callback) {
+	if (callback == null) throw new Error('Callback not defined!');
+	
+	log.info('Removing output topic: ' + topic);
+	
+	if (topic in topics) {
+		log.info('Cannot remove a system topic: %s', topic);
+		return;
+	}
+	
+	log.warn('Output topic cannot be removed, API missing!');
+	callback();
+}
+
 exports.init = function () {
 	if (!config.USE_BROKER) return;
 	
@@ -288,4 +384,8 @@ exports.init = function () {
 	initClient(function () {
 		log.info('Broker initialized!');
 	});
+}
+
+exports.setFzi = function(_fzi) {
+	fzi = _fzi;
 }

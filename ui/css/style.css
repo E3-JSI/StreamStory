@@ -175,6 +175,11 @@ html, body {
 	height: 100%;
 }
 
+#div-activity-conf {
+	height: calc(100% - 41px) !important;
+	overflow: auto;
+}
+
 
 
 /*===============================================================
