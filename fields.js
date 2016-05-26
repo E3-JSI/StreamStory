@@ -206,6 +206,206 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 	 			{"name": "value", "type": "float"}
 	 		],
 	 		"window": WINDOW_SIZE
+	 	},
+	 	
+	 	// NEW USE CASE
+	 	{
+	 		"name" : "upper_clamp",
+	 		"fields" : [
+	 			{"name": "time_ms", "type": "uint64"},
+	 			{"name": "time", "type": "datetime"},
+	 			{"name": "value", "type": "float"}
+	 		],
+	 		"window": WINDOW_SIZE
+	 	},
+	 	{
+	 		"name" : "lower_clamp",
+	 		"fields" : [
+	 			{"name": "time_ms", "type": "uint64"},
+	 			{"name": "time", "type": "datetime"},
+	 			{"name": "value", "type": "float"}
+	 		],
+	 		"window": WINDOW_SIZE
+	 	},
+	 	{
+	 		"name" : "torque_wrench_rot",
+	 		"fields" : [
+	 			{"name": "time_ms", "type": "uint64"},
+	 			{"name": "time", "type": "datetime"},
+	 			{"name": "value", "type": "float"}
+	 		],
+	 		"window": WINDOW_SIZE
+	 	},
+	 	{
+	 		"name" : "tr_breakout_dir",
+	 		"fields" : [
+	 			{"name": "time_ms", "type": "uint64"},
+	 			{"name": "time", "type": "datetime"},
+	 			{"name": "value", "type": "float"}
+	 		],
+	 		"window": WINDOW_SIZE
+	 	},
+	 	{
+	 		"name" : "hrn_travel",
+	 		"fields" : [
+	 			{"name": "time_ms", "type": "uint64"},
+	 			{"name": "time", "type": "datetime"},
+	 			{"name": "value", "type": "float"}
+	 		],
+	 		"window": WINDOW_SIZE
+	 	},
+	 	{
+	 		"name" : "travel_forward",
+	 		"fields" : [
+	 			{"name": "time_ms", "type": "uint64"},
+	 			{"name": "time", "type": "datetime"},
+	 			{"name": "value", "type": "float"}
+	 		],
+	 		"window": WINDOW_SIZE
+	 	},
+	 	{
+	 		"name" : "travel_backward",
+	 		"fields" : [
+	 			{"name": "time_ms", "type": "uint64"},
+	 			{"name": "time", "type": "datetime"},
+	 			{"name": "value", "type": "float"}
+	 		],
+	 		"window": WINDOW_SIZE
+	 	},
+	 	{
+	 		"name" : "hrn_travel_valve",
+	 		"fields" : [
+	 			{"name": "time_ms", "type": "uint64"},
+	 			{"name": "time", "type": "datetime"},
+	 			{"name": "value", "type": "float"}
+	 		],
+	 		"window": WINDOW_SIZE
+	 	},
+	 	{
+	 		"name" : "hrn_spinning_out",
+	 		"fields" : [
+	 			{"name": "time_ms", "type": "uint64"},
+	 			{"name": "time", "type": "datetime"},
+	 			{"name": "value", "type": "float"}
+	 		],
+	 		"window": WINDOW_SIZE
+	 	},
+	 	{
+	 		"name" : "hrn_spinner_clamp_closed",
+	 		"fields" : [
+	 			{"name": "time_ms", "type": "uint64"},
+	 			{"name": "time", "type": "datetime"},
+	 			{"name": "value", "type": "float"}
+	 		],
+	 		"window": WINDOW_SIZE
+	 	},
+	 	{
+	 		"name" : "hrn_elevation",
+	 		"fields" : [
+	 			{"name": "time_ms", "type": "uint64"},
+	 			{"name": "time", "type": "datetime"},
+	 			{"name": "value", "type": "float"}
+	 		],
+	 		"window": WINDOW_SIZE
+	 	},
+	 	{
+	 		"name" : "hrn_elevation_up_down",
+	 		"fields" : [
+	 			{"name": "time_ms", "type": "uint64"},
+	 			{"name": "time", "type": "datetime"},
+	 			{"name": "value", "type": "float"}
+	 		],
+	 		"window": WINDOW_SIZE
+	 	},
+	 	{
+	 		"name" : "hrn_elevate_up",
+	 		"fields" : [
+	 			{"name": "time_ms", "type": "uint64"},
+	 			{"name": "time", "type": "datetime"},
+	 			{"name": "value", "type": "float"}
+	 		],
+	 		"window": WINDOW_SIZE
+	 	},
+	 	{
+	 		"name" : "brc_load",
+	 		"fields" : [
+	 			{"name": "time_ms", "type": "uint64"},
+	 			{"name": "time", "type": "datetime"},
+	 			{"name": "value", "type": "float"}
+	 		],
+	 		"window": WINDOW_SIZE
+	 	},
+	 	{
+	 		"name" : "brc_fwd_travel_valve",
+	 		"fields" : [
+	 			{"name": "time_ms", "type": "uint64"},
+	 			{"name": "time", "type": "datetime"},
+	 			{"name": "value", "type": "float"}
+	 		],
+	 		"window": WINDOW_SIZE
+	 	},
+	 	{
+	 		"name" : "brc_travel_pos_fleg",
+	 		"fields" : [
+	 			{"name": "time_ms", "type": "uint64"},
+	 			{"name": "time", "type": "datetime"},
+	 			{"name": "value", "type": "float"}
+	 		],
+	 		"window": WINDOW_SIZE
+	 	},
+	 	{
+	 		"name" : "brc_travel_valve",
+	 		"fields" : [
+	 			{"name": "time_ms", "type": "uint64"},
+	 			{"name": "time", "type": "datetime"},
+	 			{"name": "value", "type": "float"}
+	 		],
+	 		"window": WINDOW_SIZE
+	 	},
+	 	{
+	 		"name" : "brc_travel_pos",
+	 		"fields" : [
+	 			{"name": "time_ms", "type": "uint64"},
+	 			{"name": "time", "type": "datetime"},
+	 			{"name": "value", "type": "float"}
+	 		],
+	 		"window": WINDOW_SIZE
+	 	},
+	 	{
+	 		"name" : "brc_grip_upper_valve",
+	 		"fields" : [
+	 			{"name": "time_ms", "type": "uint64"},
+	 			{"name": "time", "type": "datetime"},
+	 			{"name": "value", "type": "float"}
+	 		],
+	 		"window": WINDOW_SIZE
+	 	},
+	 	{
+	 		"name" : "brc_grip_lower_valve",
+	 		"fields" : [
+	 			{"name": "time_ms", "type": "uint64"},
+	 			{"name": "time", "type": "datetime"},
+	 			{"name": "value", "type": "float"}
+	 		],
+	 		"window": WINDOW_SIZE
+	 	},
+	 	{
+	 		"name" : "brc_lift_valve",
+	 		"fields" : [
+	 			{"name": "time_ms", "type": "uint64"},
+	 			{"name": "time", "type": "datetime"},
+	 			{"name": "value", "type": "float"}
+	 		],
+	 		"window": WINDOW_SIZE
+	 	},
+	 	{
+	 		"name" : "brc_standlift_pos",
+	 		"fields" : [
+	 			{"name": "time_ms", "type": "uint64"},
+	 			{"name": "time", "type": "datetime"},
+	 			{"name": "value", "type": "float"}
+	 		],
+	 		"window": WINDOW_SIZE
 	 	}
 	]
 	
@@ -248,7 +448,30 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 	 		{"name": "slips_closed", "type": "float"},
 	 		{"name": "slips_closing", "type": "float"},
 	 		{"name": "slips_open", "type": "float"},
-	 		{"name": "slips_opening", "type": "float"}
+	 		{"name": "slips_opening", "type": "float"},
+	 		// new use case
+	 		{ "name" : "upper_clamp", "type": "float" },
+		 	{ "name" : "lower_clamp", "type": "float" },
+		 	{ "name" : "torque_wrench_rot", "type": "float" },
+		 	{ "name" : "tr_breakout_dir", "type": "float" },
+		 	{ "name" : "hrn_travel", "type": "float" },
+		 	{ "name" : "travel_forward", "type": "float" },
+		 	{ "name" : "travel_backward", "type": "float" },
+		 	{ "name" : "hrn_travel_valve", "type": "float" },
+		 	{ "name" : "hrn_spinning_out", "type": "float" },
+		 	{ "name" : "hrn_spinner_clamp_closed", "type": "float" },
+		 	{ "name" : "hrn_elevation", "type": "float" },
+		 	{ "name" : "hrn_elevation_up_down", "type": "float" },
+		 	{ "name" : "hrn_elevate_up", "type": "float" },
+		 	{ "name" : "brc_load", "type": "float" },
+		 	{ "name" : "brc_fwd_travel_valve", "type": "float" },
+		 	{ "name" : "brc_travel_pos_fleg", "type": "float" },
+		 	{ "name" : "brc_travel_valve", "type": "float" },
+		 	{ "name" : "brc_travel_pos", "type": "float" },
+		 	{ "name" : "brc_grip_upper_valve", "type": "float" },
+		 	{ "name" : "brc_grip_lower_valve", "type": "float" },
+		 	{ "name" : "brc_lift_valve", "type": "float" },
+		 	{ "name" : "brc_standlift_pos", "type": "float" }
 	 	]
 	};
 	

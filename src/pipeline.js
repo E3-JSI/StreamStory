@@ -540,7 +540,10 @@ function initTriggers() {
 }
 
 exports.insertRaw = function (storeNm, val) {
-	base.store(storeNm).push(val);
+	var store = base.store(storeNm);
+	if (store == null)
+		throw new Error('Could not find store with name: ' + storeNm);
+	store.push(val);
 	
 	// if we initialize all stores with zeros, then the resampler should be
 	// initialized only after at least a single value has gone through the merger

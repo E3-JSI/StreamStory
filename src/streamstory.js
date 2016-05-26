@@ -1,4 +1,4 @@
-var async = require('async')
+var async = require('async');
 
 var streamstory = qm.streamstory;
 

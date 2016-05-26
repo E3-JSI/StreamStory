@@ -69,7 +69,7 @@ else {
 if (config.resampleInterval == null) {
 	log.warn('Resampling interval is not defined in the configuration! Using default ...');
 	if (exports.USE_CASE == exports.USE_CASE_MHWIRTH) {
-		exports.STREAM_STORY_RESAMPLING_INTERVAL = 1000*20;	// 20s
+		exports.STREAM_STORY_RESAMPLING_INTERVAL = 1000*10;	// 10s
 	}
 	else if (exports.USE_CASE == exports.USE_CASE_TRAFFIC) {
 		exports.STREAM_STORY_RESAMPLING_INTERVAL = 1000*60*60;	// 15min

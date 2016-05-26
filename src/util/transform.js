@@ -46,7 +46,30 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 		'1012911': 'slips_closed',
 		'1012922': 'slips_closing',
 		'1012910': 'slips_open',
-		'1012920': 'slips_opening'
+		'1012920': 'slips_opening',
+		// new use-case
+		'1000255': 'upper_clamp',
+		'1000257': 'lower_clamp',
+		'1000304': 'torque_wrench_rot',
+		'1000302': 'tr_breakout_dir',
+		'1000239': 'hrn_travel',
+		'1001545': 'travel_forward',
+		'1001546': 'travel_backward',
+		'1000249': 'hrn_travel_valve',
+		'1000297': 'hrn_spinning_out',
+		'1012934': 'hrn_spinner_clamp_closed',
+		'1000240': 'hrn_elevation',
+		'1000250': 'hrn_elevation_up_down',
+		'1001549': 'hrn_elevate_up',
+		'1012918': 'brc_load',
+		'1000572': 'brc_fwd_travel_valve',
+		'1000555': 'brc_travel_pos_fleg',
+		'1000568': 'brc_travel_valve',
+		'1000553': 'brc_travel_pos',
+		'1000573': 'brc_grip_upper_valve',
+		'1000575': 'brc_grip_lower_valve',
+		'1000570': 'brc_lift_valve',
+		'1000564': 'brc_standlift_pos'
 	};
 	
 	var storeToSensorIdMap = {};
@@ -781,7 +804,7 @@ module.exports.toDerivedEvent = function (timestamp, val) {
 }
 
 module.exports.parseDerivedEvent = function (event) {
-	var timestamp = event.timestamp;
+	var timestamp = event.timestamp != null ? event.timestamp : event.time;
 	var componentId = event.componentId;
 	var eventName = event.eventName;
 	var props = event.eventProperties;

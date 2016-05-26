@@ -6,7 +6,7 @@
 		"initializeZeros": true
 	},
 	"server": {
-		"port": 8383,
+		"port": 8386,
 		"pingInterval": 10000
 	},
 	"log": {
@@ -30,7 +30,7 @@
 		"host": "localhost",
 		"user": "StreamStory",
 		"password": "StreamStory",
-		"database": "StreamStoryDevelopment"
+		"database": "StreamStoryImport"
 	},
 	"integration": {
 		"type": "http",
@@ -39,8 +39,8 @@
 		"producerPort": 8090
 	},
 	"useCase": "mhwirth",
-	"saveStates": true,
-	"saveActivities": true,
+	"saveStates": false,
+	"saveActivities": false,
 	"interpolation": "current",
-	"dataPath": "/mnt/raidM2T/project-data/StreamStory-hella1/"
+	"dataPath": "/mnt/raidM2T/project-data/StreamStory-mhwirth-new-use-case/"
 }

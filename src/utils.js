@@ -172,6 +172,8 @@ module.exports = {
 	},
 	
 	clone: function (obj) {
+		if (obj == undefined) return undefined;
+		if (obj == null) return null;
 		return JSON.parse(JSON.stringify(obj));
 	},
 	

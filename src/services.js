@@ -2305,6 +2305,57 @@ function initBroker() {
 	
 	var lastCepTime = 0;
 	
+	var enrichedFields = [	// FIXME remove this
+	 		{"name": "time", "type": "datetime"},
+	 		{"name": "hook_load", "type": "float"},
+	 		{"name": "hoist_press_A", "type": "float"},
+	 		{"name": "hoist_press_B", "type": "float"},
+	 		{"name": "ibop", "type": "float"},
+	 		// friction
+	 		{"name": "oil_temp_gearbox", "type": "float"},
+	 		{"name": "oil_temp_swivel", "type": "float"},
+	 		{"name": "pressure_gearbox", "type": "float"},
+	 		{"name": "rpm", "type": "float"},
+	 		{"name": "temp_ambient", "type": "float"},
+	 		{"name": "torque", "type": "float"},
+	 		{"name": "wob", "type": "float"},
+	 		// setpoint
+	 		{"name": "mru_pos", "type": "float"},
+	 		{"name": "mru_vel", "type": "float"},
+	 		{"name": "ram_pos_measured", "type": "float"},
+	 		{"name": "ram_pos_setpoint", "type": "float"},
+	 		{"name": "ram_vel_measured", "type": "float"},
+	 		{"name": "ram_vel_setpoint", "type": "float"},
+	 		// activity recognition
+	 		{"name": "slips_closed", "type": "float"},
+	 		{"name": "slips_closing", "type": "float"},
+	 		{"name": "slips_open", "type": "float"},
+	 		{"name": "slips_opening", "type": "float"},
+	 		// new use case
+	 		{ "name" : "upper_clamp", "type": "float" },
+		 	{ "name" : "lower_clamp", "type": "float" },
+		 	{ "name" : "torque_wrench_rot", "type": "float" },
+		 	{ "name" : "tr_breakout_dir", "type": "float" },
+		 	{ "name" : "hrn_travel", "type": "float" },
+		 	{ "name" : "travel_forward", "type": "float" },
+		 	{ "name" : "travel_backward", "type": "float" },
+		 	{ "name" : "hrn_travel_valve", "type": "float" },
+		 	{ "name" : "hrn_spinning_out", "type": "float" },
+		 	{ "name" : "hrn_spinner_clamp_closed", "type": "float" },
+		 	{ "name" : "hrn_elevation", "type": "float" },
+		 	{ "name" : "hrn_elevation_up_down", "type": "float" },
+		 	{ "name" : "hrn_elevate_up", "type": "float" },
+		 	{ "name" : "brc_load", "type": "float" },
+		 	{ "name" : "brc_fwd_travel_valve", "type": "float" },
+		 	{ "name" : "brc_travel_pos_fleg", "type": "float" },
+		 	{ "name" : "brc_travel_valve", "type": "float" },
+		 	{ "name" : "brc_travel_pos", "type": "float" },
+		 	{ "name" : "brc_grip_upper_valve", "type": "float" },
+		 	{ "name" : "brc_grip_lower_valve", "type": "float" },
+		 	{ "name" : "brc_lift_valve", "type": "float" },
+		 	{ "name" : "brc_standlift_pos", "type": "float" }
+	 	];
+	
 	broker.onMessage(function (msg) {
 		try {
 			if (msg.type == 'raw') {
@@ -2322,7 +2373,29 @@ function initBroker() {
 //				//========================================================
 				
 				addRawMeasurement(payload);
-			} else if (msg.type == 'cep') {
+			} 
+			else if (msg.type == 'enriched') {
+				var val = msg.payload;
+				
+				if (val.timestamp == null) {
+					val.timestamp = val.time;
+					delete val.time;
+				}
+				
+				val.time = utils.dateToQmDate(new Date(val.timestamp));
+				delete val.timestamp;
+				
+				for (var i = 0; i < enrichedFields.length; i++) {	// FIXME remove this
+					if (!(enrichedFields[i].name in val))
+						val[enrichedFields[i].name] = 0;
+				}
+								
+				if (log.trace())
+					log.trace('Got enriched event ...');
+					
+				base.store(fields.OA_IN_STORE).push(val);
+			}
+			else if (msg.type == 'cep') {
 				if (log.trace())
 					log.trace('Received CEP message: %s', JSON.stringify(msg));
 				

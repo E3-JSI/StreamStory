@@ -189,7 +189,7 @@ function initConsumer(callback) {
 						if (nReceivedRaw++ % config.BROKER_PRINT_INTERVAL == 0 && log.debug())
 							log.debug('Received %d raw data messages ...', nReceivedRaw);
 						
-						msgCallback({type: 'raw', payload: payload})
+						msgCallback({type: 'raw', payload: payload});
 					} else if (topic == topics.CEP_DATA_CONSUMER_TOPIC) {
 						if (nReceivedCep++ % config.BROKER_PRINT_INTERVAL == 0 && log.debug())
 							log.debug('Received %d CEP messages %s ...', nReceivedCep, JSON.stringify(payload));
@@ -199,6 +199,7 @@ function initConsumer(callback) {
 						if (fzi.hasTopic(topic)) {
 							if (++nFromDominik % 100 == 0)
 								log.info("Received %d messages from dominik ...", nFromDominik);
+							msgCallback({type: 'enriched', payload: payload});
 							// TODO
 						}
 						else {

@@ -1,3 +1,5 @@
+var async = require('async');
+
 var ACTIVITY_OPERATION = 'ActivityDetection';
 var PREDICTION_OPERATION = 'Prediction';
 
@@ -73,16 +75,36 @@ var integrator = (function () {
 		topicCountH[input]--;
 		topicCountH[output]--;
 		
-		if (topicCountH[input] == 0) {
-			log.info('Removing topic: %s', input);
-			broker.removeInputTopic(input, callback);
-			delete topicCountH[input];
-		}
-		if (topicCountH[output] == 0) {
-			log.info('Removing topic: %s', output);
-			broker.removeOutputTopic(output, callback);
-			delete topicCountH[output];
-		}
+		async.parallel([
+		    function (cb) {
+		    	if (topicCountH[input] == 0) {
+			    	log.info('Removing topic: %s', input);
+			    	delete topicCountH[input];
+			    	broker.removeInputTopic(input, cb);
+		    	}
+		    	else {
+		    		cb();
+		    	}
+		    },
+		    function (cb) {
+		    	if (topicCountH[output] == 0) {
+		    		log.info('Removing topic: %s', output);
+		    		delete topicCountH[output];
+					broker.removeOutputTopic(output, callback);
+		    	}
+		    	else {
+		    		cb();
+		    	}
+		    }
+		], function (e) {
+			if (e != null) {
+				log.error(e, 'Exception while removing topics!');
+				callback(e);
+				return;
+			}
+			
+			callback();
+		});
 	}
 	
 	function initTopics(topics, callback) {
@@ -92,24 +114,38 @@ var integrator = (function () {
 		if (!(input in topicCountH)) { topicCountH[input] = 0; }
 		if (!(output in topicCountH)) { topicCountH[output] = 0; }
 		
-		if (topicCountH[input] == 0) {
-			log.info('Initializing topic: %s', input);
-			broker.initInputTopic(input, callback);
-		}
-		else {
-			log.debug('Topic %s already exists!', input);
+		//=============================================
+		// TODO is this safe???
+		if (topicCountH[input] > 0) {
+			log.warn('Topic %s already exists!', input);
 		}
 		
-		if (topicCountH[output] == 0) {
-			log.info('Initializing topic: %s', output);
-			broker.initOutputTopic(output, callback);
-		}
-		else {
-			log.debug('Topic %s already exists!', output);
+		if (topicCountH[output] > 0) {
+			log.warn('Topic %s already exists!', output);
 		}
 		
-		topicCountH[input]++;
-		topicCountH[output]++;
+		async.parallel([
+		    function (cb) {
+		    	broker.initOutputTopic(output, cb);
+		    },
+		    function (cb) {
+		    	broker.initInputTopic(input, cb);
+		    }
+		],
+		function (e) {
+			if (e != null) {
+				log.error(e, 'Exception while initializing topics!');
+				callback(e);
+				return;
+			}
+			
+			topicCountH[input]++;
+			topicCountH[output]++;
+			
+			callback();
+		});
+		
+		//=============================================
 	}
 	
 	var that = {
@@ -153,18 +189,26 @@ var integrator = (function () {
 			var pipelines = operations[operation];
 			var topics = pipelines[pipelineId];
 			
-			removeTopics(topics, callback);
-			
-			delete pipelines[pipelineId];
-			if (Object.keys(pipelines).length == 0) {
-				log.info('No pipeline configurations left, deleting ...');
-				delete operations[operation];
-				
-				if (Object.keys(operations).length == 0) {
-					log.info('No operation configuration left, deleting ...');
-					delete modelConfigH[mid];
+			removeTopics(topics, function (e) {
+				if (e != null) {
+					log.error(e, 'Exception while detaching pipeline: %s', pipelineId);
+					callback(e);
+					return;
 				}
-			}
+				
+				delete pipelines[pipelineId];
+				if (Object.keys(pipelines).length == 0) {
+					log.info('No pipeline configurations left, deleting ...');
+					delete operations[operation];
+					
+					if (Object.keys(operations).length == 0) {
+						log.info('No operation configuration left, deleting ...');
+						delete modelConfigH[mid];
+					}
+				}
+				
+				callback();
+			});
 		},
 		
 		attachPipeline: function (opts, callback) {
@@ -179,11 +223,15 @@ var integrator = (function () {
 			if (!(mid in modelConfigH)) {
 				modelConfigH[mid] = {}
 			}
-			if (!(operation in modelConfigH[mid])) {
-				modelConfigH[mid][operation] = {}
+			
+			var operations = modelConfigH[mid];
+			
+			if (!(operation in operations)) {
+				operations[operation] = {}
 			}
 			
-			var pipelines = modelConfigH[mid][operation];
+			
+			var pipelines = operations[operation];
 			
 			if (pipelineId in pipelines) {
 				that.detachPipeline(mid, pipelineId, function (e) {
@@ -196,14 +244,54 @@ var integrator = (function () {
 					// initialize the topics
 					pipelines[pipelineId] = opts.topics;
 					
-					initTopics(opts.topics, callback);
+					initTopics(opts.topics, function (e) {
+						if (e != null) {
+							log.error(e, 'Exception while initializing topic for pipeline: %s', pipelineId);
+							
+							delete pipelines[pipelineId];
+							if (Object.keys(pipelines).length == 0) {
+								log.info('No pipeline configurations left, deleting ...');
+								delete operations[operation];
+								
+								if (Object.keys(operations).length == 0) {
+									log.info('No operation configuration left, deleting ...');
+									delete modelConfigH[mid];
+								}
+							}
+							
+							callback(e);
+							return;
+						}
+						
+						callback();
+					});
 				});
 			}
 			else {
 				// initialize the topics
 				pipelines[pipelineId] = opts.topics;
 				
-				initTopics(opts.topics, callback);
+				initTopics(opts.topics, function (e) {
+					if (e != null) {
+						log.error(e, 'Exception while initializing topic for pipeline: %s', pipelineId);
+						
+						delete pipelines[pipelineId];
+						if (Object.keys(pipelines).length == 0) {
+							log.info('No pipeline configurations left, deleting ...');
+							delete operations[operation];
+							
+							if (Object.keys(operations).length == 0) {
+								log.info('No operation configuration left, deleting ...');
+								delete modelConfigH[mid];
+							}
+						}
+						
+						callback(e);
+						return;
+					}
+					
+					callback();
+				});
 			}
 		}
 	};
