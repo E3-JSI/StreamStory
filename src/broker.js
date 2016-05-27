@@ -196,15 +196,15 @@ function initConsumer(callback) {
 						
 						msgCallback({type: 'cep', payload: payload});
 					} else {
-						if (fzi.hasTopic(topic)) {
-							if (++nFromDominik % 100 == 0)
-								log.info("Received %d messages from dominik ...", nFromDominik);
-							msgCallback({type: 'enriched', payload: payload});
-							// TODO
-						}
-						else {
-							log.warn('Invalid topic: %s, message: %s', topic, msg.value);
-						}
+//						if (fzi.hasTopic(topic)) {
+//							if (++nFromDominik % 100 == 0)
+//								log.info("Received %d messages from dominik ...", nFromDominik);
+//							msgCallback({type: 'enriched', payload: payload});
+//							// TODO
+//						}
+//						else {
+//							log.warn('Invalid topic: %s, message: %s', topic, msg.value);
+//						}
 					}
 				}
 			} catch (e) {

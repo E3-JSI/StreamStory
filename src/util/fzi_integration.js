@@ -71,12 +71,10 @@ var integrator = (function () {
 		
 		if (topicCountH[input] == 0) throw new Error('Count for topic ' + input + ' is 0! Cannot remove!');
 		if (topicCountH[output] == 0) throw new Error('Count for topic ' + output + ' is 0! Cannot remove!');
-	
-		topicCountH[input]--;
-		topicCountH[output]--;
 		
 		async.parallel([
 		    function (cb) {
+		    	topicCountH[input]--;
 		    	if (topicCountH[input] == 0) {
 			    	log.info('Removing topic: %s', input);
 			    	delete topicCountH[input];
@@ -87,6 +85,7 @@ var integrator = (function () {
 		    	}
 		    },
 		    function (cb) {
+		    	topicCountH[output]--;
 		    	if (topicCountH[output] == 0) {
 		    		log.info('Removing topic: %s', output);
 		    		delete topicCountH[output];
@@ -158,7 +157,7 @@ var integrator = (function () {
 			
 			var result = [];
 			for (var pipelineId in pipelines) {
-				result.push(pipelines[pipelineId].topics);
+				result.push(pipelines[pipelineId]);
 			}
 			
 			return result;
@@ -229,7 +228,6 @@ var integrator = (function () {
 			if (!(operation in operations)) {
 				operations[operation] = {}
 			}
-			
 			
 			var pipelines = operations[operation];
 			

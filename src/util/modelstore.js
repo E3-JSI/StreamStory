@@ -498,7 +498,9 @@ module.exports = exports = function (opts) {
 						for (var i = 0; i < headers.length; i++) {
 							var attr = headers[i].name;
 							var type = headerTypes[i];
-														
+							
+							if (attr == '') continue;
+							
 							if (type == 'time') {
 								var date = new Date(parseFloat(lineArr[i]));
 								var qmDate = utils.dateToQmDate(date);

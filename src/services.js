@@ -415,7 +415,9 @@ function initStreamStoryHandlers(model, enable) {
 				
 				var topics = fzi.getTopics(model.getId(), fzi.ACTIVITY_OPERATION);
 				for (var i = 0; i < topics.length; i++) {
-					broker.send(topics.output, brokerMsgStr);
+					var topic = topics[i].output;
+					log.debug('Sending activity to topic: %s', topic);
+					broker.send(topic, brokerMsgStr);
 				}
 			}
 			
