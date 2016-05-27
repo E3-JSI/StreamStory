@@ -34,10 +34,12 @@ function changeControlVal(stateId, ftrIdx, val) {
 		
 		function addToResult(i, li) {
 			var name = $(li).text().substring(1);
-			var id = $(li).find('input').val();
+			var id = $(li).find('input[type="checkbox"]').val();
+			var type = $(li).find('input[type="hidden"]').val();
 			
 			result.push({
 				name: name,
+				type: type,
 				id: parseInt(id)
 			});
 		}
@@ -1656,6 +1658,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 				
 				$('#div-trans-ftrs').append(ui.createThumbnail({
 					name: ftrNm,
+					type: ftr.type,
 					value: null,
 					valueColor: null,
 					histogramContainer: containerId

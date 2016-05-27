@@ -378,7 +378,9 @@ function initStreamStoryHandlers(model, enable) {
 					
 					var topics = fzi.getTopics(mid, fzi.PREDICTION_OPERATION);
 					for (var i = 0; i < topics.length; i++) {
-						broker.send(topics.output, brokerMsgStr);
+						var topic = topics[i].output;
+						log.info('Sending a prediction message to topic: %s', topic);
+						broker.send(topic, brokerMsgStr);
 					}
 				});
 			} catch (e) {
