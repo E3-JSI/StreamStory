@@ -439,6 +439,8 @@ function pingProgress(isRealTime) {
 		$('#progress-file-upload').css('width', '0%');
 		$('#progress-file-upload').html('0%');
 		
+		$('#chk-include-time-ftrv').prop('checked', true);
+		
 		console.log('Uploading file:');
 		console.log('Enctype: ' + enctype);
 		console.log('Method: ' + method);
@@ -647,6 +649,7 @@ function pingProgress(isRealTime) {
 	
 		var attrs = $('#select-attrs').val();
 		var timeAttr = $('#radio-time').find('input:checked').val();
+		var useTimeFtrV = $('#chk-include-time-ftrv').is(':checked');
 		var controlAttrs = $('#select-controls').val();
 		var ignoredAttrs = $('#select-ignored').val();
 		var isRealTime = $('#check-realtime').is(':checked');
@@ -713,12 +716,14 @@ function pingProgress(isRealTime) {
 		if (clustAlg == 'kmeans') {
 			data.clust = {
 				type: clustAlg,
-				k: parseInt($('#input-kmeans-k').val())
+				k: parseInt($('#input-kmeans-k').val()),
+				includeTimeFeatures: useTimeFtrV,
 			}
 		} else if (clustAlg == 'dpmeans') {
 			data.clust = {
 				type: clustAlg,
-				lambda: parseFloat($('#input-dpmeans-lambda').val())
+				lambda: parseFloat($('#input-dpmeans-lambda').val()),
+				includeTimeFeatures: useTimeFtrV,
 			}
 			
 			var minStates = $('#input-dpmeans-minstates').val();

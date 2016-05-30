@@ -443,6 +443,7 @@ module.exports = exports = function (opts) {
 				var timeUnit = opts.timeUnit;
 				var headers = opts.headers;
 				var timeAttr = opts.timeAttr;
+				var useTimeFtrV = opts.useTimeFtrV;
 				var hierarchyType = opts.hierarchyType;
 				var attrs = opts.attrs;
 				var controlAttrs = opts.controlAttrs;

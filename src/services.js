@@ -1647,6 +1647,7 @@ function initDataUploadApi() {
 			var username = session.username;
 			
 			var timeAttr = req.body.time;
+			var useTimeFtrV = req.body.useTimeFtrV;
 			var modelName = req.body.name;
 			var description = req.body.description;
 			var timeUnit = req.body.timeUnit;
