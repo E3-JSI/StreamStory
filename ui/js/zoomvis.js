@@ -1292,9 +1292,11 @@ var zoomVis = function (opts) {
 	}
 	
 	function fetchTargetFtr(ftrIdx) {
+		var height = hierarchy[currentLevel].height;
+		
 		$.ajax('api/targetFeature', {
 			dataType: 'json',
-			data: { height: that.getCurrentHeight(), ftr: ftrIdx },
+			data: { height: height, ftr: ftrIdx },
 			success: function (data) {
 				var stateVals = {};
 				
@@ -1519,6 +1521,9 @@ var zoomVis = function (opts) {
 				var targetId = edge.target().id();
 				
 				callbacks.edgeSelected(parseInt(sourceId), parseInt(targetId));
+				
+				var qtipApi = cy.nodes().qtip('api');
+				qtipApi.togglt(false);
 			});
 			
 			(function () {	// fix for the non-working qtip delay
