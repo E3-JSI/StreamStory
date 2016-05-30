@@ -1427,20 +1427,9 @@ var zoomVis = function (opts) {
 		ready: function() {
 			fetchUI();
 			
-			var tooltipElement = cy.collection();
-			var tooltipShown = false;
-			
-			function forceCloseTooltip() {
-				console.log('Forcefully closing tooltip ...');
-				
-				tooltipElement.qtip('hide');//trigger('hovercancel');
-			}
-			
 			cy.on('click', 'node', function (event) {	// left click
 				var node = event.cyTarget;
 				setSelectedState(node);
-				
-				forceCloseTooltip();
 			});
 			
 			cy.on('click', function (event) {	// left click
@@ -1449,8 +1438,6 @@ var zoomVis = function (opts) {
 				if (target === cy) {
 					setSelectedState(null);
 				}
-				
-				forceCloseTooltip();
 			});
 			
 			// initialize the context menu
@@ -1494,9 +1481,7 @@ var zoomVis = function (opts) {
 					var id = parseInt(cyNode.id());
 					var pos = cyNode.position();
 					
-					startPos = {x: pos.x, y: pos.y};
-					
-					forceCloseTooltip();
+					startPos = { x: pos.x, y: pos.y };
 				});
 				
 				// fired when a node is moved
@@ -1526,8 +1511,6 @@ var zoomVis = function (opts) {
 							}
 						}
 					}
-					
-					forceCloseTooltip();
 				});
 			})();
 			
@@ -1537,11 +1520,11 @@ var zoomVis = function (opts) {
 				var targetId = edge.target().id();
 				
 				callbacks.edgeSelected(parseInt(sourceId), parseInt(targetId));
-				
-				forceCloseTooltip();
 			});
 			
-			(function () {	// fix for the non-working qtip delay
+			(function () {	// fixes the non-working qtip delay
+				var tooltipElement = cy.collection();
+				var tooltipShown = false;
 				var hoverTimeout;
 				
 				function cancelHover() {
