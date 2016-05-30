@@ -1427,16 +1427,30 @@ var zoomVis = function (opts) {
 		ready: function() {
 			fetchUI();
 			
+			var tooltipElement = cy.collection();
+			var tooltipShown = false;
+			
+			function forceCloseTooltip() {
+				console.log('Forcefully closing tooltip ...');
+				
+				tooltipElement.qtip('hide');//trigger('hovercancel');
+			}
+			
 			cy.on('click', 'node', function (event) {	// left click
 				var node = event.cyTarget;
 				setSelectedState(node);
+				
+				forceCloseTooltip();
 			});
 			
 			cy.on('click', function (event) {	// left click
 				var target = event.cyTarget;
+				
 				if (target === cy) {
 					setSelectedState(null);
 				}
+				
+				forceCloseTooltip();
 			});
 			
 			// initialize the context menu
@@ -1481,6 +1495,8 @@ var zoomVis = function (opts) {
 					var pos = cyNode.position();
 					
 					startPos = {x: pos.x, y: pos.y};
+					
+					forceCloseTooltip();
 				});
 				
 				// fired when a node is moved
@@ -1511,7 +1527,7 @@ var zoomVis = function (opts) {
 						}
 					}
 					
-					console.log('node released ' + id + ', pos: ' + JSON.stringify(pos) + ', serverPos: ' + JSON.stringify(serverPos));
+					forceCloseTooltip();
 				});
 			})();
 			
@@ -1522,34 +1538,43 @@ var zoomVis = function (opts) {
 				
 				callbacks.edgeSelected(parseInt(sourceId), parseInt(targetId));
 				
-				var qtipApi = cy.nodes().qtip('api');
-				qtipApi.togglt(false);
+				forceCloseTooltip();
 			});
 			
 			(function () {	// fix for the non-working qtip delay
 				var hoverTimeout;
-				var element = cy.collection();
-				var isShown = false;
 				
 				function cancelHover() {
+					console.log('Closing tooltip for ID: ' + tooltipElement.id() + ' ...');
 					clearTimeout(hoverTimeout);
-					element.trigger('hovercancel');
-					isShown = false;
+					tooltipElement.trigger('hovercancel');
+					tooltipShown = false;
 				}
 				
 				cy.on('mousemove', 'edge,node', function (event) {
-					element = this;
-					if (!isShown) {
-						if (element.group() == 'edges') {
+					if (tooltipShown) {
+						cancelHover();
+					}
+					
+					tooltipElement = this;
+					
+					console.log('Event fired for ID: ' + tooltipElement.id() + ' ...');
+					
+					if (!tooltipShown) {
+						console.log('Calling timeout for ID: ' + tooltipElement.id() + ' ...');
+						
+						if (tooltipElement.group() == 'edges') {
 							var offset = $(cy.container()).offset();
-							var api = element.qtip('api');
+							var api = tooltipElement.qtip('api');
 							api.set('position.adjust.x', event.cyRenderedPosition.x + offset.left);
 							api.set('position.adjust.y', event.cyRenderedPosition.y + offset.top);
 						}
 						clearTimeout(hoverTimeout); 
 						hoverTimeout = setTimeout(function () {
-							element.trigger('hover');
-							isShown = true;
+							console.log('Timeout called for ID: ' + tooltipElement.id() + ' ...');
+							
+							tooltipShown = true;
+							tooltipElement.trigger('hover');
 						}, 1000);
 					} else {
 						cancelHover();
