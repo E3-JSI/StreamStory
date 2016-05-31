@@ -1127,8 +1127,10 @@ function changeControlVal(stateId, ftrIdx, val) {
 			}
 			
 			var width = dim*minBinW;
-			if (width < wrapper.width() - 5) {
-				$('#div-parallel').css('width', (wrapper.width() - 5) + 'px');
+			var fullWidthPadding = 5;
+			
+			if (width < wrapper.width() - fullWidthPadding) {
+				$('#div-parallel').css('width', (wrapper.width() - fullWidthPadding) + 'px');
 			} else {
 				$('#div-parallel').css('width', width + 'px');
 			}
