@@ -287,8 +287,12 @@ html, body {
 	position: static;
 }
 
-#div-parallel-container, #div-parallel {
+#div-parallel-container {
 	height: 100%;
+}
+
+#div-parallel {
+	height: calc(100% - 20px);
 }
 
 #div-parallel-container {

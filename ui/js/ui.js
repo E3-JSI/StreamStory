@@ -1065,7 +1065,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 				alpha: .6
 			};
 			
-			var minBinW = 60;
+			var minBinW = 70;
 			
 			var backgroundData = [];
 			var foregroundData = [];
@@ -1081,7 +1081,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 					
 					switch (ftr.type) {
 					case 'numeric': {
-						row[ftr.name] = centroid[ftrN];
+						row[ftr.name] = toUiPrecision(centroid[ftrN]);
 						if (!dimInitialized) dim++;
 						break;
 					}
@@ -1109,7 +1109,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 					
 					switch (ftr.type) {
 					case 'numeric': {
-						row[ftr.name] = centroid[ftrN];
+						row[ftr.name] = toUiPrecision(centroid[ftrN]);
 						break;
 					}
 					case 'categorical': {
@@ -1127,8 +1127,8 @@ function changeControlVal(stateId, ftrIdx, val) {
 			}
 			
 			var width = dim*minBinW;
-			if (width < wrapper.width()) {
-				$('#div-parallel').css('width', wrapper.width() + 'px');
+			if (width < wrapper.width() - 5) {
+				$('#div-parallel').css('width', (wrapper.width() - 5) + 'px');
 			} else {
 				$('#div-parallel').css('width', width + 'px');
 			}
