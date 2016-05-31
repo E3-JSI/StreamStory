@@ -84,7 +84,7 @@ var zoomVis = function (opts) {
 	
 	nodeQtipOpts.content = function (event, api) { 
 		var data = this.data();
-		var name = data.name;
+		var name = data.style.content;//name;
 		var label = data.style.label;
 		
 		var tooltip = $('<div />');
