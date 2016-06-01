@@ -293,28 +293,30 @@ for (var topic in topics) {
 }
 
 exports.initInputTopic = function (topic, callback) {
-	if (callback == null) throw new Error('Callback undefined!');
+//	if (callback == null) throw new Error('Callback undefined!');
+//	
+//	log.info('Adding input topic: ' + topic);
+//	
+//	if (topic in topics) {
+//		log.info('Cannot add a system topic: %s', topic);
+//		return;
+//	}
+//	
+//	consumer.addTopics([topic], function (e, added) {
+//		if (e != null) {
+//			callback(e);
+//			return;
+//		}
+//		
+//		if (added) {
+//			log.info('Input topic added!');
+//			callback();
+//		} else {
+//			callback(new Error('Topic ' + topic + ' not added!'));
+//		}
+//	});
 	
-	log.info('Adding input topic: ' + topic);
-	
-	if (topic in topics) {
-		log.info('Cannot add a system topic: %s', topic);
-		return;
-	}
-	
-	consumer.addTopics([topic], function (e, added) {
-		if (e != null) {
-			callback(e);
-			return;
-		}
-		
-		if (added) {
-			log.info('Input topic added!');
-			callback();
-		} else {
-			callback(new Error('Topic ' + topic + ' not added!'));
-		}
-	});
+	callback();
 }
 
 exports.initOutputTopic = function (topic, callback) {
