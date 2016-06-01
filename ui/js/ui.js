@@ -213,9 +213,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 								thumbs.first().hide({
 									duration: 100,
 									easing: 'linear',
-									start: function () {
-										console.log('started');
-									},
+									start: function () {},
 									complete: function () {
 										$(this).remove();
 										thumbs.last().find('.thumbnail').removeClass('values-current');

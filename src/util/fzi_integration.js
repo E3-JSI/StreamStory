@@ -313,12 +313,12 @@ exports.hasTopic = function (topic) {
 exports.initWs = function (app) {
 	app.get(STREAM_PIPES_PATH + '/models', function (req, res) {
 		try {
-			var username = req.query.user;
+			var username = req.query.username;
 			var operation = req.query.analyticsOperation;
 			
 			log.info('Received StreamPipes request for models for user: %s', username);
 			
-			if (user == null || user == '') {
+			if (username == null || username == '') {
 				handleBadInput(res, 'User field missing!');
 				return;
 			}
