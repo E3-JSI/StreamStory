@@ -209,6 +209,7 @@ function calcFriction() {
 	
 //	const Q = 600000; //gearbox
 	var Q = 1;
+	var outputQ = 600000;
 	
 	var MEAN_SWIVEL = 0;
 	var MEAN_SWIVEL_EXP = 0;
@@ -344,7 +345,7 @@ function calcFriction() {
 		log.info('Starting calculation of the friction coefficient, time=%d ...', startTime);
 	}
 	
-	function checkFrictionCoeffs(val) {
+	function checkFrictionCoeffs(val, save) {
 		try {
 			var firstVal = coeffBuff[0];
 			var lastVal = coeffBuff[coeffBuff.length-1];
@@ -363,6 +364,21 @@ function calcFriction() {
 			
 			checkOutlierSwivel(coeffSwivel, avgTempSwivel, intervalEnd);
 			checkOutlierGearbox(coeffGearbox, avgTempGearbox, intervalEnd);
+			
+			if (save && config.SAVE_FRICTION) {
+				utils.appendLine('friction-coeff.txt', JSON.stringify({
+					start: intervalStart,
+					end: intervalEnd,
+					gearbox: {
+						value: coeffGearbox * outputQ,
+						meanTemperature: avgTempGearbox
+					}
+					swivel: {
+						value: coeffSwivel * outputQ,
+						meanTemperature: avgTempSwivel
+					}
+				}));
+			}
 		} catch (e) {
 			log.error(e, 'Failed to check friction coefficients!');
 		}
@@ -373,7 +389,7 @@ function calcFriction() {
 			if (log.info())
 				log.info('Finishing calculation of the friction coefficient ...');
 			
-			checkFrictionCoeffs(val);
+			checkFrictionCoeffs(val, true);
 		} else {
 			log.info('Drilling didn not take long enough, the coefficient will be ignored!');
 		}
@@ -463,7 +479,8 @@ function calcFriction() {
 					// evaluate the friction coefficients every 10 minutes of drilling
 					if (prevEvalTime == 0) {
 						prevEvalTime = time;
-					} else if (time - prevEvalTime > 1000*60*15) {	// evaluate the coefficient every 10 minutes
+					}
+					else if (time - prevEvalTime > 1000*60*15) {	// evaluate the coefficient every 10 minutes
 						if (log.debug())
 							log.debug('Periodic coefficient check ...');
 						

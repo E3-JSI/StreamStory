@@ -41,6 +41,7 @@
 	"useCase": "mhwirth",
 	"saveStates": true,
 	"saveActivities": true,
+	"saveFriction": true,
 	"interpolation": "current",
 	"dataPath": "/mnt/raidM2T/project-data/StreamStory-meeting/"
 }

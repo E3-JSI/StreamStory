@@ -12,3 +12,4 @@ node-modules.tar
 /predictions-*
 /activities-*
 /states.*
+/friction-coeff.txt

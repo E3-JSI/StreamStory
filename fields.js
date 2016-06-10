@@ -738,6 +738,11 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 							
 							val = (hl - mean) / mean;
 							
+							if (Math.abs(val) < 10) {
+								val = 0;
+								return;
+							}
+							
 							if (isNaN(val)) { val = 0; }
 							else if (val > MAX_VAL) { val = MAX_VAL; }
 							else if (val < -MAX_VAL) { val = -MAX_VAL; }

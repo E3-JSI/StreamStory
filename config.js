@@ -93,6 +93,7 @@ exports.INTERPOLATION = config.interpolation;
 //================================================================
 exports.SAVE_STATES = false;
 exports.SAVE_ACTIVITIES = false;
+exports.SAVE_FRICTION = false;
 
 if (config.saveStates == true) {
 	log.info('Saving states ...');
@@ -102,6 +103,11 @@ if (config.saveStates == true) {
 if (config.saveActivities == true) {
 	log.info('Saving activities ...');
 	exports.SAVE_ACTIVITIES = true;
+}
+
+if (config.saveFriction == true) {
+	log.info('Saving friction coefficients ...');
+	exports.SAVE_FRICTION = true;
 }
 
 //================================================================
