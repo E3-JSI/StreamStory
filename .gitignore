@@ -7,3 +7,8 @@
 # node modules
 node_modules/
 node-modules.tar
+
+# output files
+/predictions-*
+/activities-*
+/states.*
