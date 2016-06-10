@@ -372,7 +372,7 @@ function calcFriction() {
 					gearbox: {
 						value: coeffGearbox * outputQ,
 						meanTemperature: avgTempGearbox
-					}
+					},
 					swivel: {
 						value: coeffSwivel * outputQ,
 						meanTemperature: avgTempSwivel
