@@ -68,23 +68,25 @@ function initStreamAggregates() {
 	})();
 	
 	// insert zeros now, so they won't get resampled
-	var startTm = 0;
-	for (var i = 0; i < zeroFlds.length; i++) {
-		var name = zeroFlds[i];
-		
-		log.info('Initializing default value for store %s ...', name);
-							
-		var val = {
-			time_ms: startTm,
-			time: utils.dateToQmDate(new Date(startTm)),
-			value: 0
-		};
-		
-		log.info('Initializing store %s ...', name);
-		log.info('Inserting value %s ...', JSON.stringify(val));
-		
-		base.store(name).push(val);
-	}
+	(function () {
+		var startTm = 0;
+		for (var i = 0; i < zeroFlds.length; i++) {
+			var name = zeroFlds[i];
+			
+			log.info('Initializing default value for store %s ...', name);
+								
+			var val = {
+				time_ms: startTm,
+				time: utils.dateToQmDate(new Date(startTm)),
+				value: 0
+			};
+			
+			log.info('Initializing store %s ...', name);
+			log.info('Inserting value %s ...', JSON.stringify(val));
+			
+			base.store(name).push(val);
+		}
+	})();
 	
 	(function () {
 		log.info('Initializing Enricher stream aggregates ...');
@@ -98,9 +100,9 @@ function initStreamAggregates() {
 			var aggr;
 			if (aggrConf.aggr.type != 'javaScript') {
 				var tick = oaInStore.addStreamAggr(aggrConf.tick);
-				aggr = oaInStore.addStreamAggr(aggrConf.aggr);
+				aggr = enricherOutStore.addStreamAggr(aggrConf.aggr);
 			} else {
-				aggr = oaInStore.addStreamAggr(aggrConf.aggr.create());
+				aggr = enricherOutStore.addStreamAggr(aggrConf.aggr.create());
 			}
 			
 			enricherAggH[aggrNm] = aggr;
@@ -484,7 +486,7 @@ function calcFriction() {
 						if (log.debug())
 							log.debug('Periodic coefficient check ...');
 						
-						checkFrictionCoeffs(val);
+						checkFrictionCoeffs(val, false);
 						prevEvalTime = time;
 					}
 				}

@@ -379,10 +379,10 @@ var zoomVis = function (opts) {
 	
 	var visWidth = visContainer.clientWidth;
 	var visHeight = visContainer.clientHeight;
-	var minX = 0;
-	var maxX = 0;
-	var minY = 0;
-	var maxY = 0;
+	var minX = Number.POSITIVE_INFINITY;
+	var maxX = Number.NEGATIVE_INFINITY;
+	var minY = Number.POSITIVE_INFINITY;
+	var maxY = Number.NEGATIVE_INFINITY;
 	var xOffset = .1;
 	var yOffset = .1;
 	
