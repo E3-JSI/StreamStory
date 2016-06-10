@@ -23,12 +23,13 @@ var opts = {
 	onValue: null
 };
 
-var aggregates = {};
+var enricherAggH = {};
+var oaInAggregates = {};
 
 function initResampler() {
 	if (resamplerInitialized) return;
 	
-	var flds = fields.getStreamAggrFields();
+	var flds = fields.getStreamAggrFields(base);
 	
 	// create the resampler used by StreamStory
 	oaInStore.addStreamAggr({
@@ -45,24 +46,26 @@ function initResampler() {
 
 function initStreamAggregates() {
 	// create fields
-	var flds = fields.getStreamAggrFields();
+	var flds = fields.getStreamAggrFields(base);
 	var zeroFlds = fields.getInitZeroFields();
 	
 	// create the merger used for enrichment
-	var mergerConfig = {
-		type: 'stmerger',
-		name: 'drilling_merger',
-		outStore: fields.ENRICHED_STORE,
-		createStore: false,
-		timestamp: 'time',
-		fields: flds.merger
-	};
-	
-	if (config.INTERPOLATION == 'current') {
-		mergerConfig.onlyPast = true;
-	}
-	
-	new qm.StreamAggr(base, mergerConfig);
+	(function () {
+		var mergerConfig = {
+			type: 'stmerger',
+			name: 'drilling_merger',
+			outStore: fields.ENRICHED_STORE,
+			createStore: false,
+			timestamp: 'time',
+			fields: flds.merger
+		};
+		
+		if (config.INTERPOLATION == 'current') {
+			mergerConfig.onlyPast = true;
+		}
+		
+		new qm.StreamAggr(base, mergerConfig);
+	})();
 	
 	// insert zeros now, so they won't get resampled
 	var startTm = 0;
@@ -83,24 +86,47 @@ function initStreamAggregates() {
 		base.store(name).push(val);
 	}
 	
-	log.info('Initializing stream aggregates ...');
-	var aggregateConfigs = fields.getStreamAggregates();
-	for (var aggrNm in aggregateConfigs) {
-		if (log.info())
-			log.info('Initializing aggregate: %s', aggrNm);
-		
-		var aggrConf = aggregateConfigs[aggrNm];
-		
-		var aggr;
-		if (aggrConf.aggr.type != 'javaScript') {
-			var tick = oaInStore.addStreamAggr(aggrConf.tick);
-			aggr = oaInStore.addStreamAggr(aggrConf.aggr);
-		} else {
-			aggr = oaInStore.addStreamAggr(aggrConf.aggr.create());
+	(function () {
+		log.info('Initializing Enricher stream aggregates ...');
+		var aggregates = fields.getEnricherStreamAggregates();
+		for (var aggrNm in aggregates) {
+			if (log.info())
+				log.info('Initializing aggregate: %s', aggrNm);
+			
+			var aggrConf = aggregates[aggrNm];
+			
+			var aggr;
+			if (aggrConf.aggr.type != 'javaScript') {
+				var tick = oaInStore.addStreamAggr(aggrConf.tick);
+				aggr = oaInStore.addStreamAggr(aggrConf.aggr);
+			} else {
+				aggr = oaInStore.addStreamAggr(aggrConf.aggr.create());
+			}
+			
+			enricherAggH[aggrNm] = aggr;
 		}
-		
-		aggregates[aggrNm] = aggr;
-	}
+	})();
+	
+	(function () {
+		log.info('Initializing Online Analytics stream aggregates ...');
+		var aggregateConfigs = fields.getStreamAggregates();
+		for (var aggrNm in aggregateConfigs) {
+			if (log.info())
+				log.info('Initializing aggregate: %s', aggrNm);
+			
+			var aggrConf = aggregateConfigs[aggrNm];
+			
+			var aggr;
+			if (aggrConf.aggr.type != 'javaScript') {
+				var tick = oaInStore.addStreamAggr(aggrConf.tick);
+				aggr = oaInStore.addStreamAggr(aggrConf.aggr);
+			} else {
+				aggr = oaInStore.addStreamAggr(aggrConf.aggr.create());
+			}
+			
+			oaInAggregates[aggrNm] = aggr;
+		}
+	})();
 	
 	if (zeroFlds.length == 0) {
 		// if we initialize all stores with zeros, then the resampler should be
@@ -460,8 +486,20 @@ function initTriggers() {
 	// add processing triggers
 	log.info('Initilizing triggers ...');
 	
-	// print progress
-	{
+	(function () {
+		enricherOutStore.addTrigger({
+			onAdd: function (rec) {
+				if (log.trace())
+					log.trace('Received record in Enricher out store ...');
+				
+				for (var fieldNm in enricherAggH) {
+					rec[fieldNm] = enricherAggH[fieldNm].getFloat();
+				}
+			}
+		});
+	})();
+	
+	(function () {
 		var prevTime = 0;
 		var nProcessed = 0;
 		
@@ -491,24 +529,24 @@ function initTriggers() {
 				}
 			}
 		});
-	}
+	})();
 	
-	{
+	(function () {
 		oaInStore.addTrigger({
 			onAdd: function (rec) {
 				if (log.trace())
 					log.trace('Received record in OA in store ...');
 				
-				for (var fieldNm in aggregates) {
-					var aggr = aggregates[fieldNm];
+				for (var fieldNm in oaInAggregates) {
+					var aggr = oaInAggregates[fieldNm];
 					var val = aggr.getFloat();
 					rec[fieldNm] = val;
 				}
 			}
 		});
-	}
+	})();
 	
-	{	// StreamStory
+	(function () {
 		var nProcessed = 0;
 		
 		streamStoryStore.addTrigger({
@@ -531,7 +569,7 @@ function initTriggers() {
 				}
 			}
 		});
-	}
+	})();
 	
 	if (config.USE_CASE == config.USE_CASE_MHWIRTH)
 		calcFriction();

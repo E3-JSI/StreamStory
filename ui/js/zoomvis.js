@@ -5,6 +5,7 @@ var zoomVis = function (opts) {
 	var MODE_NORMAL = 'normal';
 	var MODE_PROBS = 'probs';
 	var MODE_TARGET_FTR = 'ftr';
+	var MODE_ACTIVITY = 'activity';
 	
 	// colors
 	if (THEME == 'light') {
@@ -409,6 +410,9 @@ var zoomVis = function (opts) {
 			},
 			getNode: function (id) {
 				return nodeCache[id];
+			},
+			getNodes: function () {
+				return nodeCache;
 			},
 			startNewNodeLevel: function () {
 				addedNodes = [];
@@ -819,7 +823,8 @@ var zoomVis = function (opts) {
 						id: '' + node.id,
 						style: style,
 						holdingTime: node.holdingTime,
-						name: node.name
+						name: node.name,
+						parentId: node.parentId
 					},
 					position: {
 						x: position.x,
@@ -1011,12 +1016,51 @@ var zoomVis = function (opts) {
 	}
 	
 	function setCurrentLevel(levelIdx) {
-		if (modeConfig.mode.type == MODE_TARGET_FTR) {
+		var mode = getMode();
+		
+		if (mode == MODE_TARGET_FTR) {
 			fetchTargetFtr(modeConfig.mode.config.targetFtr);
 		}
 		
 		redraw({ keepCached: true });
+		
 		fetchCurrentState(hierarchy[levelIdx].height);
+		
+		if (mode == MODE_ACTIVITY) {
+			var nodes = cy.nodes();
+			
+			for (var i = 0; i < nodes.length; i++) {
+				var node = nodes[i];
+				var data = node.data();
+				
+				var parentId = data.parentId;
+				var parent = cache.getNode(parentId);
+				
+				if (parent != null && parent.data.backgroundColor != null) {
+					var color = parent.data.backgroundColor;
+					setNodeColor(node.id(), color);
+				}
+			}
+		}
+	}
+	
+	function setNodeColor(nodeId, color) {
+		if (color != null) {
+			cache.getNode(nodeId).css['backgroundColor'] = color;
+			var graphNode = cy.nodes('#' + nodeId);
+			if (graphNode.length > 0) {
+				graphNode.data().backgroundColor = color;
+				graphNode.css('backgroundColor', color);
+			}
+		}
+		else {
+			delete cache.getNode(nodeId).css['backgroundColor'];
+			var graphNode = cy.nodes('#' + nodeId);
+			if (graphNode.length > 0) {
+				delete graphNode.data().backgroundColor;
+				graphNode.css('backgroundColor', DEFAULT_NODE_COLOR);
+			}
+		}
 	}
 	
 	function drawNode(nodeId, batchPresent) {
@@ -1026,49 +1070,62 @@ var zoomVis = function (opts) {
 			cy.startBatch();
 		
 		var node = cy.nodes('#' + nodeId);
+		var data = node.data();
 		
-		if (nodeId == modeConfig.selected) {
-			node.css('border-width', '10');
-			node.css('z-index', FOREGROUND_Z_INDEX);
-		}
-		if (nodeId == modeConfig.current) {
-			node.css('backgroundColor', CURRENT_NODE_COLOR);
-		}
-		if (nodeId in modeConfig.past) {
-			node.css('border-color', PREVIOUS_NODE_EDGE_COLOR);
-		}
+		var mode = getMode();
 		
-		if (modeConfig.mode.type == MODE_PROBS) {
-			var config = modeConfig.mode.config;
-			var probs = config.probs;
-			var prob = probs[nodeId];
-			var intens = 100*prob;//*futureColorFromProb(prob);
-						
-			var color = 'hsla(' + VIZ_NODE_COLOR + ',' + Math.ceil(intens) + '%, 55%, 1)';
-			node.css('backgroundColor', color);
-		} 
-		else if (modeConfig.mode.type == MODE_TARGET_FTR) {
-			var config = modeConfig.mode.config;
-			var ftrVal = config.ftrVals[nodeId];
-			
-			var ftrRange = config.maxVal - config.minVal;
-			var middleVal = config.minVal + ftrRange/2;
-			
-			var color;
-			if (ftrVal >= middleVal) {
-				var val = 2*(ftrVal - middleVal) / ftrRange;
-				color = 'hsla(' + VIZ_NODE_FTR_POS_COLOR + ',' + Math.floor(100*colorFromProb(val)) + '%, 55%, 1)';
-			} else {
-				var val = 2*(middleVal - ftrVal) / ftrRange;
-				color = 'hsla(' + VIZ_NODE_FTR_NEG_COLOR + ',' + Math.floor(100*colorFromProb(val)) + '%, 55%, 1)';
+		if (mode != MODE_ACTIVITY) {
+			if (nodeId == modeConfig.selected) {
+				node.css('border-width', '10');
+				node.css('z-index', FOREGROUND_Z_INDEX);
 			}
-						
-			node.css('backgroundColor', color);
-		} 
-		else if (nodeId in modeConfig.future) {
-			var prob = futureColorFromProb(modeConfig.future[nodeId]);
-			var color = 'hsla(' + FUTURE_NODE_BASE_COLOR + ',' + (15 + Math.floor((100-15)*prob)) + '%, 55%, 1)';
-			node.css('backgroundColor', color);
+			if (nodeId == modeConfig.current) {
+				node.css('backgroundColor', CURRENT_NODE_COLOR);
+			}
+			if (nodeId in modeConfig.past) {
+				node.css('border-color', PREVIOUS_NODE_EDGE_COLOR);
+			}
+			
+			if (mode == MODE_PROBS) {
+				var config = modeConfig.mode.config;
+				var probs = config.probs;
+				var prob = probs[nodeId];
+				var intens = 100*prob;//*futureColorFromProb(prob);
+							
+				var color = 'hsla(' + VIZ_NODE_COLOR + ',' + Math.ceil(intens) + '%, 55%, 1)';
+				node.css('backgroundColor', color);
+			} 
+			else if (mode == MODE_TARGET_FTR) {
+				var config = modeConfig.mode.config;
+				var ftrVal = config.ftrVals[nodeId];
+				
+				var ftrRange = config.maxVal - config.minVal;
+				var middleVal = config.minVal + ftrRange/2;
+				
+				var color;
+				if (ftrVal >= middleVal) {
+					var val = 2*(ftrVal - middleVal) / ftrRange;
+					color = 'hsla(' + VIZ_NODE_FTR_POS_COLOR + ',' + Math.floor(100*colorFromProb(val)) + '%, 55%, 1)';
+				} else {
+					var val = 2*(middleVal - ftrVal) / ftrRange;
+					color = 'hsla(' + VIZ_NODE_FTR_NEG_COLOR + ',' + Math.floor(100*colorFromProb(val)) + '%, 55%, 1)';
+				}
+							
+				node.css('backgroundColor', color);
+			} 
+			else if (nodeId in modeConfig.future) {
+				var prob = futureColorFromProb(modeConfig.future[nodeId]);
+				var color = 'hsla(' + FUTURE_NODE_BASE_COLOR + ',' + (15 + Math.floor((100-15)*prob)) + '%, 55%, 1)';
+				node.css('backgroundColor', color);
+			}
+		}
+		else {
+			if (data.backgroundColor != null) {
+				node.css('backgroundColor', data.backgroundColor);
+			}
+			else {
+				node.css('backgroundColor', DEFAULT_NODE_COLOR);
+			}
 		}
 		
 		if (!batchPresent)
@@ -1265,6 +1322,10 @@ var zoomVis = function (opts) {
 				stateIdH[id] = true;
 			}
 		}
+	}
+	
+	function isInitialized() {
+		return levelNodes.length > 0;
 	}
 	
 	function setUI(data, isInit) {
@@ -1569,12 +1630,19 @@ var zoomVis = function (opts) {
 		}
 	});
 	
+	function getMode() {
+		return modeConfig.mode.type;
+	}
+	
 	function setMode(mode, config) {
 		modeConfig.mode.type = mode;
-		modeConfig.mode.config = config;
+		if (config != null)
+			modeConfig.mode.config = config;
 	}
 	
 	function resetMode() {
+		if (!isInitialized()) return;
+		
 		cy.batch(function () {
 			setMode(MODE_NORMAL, {});
 			redraw({ keepCached: true, isInBatch: true });
@@ -1583,11 +1651,32 @@ var zoomVis = function (opts) {
 	}
 	
 	//===============================================================
+	// INTERNAL TO EXTERNAL CONVERSION
+	//===============================================================
+	
+	function findNodeFromStateId(stateId) {
+		var level = currentLevel;
+		var levelInfo = levelNodes[level];
+		
+		var targetNode = null;
+		for (var i = 0; i < levelInfo.length; i++) {
+			var node = levelInfo[i];
+			if (node.id == stateId) {
+				targetNode = node;
+			}
+		}
+		
+		return targetNode;
+	}
+	
+	//===============================================================
 	// OBJECT
 	//===============================================================
 	
 	var that = {
 		
+		MODE_ACTIVITY: MODE_ACTIVITY,
+			
 		/*
 		 * Sets a new model which is visualized. Zoom and other properties are not
 		 * refreshed!
@@ -1633,9 +1722,12 @@ var zoomVis = function (opts) {
 			redrawSpecial();
 		},
 		
-		getMode: function () {
-			return modeConfig.mode.type;
+		getMode: getMode,
+		setMode: function (mode, config) {
+			setMode(mode, config);
+			redrawAll();
 		},
+		resetMode: resetMode,
 		
 		getNodePositions: function () {
 			var posArr = [];
@@ -1658,8 +1750,6 @@ var zoomVis = function (opts) {
 			
 			return posArr;
 		},
-		
-		resetMode: resetMode,
 		
 		setTargetFtr: function (ftrIdx) {
 			if (ftrIdx == null) {	// reset to normal mode
@@ -1697,20 +1787,11 @@ var zoomVis = function (opts) {
 		},
 		
 		setStateName: function (stateId, name) {
-			var level = currentLevel;
-			var levelInfo = levelNodes[level];
-			
-			var node;
-			var targetNode = null;
-			for (var i = 0; i < levelInfo.length; i++) {
-				node = levelInfo[i];
-				if (node.id == stateId) {
-					node.name = name;
-					targetNode = node;
-				}
-			}
+			var targetNode = findNodeFromStateId(stateId);
 			
 			if (targetNode == null) return;
+			
+			targetNode.name = name;
 			
 			var label = getNodeLabel(targetNode);
 			cache.getNode(stateId).css['content'] = label;
@@ -1720,8 +1801,17 @@ var zoomVis = function (opts) {
 				graphNode.data().name = name;
 				graphNode.css('content', getNodeLabel(targetNode));
 				graphNode.flashClass('nolabel', 1);	// fix, doesn't work without this
-//				graphNode.css().content = getNodeLabel(node);
 			}
+		},
+		
+		setNodeColor: setNodeColor,
+		
+		clearNodeColors: function () {
+			var cachedNodes = cache.getNodes();
+			for (var nodeId in cachedNodes) {
+				setNodeColor(nodeId, null);
+			}
+			redrawAll();
 		},
 		
 		setShowTransitionProbs: function (show) {

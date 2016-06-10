@@ -228,7 +228,7 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 	 		"window": WINDOW_SIZE
 	 	},
 	 	{
-	 		"name" : "torque_wrench_rot",
+	 		"name" : "tr_rot_makeup",
 	 		"fields" : [
 	 			{"name": "time_ms", "type": "uint64"},
 	 			{"name": "time", "type": "datetime"},
@@ -237,7 +237,7 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 	 		"window": WINDOW_SIZE
 	 	},
 	 	{
-	 		"name" : "tr_breakout_dir",
+	 		"name" : "tr_rot_breakout",
 	 		"fields" : [
 	 			{"name": "time_ms", "type": "uint64"},
 	 			{"name": "time", "type": "datetime"},
@@ -246,7 +246,7 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 	 		"window": WINDOW_SIZE
 	 	},
 	 	{
-	 		"name" : "hrn_travel",
+	 		"name" : "hrn_travel_pos",
 	 		"fields" : [
 	 			{"name": "time_ms", "type": "uint64"},
 	 			{"name": "time", "type": "datetime"},
@@ -274,6 +274,15 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 	 	},
 	 	{
 	 		"name" : "hrn_travel_valve",
+	 		"fields" : [
+	 			{"name": "time_ms", "type": "uint64"},
+	 			{"name": "time", "type": "datetime"},
+	 			{"name": "value", "type": "float"}
+	 		],
+	 		"window": WINDOW_SIZE
+	 	},
+	 	{
+	 		"name" : "hrn_spinning_in",
 	 		"fields" : [
 	 			{"name": "time_ms", "type": "uint64"},
 	 			{"name": "time", "type": "datetime"},
@@ -319,6 +328,15 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 	 	},
 	 	{
 	 		"name" : "hrn_elevate_up",
+	 		"fields" : [
+	 			{"name": "time_ms", "type": "uint64"},
+	 			{"name": "time", "type": "datetime"},
+	 			{"name": "value", "type": "float"}
+	 		],
+	 		"window": WINDOW_SIZE
+	 	},
+	 	{
+	 		"name" : "hrn_elevate_down",
 	 		"fields" : [
 	 			{"name": "time_ms", "type": "uint64"},
 	 			{"name": "time", "type": "datetime"},
@@ -452,17 +470,19 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 	 		// new use case
 	 		{ "name" : "upper_clamp", "type": "float" },
 		 	{ "name" : "lower_clamp", "type": "float" },
-		 	{ "name" : "torque_wrench_rot", "type": "float" },
-		 	{ "name" : "tr_breakout_dir", "type": "float" },
-		 	{ "name" : "hrn_travel", "type": "float" },
+		 	{ "name" : "tr_rot_makeup", "type": "float" },
+		 	{ "name" : "tr_rot_breakout", "type": "float" },
+		 	{ "name" : "hrn_travel_pos", "type": "float" },
 		 	{ "name" : "travel_forward", "type": "float" },
 		 	{ "name" : "travel_backward", "type": "float" },
 		 	{ "name" : "hrn_travel_valve", "type": "float" },
+		 	{ "name" : "hrn_spinning_in", "type": "float" },
 		 	{ "name" : "hrn_spinning_out", "type": "float" },
 		 	{ "name" : "hrn_spinner_clamp_closed", "type": "float" },
 		 	{ "name" : "hrn_elevation", "type": "float" },
 		 	{ "name" : "hrn_elevation_up_down", "type": "float" },
 		 	{ "name" : "hrn_elevate_up", "type": "float" },
+		 	{ "name" : "hrn_elevate_down", "type": "float" },
 		 	{ "name" : "brc_load", "type": "float" },
 		 	{ "name" : "brc_fwd_travel_valve", "type": "float" },
 		 	{ "name" : "brc_travel_pos_fleg", "type": "float" },
@@ -471,11 +491,184 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 		 	{ "name" : "brc_grip_upper_valve", "type": "float" },
 		 	{ "name" : "brc_grip_lower_valve", "type": "float" },
 		 	{ "name" : "brc_lift_valve", "type": "float" },
-		 	{ "name" : "brc_standlift_pos", "type": "float" }
+		 	{ "name" : "brc_standlift_pos", "type": "float" },
+//		 	// new use case virtual sensors
+//		 	{ "name" : "tr_rotation", "type": "float", "null": true },
+//		 	{ "name" : "hrn_spin_direction", "type": "float", "null": true },
+//		 	{ "name" : "hrn_travel_velocity", "type": "float", "null": true },
+//		 	{ "name" : "hrn_elevation_velocity", "type": "float", "null": true }
 	 	]
 	};
 	
-	var aggregateConfigs = {
+	var enricherAggH = {
+		'tr_rotation': {
+			aggr: {
+				type: 'javaScript',
+				name: 'TrRotation',
+				create: function () {
+					var val = 0;
+					
+					return {
+						type: 'javaScript',
+						name: 'TrRotation',
+						saveJson: function () {
+							return { val: val };
+						},
+						save: function (fout) {
+							fout.write(val + '');
+						},
+						load: function (fin) {
+							val = parseFloat(fin.readString());
+						},
+						onAdd: function (rec) {
+							var makeUpRot = rec['tr_rot_makeup'];
+							var breakOutRot = rec['tr_rot_breakout'];
+							
+							if (breakOutRot > makeUpRot) {
+								val = -breakOutRot;
+							}
+							else {
+								val = makeUpRot;
+							}
+						},
+						getFloat: function () {
+							return val;
+						}
+					}
+				}
+			}
+		},
+		'hrn_spin_direction': {
+			aggr: {
+				type: 'javaScript',
+				name: 'HrnSpinDirection',
+				create: function () {
+					var val = 0;
+					
+					return {
+						type: 'javaScript',
+						name: 'HrnSpinDirection',
+						saveJson: function () {
+							return { val: val };
+						},
+						save: function (fout) {
+							fout.write(val + '');
+						},
+						load: function (fin) {
+							val = parseFloat(fin.readString());
+						},
+						onAdd: function (rec) {
+							var spinningIn = rec['hrn_spinning_in'];
+							var spinningOut = rec['hrn_spinning_out'];
+							var clampClosed = rec['hrn_spinner_clamp_closed'];
+							
+							if (clampClosed) {
+								if (spinningIn > 0) {
+									val = 1;
+								}
+								else if (spinningOut > 0) {
+									val = -1;
+								}
+								else {
+									val = 0;
+								}
+							}
+							else {
+								val = 0;
+							}
+						},
+						getFloat: function () {
+							return val;
+						}
+					}
+				}
+			}
+		},
+		'hrn_travel_velocity': {
+			aggr: {
+				type: 'javaScript',
+				name: 'HrnTravelVelocity',
+				create: function () {
+					var val = 0;
+					
+					return {
+						type: 'javaScript',
+						name: 'HrnTravelVelocity',
+						saveJson: function () {
+							return { val: val };
+						},
+						save: function (fout) {
+							fout.write(val + '');
+						},
+						load: function (fin) {
+							val = parseFloat(fin.readString());
+						},
+						onAdd: function (rec) {
+							var forward = rec['travel_forward'];
+							var backward = rec['travel_backward'];
+							var absVal = rec['hrn_travel_valve'];
+							
+							if (forward > 0) {
+								val = absVal;
+							}
+							else if (backward > 0) {
+								val = -absVal;
+							}
+							else {
+								val = 0;
+							}
+						},
+						getFloat: function () {
+							return val;
+						}
+					}
+				}
+			}
+		},
+		'hrn_elevation_velocity': {
+			aggr: {
+				type: 'javaScript',
+				name: 'HrnElevationVelocity',
+				create: function () {
+					var val = 0;
+					
+					return {
+						type: 'javaScript',
+						name: 'HrnElevationVelocity',
+						saveJson: function () {
+							return { val: val };
+						},
+						save: function (fout) {
+							fout.write(val + '');
+						},
+						load: function (fin) {
+							val = parseFloat(fin.readString());
+						},
+						onAdd: function (rec) {
+							var up = rec['hrn_elevate_up'];
+							var down = rec['hrn_elevate_down'];
+							var absVal = rec['hrn_elevation_up_down'];
+							
+							if (up > 0) {
+								val = absVal;
+							}
+							else if (down > 0) {
+								val = -absVal;
+							}
+							else {
+								val = 0;
+							}
+						},
+						getFloat: function () {
+							return val;
+						}
+					}
+				}
+			}
+		}
+	};
+	
+	var onlineAnalyticsAggH = {
 		'hl > Threshold': {
 			tick: {
 				name: 'HlThresholdTick',
@@ -523,7 +716,7 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 				type: 'javaScript',
 				name: 'hlMeanDiffRel',
 				create: function () {
-					var MAX_VAL = 1e3;
+					var MAX_VAL = 10;
 					
 					var val = 0;
 					
@@ -554,34 +747,34 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 						}
 					}
 				}
-			},
-			'HL mean diff': {
-				aggr: {
-					type: 'javaScript',
-					name: 'hlMeanDiff',
-					create: function () {
-						var val = 0;
-						
-						return {
-							type: 'javaScript',
-							name: 'hlMeanDiff',
-							saveJson: function () {
-								return { val: val };
-							},
-							save: function (fout) {
-								fout.write(val + '');
-							},
-							load: function (fin) {
-								val = parseFloat(fin.readString());
-							},
-							onAdd: function (rec) {
-								var mean = rec['Hook load 3h mean'];
-								var hl = rec['hook_load'];
-								val = hl - mean;
-							},
-							getFloat: function () {
-								return val;
-							}
+			}
+		},
+		'HL mean diff': {
+			aggr: {
+				type: 'javaScript',
+				name: 'hlMeanDiff',
+				create: function () {
+					var val = 0;
+					
+					return {
+						type: 'javaScript',
+						name: 'hlMeanDiff',
+						saveJson: function () {
+							return { val: val };
+						},
+						save: function (fout) {
+							fout.write(val + '');
+						},
+						load: function (fin) {
+							val = parseFloat(fin.readString());
+						},
+						onAdd: function (rec) {
+							var mean = rec['Hook load 3h mean'];
+							var hl = rec['hook_load'];
+							val = hl - mean;
+						},
+						getFloat: function () {
+							return val;
 						}
 					}
 				}
@@ -596,7 +789,7 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 		var aggrNm = storeNm + ' (EMA)';
 		var tickNm = 'emaTick-' + i;
 		
-		aggregateConfigs[aggrNm] = {
+		onlineAnalyticsAggH[aggrNm] = {
 			tick: {
 				name: tickNm,
 				type: 'timeSeriesTick',
@@ -622,7 +815,11 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 	onlineAnalyticsStores.fields.push({name: "coeff_swivel", type: "float", "null": true});
 	onlineAnalyticsStores.fields.push({name: "coeff_gearbox", type: "float", "null": true});
 	
-	for (var aggrNm in aggregateConfigs) {
+	for (var fieldName in enricherAggH) {
+		realTimeStores.fields.push({ name : fieldName, type: "float", "null": true });
+	}
+	
+	for (var aggrNm in onlineAnalyticsAggH) {
 		onlineAnalyticsStores.fields.push({name: aggrNm, type: 'float', 'null': true});
 	}
 	
@@ -636,8 +833,12 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 		return rawStores;
 	}
 	
+	exports.getEnricherStreamAggregates = function () {
+		return enricherAggH;
+	}
+	
 	exports.getStreamAggregates = function () {
-		return aggregateConfigs;
+		return onlineAnalyticsAggH;
 	}
 	
 	exports.getInitZeroFields = function () {
@@ -666,7 +867,41 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 	    					  .concat([enrichedStore, oaInStore, streamStoryStore]);
 	}
 	
-	exports.getStreamAggrFields = function () {
+	function isCurrentInterpolation(fieldNm) {
+		if (fieldNm == 'ibop')
+			return true;
+		if (fieldNm == 'hl > Threshold')
+			return true;
+		if (fieldNm == 'slips_closed')
+			return true;
+		if (fieldNm == 'slips_closing')
+			return true;
+		if (fieldNm == 'slips_open')
+			return true;
+		if (fieldNm == 'slips_opening')
+			return true;
+		if (fieldNm == 'tr_rot_makeup')
+			return true;
+		if (fieldNm == 'tr_rot_breakout')
+			return true;
+		if (fieldNm == 'travel_forward')
+			return true;
+		if (fieldNm == 'travel_backward')
+			return true;
+		if (fieldNm == 'hrn_spinning_in')
+			return true;
+		if (fieldNm == 'hrn_spinning_out')
+			return true;
+		if (fieldNm == 'hrn_spinner_clamp_closed')
+			return true;
+		if (fieldNm == 'hrn_elevate_up')
+			return true;
+		if (fieldNm == 'hrn_elevate_down')
+			return true;
+		return false;
+	}
+	
+	exports.getStreamAggrFields = function (base) {
 		var result = {
 			merger: [],
 			resampler: []
@@ -682,17 +917,7 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 			
 			var interpolation = config.INTERPOLATION;
 			
-			if (fieldNm == 'ibop')
-				interpolation = 'current';
-			if (fieldNm == 'hl > Threshold')
-				interpolation = 'current';
-			if (fieldNm == 'slips_closed')
-				interpolation = 'current';
-			if (fieldNm == 'slips_closing')
-				interpolation = 'current';
-			if (fieldNm == 'slips_open')
-				interpolation = 'current';
-			if (fieldNm == 'slips_opening')
+			if (isCurrentInterpolation(fieldNm))
 				interpolation = 'current';
 			
 			if (log.info())
@@ -707,21 +932,12 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 		for (var i = 0; i < mergerFields.length; i++) {
 			var fieldNm = mergerFields[i].name;
 			
-			if (fieldNm == 'time') continue;
+			if (fieldNm == 'time') continue;		// time field
+			if (!base.isStore(fieldNm)) continue;	// enricher aggregate
 			
 			var interpolation = config.INTERPOLATION;
 			
-			if (fieldNm == 'ibop')
-				interpolation = 'current';
-			if (fieldNm == 'hl > Threshold')
-				interpolation = 'current';
-			if (fieldNm == 'slips_closed')
-				interpolation = 'current';
-			if (fieldNm == 'slips_closing')
-				interpolation = 'current';
-			if (fieldNm == 'slips_open')
-				interpolation = 'current';
-			if (fieldNm == 'slips_opening')
+			if (isCurrentInterpolation(fieldNm))
 				interpolation = 'current';
 			
 			if (log.info())
@@ -941,6 +1157,10 @@ else if (config.USE_CASE == config.USE_CASE_HELLA) {
 		return {};
 	}
 	
+	exports.getEnricherStreamAggregates = function () {
+		return {};
+	}
+	
 	exports.getInitZeroFields = function () {
 		if (config.INITIALIZE_ZERO)
 			return ['LACQUERING'].concat(montracFields.concat(environmentFields.concat(moldingFields)));
@@ -957,7 +1177,7 @@ else if (config.USE_CASE == config.USE_CASE_HELLA) {
 		return rawStores;
 	};
 	
-	exports.getStreamAggrFields = function () {
+	exports.getStreamAggrFields = function (base) {
 		var result = {
 			merger: [],
 			resampler: []
@@ -1146,7 +1366,7 @@ else if (config.USE_CASE == config.USE_CASE_NRG) {
 	    					  .concat([enrichedStore, oaInStore, streamStoryStore]);
 	}
 	
-	exports.getStreamAggrFields = function () {
+	exports.getStreamAggrFields = function (base) {
 		var result = {
 			merger: [],
 			resampler: []
@@ -1237,7 +1457,7 @@ else if (config.USE_CASE == config.USE_CASE_SIMULATION) {
 		return rawStores;
 	};
 	
-	exports.getStreamAggrFields = function () {
+	exports.getStreamAggrFields = function (base) {
 		var result = {
 			merger: [],
 			resampler: []
@@ -1692,7 +1912,7 @@ else if (config.USE_CASE == config.USE_CASE_TRAFFIC) {
 		return rawStores;
 	};
 	
-	exports.getStreamAggrFields = function () {
+	exports.getStreamAggrFields = function (base) {
 		var result = {
 			merger: [],
 			resampler: []

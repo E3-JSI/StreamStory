@@ -1259,7 +1259,6 @@ function changeControlVal(stateId, ftrIdx, val) {
 			animate:"slow",
 			orientation: "vertical",
 			slide: function (event, ui) {
-//				viz.setZoom(ui.value);
 				viz.setScale(ui.value);
 			}
 		});
@@ -1717,11 +1716,36 @@ function changeControlVal(stateId, ftrIdx, val) {
 	//=======================================================
 	
 	(function () {
+		var ACTIVITY_COLORS = ['blue', 'red', 'green', 'yellow', 'magenta', 'cyan', 'brown', 'Wheat', 'DeepPink', 'CadetBlue'];
+		
 		var currStep = {};
 		var currStepN = 0;
 		var currStepSize = 0;
 		
 		var alertField = $('#alert-wrapper-activity');
+		
+		function getStepColor() {
+			return ACTIVITY_COLORS[currStepN % ACTIVITY_COLORS.length];
+		}
+		
+		function onRemoveBtnClick() {
+			var tr = $(this).parent().parent().parent();
+			var txt = tr.find('.td-name').html();
+			var name = txt.replace(/\s\([0-9]*\)$/, '');
+			
+			promptConfirm('Remove Activity', 'Are you sure you wish remove activity ' + name + '?', function () {
+				$.ajax('api/removeActivity', {
+					dataType: 'json',
+				    type: 'POST',
+				    data: { name: name },
+				    success: function () {
+				    	tr.remove();
+				    	showAlert($('#alert-holder'), alertField, 'alert-success', 'Removed!', null, true);
+				    },
+				    error: handleAjaxError(alertField)
+				});
+			});
+		}
 		
 		$('#btn-activity-add-step').click(function () {
 			var currThumb = $('#div-curr-activity-step');
@@ -1735,6 +1759,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 			currStep = {};
 			currStepN++;
 			currStepSize = 0;
+			newThumb.find('.thumbnail').css('background-color', getStepColor());
 		});
 		
 		$('#btn-activity-cancel').click(function () {
@@ -1781,31 +1806,32 @@ function changeControlVal(stateId, ftrIdx, val) {
 			    type: 'POST',
 			    data: data,
 			    success: function () {
+			    	// add the activity to the table
+			    	var tr = $('<tr><td class="td-name">' + name + ' (' + sequence.length + ')</td></tr>');
+			    	var btnCell = $('<td class="td-btns" />');
+			    	var btnSpan = $('<span class="pull-right span-btns" />');
+			    	var btn = $('<button class="btn btn-danger btn-xs btn-remove" aria-label="Left Align"><span class="glyphicon glyphicon-remove"></span> Remove</button>');
+			    	
+			    	btn.click(onRemoveBtnClick);
+			    	
+			    	btnSpan.append(btn);
+			    	btnCell.append(btnSpan);
+			    	tr.append(btnCell);
+			    	$('#table-activities').find('tbody').append(tr);
+			    	
+			    	// clear the structures
 			    	$('#btn-activity-cancel').click();
+			    	// clear the colors
+			    	$('#div-curr-activity-step').find('.thumbnail').css('background-color', getStepColor());
+			    	viz.clearNodeColors();
+			    	// show success
 			    	showAlert($('#alert-holder'), alertField, 'alert-success', 'Saved!', null, true);
 			    },
 			    error: handleAjaxError(alertField)
 			});
 		});
-		
-		$('#table-activities').find('.btn-remove').click(function () {
-			var tr = $(this).parent().parent().parent();
-			var txt = tr.find('.td-name').html();
-			var name = txt.replace(/\s\([0-9]*\)$/, '');
-			
-			promptConfirm('Remove Activity', 'Are you sure you wish remove activity ' + name + '?', function () {
-				$.ajax('api/removeActivity', {
-					dataType: 'json',
-				    type: 'POST',
-				    data: { name: name },
-				    success: function () {
-				    	tr.remove();
-				    	showAlert($('#alert-holder'), alertField, 'alert-success', 'Removed!', null, true);
-				    },
-				    error: handleAjaxError(alertField)
-				});
-			});
-		});
+
+		$('#table-activities').find('.btn-remove').click(onRemoveBtnClick);
 		
 		act =  {
 			addActivityState: function (stateId, label, name) {
@@ -1816,12 +1842,18 @@ function changeControlVal(stateId, ftrIdx, val) {
 				
 				var stateStr = name != null ? name : label;
 				
-				$('#div-curr-activity-step').find('.thumbnail').append((currStepSize > 0 ? ', ' : '') + '<span id="step-' + currStepN + '-' + stateId + '">' + stateStr + '</span>');
+				$('#div-curr-activity-step').find('.thumbnail').append((currStepSize > 0 ? ', ' : '') + '<span id="step-' + currStepN + '-' + stateId + '" style="display: none;">' + stateStr + '</span>');
 				
+				// set the background in the visualization
+				viz.setNodeColor(stateId, getStepColor());
+				
+				// update the structures
 				currStep[stateId] = true;
 				currStepSize++;
 			}
 		}
+		
+		$('#div-curr-activity-step').find('.thumbnail').css('background-color', getStepColor());
 	})();
 	
 	$(document).ready(function () {
@@ -1834,8 +1866,12 @@ function changeControlVal(stateId, ftrIdx, val) {
 			
 			if (TAB_ID == 'a-default') {
 				$('#tabs-viz-bottom').find('a')[0].click();
+				viz.resetMode();
 				// TODO fetch the histograms
 				// TODO reload the decision tree
+			}
+			else if (TAB_ID = 'a-activities') {
+				viz.setMode(viz.MODE_ACTIVITY);
 			}
 		});
 		

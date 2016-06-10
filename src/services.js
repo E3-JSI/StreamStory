@@ -1198,13 +1198,16 @@ function initStreamStoryRestApi() {
 		
 		app.post(API_PATH + '/activity', function (req, res) {			
 			try {
+				var session = req.session;
+				
 				var model = getModel(req.sessionID, req.session);
 				var name = req.body.name;
 				var sequence = JSON.parse(req.body.sequence);
 				
 				if (log.debug())
-					log.debug('Setting setting activity %s for model %d with transitions %s', name, model.getId(), JSON.stringify(sequence));
+					log.debug('Setting activity %s for model %d with transitions %s', name, model.getId(), JSON.stringify(sequence));
 				
+				// perform checks
 				if (name == null || name == '') {
 					handleBadInput(res, 'Activity name missing!');
 					return;
@@ -1221,7 +1224,14 @@ function initStreamStoryRestApi() {
 					}
 				}
 				
+				// set the activity
 				model.getModel().setActivity(name, sequence);
+				// save the model
+				var fname = getModelFile(session);
+				if (log.debug())
+					log.debug('Saving model to file: %s', fname);
+				model.save(fname);
+				
 				res.status(204);	// no content
 				res.end();
 			} catch (e) {
@@ -2339,9 +2349,9 @@ function initBroker() {
 	 		// new use case
 	 		{ "name" : "upper_clamp", "type": "float" },
 		 	{ "name" : "lower_clamp", "type": "float" },
-		 	{ "name" : "torque_wrench_rot", "type": "float" },
-		 	{ "name" : "tr_breakout_dir", "type": "float" },
-		 	{ "name" : "hrn_travel", "type": "float" },
+		 	{ "name" : "tr_rot_makeup", "type": "float" },
+		 	{ "name" : "tr_rot_breakout", "type": "float" },
+		 	{ "name" : "hrn_travel_pos", "type": "float" },
 		 	{ "name" : "travel_forward", "type": "float" },
 		 	{ "name" : "travel_backward", "type": "float" },
 		 	{ "name" : "hrn_travel_valve", "type": "float" },
@@ -2350,6 +2360,7 @@ function initBroker() {
 		 	{ "name" : "hrn_elevation", "type": "float" },
 		 	{ "name" : "hrn_elevation_up_down", "type": "float" },
 		 	{ "name" : "hrn_elevate_up", "type": "float" },
+		 	{ "name" : "hrn_elevate_down", "type": "float" },
 		 	{ "name" : "brc_load", "type": "float" },
 		 	{ "name" : "brc_fwd_travel_valve", "type": "float" },
 		 	{ "name" : "brc_travel_pos_fleg", "type": "float" },
