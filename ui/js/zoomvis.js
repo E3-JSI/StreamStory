@@ -1102,14 +1102,18 @@ var zoomVis = function (opts) {
 				var ftrRange = config.maxVal - config.minVal;
 				var middleVal = config.minVal + ftrRange/2;
 				
-				var color;
-				if (ftrVal >= middleVal) {
-					var val = 2*(ftrVal - middleVal) / ftrRange;
-					color = 'hsla(' + VIZ_NODE_FTR_POS_COLOR + ',' + Math.floor(100*colorFromProb(val)) + '%, 55%, 1)';
-				} else {
-					var val = 2*(middleVal - ftrVal) / ftrRange;
-					color = 'hsla(' + VIZ_NODE_FTR_NEG_COLOR + ',' + Math.floor(100*colorFromProb(val)) + '%, 55%, 1)';
-				}
+				var color = getFtrColor(ftrVal, config.minVal, config.maxVal, middleVal);
+				
+				console.log(color);
+				
+//				var color;
+//				if (ftrVal >= middleVal) {
+//					var val = 2*(ftrVal - middleVal) / ftrRange;
+//					color = 'hsla(' + VIZ_NODE_FTR_POS_COLOR + ',' + Math.floor(100*colorFromProb(val)) + '%, 55%, 1)';
+//				} else {
+//					var val = 2*(middleVal - ftrVal) / ftrRange;
+//					color = 'hsla(' + VIZ_NODE_FTR_NEG_COLOR + ',' + Math.floor(100*colorFromProb(val)) + '%, 55%, 1)';
+//				}
 							
 				node.css('backgroundColor', color);
 			} 

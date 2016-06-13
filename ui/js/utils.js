@@ -120,6 +120,36 @@ function reloadWindow() {
 	window.location.reload();
 }
 
+function getFtrColor(val, minVal, maxVal, middleVal) {
+	if (middleVal == null) middleVal = 0;
+	
+	var negColor = [0,0,255];	// purple
+	var posColor = [255,128,0];	// yellow
+	
+	var baseColor = val > middleVal ? posColor : negColor;
+	var colorWgt = val > middleVal ? (val - middleVal) / (maxVal - middleVal) : (val - middleVal) / (minVal - middleVal);
+	
+	var color = [];
+	for (var i = 0; i < baseColor.length; i++) {
+		color.push((baseColor[i]*colorWgt).toFixed());
+	}
+	
+	return 'rgb(' + color.join(',') + ')';
+	
+//	if (THEME == 'dark') {
+//		if (wgt > 0) {
+//			return 'rgb(' + Math.ceil(255 - 255*wgt / maxWgt) + ',255,' + Math.ceil(255 - 255*wgt / maxWgt) + ')';
+//		} else {
+//			return 'rgb(255,' + Math.ceil(255 - 255*wgt / minWgt) + ',' + Math.ceil(255 - 255*wgt / minWgt) + ')';
+//		}
+//	} else {
+//		if (wgt > 0)
+//			return 'rgb(0,' + Math.floor(255*wgt / maxWgt) + ',0)';
+//		else
+//			return 'rgb(' + Math.floor(255*wgt / minWgt) + ',0,0)';
+//	}
+}
+
 $(document).ready(function () {
 	var tooltipElements = $('[rel=tooltip]');
 	

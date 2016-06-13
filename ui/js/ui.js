@@ -1477,32 +1477,18 @@ function changeControlVal(stateId, ftrIdx, val) {
 						}
 					}
 					
-					function getSingleColor(wgt, minWgt, maxWgt) {
-						if (THEME == 'dark') {
-							if (wgt > 0)
-								return 'rgb(' + Math.ceil(255 - 255*wgt / maxWgt) + ',255,' + Math.ceil(255 - 255*wgt / maxWgt) + ')';
-							else
-								return 'rgb(255,' + Math.ceil(255 - 255*wgt / minWgt) + ',' + Math.ceil(255 - 255*wgt / minWgt) + ')';
-						} else {
-							if (wgt > 0)
-								return 'rgb(0,' + Math.floor(255*wgt / maxWgt) + ',0)';
-							else
-								return 'rgb(' + Math.floor(255*wgt / minWgt) + ',0,0)';
-						}
-					}
-					
 					function getWeightColor(ftr, wgtV, minWgt, maxWgt) {
 						var type = ftr.type;
 						
 						switch (type) {
 						case 'numeric': {
-							return getSingleColor(wgtV, minWgt, maxWgt);
+							return getFtrColor(wgtV, minWgt, maxWgt);
 							break;
 						}
 						case 'categorical': {
 							var colorObj = {};
 							for (var key in wgtV) {
-								colorObj[key] = getSingleColor(wgtV[key], minWgt, maxWgt);
+								colorObj[key] = getFtrColor(wgtV[key], minWgt, maxWgt);
 							}
 							return colorObj;
 							break;
