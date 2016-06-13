@@ -1,7 +1,8 @@
 {
 	"qminer": {
 		"path": "../qminer/",
-		"mode": "createClean",
+		"xmode": "createClean",
+		"mode": "openReadOnly",
 		"createPipeline": true,
 		"initializeZeros": true
 	},
@@ -33,7 +34,7 @@
 		"database": "StreamStoryDev"
 	},
 	"integration": {
-		"type": "broker",
+		"type": "http",
 		"brokerUrl": "ipe-koi04.fzi.de",
 		"zookeperPort": 2181,
 		"producerPort": 9092
