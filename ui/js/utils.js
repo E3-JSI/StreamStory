@@ -135,19 +135,6 @@ function getFtrColor(val, minVal, maxVal, middleVal) {
 	}
 	
 	return 'rgb(' + color.join(',') + ')';
-	
-//	if (THEME == 'dark') {
-//		if (wgt > 0) {
-//			return 'rgb(' + Math.ceil(255 - 255*wgt / maxWgt) + ',255,' + Math.ceil(255 - 255*wgt / maxWgt) + ')';
-//		} else {
-//			return 'rgb(255,' + Math.ceil(255 - 255*wgt / minWgt) + ',' + Math.ceil(255 - 255*wgt / minWgt) + ')';
-//		}
-//	} else {
-//		if (wgt > 0)
-//			return 'rgb(0,' + Math.floor(255*wgt / maxWgt) + ',0)';
-//		else
-//			return 'rgb(' + Math.floor(255*wgt / minWgt) + ',0,0)';
-//	}
 }
 
 $(document).ready(function () {

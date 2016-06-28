@@ -2,7 +2,7 @@ var config = require('./config.js');
 
 console.log('Initializing fields ...');
 
-var WINDOW_SIZE = 100000;
+var WINDOW_SIZE = 1000000;
 
 exports.ENRICHED_STORE = 'enriched';
 exports.OA_IN_STORE = 'oa_in';
@@ -738,7 +738,7 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 							
 							val = (hl - mean) / mean;
 							
-							if (Math.abs(val) < 10) {
+							if (Math.abs(val) > 10) {
 								val = 0;
 								return;
 							}

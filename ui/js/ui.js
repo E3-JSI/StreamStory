@@ -774,6 +774,13 @@ function changeControlVal(stateId, ftrIdx, val) {
 		$('#btn-save').click(function () {
 			var nodePositions = viz.getNodePositions();
 			
+			// FIXME check the positions, got a NULL before submitting the deliverable
+			for (var i = 0; i < nodePositions.length; i++) {
+				var pos = nodePositions[i].position;
+				if (pos.x == null) pos.x = 0;
+				if (pos.y == null) pos.y = 0;
+			}
+			
 			console.log(JSON.stringify(nodePositions));
 			
 			$.ajax('api/save', {
