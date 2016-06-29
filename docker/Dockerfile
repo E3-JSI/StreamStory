@@ -22,13 +22,15 @@ RUN apt-get install -y build-essential
 RUN apt-get install -y python2.7
 RUN apt-get install -y libopenblas-dev
 RUN apt-get install -y liblapacke-dev
+#RUN apt-get install -y nodejs
 
 # install MySQL
 RUN DEBIAN_FRONTEND=noninteractive && apt-get install -y mysql-server
 
 # install Node.js
-RUN curl -sL https://deb.nodesource.com/setup_0.12 | sudo bash -
+RUN curl -sL https://deb.nodesource.com/setup_4.x | sudo -E bash -
 RUN apt-get install -y nodejs
+
 RUN npm install -g node-gyp
 
 #RUN rm -rf ~/.node_gyp
@@ -43,6 +45,7 @@ RUN ln -s /usr/bin/python2.7 /usr/bin/python
 # make the directory structure
 RUN mkdir app
 # clone the projects
+RUN echo `gcc -v`
 RUN cd app && git clone https://github.com/lstopar/qminer.git && cd qminer && git checkout -b development
 RUN cd app && git clone https://github.com/JozefStefanInstitute/StreamStory.git && cd StreamStory && git checkout -b development
 
