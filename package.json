@@ -26,7 +26,7 @@
     "ejs": "^2.3.4",
     "express": "^4.10.6",
     "express-session": "^1.11.3",
-    "kafka-node": "^0.2.24",
+    "kafka-node": "^0.4.0",
     "mathjs": "^2.2.0",
     "mkdirp": "^0.5.1",
     "multer": "^1.0.3",
