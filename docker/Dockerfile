@@ -50,7 +50,7 @@ RUN cd app && \
 	git clone https://github.com/JozefStefanInstitute/StreamStory.git && \
 	cd StreamStory && \
 	git checkout -b development && \
-	npm install
+	npm install --loglevel info
 RUN cd app && \
 	git clone https://github.com/lstopar/qminer.git && \
 	cd qminer && \
