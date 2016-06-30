@@ -36,9 +36,8 @@ RUN curl -sL https://deb.nodesource.com/setup_4.x | bash -
 RUN apt-get install -y nodejs
 
 RUN npm update && npm install -g node-gyp
-
-# configure Python
-#RUN ln -s /usr/bin/python2.7 /usr/bin/python
+RUN echo `node -v`
+RUN echo `node-gyp -v`
 
 #==================================================
 # CONFIGURE THE APP
@@ -46,14 +45,6 @@ RUN npm update && npm install -g node-gyp
 
 # make the directory structure
 RUN mkdir app
-# clone the projects
-RUN echo `gcc -v`
-RUN echo `which node-gyp`
-RUN echo `ls -al /root/.node-gyp/4.4.7/`
-RUN echo `ls -al ~/.node-gyp`
-RUN cd / && echo `find -name common.gypi`
-#RUN mkdir -p ~/.node-gyp/4.4.7 && cp /usr/include/node/common.gypi ~/.node-gyp/4.4.7/
-
 
 RUN cd app && \
 	git clone https://github.com/JozefStefanInstitute/StreamStory.git && \
