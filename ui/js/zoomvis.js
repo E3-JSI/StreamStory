@@ -44,9 +44,13 @@ var zoomVis = function (opts) {
 		var NODE_TEXT_COLOR = '#F0F0F0';
 	}
 	
+	var SELECTED_NODE_SHADOW_COLOR = 'white';
+	var SELECTED_NODE_SHADOW_SIZE = 100;
+	var SELECTED_NODE_SHADOW_OPACITY = 1;
+	
 	var FONT_SIZE = '12';
 	var DEFAULT_BORDER_WIDTH = 5;
-	var SELECTED_BORDER_WIDTH = 10;
+	var CURRENT_BORDER_WIDTH = 10;
 	
 	var BACKGROUND_Z_INDEX = 0;
 	var MIDDLEGROUND_Z_INDEX = 10;
@@ -1085,10 +1089,15 @@ var zoomVis = function (opts) {
 				
 		if (mode != MODE_ACTIVITY) {
 			if (nodeId == modeConfig.selected) {
-				node.css('border-width', SELECTED_BORDER_WIDTH);
 				node.css('z-index', FOREGROUND_Z_INDEX);
+				
+				node.css('shadow-color', SELECTED_NODE_SHADOW_COLOR);
+				node.css('shadow-blur', SELECTED_NODE_SHADOW_SIZE);
+				node.css('shadow-opacity', SELECTED_NODE_SHADOW_OPACITY)
 			}
+			
 			if (nodeId == modeConfig.current) {
+				node.css('border-width', CURRENT_BORDER_WIDTH);
 				node.css('border-color', CURRENT_NODE_COLOR);
 //				node.css('backgroundColor', CURRENT_NODE_COLOR);
 			}
@@ -1220,7 +1229,11 @@ var zoomVis = function (opts) {
 			modeConfig.selected = null;
 			
 			cy.batch(function () {
-				cy.nodes().css('border-width', DEFAULT_BORDER_WIDTH);
+				var nodes = cy.nodes();
+				nodes.css('shadow-color', 'white');
+				nodes.css('shadow-blur', 0);
+				nodes.css('shadow-opacity', 0);
+//				cy.nodes().css('border-width', DEFAULT_BORDER_WIDTH);
 				
 				// emphasize edges
 				var edges = cy.edges();
@@ -1236,7 +1249,11 @@ var zoomVis = function (opts) {
 			modeConfig.selected = stateId;
 			// redraw
 			cy.batch(function () {
-				cy.nodes().css('border-width', DEFAULT_BORDER_WIDTH);
+				var nodes = cy.nodes();
+				nodes.css('shadow-color', 'white');
+				nodes.css('shadow-blur', 0);
+				nodes.css('shadow-opacity', 0);
+//				nodes.css('border-width', DEFAULT_BORDER_WIDTH);
 				drawNode(stateId, true);
 				
 				// emphasize edges
@@ -1416,17 +1433,17 @@ var zoomVis = function (opts) {
 		var prevHeight = currentHeight;
 		currentHeight = Math.min(maxHeight, Math.max(minHeight, scale));
 		
-		if (currentLevel < levelHeights.length - 1) {
-			if (currentHeight >= levelHeights[currentLevel + 1]) {
-				setLevel(currentLevel + 1);
-//				setCurrentLevel(++currentLevel);
-			}
+		var levelN = currentLevel;
+		
+		while (levelN < levelHeights.length - 1 && currentHeight >= levelHeights[levelN+1]) {
+			levelN++;
 		}
-		if (currentLevel > 0) {
-			if (currentHeight < levelHeights[currentLevel]) {
-				setLevel(currentLevel - 1);
-//				setCurrentLevel(--currentLevel);
-			}
+		while (levelN > 0 && currentHeight < levelHeights[levelN]) {
+			levelN--;
+		}
+		
+		if (levelN != currentLevel) {
+			setLevel(levelN);
 		}
 		
 		if (currentHeight != prevHeight) {
@@ -1605,7 +1622,6 @@ var zoomVis = function (opts) {
 				var hoverTimeout;
 				
 				function cancelHover() {
-					console.log('Closing tooltip for ID: ' + tooltipElement.id() + ' ...');
 					clearTimeout(hoverTimeout);
 					tooltipElement.trigger('hovercancel');
 					tooltipShown = false;
@@ -1617,12 +1633,8 @@ var zoomVis = function (opts) {
 					}
 					
 					tooltipElement = this;
-					
-					console.log('Event fired for ID: ' + tooltipElement.id() + ' ...');
-					
-					if (!tooltipShown) {
-						console.log('Calling timeout for ID: ' + tooltipElement.id() + ' ...');
-						
+										
+					if (!tooltipShown) {						
 						if (tooltipElement.group() == 'edges') {
 							var offset = $(cy.container()).offset();
 							var api = tooltipElement.qtip('api');
@@ -1630,9 +1642,7 @@ var zoomVis = function (opts) {
 							api.set('position.adjust.y', event.cyRenderedPosition.y + offset.top);
 						}
 						clearTimeout(hoverTimeout); 
-						hoverTimeout = setTimeout(function () {
-							console.log('Timeout called for ID: ' + tooltipElement.id() + ' ...');
-							
+						hoverTimeout = setTimeout(function () {							
 							tooltipShown = true;
 							tooltipElement.trigger('hover');
 						}, 1000);
@@ -1930,7 +1940,8 @@ var zoomVis = function (opts) {
 		},
 		
 		setLevel: function (levelN) {
-			setLevel(levelN);
+			setScale(levelHeights[levelN]);	// TODO
+//			setLevel(levelN);
 		},
 		
 		setZoom: function (value) {

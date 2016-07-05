@@ -1344,8 +1344,11 @@ function changeControlVal(stateId, ftrIdx, val) {
 			
 			if (stateId == null) return;
 			
-//			firstBottomVizTab.click();
-			
+			// highlight the state in the "Big Picture"
+			$('#div-time-state-hist').find('rect').removeAttr('highlighted');
+			var items = $('#div-time-state-hist').find('.timelineItem_state-' + stateId);
+			items.attr('highlighted', 'highlighted');
+						
 			// fetch state details
 			$.ajax('api/stateDetails', {
 				dataType: 'json',
@@ -1718,6 +1721,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 					data: {},
 					success: function (scales) {
 						var drawData = [];
+						var maxEls = 0;
 						
 						for (var scaleN = scales.length-1; scaleN >= 0; scaleN--) {							
 							var scale = scales[scaleN].scale;
@@ -1743,6 +1747,10 @@ function changeControlVal(stateId, ftrIdx, val) {
 								label: category,
 								times: timeV
 							});
+							
+							if (timeV.length > maxEls) {
+								maxEls = timeV.length;
+							}
 						}
 													
 						var finestStates = scales[0].states;
@@ -1750,6 +1758,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 						var chart = d3.timeline();
 						
 						var nTicks = 15;
+						var minElementWidth = 10;
 						
 						var tickTime = null;
 						var tickInterval = null;
@@ -1791,13 +1800,8 @@ function changeControlVal(stateId, ftrIdx, val) {
 						}
 						}
 						
-//						drawData = [
-//						            {label: "person a", times: [{"starting_time": 1355752800000, "ending_time": 1355759900000}, {"starting_time": 1355767900000, "ending_time": 1355774400000}]},
-//						            {label: "person b", times: [{"starting_time": 1355759910000, "ending_time": 1355761900000}, ]},
-//						            {label: "person c", times: [{"starting_time": 1355761910000, "ending_time": 1355763910000}]}
-//						          ]
+						var containerW = wrapper.width();
 						
-//						chart.margin({left: 100, right:0, top:0, bottom:0});
 						chart.tickFormat({
 							format: format,
 							tickTime: tickTime,
@@ -1818,12 +1822,13 @@ function changeControlVal(stateId, ftrIdx, val) {
 							viz.setLevel(scaleN);
 							viz.setSelectedState(stateId);							
 						});
+						chart.width(Math.max(maxEls*minElementWidth, containerW));
 						chart.margin({ left: 50, right: 0, top: 0, bottom: 0 });
 						chart.stack();
 												
 						var svg = d3.select(wrapperId)
 									.append('svg')
-									.attr('width', wrapper.width() - 100)
+									.attr('width', containerW)
 									.attr('height', wrapper.height())
 //									.attr('transform', 'translate(50, 0)')
 									.datum(drawData)

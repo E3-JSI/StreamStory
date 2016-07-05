@@ -294,13 +294,34 @@
               click(d, index, datum);
             })
             .attr("class", function (d, i) {
-              return datum.class ? "timelineSeries_"+datum.class : "timelineSeries_"+index;
+            	var itemId = '';
+            	var timelineId = '';
+            	
+            	if ('class' in d) {
+            		itemId = 'timelineItem_' + d['class'];
+            	}
+            	
+            	if ('class' in datum) {
+            		timelineId = 'timelineSeries_' + datum['class']; 
+            	}
+            	else {
+            		timelineId = datum.class ? "timelineSeries_"+datum.class : "timelineSeries_"+index;
+            	}
+            	
+            	return itemId != '' ? itemId + ' ' + timelineId : timelineId;
             })
             .attr("id", function(d, i) {
               // use deprecated id field
-              if (datum.id && !d.id) {
-                return 'timelineItem_'+datum.id;
-              }
+            	if (d.id != null) {
+            		return 'timelineItem_'+d.id;
+            	}
+            	else if (datum.id != null) {
+            		return 'timelineItem_'+datum.id;
+            	}
+//              if (datum.id && !d.id) {
+//                return 'timelineItem_'+datum.id;
+//                return 'timelineItem_'+d.id;
+//              }
 
               return d.id ? d.id : "timelineItem_"+index+"_"+i;
             })
