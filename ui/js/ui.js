@@ -1345,10 +1345,25 @@ function changeControlVal(stateId, ftrIdx, val) {
 			if (stateId == null) return;
 			
 			// highlight the state in the "Big Picture"
-			$('#div-time-state-hist').find('rect').removeAttr('highlighted');
-			var items = $('#div-time-state-hist').find('.timelineItem_state-' + stateId);
-			items.attr('highlighted', 'highlighted');
-						
+			var historyViz = $('#div-time-state-hist');
+			historyViz.find('rect').removeAttr('highlighted');
+			
+			var currId = stateId;
+			var parentId = null;
+			
+			while (true) {
+				parentId = viz.getParent(currId);
+					
+				if (parentId == null) break;
+				
+				var items = historyViz.find('.timelineItem_state-' + currId);
+				items.attr('highlighted', 'highlighted');
+				
+				if (parentId == currId) break;
+				
+				currId = parentId;
+			}
+			
 			// fetch state details
 			$.ajax('api/stateDetails', {
 				dataType: 'json',

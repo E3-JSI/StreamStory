@@ -398,6 +398,8 @@ var zoomVis = function (opts) {
 		y: { min: Number.MAX_VALUE, max: Number.MIN_VALUE }
 	}
 	
+	var parentH = {};
+	
 	//===============================================================
 	// UTILITY FUNCTIONS
 	//===============================================================
@@ -651,6 +653,8 @@ var zoomVis = function (opts) {
 		levelCurrentStates = [];
 		levelNodes = [];
 		levelNodeMap = {};
+		
+		parentH = {};
 	}
 	
 	//===============================================================
@@ -1000,8 +1004,10 @@ var zoomVis = function (opts) {
 			
 			for (var j = 0; j < states.length; j++) {
 				var node = states[j];
+				var nodeId = node.id;
 				
-				levelNodeMap[i][node.id] = node;
+				levelNodeMap[i][nodeId] = node;
+				parentH[nodeId] = node.parentId;
 				
 				var size = node.raduis;
 				if (size > uiConfig.maxNodeSize)
@@ -1715,6 +1721,10 @@ var zoomVis = function (opts) {
 			setUI(data, true);
 		},
 		
+		getParent: function (stateId) {
+			return parentH[stateId];
+		},
+		
 		setCurrentStates: function (currentStates) {
 			if (hierarchy == null) return;
 						
@@ -1940,8 +1950,7 @@ var zoomVis = function (opts) {
 		},
 		
 		setLevel: function (levelN) {
-			setScale(levelHeights[levelN]);	// TODO
-//			setLevel(levelN);
+			setScale(levelHeights[levelN]);
 		},
 		
 		setZoom: function (value) {
