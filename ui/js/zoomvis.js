@@ -358,7 +358,8 @@ var zoomVis = function (opts) {
 		edgeSelected: function (sourceId, targetId) {},
 		zoomChanged: function (zoom) {},
 		heightChanged: function (height) {},
-		onStateCtxMenu: function () {}
+		onStateCtxMenu: function () {},
+		onInitialized: function () {}
 	}
 	
 	var maxNodeSize = 0;
@@ -404,9 +405,127 @@ var zoomVis = function (opts) {
 	// UTILITY FUNCTIONS
 	//===============================================================
 	
+	var colorGenerator = (function () {
+		var MIN_SATURATION = .15;
+		var DEFAULT_LIGHT = .5;
+		
+		var colorH = {};
+		
+		function getOutputStr(val) {
+			return 'hsl(' + (360*val.hue / (2*Math.PI)).toFixed() + ',' + (100*val.saturation).toFixed() + '%,' + (100*val.light).toFixed() + '%)';
+		}
+		
+		return {
+			init: function (levels) {
+				colorH = {};
+				
+				var nLevels = levels.length;
+				
+				// generate the colors on the lowest scale				
+				var childH = {};
+				var nodeH = {};
+				
+				// construct the top-down hierarchy
+				for (var levelN = 0; levelN < nLevels; levelN++) {
+					var level = levels[levelN];
+					var states = level.states;
+					
+					for (var stateN = 0; stateN < states.length; stateN++) {
+						var state = states[stateN];
+						var nodeId = state.id;
+						var parentId = state.parentId;
+						
+						if (parentId != null && parentId != nodeId) {
+							if (!(parentId in childH)) { childH[parentId] = []; }
+							
+							if (childH[parentId].indexOf(nodeId) < 0) {
+								childH[parentId].push(nodeId);
+							}
+						}
+						
+						nodeH[nodeId] = state;
+					}
+				}
+				
+				// color the states
+				// first color the leafs
+				(function () {
+					var nLeafs = levels[0].states.length;
+					
+					var angle = 2*Math.PI / nLeafs;
+					var currAngle = 0;
+					
+					function colorLeafs(parentId) {
+						if (parentId in childH) {
+							var children = childH[parentId];
+							for (var i = 0; i < children.length; i++) {
+								colorLeafs(children[i]);
+							}
+						}
+						else {
+							colorH[parentId] = {
+								hue: currAngle,
+								saturation: 1,
+								light: DEFAULT_LIGHT
+							};
+							currAngle += angle;
+						}
+					}
+					
+					var lastLevel = levels[levels.length-1];
+					var rootStates = lastLevel.states;
+					
+					for (var stateN = 0; stateN < rootStates.length; stateN++) {
+						colorLeafs(rootStates[stateN].id);
+					}
+				})();
+				
+				// then color all the others
+				for (var levelN = 1; levelN < nLevels; levelN++) {
+					var level = levels[levelN];
+					var states = level.states;
+					
+					for (var stateN = 0; stateN < states.length; stateN++) {
+						var state = states[stateN];
+						var nodeId = state.id;
+						
+						if (nodeId in colorH) continue;
+						
+						var children = childH[nodeId];
+						
+						var hue = 0;
+						var totalWgt = 0;
+						for (var i = 0; i < children.length; i++) {
+							var childId = children[i];
+							var wgt = nodeH[childId].timeProportion;
+							
+							hue += colorH[childId].hue*wgt;
+							totalWgt += wgt;
+						}
+						hue /= totalWgt;
+						
+						colorH[nodeId] = {
+							hue: hue,
+							saturation: 1 - levelN*(1 - MIN_SATURATION) / (levels.length - 1),
+							light: DEFAULT_LIGHT
+						};
+					}
+				}
+				
+				console.log(JSON.stringify(colorH));
+			},
+			getColor: function (nodeId) {
+				var colorStr = getOutputStr(colorH[nodeId]);
+				
+				console.log(colorStr);
+				
+				return colorStr;
+			}
+		}
+	})();
+	
 	var ElementCache = function () {
 		var nodeCache = {};
-		var nodeColorH = {};
 		
 		var prevLevelNodeCache = {};
 		var currLevelNodeCache = {};
@@ -414,17 +533,10 @@ var zoomVis = function (opts) {
 		
 		var that = {
 			addNode: function (id, level, nodeConfig) {
-				if (!(id in nodeColorH)) nodeColorH[id] = genRandStateColor();
-				
-				nodeConfig.css['background-color'] = nodeColorH[id];
 				nodeCache[id] = nodeConfig;
 			},
 			getNode: function (id) {
 				return nodeCache[id];
-			},
-			getNodeColor: function (id) {
-				if (!(id in nodeColorH)) nodeColorH[id] = genRandStateColor();
-				return nodeColorH[id];
 			},
 			getNodes: function () {
 				return nodeCache;
@@ -819,7 +931,7 @@ var zoomVis = function (opts) {
 					'font-weight': 'normal',
 					'shape': 'ellipse',
 					'display': 'element',
-//					'background-color': DEFAULT_NODE_COLOR,
+					'background-color': colorGenerator.getColor(id),
 					'width': nodeSize.width,
 					'height': nodeSize.height,
 					'border-width': DEFAULT_BORDER_WIDTH,
@@ -990,6 +1102,7 @@ var zoomVis = function (opts) {
 	
 	function constructLevels(data, isInit) {
 		clearStructures();
+		colorGenerator.init(data);
 		
 		for (var i = 0; i < data.length; i++) {
 			var states = data[i].states;
@@ -1025,10 +1138,12 @@ var zoomVis = function (opts) {
 		
 			minAndMaxCoords();
 
-			setViewport(boundingBox)
+			setViewport(boundingBox, false);	// don't fire an event
 			
 			currentHeight = maxHeight;
 			currentLevel = levelHeights.length - 1;
+			
+			callbacks.heightChanged(internalToUiScale(currentHeight));
 		}
 		
 		redraw();
@@ -1137,7 +1252,7 @@ var zoomVis = function (opts) {
 				node.css('backgroundColor', color);
 			} 
 			else {
-				var nodeColor = cache.getNodeColor(nodeId);
+				var nodeColor = colorGenerator.getColor(nodeId);
 				node.css('backgroundColor', nodeColor);
 			}
 		}
@@ -1374,6 +1489,8 @@ var zoomVis = function (opts) {
 			url: 'api/model',
 			success: function (data) {
 				setUI(data, true);
+				// notify the UI that we are initialized
+				callbacks.onInitialized();
 			},	
 			dataType: 'json',
 			error: function (jqXHR, jqXHR, status, err) {
@@ -1421,11 +1538,12 @@ var zoomVis = function (opts) {
 	//===============================================================
 	
 	function internalToUiScale(scale) {
-		return (1 - (scale - minHeight) / (maxHeight - minHeight)) * 100;
+		return 100 - (1 - (scale - minHeight) / (maxHeight - minHeight)) * 100;
 	}
 	
 	function uiToInternalScale(scale) {
-		return (1 - scale / 100)*(maxHeight - minHeight) + minHeight;
+//		var negScale = 100 - scale;
+		return (1 - (100 - scale) / 100)*(maxHeight - minHeight) + minHeight;
 	}
 	
 	function setLevel(levelN) {
@@ -1846,7 +1964,7 @@ var zoomVis = function (opts) {
 		
 		setNodeColor: setNodeColor,
 		getDefaultNodeColor: function (id) {
-			return cache.getNodeColor(id);
+			return colorGenerator.getColor(id);
 		},
 		
 		clearNodeColors: function () {
@@ -1953,6 +2071,10 @@ var zoomVis = function (opts) {
 			setScale(levelHeights[levelN]);
 		},
 		
+		getLevel: function () {
+			return currentLevel;
+		},
+		
 		setZoom: function (value) {
 			setZoom(value, false);
 		},
@@ -1967,6 +2089,14 @@ var zoomVis = function (opts) {
 		
 		getMaxZoom: function () {
 			return maxCyZoom;
+		},
+		
+		getZoomLevels: function () {
+			var zoomLevels = [];
+			for (var i = 0; i < levelHeights.length; i++) {
+				zoomLevels.push(internalToUiScale(levelHeights[i]));
+			}
+			return zoomLevels;
 		},
 		
 		getScale: function () {
@@ -2008,6 +2138,10 @@ var zoomVis = function (opts) {
 		
 		onStateCtxMenu: function (callback) {
 			callbacks.onStateCtxMenu = callback;
+		},
+		
+		onInitialized: function (callback) {
+			callbacks.onInitialized = callback;
 		}
 	}
 	

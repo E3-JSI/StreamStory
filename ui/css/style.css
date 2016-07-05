@@ -339,6 +339,10 @@ html, body {
 	stroke: white;
 }
 
+#div-time-state-hist > svg > text[highlighted="highlighted"] {
+	fill: white;
+	font-weight: bold;
+}
 
 /*===============================================================
  	ADMIN TEMPLATE

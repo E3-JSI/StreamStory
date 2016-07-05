@@ -137,21 +137,6 @@ function getFtrColor(val, minVal, maxVal, middleVal) {
 	return 'rgb(' + color.join(',') + ')';
 }
 
-var randGen = (function () {
-	var seed = 100;
-	
-	return {
-		random: function () {
-		    var x = Math.sin(seed++) * 10000;
-		    return x - Math.floor(x);
-		}
-	}
-})();
-
-function genRandStateColor() {
-	return 'hsl(' + (randGen.random()*360).toFixed() + ',' + (35 + 30*randGen.random()).toFixed() + '%,' + (35 + 30*randGen.random()).toFixed() + '%)';
-}
-
 $(document).ready(function () {
 	var tooltipElements = $('[rel=tooltip]');
 	

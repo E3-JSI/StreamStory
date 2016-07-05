@@ -1232,6 +1232,174 @@ function changeControlVal(stateId, ftrIdx, val) {
 			$('#div-timehist-daily').html('');
 		}
 		
+		var timelineController = (function () {
+			var wrapperId = '#div-time-state-hist';
+			var wrapper = $(wrapperId);
+			
+			var prevScaleN = -1;
+			
+			var that = {
+				init: function () {
+					$.ajax('api/stateHistory', {
+						dataType: 'json',
+						data: {},
+						success: function (scales) {
+							var drawData = [];
+							var maxEls = 0;
+							
+							var zoomLevels = viz.getZoomLevels();
+							
+							for (var scaleN = scales.length-1; scaleN >= 0; scaleN--) {							
+								var scale = scales[scaleN].scale;
+								var zoom = zoomLevels[scaleN];
+								var states = scales[scaleN].states;
+								var timeV = [];
+								var category = 'scale-' + scaleN;
+								
+								for (var stateN = 0; stateN < states.length-1; stateN++) {
+									var state = states[stateN];
+									var stateId = state.id;
+									
+									var color = viz.getDefaultNodeColor(stateId);
+									timeV.push({
+										starting_time: state.start,
+										ending_time: states[stateN+1].start - 1,
+										color: color,
+										"class": 'state-' + stateId
+									});
+								}
+								
+								drawData.push({
+									'class': category,
+									label: zoom.toFixed() + '%',
+									times: timeV
+								});
+								
+								if (timeV.length > maxEls) {
+									maxEls = timeV.length;
+								}
+							}
+														
+							var finestStates = scales[0].states;
+							
+							var chart = d3.timeline();
+							
+							var nTicks = 15;
+							var minElementWidth = 10;
+							
+							var tickTime = null;
+							var tickInterval = null;
+							var format = null;
+							
+							switch (TIME_UNIT) {
+							case 'second': {
+								tickTime = d3.time.seconds;
+								tickInterval = (scales[scales.length-1].start - scales[0].start) / (1000*nTicks);
+								format = d3.time.format('%c');
+								break;
+							}
+							case 'minute': {
+								tickTime = d3.time.minutes;
+								tickInterval = (finestStates[finestStates.length-1].start - finestStates[0].start) / (1000*60*nTicks);
+								format = d3.time.format('%c');
+								break;
+							}
+							case 'hour': {
+								tickTime = d3.time.hours;
+								tickInterval = (finestStates[finestStates.length-1].start - finestStates[0].start) / (1000*60*60*nTicks);
+								format = d3.time.format('%c');
+								break;
+							}
+							case 'day': {
+								tickTime = d3.time.days;
+								tickInterval = (finestStates[finestStates.length-1].start - finestStates[0].start) / (1000*60*60*24*nTicks);
+								format = d3.time.format('%x');
+								break;
+							}
+							case 'month': {
+								tickTime = d3.time.months;
+								tickInterval = (finestStates[finestStates.length-1].start - finestStates[0].start) / (1000*60*60*24*30*nTicks);
+								format = d3.time.format('%Y');
+								break;
+							}
+							default: {
+								alert('Illegal time unit: ' + TIME_UNIT);
+							}
+							}
+							
+							var containerW = wrapper.width();
+							
+							chart.tickFormat({
+								format: format,
+								tickTime: tickTime,
+								tickInterval: tickInterval,
+								tickSize: 6,
+								tickValues: null
+							});
+							chart.click(function (d, i, datum) {
+								var stateClass = d['class'];
+								var scaleClass = datum['class'];
+								
+								var stateSpl = stateClass.split('-');
+								var scaleSpl = scaleClass.split('-');
+								
+								var stateId = stateSpl[stateSpl.length-1];
+								var scaleN = scaleSpl[scaleSpl.length-1];
+								
+								viz.setLevel(scaleN);
+								viz.setSelectedState(stateId);							
+							});
+							chart.width(Math.max(maxEls*minElementWidth, containerW));
+							chart.margin({ left: 50, right: 0, top: 0, bottom: 0 });
+							chart.stack();
+													
+							var svg = d3.select(wrapperId)
+										.append('svg')
+										.attr('width', containerW)
+										.attr('height', wrapper.height())
+										.datum(drawData)
+										.call(chart);
+							
+							that.onScaleChanged();
+						},
+						error: handleAjaxError()
+					});
+				},
+				
+				onScaleChanged: function () {
+					var scaleN = viz.getLevel();
+					if (scaleN != prevScaleN) {
+						var svg = $('#div-time-state-hist').find('svg');
+						var scales = svg.children('text');
+						
+						scales.removeAttr('highlighted');
+						$(scales[scales.length - scaleN - 1]).attr('highlighted', 'highlighted');
+					}
+				},
+				
+				onStateChanged: function (stateId) {
+					wrapper.find('rect').removeAttr('highlighted');
+					
+					if (stateId == null) return;
+					
+					var currId = stateId;
+					var parentId = null;
+					
+					while (true) {
+						parentId = viz.getParent(currId);
+						if (parentId == null) break;
+						
+						wrapper.find('.timelineItem_state-' + currId).attr('highlighted', 'highlighted');
+						
+						if (parentId == currId) break;
+						
+						currId = parentId;
+					}
+				}
+			};
+			return that;
+		})();
+		
 		(function () {
 			var prevVal = 1;
 			
@@ -1261,7 +1429,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 		})();
 	
 		$("#slider_item_div").slider({
-			value: 0,//viz.getZoom(),
+			value: 100,//viz.getZoom(),
 			min: 0,//viz.getMinZoom(),
 			max: 100,//viz.getMaxZoom(),
 			step: 1,//0.01,
@@ -1342,27 +1510,10 @@ function changeControlVal(stateId, ftrIdx, val) {
 				$('#chk-show-fut').change();
 			}
 			
-			if (stateId == null) return;
-			
 			// highlight the state in the "Big Picture"
-			var historyViz = $('#div-time-state-hist');
-			historyViz.find('rect').removeAttr('highlighted');
+			timelineController.onStateChanged(stateId);
 			
-			var currId = stateId;
-			var parentId = null;
-			
-			while (true) {
-				parentId = viz.getParent(currId);
-					
-				if (parentId == null) break;
-				
-				var items = historyViz.find('.timelineItem_state-' + currId);
-				items.attr('highlighted', 'highlighted');
-				
-				if (parentId == currId) break;
-				
-				currId = parentId;
-			}
+			if (stateId == null) return;
 			
 			// fetch state details
 			$.ajax('api/stateDetails', {
@@ -1691,6 +1842,9 @@ function changeControlVal(stateId, ftrIdx, val) {
 					$('#chk-show-fut').attr('checked', false);
 					$('#chk-show-fut').change();
 				}
+				
+				// highlight the current level in the timeline
+				timelineController.onScaleChanged();
 			});
 		})();
 		
@@ -1725,134 +1879,9 @@ function changeControlVal(stateId, ftrIdx, val) {
 			return result;
 		});
 		
-		$(document).ready(function () {
-			
-			(function () {
-				var wrapperId = '#div-time-state-hist';
-				var wrapper = $(wrapperId);
-			
-				$.ajax('api/stateHistory', {
-					dataType: 'json',
-					data: {},
-					success: function (scales) {
-						var drawData = [];
-						var maxEls = 0;
-						
-						for (var scaleN = scales.length-1; scaleN >= 0; scaleN--) {							
-							var scale = scales[scaleN].scale;
-							var states = scales[scaleN].states;
-							var timeV = [];
-							var category = 'scale-' + scaleN;
-							
-							for (var stateN = 0; stateN < states.length-1; stateN++) {
-								var state = states[stateN];
-								var stateId = state.id;
-								
-								var color = viz.getDefaultNodeColor(stateId);
-								timeV.push({
-									starting_time: state.start,
-									ending_time: states[stateN+1].start - 1,
-									color: color,
-									"class": 'state-' + stateId
-								});
-							}
-							
-							drawData.push({
-								'class': category,
-								label: category,
-								times: timeV
-							});
-							
-							if (timeV.length > maxEls) {
-								maxEls = timeV.length;
-							}
-						}
-													
-						var finestStates = scales[0].states;
-						
-						var chart = d3.timeline();
-						
-						var nTicks = 15;
-						var minElementWidth = 10;
-						
-						var tickTime = null;
-						var tickInterval = null;
-						var format = null;
-						
-						switch (TIME_UNIT) {
-						case 'second': {
-							tickTime = d3.time.seconds;
-							tickInterval = (scales[scales.length-1].start - scales[0].start) / (1000*nTicks);
-							format = d3.time.format('%c');
-							break;
-						}
-						case 'minute': {
-							tickTime = d3.time.minutes;
-							tickInterval = (finestStates[finestStates.length-1].start - finestStates[0].start) / (1000*60*nTicks);
-							format = d3.time.format('%c');
-							break;
-						}
-						case 'hour': {
-							tickTime = d3.time.hours;
-							tickInterval = (finestStates[finestStates.length-1].start - finestStates[0].start) / (1000*60*60*nTicks);
-							format = d3.time.format('%c');
-							break;
-						}
-						case 'day': {
-							tickTime = d3.time.days;
-							tickInterval = (finestStates[finestStates.length-1].start - finestStates[0].start) / (1000*60*60*24*nTicks);
-							format = d3.time.format('%x');
-							break;
-						}
-						case 'month': {
-							tickTime = d3.time.months;
-							tickInterval = (finestStates[finestStates.length-1].start - finestStates[0].start) / (1000*60*60*24*30*nTicks);
-							format = d3.time.format('%Y');
-							break;
-						}
-						default: {
-							alert('Illegal time unit: ' + TIME_UNIT);
-						}
-						}
-						
-						var containerW = wrapper.width();
-						
-						chart.tickFormat({
-							format: format,
-							tickTime: tickTime,
-							tickInterval: tickInterval,
-							tickSize: 6,
-							tickValues: null
-						});
-						chart.click(function (d, i, datum) {
-							var stateClass = d['class'];
-							var scaleClass = datum['class'];
-							
-							var stateSpl = stateClass.split('-');
-							var scaleSpl = scaleClass.split('-');
-							
-							var stateId = stateSpl[stateSpl.length-1];
-							var scaleN = scaleSpl[scaleSpl.length-1];
-							
-							viz.setLevel(scaleN);
-							viz.setSelectedState(stateId);							
-						});
-						chart.width(Math.max(maxEls*minElementWidth, containerW));
-						chart.margin({ left: 50, right: 0, top: 0, bottom: 0 });
-						chart.stack();
-												
-						var svg = d3.select(wrapperId)
-									.append('svg')
-									.attr('width', containerW)
-									.attr('height', wrapper.height())
-//									.attr('transform', 'translate(50, 0)')
-									.datum(drawData)
-									.call(chart);
-					},
-					error: handleAjaxError()
-				});
-			})();
-		})
+		viz.onInitialized(function () {
+			timelineController.init();
+		});
 	})();
 	
 	//=======================================================
