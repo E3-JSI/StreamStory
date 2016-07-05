@@ -846,6 +846,11 @@ exports.StreamStory = function (opts) {
 			};
 		},
 		
+		getHistoricalStates: function (scale) {
+			var result = mc.getHistoricalStates(scale);
+			return result;
+		},
+		
 		explainState: function (stateId) {
 			var unionV = mc.explainState(stateId);
 			var names = getObsFtrNames();

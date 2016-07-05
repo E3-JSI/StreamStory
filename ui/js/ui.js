@@ -14,6 +14,8 @@ function changeControlVal(stateId, ftrIdx, val) {
 }
 
 (function () {
+	var STATE_COLORS = ['blue', 'red', 'green', 'yellow', 'magenta', 'cyan', 'brown', 'Wheat', 'DeepPink', 'CadetBlue'];
+	
 	var TAB_ID = null;
 	var MODE_SELECT_ACTIVITY_STATE = false;
 	var ui;
@@ -1342,7 +1344,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 			
 			if (stateId == null) return;
 			
-			firstBottomVizTab.click();
+//			firstBottomVizTab.click();
 			
 			// fetch state details
 			$.ajax('api/stateDetails', {
@@ -1663,14 +1665,16 @@ function changeControlVal(stateId, ftrIdx, val) {
 			$('#wrapper-transition-details').show();
 		});
 		
-		viz.onHeightChanged(function (scale) {
-			$('#span-zoom-val').html(scale.toFixed());
-			$("#slider_item_div").slider('value', scale);
-			if ($('#chk-show-fut').is(':checked')) {
-				$('#chk-show-fut').attr('checked', false);
-				$('#chk-show-fut').change();
-			}
-		});
+		(function () {
+			viz.onHeightChanged(function (scale) {
+				$('#span-zoom-val').html(scale.toFixed());
+				$("#slider_item_div").slider('value', scale);
+				if ($('#chk-show-fut').is(':checked')) {
+					$('#chk-show-fut').attr('checked', false);
+					$('#chk-show-fut').change();
+				}
+			});
+		})();
 		
 		viz.onStateCtxMenu(function (id, label, level, height) {
 			var result = [
@@ -1702,6 +1706,133 @@ function changeControlVal(stateId, ftrIdx, val) {
 			
 			return result;
 		});
+		
+		$(document).ready(function () {
+			
+			(function () {
+				var wrapperId = '#div-time-state-hist';
+				var wrapper = $(wrapperId);
+			
+				$.ajax('api/stateHistory', {
+					dataType: 'json',
+					data: {},
+					success: function (scales) {
+						var drawData = [];
+						
+						for (var scaleN = scales.length-1; scaleN >= 0; scaleN--) {							
+							var scale = scales[scaleN].scale;
+							var states = scales[scaleN].states;
+							var timeV = [];
+							var category = 'scale-' + scaleN;
+							
+							for (var stateN = 0; stateN < states.length-1; stateN++) {
+								var state = states[stateN];
+								var stateId = state.id;
+								
+								var color = viz.getDefaultNodeColor(stateId);
+								timeV.push({
+									starting_time: state.start,
+									ending_time: states[stateN+1].start - 1,
+									color: color,
+									"class": 'state-' + stateId
+								});
+							}
+							
+							drawData.push({
+								'class': category,
+								label: category,
+								times: timeV
+							});
+						}
+													
+						var finestStates = scales[0].states;
+						
+						var chart = d3.timeline();
+						
+						var nTicks = 15;
+						
+						var tickTime = null;
+						var tickInterval = null;
+						var format = null;
+						
+						switch (TIME_UNIT) {
+						case 'second': {
+							tickTime = d3.time.seconds;
+							tickInterval = (scales[scales.length-1].start - scales[0].start) / (1000*nTicks);
+							format = d3.time.format('%c');
+							break;
+						}
+						case 'minute': {
+							tickTime = d3.time.minutes;
+							tickInterval = (finestStates[finestStates.length-1].start - finestStates[0].start) / (1000*60*nTicks);
+							format = d3.time.format('%c');
+							break;
+						}
+						case 'hour': {
+							tickTime = d3.time.hours;
+							tickInterval = (finestStates[finestStates.length-1].start - finestStates[0].start) / (1000*60*60*nTicks);
+							format = d3.time.format('%c');
+							break;
+						}
+						case 'day': {
+							tickTime = d3.time.days;
+							tickInterval = (finestStates[finestStates.length-1].start - finestStates[0].start) / (1000*60*60*24*nTicks);
+							format = d3.time.format('%x');
+							break;
+						}
+						case 'month': {
+							tickTime = d3.time.months;
+							tickInterval = (finestStates[finestStates.length-1].start - finestStates[0].start) / (1000*60*60*24*30*nTicks);
+							format = d3.time.format('%Y');
+							break;
+						}
+						default: {
+							alert('Illegal time unit: ' + TIME_UNIT);
+						}
+						}
+						
+//						drawData = [
+//						            {label: "person a", times: [{"starting_time": 1355752800000, "ending_time": 1355759900000}, {"starting_time": 1355767900000, "ending_time": 1355774400000}]},
+//						            {label: "person b", times: [{"starting_time": 1355759910000, "ending_time": 1355761900000}, ]},
+//						            {label: "person c", times: [{"starting_time": 1355761910000, "ending_time": 1355763910000}]}
+//						          ]
+						
+//						chart.margin({left: 100, right:0, top:0, bottom:0});
+						chart.tickFormat({
+							format: format,
+							tickTime: tickTime,
+							tickInterval: tickInterval,
+							tickSize: 6,
+							tickValues: null
+						});
+						chart.click(function (d, i, datum) {
+							var stateClass = d['class'];
+							var scaleClass = datum['class'];
+							
+							var stateSpl = stateClass.split('-');
+							var scaleSpl = scaleClass.split('-');
+							
+							var stateId = stateSpl[stateSpl.length-1];
+							var scaleN = scaleSpl[scaleSpl.length-1];
+							
+							viz.setLevel(scaleN);
+							viz.setSelectedState(stateId);							
+						});
+						chart.margin({ left: 50, right: 0, top: 0, bottom: 0 });
+						chart.stack();
+												
+						var svg = d3.select(wrapperId)
+									.append('svg')
+									.attr('width', wrapper.width() - 100)
+									.attr('height', wrapper.height())
+//									.attr('transform', 'translate(50, 0)')
+									.datum(drawData)
+									.call(chart);
+					},
+					error: handleAjaxError()
+				});
+			})();
+		})
 	})();
 	
 	//=======================================================
@@ -1709,8 +1840,6 @@ function changeControlVal(stateId, ftrIdx, val) {
 	//=======================================================
 	
 	(function () {
-		var ACTIVITY_COLORS = ['blue', 'red', 'green', 'yellow', 'magenta', 'cyan', 'brown', 'Wheat', 'DeepPink', 'CadetBlue'];
-		
 		var currStep = {};
 		var currStepN = 0;
 		var currStepSize = 0;
@@ -1718,7 +1847,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 		var alertField = $('#alert-wrapper-activity');
 		
 		function getStepColor() {
-			return ACTIVITY_COLORS[currStepN % ACTIVITY_COLORS.length];
+			return STATE_COLORS[currStepN % STATE_COLORS.length];
 		}
 		
 		function onRemoveBtnClick() {

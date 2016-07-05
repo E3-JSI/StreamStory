@@ -270,7 +270,7 @@ html, body {
 	margin-bottom: 0px !important;
 }
 
-#div-tree-wrapper, #div-parallel-wrapper, #div-timehist-wrapper {
+#div-tree-wrapper, #div-parallel-wrapper, #div-timehist-wrapper, #div-time-state-hist-wrapper {
 	/*display: initial !important;*/
 	display: block !important;
 	width: calc(100% - 32px);	/* inherits the width from col-md-8, which has 15px padding on both sides and a small border */
@@ -280,7 +280,7 @@ html, body {
 	left: -100000px;
 }
 
-#div-tree-wrapper.active, #div-parallel-wrapper.active, #div-timehist-wrapper.active {
+#div-tree-wrapper.active, #div-parallel-wrapper.active, #div-timehist-wrapper.active, #div-time-state-hist-wrapper.active {
 	display: block !important;
 	width: 100% !important;
 	visibility: visible;

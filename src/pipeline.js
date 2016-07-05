@@ -52,7 +52,7 @@ function initStreamAggregates() {
 	// create the merger used for enrichment
 	(function () {
 		var mergerConfig = {
-			type: 'stmerger',
+			type: 'merger',
 			name: 'drilling_merger',
 			outStore: fields.ENRICHED_STORE,
 			createStore: false,

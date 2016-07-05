@@ -46,6 +46,7 @@ var zoomVis = function (opts) {
 	
 	var FONT_SIZE = '12';
 	var DEFAULT_BORDER_WIDTH = 5;
+	var SELECTED_BORDER_WIDTH = 10;
 	
 	var BACKGROUND_Z_INDEX = 0;
 	var MIDDLEGROUND_Z_INDEX = 10;
@@ -399,6 +400,7 @@ var zoomVis = function (opts) {
 	
 	var ElementCache = function () {
 		var nodeCache = {};
+		var nodeColorH = {};
 		
 		var prevLevelNodeCache = {};
 		var currLevelNodeCache = {};
@@ -406,10 +408,17 @@ var zoomVis = function (opts) {
 		
 		var that = {
 			addNode: function (id, level, nodeConfig) {
+				if (!(id in nodeColorH)) nodeColorH[id] = genRandStateColor();
+				
+				nodeConfig.css['background-color'] = nodeColorH[id];
 				nodeCache[id] = nodeConfig;
 			},
 			getNode: function (id) {
 				return nodeCache[id];
+			},
+			getNodeColor: function (id) {
+				if (!(id in nodeColorH)) nodeColorH[id] = genRandStateColor();
+				return nodeColorH[id];
 			},
 			getNodes: function () {
 				return nodeCache;
@@ -802,7 +811,7 @@ var zoomVis = function (opts) {
 					'font-weight': 'normal',
 					'shape': 'ellipse',
 					'display': 'element',
-					'background-color': DEFAULT_NODE_COLOR,
+//					'background-color': DEFAULT_NODE_COLOR,
 					'width': nodeSize.width,
 					'height': nodeSize.height,
 					'border-width': DEFAULT_BORDER_WIDTH,
@@ -1073,17 +1082,23 @@ var zoomVis = function (opts) {
 		var data = node.data();
 		
 		var mode = getMode();
-		
+				
 		if (mode != MODE_ACTIVITY) {
 			if (nodeId == modeConfig.selected) {
-				node.css('border-width', '10');
+				node.css('border-width', SELECTED_BORDER_WIDTH);
 				node.css('z-index', FOREGROUND_Z_INDEX);
 			}
 			if (nodeId == modeConfig.current) {
-				node.css('backgroundColor', CURRENT_NODE_COLOR);
+				node.css('border-color', CURRENT_NODE_COLOR);
+//				node.css('backgroundColor', CURRENT_NODE_COLOR);
 			}
 			if (nodeId in modeConfig.past) {
 				node.css('border-color', PREVIOUS_NODE_EDGE_COLOR);
+			}
+			if (nodeId in modeConfig.future) {
+				var prob = futureColorFromProb(modeConfig.future[nodeId]);
+				var color = 'hsla(' + FUTURE_NODE_BASE_COLOR + ',' + (15 + Math.floor((100-15)*prob)) + '%, 55%, 1)';
+				node.css('border-color', color);
 			}
 			
 			if (mode == MODE_PROBS) {
@@ -1106,10 +1121,9 @@ var zoomVis = function (opts) {
 							
 				node.css('backgroundColor', color);
 			} 
-			else if (nodeId in modeConfig.future) {
-				var prob = futureColorFromProb(modeConfig.future[nodeId]);
-				var color = 'hsla(' + FUTURE_NODE_BASE_COLOR + ',' + (15 + Math.floor((100-15)*prob)) + '%, 55%, 1)';
-				node.css('backgroundColor', color);
+			else {
+				var nodeColor = cache.getNodeColor(nodeId);
+				node.css('backgroundColor', nodeColor);
 			}
 		}
 		else {
@@ -1391,18 +1405,27 @@ var zoomVis = function (opts) {
 		return (1 - scale / 100)*(maxHeight - minHeight) + minHeight;
 	}
 	
+	function setLevel(levelN) {
+		if (levelN != currentLevel) {
+			currentLevel = levelN;
+			setCurrentLevel(currentLevel);
+		}
+	}
+	
 	function setScale(scale) {
 		var prevHeight = currentHeight;
 		currentHeight = Math.min(maxHeight, Math.max(minHeight, scale));
 		
 		if (currentLevel < levelHeights.length - 1) {
 			if (currentHeight >= levelHeights[currentLevel + 1]) {
-				setCurrentLevel(++currentLevel);
+				setLevel(currentLevel + 1);
+//				setCurrentLevel(++currentLevel);
 			}
 		}
 		if (currentLevel > 0) {
 			if (currentHeight < levelHeights[currentLevel]) {
-				setCurrentLevel(--currentLevel);
+				setLevel(currentLevel - 1);
+//				setCurrentLevel(--currentLevel);
 			}
 		}
 		
@@ -1797,7 +1820,14 @@ var zoomVis = function (opts) {
 			}
 		},
 		
+		setSelectedState: function (stateId) {
+			setSelectedState(cy.nodes('#' + stateId));
+		},
+		
 		setNodeColor: setNodeColor,
+		getDefaultNodeColor: function (id) {
+			return cache.getNodeColor(id);
+		},
 		
 		clearNodeColors: function () {
 			var cachedNodes = cache.getNodes();
@@ -1899,6 +1929,10 @@ var zoomVis = function (opts) {
 			setScale(uiToInternalScale(scale));
 		},
 		
+		setLevel: function (levelN) {
+			setLevel(levelN);
+		},
+		
 		setZoom: function (value) {
 			setZoom(value, false);
 		},
@@ -1913,6 +1947,10 @@ var zoomVis = function (opts) {
 		
 		getMaxZoom: function () {
 			return maxCyZoom;
+		},
+		
+		getScale: function () {
+			return hierarchy[currentLevel].height;
 		},
 		
 		getCurrentHeight: function () {

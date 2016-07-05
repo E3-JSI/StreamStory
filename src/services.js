@@ -1100,8 +1100,8 @@ function initStreamStoryRestApi() {
 		});
 	}
 	
-	{
-		log.info('Registering state details service ...');
+	(function () {
+log.info('Registering state details service ...');
 		
 		// state details
 		app.get(API_PATH + '/stateDetails', function (req, res) {
@@ -1130,6 +1130,31 @@ function initStreamStoryRestApi() {
 				});
 			} catch (e) {
 				log.error(e, 'Failed to query state details!');
+				handleServerError(e, req, res);
+			}
+		});
+		
+		app.get(API_PATH + '/stateHistory', function (req, res) {
+			try {
+				var scale = req.query.scale;
+				
+				if (scale != null) {
+					if (log.debug())
+						log.debug('Fetching state history for scale %d', scale);
+					scale = parseFloat(scale);
+				}
+				else {
+					if (log.debug())
+						log.debug('Fetching state history for all scales');
+				}
+				
+				var model = getModel(req.sessionID, req.session);
+				
+				var result = model.getHistoricalStates(scale);
+				
+				res.send(result);
+				res.end();
+			} catch (e) {
 				handleServerError(e, req, res);
 			}
 		});
@@ -1569,7 +1594,7 @@ function initStreamStoryRestApi() {
 				handleServerError(e, req, res);
 			}
 		});
-	}
+	})();
 }
 
 function initDataUploadApi() {

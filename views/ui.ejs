@@ -16,6 +16,8 @@
 	</style>
     
     <script type="text/javascript">
+    	var TIME_UNIT = '<%= model.getModel().getTimeUnit(); %>';
+    
 		<% if (model.isOnline()) { %>
 		var PREDICTION_THRESHOLD = <%= predictionThreshold %>;
 		var TIME_HORIZON = <%= timeHorizon %>;
@@ -356,6 +358,9 @@
 								<div class="panel panel-default" style="width: 100%;">
 									<div class="panel-body nopadding" style="width: 100%;">
 										<ul id="tabs-viz-bottom" class="nav nav-tabs">
+										  	<li role="presentation">
+										  		<a id="a-time-state-hist" href="#" data-target="#div-time-state-hist-wrapper" data-toggle="tab">State History</a>
+										  	</li>
 										  	<li role="presentation" class="active">
 										  		<a id="a-parcoords" href="#" data-target="#div-parallel-wrapper" data-toggle="tab">Coordinates</a>
 										  	</li>
@@ -367,6 +372,9 @@
 										  	</li>
 										</ul>
 										<div id="tab-content-bottom" class="tab-content" style="width: 100%;">
+											<div id="div-time-state-hist-wrapper" class="tab-pane container-bottom parcoords container-chart">
+												<div id="div-time-state-hist" style="height: 100%; width: calc(100% - 50px); padding-left: 50px;"></div>
+											</div>
 											<div id="div-parallel-wrapper" class="tab-pane container-bottom active">
 												<div id="div-parallel-container" class="hidden">
 													<div id="div-parallel" class="parcoords"></div>
@@ -567,6 +575,7 @@
 	<script type="text/javascript" src="lib/cytoscape-ctxmenu.js"></script>
 	<script type="text/javascript" src="lib/d3.js"></script>
 	<script type="text/javascript" src="lib/d3.parcoords.js"></script>
+	<script type="text/javascript" src="lib/d3-timeline.js"></script>
 	<script type="text/javascript" src="lib/d3-tip.js"></script>
 	<script src="https://cdn.rawgit.com/cpettitt/dagre/v0.7.4/dist/dagre.min.js"></script>
 	<script type="text/javascript" src="js/zoomvis.js"></script>
