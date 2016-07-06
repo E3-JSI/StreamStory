@@ -3,6 +3,14 @@
   d3.timeline = function() {
     var DISPLAY_TYPES = ["circle", "rect"];
 
+    var g = null;
+    var gParent = null;
+    var zoom = null;
+    
+    var scaleFactor = null;
+    
+    var xScale = null;
+    
     var hover = function () {},
         mouseover = function () {},
         mouseout = function () {},
@@ -156,10 +164,11 @@
         .on("click", function (d, i) { click(d, index, datum); });
     };
 
-    function timeline (gParent) {
-      var g = gParent.append("g");
+    function timeline (parent) {
+      gParent = parent;
+      g = gParent.append("g");
+      
       var gParentSize = gParent[0][0].getBoundingClientRect();
-
       var gParentItem = d3.select(gParent[0][0]);
 
       var yAxisMapping = {},
@@ -220,10 +229,10 @@
         }
       }
 
-      var scaleFactor = (1/(ending - beginning)) * (width - margin.left - margin.right);
+      scaleFactor = (1/(ending - beginning)) * (width - margin.left - margin.right);
 
       // draw the axis
-      var xScale = d3.time.scale()
+      xScale = d3.time.scale()
         .domain([beginning, ending])
         .range([margin.left, width - margin.right]);
 
@@ -389,7 +398,7 @@
           scroll(x*scaleFactor, xScale);
         };
 
-        var zoom = d3.behavior.zoom().x(xScale).on("zoom", move);
+        zoom = d3.behavior.zoom().x(xScale).on("zoom", move);
 
         gParent
           .attr("class", "scrollable")
@@ -701,6 +710,22 @@
       showAxisNav = !showAxisNav;
       return timeline;
     };
+    
+    timeline.move = function (x) {
+    	if (zoom == null) return;
+    	
+    	console.log('moving to: ' + x);
+    	
+    	var gParentSize = gParent[0][0].getBoundingClientRect();
+    	var x = Math.min(0, Math.max(gParentSize.width - width, x/* / scaleFactor*/));
+        zoom.translate([x, 0]);
+        g.attr("transform", "translate(" + x + ",0)");
+        scroll(x*scaleFactor, xScale);
+    }
+    
+    timeline.scaleFactor = function () {
+    	return scaleFactor;
+    }
 
     return timeline;
   };

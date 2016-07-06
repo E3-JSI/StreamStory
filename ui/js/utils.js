@@ -59,15 +59,30 @@ function addPressHandler(btn, callback) {
 	var timeoutId = 0;
 	var intervalId = 0;
 	
-	btn.click(callback);
-	btn.mousedown(function () {
+	btn.click(function (event) {
+		if (event.which != 1) return;
+		
+		callback(event);
+	});
+	btn.mousedown(function (event) {
+		if (event.which != 1) return;	// only listen to the left mouse button
+		
 		timeoutId = setTimeout(function () {
 			// the button is pressed
-			intervalId = setInterval(callback, 50);
+			timeoutId = null;
+			intervalId = setInterval(function () {
+				callback(event);
+			}, 50);
 		}, 1000);
 	}).bind('mouseup mouseleave', function () {
-		clearTimeout(timeoutId);
-		clearInterval(intervalId);
+		if (timeoutId != null) {
+			clearTimeout(timeoutId);
+			timeoutId = null;
+		}
+		if (intervalId != null) {
+			clearInterval(intervalId);
+			intervalId = null;
+		}
 	});
 }
 

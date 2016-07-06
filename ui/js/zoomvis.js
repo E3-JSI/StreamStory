@@ -511,14 +511,9 @@ var zoomVis = function (opts) {
 						};
 					}
 				}
-				
-				console.log(JSON.stringify(colorH));
 			},
 			getColor: function (nodeId) {
 				var colorStr = getOutputStr(colorH[nodeId]);
-				
-				console.log(colorStr);
-				
 				return colorStr;
 			}
 		}

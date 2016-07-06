@@ -344,6 +344,12 @@ html, body {
 	font-weight: bold;
 }
 
+#div-timeline-zoom {
+	position: absolute;
+	top: 50px;
+	right: 23px;
+}
+
 /*===============================================================
  	ADMIN TEMPLATE
 ===============================================================*/
