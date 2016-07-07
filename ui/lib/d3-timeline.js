@@ -11,6 +11,9 @@
     
     var xScale = null;
     
+    var currTranslation = 0;
+    var scaleX = 1;
+    
     var hover = function () {},
         mouseover = function () {},
         mouseout = function () {},
@@ -21,6 +24,7 @@
         navigateRight = function () {},
         orient = "bottom",
         width = null,
+        origWidth = null,
         height = null,
         rowSeparatorsColor = null,
         backgroundColor = null,
@@ -168,7 +172,7 @@
       gParent = parent;
       g = gParent.append("g");
       
-      var gParentSize = gParent[0][0].getBoundingClientRect();
+//      var gParentSize = gParent[0][0].getBoundingClientRect();
       var gParentItem = d3.select(gParent[0][0]);
 
       var yAxisMapping = {},
@@ -390,12 +394,33 @@
       if (showTimeAxis) { appendTimeAxis(g, xAxis, timeAxisYPosition); }
       if (timeAxisTick) { appendTimeAxisTick(g, xAxis, maxStack); }
 
-      if (width > gParentSize.width) {
+      
+      if (width > gParent[0][0].getBoundingClientRect().width) {
         var move = function() {
-          var x = Math.min(0, Math.max(gParentSize.width - width, d3.event.translate[0]));
-          zoom.translate([x, 0]);
-          g.attr("transform", "translate(" + x + ",0)");
-          scroll(x*scaleFactor, xScale);
+          var gParentW = gParent[0][0].getBoundingClientRect().width;
+          
+          var event = d3.event;
+          var sourceEvent = event.sourceEvent;
+          
+//          if (sourceEvent.type == 'mousemove') {
+//        	  var translate = event.translate[0];
+//        	  
+//        	  console.log('translation in move: ' + translate);
+//        	  
+//        	  currTranslation = translate*scaleX;
+//          }
+//          else {
+    	  var deltaY = sourceEvent.deltaY;
+          if (deltaY == null) return;
+          currTranslation -= deltaY;
+//          }
+          
+          if (currTranslation > 0) currTranslation = 0;
+          if (currTranslation < gParentW - width) currTranslation = gParentW - width;
+                    
+          zoom.translate([currTranslation, 0]);
+          g.attr("transform", "matrix(" + scaleX + ",0,0,1," + currTranslation + ",0)");
+          scroll(currTranslation, xScale);
         };
 
         zoom = d3.behavior.zoom().x(xScale).on("zoom", move);
@@ -446,6 +471,7 @@
         if (!height && !gParentItem.attr("height")) {
           if (itemHeight) {
             // set height based off of item height
+        	var gParentSize = gParent[0][0].getBoundingClientRect();
             height = gSize.height + gSize.top - gParentSize.top;
             // set bounding rectangle height
             d3.select(gParent[0][0]).attr("height", height);
@@ -462,9 +488,11 @@
       }
 
       function setWidth() {
+    	var gParentSize = gParent[0][0].getBoundingClientRect()
         if (!width && !gParentSize.width) {
           try {
             width = gParentItem.attr("width");
+            origWidth = width;
             if (!width) {
               throw "width of the timeline is not set. As of Firefox 27, timeline().with(x) needs to be explicitly set in order to render";
             }
@@ -534,6 +562,7 @@
     timeline.width = function (w) {
       if (!arguments.length) return width;
       width = w;
+      origWidth = w;
       return timeline;
     };
 
@@ -711,21 +740,21 @@
       return timeline;
     };
     
-    timeline.move = function (x) {
-    	if (zoom == null) return;
-    	
-    	console.log('moving to: ' + x);
-    	
-    	var gParentSize = gParent[0][0].getBoundingClientRect();
-    	var x = Math.min(0, Math.max(gParentSize.width - width, x/* / scaleFactor*/));
-        zoom.translate([x, 0]);
-        g.attr("transform", "translate(" + x + ",0)");
-        scroll(x*scaleFactor, xScale);
-    }
+    timeline.zoom = function (scale) {
+    	var factor = scale / scaleX;
+    	scaleX = scale;
+//    	currTranslation *= scaleX;
+    	width = origWidth*scaleX;
+    	zoom.scale(scaleX);
+//    	g.call(zoom);
+    	g.attr("transform", "matrix(" + scaleX + ",0,0,1," + currTranslation*factor + ",0)");
+    	currTranslation *= factor;
+    	console.log('curr translation in zoom: ' + currTranslation);
+    };
     
     timeline.scaleFactor = function () {
     	return scaleFactor;
-    }
+    };
 
     return timeline;
   };

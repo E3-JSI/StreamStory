@@ -1409,17 +1409,13 @@ function changeControlVal(stateId, ftrIdx, val) {
 							});
 							
 							chart.scroll(function (x, scale) {
-								currX = x / chart.scaleFactor();
-								console.log('x: ' + currX);
-								console.log('scale: ' + scale);
+//								currX = x / chart.scaleFactor();
 							});
 							
 							addPressHandler($('#btn-timeline-zoomin'), function () {
 								chartW *= ZOOM_FACTOR;
-								chart.width(chartW.toFixed());
-								redraw();
-								chart.move((currX * ZOOM_FACTOR).toFixed());
-								that.onStateChanged(selectedStateId);
+								
+								chart.zoom(chartW / defaultChartW);
 							});
 							
 							addPressHandler($('#btn-timeline-zoomout'), function () {
@@ -1427,10 +1423,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 								chartW = Math.max(chartW / ZOOM_FACTOR, minChartW);
 																										
 								if (chartW != prevChartW) {
-									chart.width(chartW.toFixed());
-									redraw();
-									chart.move((currX / ZOOM_FACTOR).toFixed());
-									that.onStateChanged(selectedStateId);
+									chart.zoom(chartW / defaultChartW);
 								}
 							});
 						},

@@ -11,11 +11,17 @@ a {
 }
 
 .row-title {
-	height: 330px;
+	min-height: 330px;
 }
 
 .row-title .col {
 	height: 100%;
+}
+
+.thumbnail p {
+	max-height: 120px;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 #div-title {
