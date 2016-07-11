@@ -5,6 +5,7 @@ MAINTAINER Luka Stopar <luka.stopar@ijs.si>
 ENV MYSQL_ROOT_PASS root12
 ENV NPM_VERSION 2.11.3
 ENV NODE_GYP_VERSION 2.0.1
+ENV GIT_BRANCH development
 
 #==================================================
 # CHECK INTERNET
@@ -41,11 +42,11 @@ RUN apt-get install -y libssl-dev
 
 
 # install MySQL
-RUN echo $MYSQL_ROOT_PASS
-RUN echo 'mysql-server mysql-server/root_password_again password '$MYSQL_ROOT_PASS
-RUN debconf-set-selections << 'mysql-server mysql-server/root_password password '$MYSQL_ROOT_PASS
-RUN debconf-set-selections << 'mysql-server mysql-server/root_password_again password '$MYSQL_ROOT_PASS
-RUN export DEBIAN_FRONTEND="noninteractive" && apt-get install -y mysql-server
+#RUN echo $MYSQL_ROOT_PASS
+#RUN echo 'mysql-server mysql-server/root_password_again password '$MYSQL_ROOT_PASS
+#RUN debconf-set-selections << 'mysql-server mysql-server/root_password password '$MYSQL_ROOT_PASS
+#RUN debconf-set-selections << 'mysql-server mysql-server/root_password_again password '$MYSQL_ROOT_PASS
+#RUN export DEBIAN_FRONTEND="noninteractive" && apt-get install -y mysql-server
 
 # install Node.js
 RUN curl -sL https://deb.nodesource.com/setup_0.12 | bash -
@@ -69,17 +70,17 @@ RUN mkdir app
 RUN cd app && \
 	git clone https://github.com/JozefStefanInstitute/StreamStory.git && \
 	cd StreamStory && \
-	git checkout -b development && \
+	git checkout -b $GIT_BRANCH && \
 	npm install
 RUN cd app && \
 	git clone https://github.com/lstopar/qminer.git && \
 	cd qminer && \
-	git checkout -b development
+	git checkout -b $GIT_BRANCH
 
 # configure the database
-RUN service mysql start && \
-	cd app/StreamStory && \
-	cat init.sql | mysql -u root
+#RUN service mysql start && \
+#	cd app/StreamStory && \
+#	cat init.sql | mysql -u root
 
 # compile the projects
 RUN cd app/qminer && npm install && node-gyp clean && node-gyp configure -- -DLIN_ALG_BLAS=BLAS -DLIN_ALG_LAPACKE=LAPACKE -DLIN_ALG_LIB=-llapacke && node-gyp build --verbose
@@ -91,7 +92,7 @@ RUN ls -al app/StreamStory/node_modules
 #==================================================
 # ENTRY POINT
 #==================================================
-
+#VOLUME ["/var/lib/mysql"]
 EXPOSE 8283
 WORKDIR /app/StreamStory
-CMD ["node", "main.js", "/etc/streamstory/config-streamstory.json"]
+CMD node main.js /etc/streamstory/config-streamstory.json
