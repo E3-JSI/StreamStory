@@ -8,6 +8,7 @@ module.exports = function () {
 	var pool = mysql.createPool({
 		database: config.database.database,
 		host: config.database.host,
+		port: config.database.port != null ? config.database.port : 3306,
 		user: config.database.user,
 		password: config.database.password,
 		connectionLimit: 10

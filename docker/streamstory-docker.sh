@@ -9,13 +9,10 @@ DOCKER_IP=172.17.0.1
 CONFIG_PATH=/mnt/raidM2T/project-data/config
 DATABASE_STORAGE=/mnt/docker-mysql
 
+# containers
 SS_CONTAINER=$USR/streamstory
-#DATA_CONTAINER=$USR/data
-MYSQL_CONTAINER=$USR/mysql
-
-# container names
-#DATA_CONTAINER_NAME=streamstory-persistent
 SS_CONTAINER_NAME=streamstory
+MYSQL_CONTAINER=$USR/mysql
 MYSQL_CONTAINER_NAME=streamstory-mysql
 
 MYSQL_ROOT_PASSWD=root12
@@ -27,7 +24,7 @@ MYSQL_DATABASE=StreamStory
 case $1 in
 	run)
 		echo 'Running StreamStory ...'
-		docker run --name $SS_CONTAINER_NAME -p $APP_PORT:$APP_PORT -v $CONFIG_PATH:/etc/streamstory -v $DATABASE_STORAGE:/var/lib/mysql $CONTAINER
+		docker run --name $SS_CONTAINER_NAME -p $APP_PORT:8080 -v $CONFIG_PATH:/etc/streamstory -v $DATABASE_STORAGE:/var/lib/mysql $SS_CONTAINER
 		;;
 	configure)
 		echo 'Starting database ...'
