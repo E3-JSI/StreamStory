@@ -66,6 +66,7 @@ RUN cd app/qminer && \
 RUN echo 'sdfdsf'
 RUN echo 'sdfdsf'
 RUN echo 'sdfdsf'
+RUN echo 'sdfdsf'
 RUN cd app && \
 	git clone https://github.com/JozefStefanInstitute/StreamStory.git && \
 	cd StreamStory && \

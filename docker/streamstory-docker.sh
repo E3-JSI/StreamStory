@@ -22,7 +22,7 @@ MYSQL_DATABASE=StreamStory
 
 function start {
 	echo 'Starting StreamStory ...'
-	docker run --name $SS_CONTAINER_NAME -p $APP_PORT:8080 -v $CONFIG_PATH:/etc/streamstory -v $DATABASE_STORAGE:/var/lib/mysql $SS_CONTAINER
+	docker run --name $SS_CONTAINER_NAME --link $MYSQL_CONTAINER_NAME:$MYSQL_CONTAINER -p $APP_PORT:8080 -v $CONFIG_PATH:/etc/streamstory -v $DATABASE_STORAGE:/var/lib/mysql $SS_CONTAINER
 }
 
 function stop {
@@ -37,13 +37,16 @@ function configure {
 	echo 'Starting database ...'
 	docker run --name $MYSQL_CONTAINER_NAME -p $MYSQL_PORT:3306 -v $DATABASE_STORAGE:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWD -e MYSQL_USER=$MYSQL_USER -e MYSQL_PASSWORD=$MYSQL_PASSWORD -e MYSQL_DATABASE=$MYSQL_DATABASE -d $MYSQL_CONTAINER --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
 	
-	echo 'Sleeping for 20 seconds while the container initializes ...'
-	sleep 20
+	WAIT_TM=20
+
+	echo 'Sleeping for '$WAIT_TM' seconds while the container initializes ...'
+	sleep $WAIT_TM
 
 	echo 'Running containers:'
 	docker ps
 
-	echo 'Configuring schema ...'
+	echo 'Configuring database schema ...'
+	docker exec $MYSQL_CONTAINER_NAME sh -c 'cat StreamStory/init-db.sql | mysql -u root -p'$MYSQL_ROOT_PASSWD' '$MYSQL_DATABASE
 	docker exec $MYSQL_CONTAINER_NAME sh -c 'cat StreamStory/init-tables.sql | mysql -u root -p'$MYSQL_ROOT_PASSWD' '$MYSQL_DATABASE
 
 	echo 'Done!'
