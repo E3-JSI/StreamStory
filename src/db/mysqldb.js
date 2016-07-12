@@ -3,7 +3,8 @@ var config = require('../../config.js');
 var utils = require('../utils.js');
 
 module.exports = function () {
-	log.info('Creating MySQL connection pool ...');
+	log.info('Creating MySQL connection pool using configuration:\n%s', JSON.stringify(config.database, null, 4));
+	
 	
 	var pool = mysql.createPool({
 		database: config.database.database,
