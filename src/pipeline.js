@@ -73,7 +73,7 @@ function initStreamAggregates() {
 		for (var i = 0; i < zeroFlds.length; i++) {
 			var name = zeroFlds[i];
 			
-			log.info('Initializing default value for store %s ...', name);
+			log.debug('Initializing default value for store %s ...', name);
 								
 			var val = {
 				time_ms: startTm,
@@ -82,7 +82,7 @@ function initStreamAggregates() {
 			};
 			
 			log.info('Initializing store %s ...', name);
-			log.info('Inserting value %s ...', JSON.stringify(val));
+			log.debug('Inserting value %s ...', JSON.stringify(val));
 			
 			base.store(name).push(val);
 		}
@@ -92,8 +92,7 @@ function initStreamAggregates() {
 		log.info('Initializing Enricher stream aggregates ...');
 		var aggregates = fields.getEnricherStreamAggregates();
 		for (var aggrNm in aggregates) {
-			if (log.info())
-				log.info('Initializing aggregate: %s', aggrNm);
+			log.info('Initializing aggregate: %s', aggrNm);
 			
 			var aggrConf = aggregates[aggrNm];
 			

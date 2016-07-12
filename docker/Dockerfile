@@ -41,10 +41,6 @@ RUN npm update && \
 	npm install -g npm@$NPM_VERSION
 RUN npm install -g node-gyp@$NODE_GYP_VERSION
 
-RUN echo `node -v`
-RUN echo `npm -v`
-RUN echo `node-gyp -v`
-
 #==================================================
 # CONFIGURE THE APP
 #==================================================
@@ -73,7 +69,6 @@ RUN cd app && mkdir ss-db
 #==================================================
 # ENTRY POINT
 #==================================================
-#VOLUME ["/var/lib/mysql"]
 EXPOSE 8283
 WORKDIR /app/StreamStory
 CMD node main.js /etc/streamstory/config-streamstory.json
