@@ -63,8 +63,6 @@ RUN cd app/qminer && \
 	node-gyp build --verbose --jobs 20
 
 # STREAM STORY
-RUN echo 'Remove me'
-RUN echo 'Remove me 2'
 RUN cd app && \
 	git clone https://github.com/JozefStefanInstitute/StreamStory.git && \
 	cd StreamStory && \

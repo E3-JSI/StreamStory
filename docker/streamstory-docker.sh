@@ -22,7 +22,7 @@ MYSQL_DATABASE=StreamStory
 
 
 case $1 in
-	run)
+	start)
 		echo 'Running StreamStory ...'
 		docker run --name $SS_CONTAINER_NAME -p $APP_PORT:8080 -v $CONFIG_PATH:/etc/streamstory -v $DATABASE_STORAGE:/var/lib/mysql $SS_CONTAINER
 		;;
@@ -74,7 +74,7 @@ case $1 in
 		docker rm -f $MYSQL_CONTAINER_NAME
 		;;
 	*)
-		echo 'Usage: streamstory-docker.sh run|stop|build|configure|delete|enter|database|deletedb'
+		echo 'Usage: streamstory-docker.sh start|stop|build|configure|delete|enter|database|deletedb'
 		;;
 esac
 
