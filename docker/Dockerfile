@@ -55,9 +55,16 @@ RUN cd app && \
 	git checkout -b $GIT_BRANCH
 
 # compile the projects
-RUN cd app/qminer && npm install && node-gyp clean && node-gyp configure -- -DLIN_ALG_BLAS=BLAS -DLIN_ALG_LAPACKE=LAPACKE -DLIN_ALG_LIB=-llapacke && node-gyp build --verbose
+RUN cd app/qminer && \
+	npm install
+RUN cd app/qminer && \
+	node-gyp clean && \
+	node-gyp configure -- -DLIN_ALG_BLAS=BLAS -DLIN_ALG_LAPACKE=LAPACKE -DLIN_ALG_LIB=-llapacke && \
+	node-gyp build --verbose --jobs 20
 
 # STREAM STORY
+RUN echo 'Remove me'
+RUN echo 'Remove me 2'
 RUN cd app && \
 	git clone https://github.com/JozefStefanInstitute/StreamStory.git && \
 	cd StreamStory && \

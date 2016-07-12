@@ -37,7 +37,7 @@ case $1 in
 		echo 'Starting database ...'
 		docker run --name $MYSQL_CONTAINER_NAME -p $MYSQL_PORT:3306 -v $DATABASE_STORAGE:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWD -e MYSQL_USER=$MYSQL_USER -e MYSQL_PASSWORD=$MYSQL_PASSWORD -e MYSQL_DATABASE=$MYSQL_DATABASE -d $MYSQL_CONTAINER --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
 		
-		echo 'Sleeping for 10 seconds while the container initializes ...'
+		echo 'Sleeping for 20 seconds while the container initializes ...'
 		sleep 20
 
 		echo 'Running containers:'

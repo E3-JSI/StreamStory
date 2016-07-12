@@ -149,7 +149,8 @@ function initGC() {
 		
 		var store = base.store(storeName);
 		
-		log.info('Initializing store %s ...', JSON.stringify(store));
+		if (log.debug())
+			log.debug('Initializing store %s ...', JSON.stringify(store));
 				
 		// garbagge collector for the stores that have a window
 		if (storeJson.window != null) {
