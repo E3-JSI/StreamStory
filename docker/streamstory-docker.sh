@@ -21,8 +21,26 @@ MYSQL_PASSWORD=StreamStory
 MYSQL_DATABASE=StreamStory
 
 function start {
+	if [ "`docker inspect -f {{.State.Running}} $MYSQL_CONTAINER_NAME`" = "false" ]; then
+		echo 'Starting database ...'
+		docker start $MYSQL_CONTAINER_NAME
+	fi
 	echo 'Starting StreamStory ...'
-	docker run --name $SS_CONTAINER_NAME --link $MYSQL_CONTAINER_NAME:$MYSQL_CONTAINER -p $APP_PORT:8080 -v $CONFIG_PATH:/etc/streamstory -v $DATABASE_STORAGE:/var/lib/mysql $SS_CONTAINER
+	docker start $SS_CONTAINER_NAME
+}
+
+function run_db {
+	echo 'Running database ...'
+	docker run --name $MYSQL_CONTAINER_NAME -p $MYSQL_PORT:3306 -v $DATABASE_STORAGE:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWD -e MYSQL_USER=$MYSQL_USER -e MYSQL_PASSWORD=$MYSQL_PASSWORD -e MYSQL_DATABASE=$MYSQL_DATABASE -d $MYSQL_CONTAINER --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+}
+
+function run {
+	RUNNING=$(docker inspect -f {{.State.Running}} $MYSQL_CONTAINER_NAME 2> /dev/null)
+	if [ $? -eq 1 ]; then
+		run_db
+	fi
+	echo 'Running StreamStory ...'
+	docker run --name $SS_CONTAINER_NAME --link $MYSQL_CONTAINER_NAME:$MYSQL_CONTAINER_NAME -p $APP_PORT:8080 -v $CONFIG_PATH:/etc/streamstory -v $DATABASE_STORAGE:/var/lib/mysql $SS_CONTAINER
 }
 
 function stop {
@@ -34,8 +52,7 @@ function stop {
 }
 
 function configure {
-	echo 'Starting database ...'
-	docker run --name $MYSQL_CONTAINER_NAME -p $MYSQL_PORT:3306 -v $DATABASE_STORAGE:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWD -e MYSQL_USER=$MYSQL_USER -e MYSQL_PASSWORD=$MYSQL_PASSWORD -e MYSQL_DATABASE=$MYSQL_DATABASE -d $MYSQL_CONTAINER --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+	run_db
 	
 	WAIT_TM=20
 
@@ -59,6 +76,9 @@ function build {
 }
 
 case $1 in
+	run)
+		run
+		;;
 	start)
 		start
 		;;
@@ -98,5 +118,3 @@ case $1 in
 		echo 'Usage: streamstory-docker.sh start|stop|build|configure|delete|enter|database|deletedb'
 		;;
 esac
-
-#docker run --name some-mysql -e MYSQL_ROOT_PASSWORD=my-secret-pw -d mysql:tag --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci

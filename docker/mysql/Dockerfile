@@ -5,7 +5,7 @@ ENV GIT_BRANCH development
 
 RUN apt-get update && apt-get install -y git
 
-RUN echo 'Helskdjhf'
+RUN echo 'sdslkfjsdf'
 RUN git clone https://github.com/JozefStefanInstitute/StreamStory.git
 RUN cd StreamStory && \
 	git fetch && \
