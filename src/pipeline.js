@@ -82,7 +82,8 @@ function initStreamAggregates() {
 			};
 			
 			log.info('Initializing store %s ...', name);
-			log.debug('Inserting value %s ...', JSON.stringify(val));
+			if (log.debug())
+				log.debug('Inserting value %s ...', JSON.stringify(val));
 			
 			base.store(name).push(val);
 		}
