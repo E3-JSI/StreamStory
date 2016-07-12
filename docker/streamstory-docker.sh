@@ -20,43 +20,61 @@ MYSQL_USER=StreamStory
 MYSQL_PASSWORD=StreamStory
 MYSQL_DATABASE=StreamStory
 
+function start {
+	echo 'Starting StreamStory ...'
+	docker run --name $SS_CONTAINER_NAME -p $APP_PORT:8080 -v $CONFIG_PATH:/etc/streamstory -v $DATABASE_STORAGE:/var/lib/mysql $SS_CONTAINER
+}
+
+function stop {
+	echo 'Stopping StreamStory ...'
+	docker stop $SS_CONTAINER_NAME
+	echo 'Stopping database ...'
+	docker stop $MYSQL_CONTAINER_NAME
+	echo 'Done!'
+}
+
+function configure {
+	echo 'Starting database ...'
+	docker run --name $MYSQL_CONTAINER_NAME -p $MYSQL_PORT:3306 -v $DATABASE_STORAGE:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWD -e MYSQL_USER=$MYSQL_USER -e MYSQL_PASSWORD=$MYSQL_PASSWORD -e MYSQL_DATABASE=$MYSQL_DATABASE -d $MYSQL_CONTAINER --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+	
+	echo 'Sleeping for 20 seconds while the container initializes ...'
+	sleep 20
+
+	echo 'Running containers:'
+	docker ps
+
+	echo 'Configuring schema ...'
+	docker exec $MYSQL_CONTAINER_NAME sh -c 'cat StreamStory/init-tables.sql | mysql -u root -p'$MYSQL_ROOT_PASSWD' '$MYSQL_DATABASE
+
+	echo 'Done!'
+}
+
+function build {
+	echo 'Building StreamStory ...'
+	docker build -t $MYSQL_CONTAINER mysql/
+	docker build -t $SS_CONTAINER .
+}
 
 case $1 in
 	start)
-		echo 'Running StreamStory ...'
-		docker run --name $SS_CONTAINER_NAME -p $APP_PORT:8080 -v $CONFIG_PATH:/etc/streamstory -v $DATABASE_STORAGE:/var/lib/mysql $SS_CONTAINER
+		start
 		;;
 	stop)
-		echo 'Stopping StreamStory ...'
-		docker stop $SS_CONTAINER_NAME
-		echo 'Stopping database ...'
-		docker stop $MYSQL_CONTAINER_NAME
-		echo 'Done!'
+		stop
 		;;
 	configure)
-		echo 'Starting database ...'
-		docker run --name $MYSQL_CONTAINER_NAME -p $MYSQL_PORT:3306 -v $DATABASE_STORAGE:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWD -e MYSQL_USER=$MYSQL_USER -e MYSQL_PASSWORD=$MYSQL_PASSWORD -e MYSQL_DATABASE=$MYSQL_DATABASE -d $MYSQL_CONTAINER --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
-		
-		echo 'Sleeping for 20 seconds while the container initializes ...'
-		sleep 20
-
-		echo 'Running containers:'
-		docker ps
-
-		echo 'Configuring schema ...'
-		docker exec $MYSQL_CONTAINER_NAME sh -c 'cat StreamStory/init-tables.sql | mysql -u root -p'$MYSQL_ROOT_PASSWD' '$MYSQL_DATABASE
-
-		echo 'Done!'
+		configure
 		;;
 	build)
-		echo 'Building StreamStory ...'
-		docker build -t $MYSQL_CONTAINER mysql/
-		docker build -t $SS_CONTAINER .
+		build
 		;;
 	enter)
 		case $2 in
 			database)
 				docker exec -it $MYSQL_CONTAINER_NAME bash
+				;;
+			streamstory)
+				docker exec -it $SS_CONTAINER_NAME bash
 				;;
 			*)
 				echo 'Cannot enter container '$2

@@ -12,7 +12,8 @@ module.exports = function () {
 		port: config.database.port != null ? config.database.port : 3306,
 		user: config.database.user,
 		password: config.database.password,
-		connectionLimit: 10
+		connectionLimit: 10,
+		acquireTimeout: 20*1000	// 20s
 	});
 	
 	function releaseConnection(conn, callback) {

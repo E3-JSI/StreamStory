@@ -52,7 +52,7 @@ RUN mkdir app
 RUN cd app && \
 	git clone https://github.com/lstopar/qminer.git && \
 	cd qminer && \
-	git checkout -b $GIT_BRANCH
+	git checkout $GIT_BRANCH
 
 # compile the projects
 RUN cd app/qminer && \
@@ -60,13 +60,16 @@ RUN cd app/qminer && \
 RUN cd app/qminer && \
 	node-gyp clean && \
 	node-gyp configure -- -DLIN_ALG_BLAS=BLAS -DLIN_ALG_LAPACKE=LAPACKE -DLIN_ALG_LIB=-llapacke && \
-	node-gyp build --verbose --jobs 20
+	node-gyp build --jobs 20
 
 # STREAM STORY
+RUN echo 'sdfdsf'
+RUN echo 'sdfdsf'
+RUN echo 'sdfdsf'
 RUN cd app && \
 	git clone https://github.com/JozefStefanInstitute/StreamStory.git && \
 	cd StreamStory && \
-	git checkout -b $GIT_BRANCH && \
+	git checkout $GIT_BRANCH && \
 	npm install
 
 RUN cd app && mkdir ss-db
