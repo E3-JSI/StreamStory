@@ -656,7 +656,7 @@ var zoomVis = function (opts) {
 	function getNodeLabel(node) {
 		var label = node.name != null ? node.name : node.autoName;
 		
-		if (label == null) label = node.label;
+		if (label == null) label = '';//node.label;
 		
 		var spl = label.split(/\s+/);
 		var maxLineLen = 10;
