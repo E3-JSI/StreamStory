@@ -1950,6 +1950,10 @@ else if (config.USE_CASE == config.USE_CASE_TRAFFIC) {
 		return result;
 	}
 	
+	exports.getEnricherStreamAggregates = function () {
+		return {};
+	}
+	
 	exports.getQmSchema = function () {
 		var realTimeFields = getRealTimeFields();
 		
