@@ -24,7 +24,6 @@ var zoomVis = function (opts) {
 		var MIDDLE_EDGE_COLOR = '#606060';
 		var SMALL_EDGE_COLOR = '#707070';
 		var EDGE_TEXT_COLOR = '#000000';
-		var NODE_TEXT_COLOR = '#000000';
 	} else {
 		var DEFAULT_NODE_COLOR = '#073642';
 		var CURRENT_NODE_COLOR = '#FFA500';
@@ -41,7 +40,6 @@ var zoomVis = function (opts) {
 		var MIDDLE_EDGE_COLOR = '#606060';
 		var SMALL_EDGE_COLOR = '#606060';
 		var EDGE_TEXT_COLOR = '#F0F0F0';
-		var NODE_TEXT_COLOR = '#F0F0F0';
 	}
 	
 	var SELECTED_NODE_SHADOW_COLOR = 'white';
@@ -415,7 +413,7 @@ var zoomVis = function (opts) {
 			return 'hsl(' + (360*val.hue / (2*Math.PI)).toFixed() + ',' + (100*val.saturation).toFixed() + '%,' + (100*val.light).toFixed() + '%)';
 		}
 		
-		return {
+		var that = {
 			init: function (levels) {
 				colorH = {};
 				
@@ -512,11 +510,15 @@ var zoomVis = function (opts) {
 					}
 				}
 			},
+			getColorStr: function (nodeId) {
+				return getOutputStr(that.getColor(nodeId));
+			},
 			getColor: function (nodeId) {
-				var colorStr = getOutputStr(colorH[nodeId]);
-				return colorStr;
+				return colorH[nodeId];
 			}
 		}
+		
+		return that;
 	})();
 	
 	var ElementCache = function () {
@@ -912,13 +914,16 @@ var zoomVis = function (opts) {
 				var nodeSize = cySize(levelInfo[i].radius);
 				var label = getNodeLabel(node);
 				
+				var nodeColor = colorGenerator.getColor(id);
+				var hue = nodeColor.hue;
+				
 				var style = {
 					'content': label,//node.label,
 					'text-transform': 'none',
 					'text-halign': 'center',
 					'text-valign': 'center',
 					'text-wrap': 'wrap',
-					'color': NODE_TEXT_COLOR,
+					'color': 0.471239 <= hue && hue <= 3.75246 ? '#000000' : '#F0F0F0',
 					'font-style': 'normal',
 					'font-size': 10000,	// hack, for automatic font size
 					'font-factor': fontFactor,
@@ -926,7 +931,7 @@ var zoomVis = function (opts) {
 					'font-weight': 'normal',
 					'shape': 'ellipse',
 					'display': 'element',
-					'background-color': colorGenerator.getColor(id),
+					'background-color': colorGenerator.getColorStr(id),
 					'width': nodeSize.width,
 					'height': nodeSize.height,
 					'border-width': DEFAULT_BORDER_WIDTH,
@@ -1247,7 +1252,7 @@ var zoomVis = function (opts) {
 				node.css('backgroundColor', color);
 			} 
 			else {
-				var nodeColor = colorGenerator.getColor(nodeId);
+				var nodeColor = colorGenerator.getColorStr(nodeId);
 				node.css('backgroundColor', nodeColor);
 			}
 		}
@@ -1959,7 +1964,7 @@ var zoomVis = function (opts) {
 		
 		setNodeColor: setNodeColor,
 		getDefaultNodeColor: function (id) {
-			return colorGenerator.getColor(id);
+			return colorGenerator.getColorStr(id);
 		},
 		
 		clearNodeColors: function () {
