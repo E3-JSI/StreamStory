@@ -32,7 +32,9 @@ try {
 	
 	var schema = fields.getQmSchema();
 	
-	log.info('Opening base with the following schema: %s', JSON.stringify(schema));
+	log.info('Opening database ...');
+	if (log.trace())
+		log.trace('Using the following schema: %s', JSON.stringify(schema));
 	
 	base = new qm.Base({
 		dbPath: config.REAL_TIME_BASE_PATH,
