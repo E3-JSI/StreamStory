@@ -1,7 +1,10 @@
 FROM debian:jessie
 MAINTAINER Luka Stopar <luka.stopar@ijs.si>
 
+#==================================================
 # VARIABLES
+#==================================================
+
 ENV MYSQL_ROOT_PASS root12
 ENV NPM_VERSION 2.11.3
 ENV NODE_GYP_VERSION 2.0.1
