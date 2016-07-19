@@ -1322,45 +1322,60 @@ function changeControlVal(stateId, ftrIdx, val) {
 								var margin = chart.itemMargin();
 								var itemHeight = Math.floor((wrapperH - (nTimelines-1)*margin - 70) / nTimelines);
 								
+								var dt = finestStates[finestStates.length-1].start - finestStates[0].start;
+								
+								var tickInterval = dt / nTicks;
 								var tickTime = null;
-								var tickInterval = null;
 								var format = null;
 								
-								switch (TIME_UNIT) {
-								case 'second': {
-									tickTime = d3.time.seconds;
-									tickInterval = (finestStates[finestStates.length-1].start - finestStates[0].start) / (1000*nTicks);
-									format = d3.time.format('%c');
-									break;
-								}
-								case 'minute': {
-									tickTime = d3.time.minutes;
-									tickInterval = (finestStates[finestStates.length-1].start - finestStates[0].start) / (1000*60*nTicks);
-									format = d3.time.format('%c');
-									break;
-								}
-								case 'hour': {
+								if (dt < 1000*60*60*24*7) {	// one week
 									tickTime = d3.time.hours;
-									tickInterval = (finestStates[finestStates.length-1].start - finestStates[0].start) / (1000*60*60*nTicks);
 									format = d3.time.format('%c');
-									break;
 								}
-								case 'day': {
+								else if (dt < 1000*60*60*24*365*2) {
 									tickTime = d3.time.days;
-									tickInterval = (finestStates[finestStates.length-1].start - finestStates[0].start) / (1000*60*60*24*nTicks);
 									format = d3.time.format('%x');
-									break;
 								}
-								case 'month': {
+								else {
 									tickTime = d3.time.months;
-									tickInterval = (finestStates[finestStates.length-1].start - finestStates[0].start) / (1000*60*60*24*30*nTicks);
 									format = d3.time.format('%Y');
-									break;
 								}
-								default: {
-									alert('Illegal time unit: ' + TIME_UNIT);
-								}
-								}
+								
+//								switch (TIME_UNIT) {
+//								case 'second': {
+//									tickTime = d3.time.seconds;
+//									tickInterval = (finestStates[finestStates.length-1].start - finestStates[0].start) / (1000*nTicks);
+//									format = d3.time.format('%c');
+//									break;
+//								}
+//								case 'minute': {
+//									tickTime = d3.time.minutes;
+//									tickInterval = (finestStates[finestStates.length-1].start - finestStates[0].start) / (1000*60*nTicks);
+//									format = d3.time.format('%c');
+//									break;
+//								}
+//								case 'hour': {
+//									tickTime = d3.time.hours;
+//									tickInterval = (finestStates[finestStates.length-1].start - finestStates[0].start) / (1000*60*60*nTicks);
+//									format = d3.time.format('%c');
+//									break;
+//								}
+//								case 'day': {
+//									tickTime = d3.time.days;
+//									tickInterval = (finestStates[finestStates.length-1].start - finestStates[0].start) / (1000*60*60*24*nTicks);
+//									format = d3.time.format('%x');
+//									break;
+//								}
+//								case 'month': {
+//									tickTime = d3.time.months;
+//									tickInterval = (finestStates[finestStates.length-1].start - finestStates[0].start) / (1000*60*60*24*30*nTicks);
+//									format = d3.time.format('%Y');
+//									break;
+//								}
+//								default: {
+//									alert('Illegal time unit: ' + TIME_UNIT);
+//								}
+//								}
 								
 								chart.tickFormat({
 									format: format,
