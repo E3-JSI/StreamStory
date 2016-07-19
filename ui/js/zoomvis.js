@@ -397,12 +397,6 @@ var zoomVis = function (opts) {
 		y: { min: Number.MAX_VALUE, max: Number.MIN_VALUE }
 	}
 	
-	function mod(val, base) {
-		var result = val % base;
-		if (result < 0) result += base;
-		return result;
-	}
-	
 	var parentH = {};
 	
 	//===============================================================
@@ -529,50 +523,9 @@ var zoomVis = function (opts) {
 				var s = color.saturation;
 				var l = color.light;
 				
-				var c = (1 - Math.abs(2*l - 1))*s;
-				var h1 = Math.round(h*360 / (120*Math.PI));	// = h * 360 / 60
-				var x = c*(1 - Math.abs(mod(h1, 2) - 1));
-				
-				var red = 0;
-				var green = 0;
-				var blue = 0;
-				
-				if (h1 < 1) {
-					red = c;
-					green = x;
-					blue = 0;
-				} else if (h1 < 2) {
-					red = x;
-					green = c;
-					blue = 0;
-				} else if (h1 < 3) {
-					red = 0;
-					green = c;
-					blue = x;
-				} else if (h1 < 4) {
-					red = 0;
-					green = x;
-					blue = c;
-				} else if (h1 < 5) {
-					red = x;
-					green = 0;
-					blue = c;
-				} else if (h1 <= 6) {
-					red = c;
-					green = 0;
-					blue = x;
-				} else {
-					alert('h1: ' + h1);
-				}
-				
-				console.log('(' + red + ', ' + green + ', ' + blue + ')');
-				
-				var gray = .3*red + .59*green + .11*blue;
-				
-				console.log(gray);
-				
-				return gray >= .5 ? '#000000' : '#F0F0F0';
-//				return getOutputStr(that.getComplementaryColor(nodeId));
+				var rgb = hsl2rgb(h, s, l);
+								
+				return getBrightness(rgb) >= .5 ? '#000000' : '#F0F0F0';
 			},
 			toColorStr: function (color) {
 				return getOutputStr(color)

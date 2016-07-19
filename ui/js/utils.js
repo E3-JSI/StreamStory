@@ -135,6 +135,12 @@ function reloadWindow() {
 	window.location.reload();
 }
 
+//function mod(val, base) {
+//	var result = val % base;
+//	if (result < 0) result += base;
+//	return result;
+//}
+
 function getFtrColor(val, minVal, maxVal, middleVal) {
 	if (middleVal == null) middleVal = 0;
 	
@@ -150,6 +156,54 @@ function getFtrColor(val, minVal, maxVal, middleVal) {
 	}
 	
 	return 'rgb(' + color.join(',') + ')';
+}
+
+function getBrightness(rgb) {
+	return .3*rgb.r + .59*rgb.g + .11*rgb.b;
+}
+
+function hsl2rgb(h, s, l) {
+	var c = (1 - Math.abs(2*l - 1))*s;
+	var h1 = Math.round(h*360 / (120*Math.PI));	// = h * 360 / 60
+	var x = c*(1 - Math.abs((h1 % 2) - 1));
+	
+	var red = 0;
+	var green = 0;
+	var blue = 0;
+	
+	if (h1 < 1) {
+		red = c;
+		green = x;
+		blue = 0;
+	} else if (h1 < 2) {
+		red = x;
+		green = c;
+		blue = 0;
+	} else if (h1 < 3) {
+		red = 0;
+		green = c;
+		blue = x;
+	} else if (h1 < 4) {
+		red = 0;
+		green = x;
+		blue = c;
+	} else if (h1 < 5) {
+		red = x;
+		green = 0;
+		blue = c;
+	} else if (h1 <= 6) {
+		red = c;
+		green = 0;
+		blue = x;
+	} else {
+		alert('h1: ' + h1);
+	}
+	
+	return {
+		r: red,
+		g: green,
+		b: blue
+	}
 }
 
 $(document).ready(function () {
