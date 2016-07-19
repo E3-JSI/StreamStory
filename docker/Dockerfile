@@ -8,7 +8,7 @@ MAINTAINER Luka Stopar <luka.stopar@ijs.si>
 ENV MYSQL_ROOT_PASS root12
 ENV NPM_VERSION 2.11.3
 ENV NODE_GYP_VERSION 2.0.1
-ENV GIT_BRANCH development
+ENV GIT_BRANCH master
 
 #==================================================
 # CHECK INTERNET
