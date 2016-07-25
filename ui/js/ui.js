@@ -1232,6 +1232,184 @@ function changeControlVal(stateId, ftrIdx, val) {
 			$('#div-timehist-daily').html('');
 		}
 		
+		var timeGranController = (function () {
+			return {
+				init: function () {
+					// TODO
+				},
+				onScaleChanged: function () {
+					var scale = viz.getCurrentHeight();
+					
+					$.ajax('api/stateHistoryTimeGran', {
+						dataType: 'json',
+						data: { scale: scale, granularity: 'week' },
+						success: function (data) {
+							var wrapperId = '#div-tmgran-state-hist';
+							var wrapper = $(wrapperId);
+							
+							wrapper.html('');
+							
+							var dayNodeNHV = [];
+							var arrowData = [];
+							for (var dayN = 0; dayN < data.length; dayN++) {
+								var states = data[dayN].states;
+								
+								var dayH = {};
+								for (var stateN = 0; stateN < states.length; stateN++) {
+									var state = states[stateN];
+									dayH[state.id] = stateN;
+									
+									
+									var jumps = state.jumps;
+									for (var jumpN = 0; jumpN < jumps.length; jumpN++) {
+										var jump = jumps[jumpN];
+										
+										arrowData.push({
+											fromId: state.id,
+											toId: jump.id,
+											fromTime: dayN,
+											toTime: jump.timeN,
+											count: jump.count
+										})
+									}
+								}
+								dayNodeNHV.push(dayH);
+							}
+							
+							(function () {
+								var PADDING = {
+									top: 0,
+									bottom: 30
+								}
+								
+								var NODE_RADIUS = 30;
+								var NODE_PADDING = 10;
+								
+								var dayW = 150;
+								
+								var xDomain = [];
+								for (var i = 0; i < data.length; i++) {
+									xDomain.push(data[i].name);
+								}
+								
+								var helpers = {
+									getNodeX: function (dayN) {
+										return dayW*(dayN + .5);
+									},
+									getNodeY: function (j) {
+										return wrapper.height() - PADDING.bottom - (j+1)*NODE_PADDING - (2*j+1)*NODE_RADIUS;
+									}
+								}
+								
+								var d3Helpers = {
+									getNodeX: function (d, j, dayN) {
+										return helpers.getNodeX(dayN);
+									},
+									getNodeY: function (d, j) {
+										return helpers.getNodeY(j);
+									}
+								}
+								
+								var xScale = d3.scale.ordinal()
+												.domain(xDomain)
+												.rangePoints([0, wrapper.width()]);
+								var xAxis = d3.svg.axis()
+												.scale(xScale)
+												.orient('bottom');	// the labels will appear below the axis line
+								
+								// draw the graph
+								var svg = d3.select(wrapperId)
+											.append('svg')
+											.attr('width', function () { return wrapper.width() })
+											.attr('height', function () { return wrapper.height() });
+								var g = svg.append('g')
+											.attr('width', function () { return wrapper.width() })
+											.attr('height', function () { return wrapper.height() })
+								var timeBucket = g.selectAll('g')
+											.data(data)
+											.enter()
+											.append('g')
+								var circles = timeBucket.selectAll('circle')
+											.data(function (d) { return d.states })
+											.enter()
+//												.append('g')
+											.append('circle')
+											.attr('r', function (d) { return NODE_RADIUS; })
+											.attr('cx', d3Helpers.getNodeX)
+											.attr('cy', d3Helpers.getNodeY)
+											.attr('fill', function (d) {  return viz.getDefaultNodeColor(d.id); })
+											
+								var circleText = timeBucket.selectAll('text')
+											.data(function (d) { return d.states })
+											.enter()
+											.append('text')
+											.text(function (d) { return viz.getNodeText(d.id); })
+											.attr('x', d3Helpers.getNodeX)
+											.attr('y', d3Helpers.getNodeY)
+											.attr("font-family", "sans-serif")
+											.attr('font-size', '20px')
+											.attr('text-anchor', 'middle')
+											.attr('alignment-baseline', 'central')
+											.attr('fill', 'black');
+								
+								var linePath = function (jump) {
+									var x1 = helpers.getNodeX(jump.fromTime);
+									var y1 = helpers.getNodeY(dayNodeNHV[jump.fromTime][jump.fromId]);
+									var x2 = helpers.getNodeX(jump.toTime);
+									var y2 = helpers.getNodeY(dayNodeNHV[jump.toTime][jump.toId]);
+									
+									var l = Math.sqrt((x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1));
+									
+									var cosPhi = (x2 - x1) / l;
+									var sinPhi = (y2 - y1) / l;
+									
+									return {
+										x1: x1 + NODE_RADIUS*cosPhi,
+										y1: y1 + NODE_RADIUS*sinPhi,
+										x2: x2 - NODE_RADIUS*cosPhi,
+										y2: y2 - NODE_RADIUS*sinPhi
+									}
+								}
+								
+								svg.append('defs')
+									.append('marker')
+									.attr('id', 'arrow')
+									.attr('markerWidth', 5)
+									.attr('markerHeight', 5)
+									.attr('orient', 'auto')
+									.attr('refx', 0)
+									.attr('refy', 0)
+									.append('path')
+									.attr('d', 'M0,0 L0,6 L9,3 z')
+									.attr('fill', '#f00')
+								
+								var arrows = svg.selectAll('line')
+											.data(arrowData)
+											.enter()
+											.append('line')
+											.attr('x1', function (jump) { return linePath(jump).x1; })
+											.attr('y1', function (jump) { return linePath(jump).y1; })
+											.attr('x2', function (jump) { return linePath(jump).x2; })
+											.attr('y2', function (jump) { return linePath(jump).y2; })
+											.attr('stroke', '#FFFFFF')
+											.attr('stroke-width', 5)
+											.attr('marker-end', 'url(#arrow)')
+											
+								
+								svg.append('g')
+									.attr('class', 'axis')
+									.attr('transform', 'translate(0,' + (wrapper.height() - PADDING.bottom) + ')')
+									.call(xAxis);
+							})();
+							
+							console.log(JSON.stringify(data));
+						},
+						error: handleAjaxError()
+					});
+				}
+			}
+		})();
+		
 		var timelineController = (function () {
 			var ZOOM_FACTOR = 1.1;
 			
@@ -1340,42 +1518,6 @@ function changeControlVal(stateId, ftrIdx, val) {
 									tickTime = d3.time.months;
 									format = d3.time.format('%Y');
 								}
-								
-//								switch (TIME_UNIT) {
-//								case 'second': {
-//									tickTime = d3.time.seconds;
-//									tickInterval = (finestStates[finestStates.length-1].start - finestStates[0].start) / (1000*nTicks);
-//									format = d3.time.format('%c');
-//									break;
-//								}
-//								case 'minute': {
-//									tickTime = d3.time.minutes;
-//									tickInterval = (finestStates[finestStates.length-1].start - finestStates[0].start) / (1000*60*nTicks);
-//									format = d3.time.format('%c');
-//									break;
-//								}
-//								case 'hour': {
-//									tickTime = d3.time.hours;
-//									tickInterval = (finestStates[finestStates.length-1].start - finestStates[0].start) / (1000*60*60*nTicks);
-//									format = d3.time.format('%c');
-//									break;
-//								}
-//								case 'day': {
-//									tickTime = d3.time.days;
-//									tickInterval = (finestStates[finestStates.length-1].start - finestStates[0].start) / (1000*60*60*24*nTicks);
-//									format = d3.time.format('%x');
-//									break;
-//								}
-//								case 'month': {
-//									tickTime = d3.time.months;
-//									tickInterval = (finestStates[finestStates.length-1].start - finestStates[0].start) / (1000*60*60*24*30*nTicks);
-//									format = d3.time.format('%Y');
-//									break;
-//								}
-//								default: {
-//									alert('Illegal time unit: ' + TIME_UNIT);
-//								}
-//								}
 								
 								chart.tickFormat({
 									format: format,
@@ -1927,6 +2069,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 				
 				// highlight the current level in the timeline
 				timelineController.onScaleChanged();
+				timeGranController.onScaleChanged();
 			});
 		})();
 		
@@ -1963,6 +2106,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 		
 		viz.onInitialized(function () {
 			timelineController.init();
+			timeGranController.init();
 		});
 	})();
 	

@@ -358,10 +358,13 @@
 								<div class="panel panel-default" style="width: 100%;">
 									<div class="panel-body nopadding" style="width: 100%;">
 										<ul id="tabs-viz-bottom" class="nav nav-tabs">
-										  	<li role="presentation">
+										  	<li role="presentation" class="active">
 										  		<a id="a-time-state-hist" href="#" data-target="#div-time-state-hist-wrapper" data-toggle="tab">State History</a>
 										  	</li>
-										  	<li role="presentation" class="active">
+										  	<li role="presentation">
+										  		<a id="a-tmgran-state-hist" href="#" data-target="#div-tmgran-state-hist-wrapper" data-toggle="tab">State History (2)</a>
+										  	</li>
+										  	<li role="presentation">
 										  		<a id="a-parcoords" href="#" data-target="#div-parallel-wrapper" data-toggle="tab">Coordinates</a>
 										  	</li>
 										  	<li role="presentation">
@@ -372,14 +375,17 @@
 										  	</li>
 										</ul>
 										<div id="tab-content-bottom" class="tab-content" style="width: 100%;">
-											<div id="div-time-state-hist-wrapper" class="tab-pane container-bottom parcoords">
+											<div id="div-time-state-hist-wrapper" class="tab-pane container-bottom parcoords active">
 												<div id="div-timeline-zoom">
 													<button id="btn-timeline-zoomin" type="button" class="btn btn-default btn-xs"><span class="glyphicon glyphicon-plus"></span></button><br />
 													<button id="btn-timeline-zoomout" type="button" class="btn btn-default btn-xs"><span class="glyphicon glyphicon-minus"></span></button>
 												</div>
 												<div id="div-time-state-hist" style="height: 100%; margin-left: 40px; margin-right: 40px;"></div>
 											</div>
-											<div id="div-parallel-wrapper" class="tab-pane container-bottom active">
+											<div id="div-tmgran-state-hist-wrapper" class="tab-pane container-bottom parcoords">
+												<div id="div-tmgran-state-hist" style="height: 100%; margin-left: 40px; margin-right: 40px;"></div>
+											</div>
+											<div id="div-parallel-wrapper" class="tab-pane container-bottom">
 												<div id="div-parallel-container" class="hidden">
 													<div id="div-parallel" class="parcoords"></div>
 												</div>

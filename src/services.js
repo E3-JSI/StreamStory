@@ -1159,6 +1159,25 @@ log.info('Registering state details service ...');
 			}
 		});
 		
+		app.get(API_PATH + '/stateHistoryTimeGran', function (req, res) {
+			try {
+				var scale = parseFloat(req.query.scale);
+				var granularity = req.query.granularity;
+				
+				if (log.debug())
+					log.debug('Fetching time granularity history for granularity: %s, scale: %d', granularity, scale);
+				
+				var model = getModel(req.sessionID, req.session);
+				
+				var result = model.getModel().getHistoryTimeGran(scale, granularity);
+				
+				res.send(result);
+				res.end();
+			} catch (e) {
+				handleServerError(e, req, res);
+			}
+		});
+		
 		app.get(API_PATH + '/modelDetails', function (req, res) {
 			try {
 				var session = req.session;

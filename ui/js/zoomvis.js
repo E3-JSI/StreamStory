@@ -1972,6 +1972,10 @@ var zoomVis = function (opts) {
 			}
 		},
 		
+		getNodeText: function (stateId) {
+			return 'TODO';	// TODO
+		},
+		
 		setSelectedState: function (stateId) {
 			setSelectedState(cy.nodes('#' + stateId));
 		},
@@ -2081,6 +2085,14 @@ var zoomVis = function (opts) {
 			setScale(uiToInternalScale(scale));
 		},
 		
+		getScale: function () {
+			return hierarchy[currentLevel].height;
+		},
+		
+		getCurrentHeight: function () {
+			return currentHeight;
+		},
+		
 		setLevel: function (levelN) {
 			setScale(levelHeights[levelN]);
 		},
@@ -2111,14 +2123,6 @@ var zoomVis = function (opts) {
 				zoomLevels.push(internalToUiScale(levelHeights[i]));
 			}
 			return zoomLevels;
-		},
-		
-		getScale: function () {
-			return hierarchy[currentLevel].height;
-		},
-		
-		getCurrentHeight: function () {
-			return currentHeight;
 		},
 		
 		getCurrentState: function () {
