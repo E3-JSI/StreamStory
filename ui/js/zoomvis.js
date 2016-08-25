@@ -825,14 +825,23 @@ var zoomVis = function (opts) {
 			'target-arrow-color': SMALL_EDGE_COLOR,
 			'width': Math.max(1, (val*10).toFixed()),
 			'z-index': 100,
-			'content': ''
+			'content': '',
+			'shadow-color': 'white',
+			'shadow-blur': 1,
+			'shadow-opacity': 0
 		};
+		
+		var defaultCss = {};
+		for (var key in css) {
+			defaultCss[key] = css[key];
+		}
 		
 		var data = {
 			id: id,
 			source: sourceId,
 			target: targetId,
 			style: css,
+			defaultStyle: defaultCss,
 			prob: val,
 			cumProb: cumProb,
 			maxProb: maxProb
@@ -1082,11 +1091,16 @@ var zoomVis = function (opts) {
 				
 				edge.data().style['line-style'] = 'solid';
 				edge.data().style['content'] = prob;
+				edge.data().defaultStyle['line-style'] = 'solid';
+				edge.data().defaultStyle['content'] = prob;
+				
 				edge.css({ content: toUiPrecision(edge.data().prob) });
 			}
 			for (var i = 0; i < bold.length; i++) {
 				bold[i].data().style['line-color'] = BOLD_EDGE_COLOR;
 				bold[i].data().style['target-arrow-color'] = BOLD_EDGE_COLOR;
+				bold[i].data().defaultStyle['line-color'] = BOLD_EDGE_COLOR;
+				bold[i].data().defaultStyle['target-arrow-color'] = BOLD_EDGE_COLOR;
 			}
 		}
 	}
@@ -1209,6 +1223,47 @@ var zoomVis = function (opts) {
 				graphNode.css('backgroundColor', DEFAULT_NODE_COLOR);
 			}
 		}
+	}
+	
+	function highlightEdges(edgeIdV, color) {
+		var edgeIdStr = '';
+		for (var i = 0; i < edgeIdV.length; i++) {
+			edgeIdStr += '#' + edgeIdV[i];
+			if (i < edgeIdV.length - 1) {
+				edgeIdStr += ',';
+			}
+		}
+		
+		cy.batch(function () {
+			var allEdges = cy.edges();
+			var nedges = allEdges.length;
+			for (var i = 0; i < nedges; i++) {
+				var edge = allEdges[i];
+				var style = edge.data().style;
+				var defaultStyle = edge.data().defaultStyle;
+				
+				style['line-color'] = defaultStyle['line-color'];
+				style['target-arrow-color'] = defaultStyle['target-arrow-color'];
+				style['line-style'] = defaultStyle['line-style'];
+				
+				edge.css(style);
+			}
+			
+			var edges = cy.edges(edgeIdStr);
+			
+			if (color != null) {
+				for (var i = 0; i < edges.length; i++) {
+					var edge = edges[i];
+					var style = edge.data().style;
+					
+					style['line-color'] = 'green';
+					style['target-arrow-color'] = 'green';
+					style['line-style'] = 'solid';
+					
+					edge.css(style);
+				}
+			}
+		});
 	}
 	
 	function drawNode(nodeId, batchPresent) {
@@ -1368,14 +1423,21 @@ var zoomVis = function (opts) {
 				nodes.css('shadow-color', 'white');
 				nodes.css('shadow-blur', 0);
 				nodes.css('shadow-opacity', 0);
-//				cy.nodes().css('border-width', DEFAULT_BORDER_WIDTH);
 				
-				// emphasize edges
+				// remove edge highlight
 				var edges = cy.edges();
 				var nedges = edges.length;
 				for (var i = 0; i < nedges; i++) {
 					var edge = edges[i];
-					edge.css(edge.data().style);
+					var style = edge.data().style;
+					var defaultStyle = edge.data().defaultStyle;
+					
+					style['shadow-color'] = defaultStyle['shadow-color'];
+					style['shadow-blur'] = defaultStyle['shadow-blur'];
+					style['shadow-opacity'] = defaultStyle['shadow-opacity'];
+//					style['color'] = defaultStyle['color'];
+					
+					edge.css(style);
 				}
 			});
 		} else {
@@ -1391,19 +1453,50 @@ var zoomVis = function (opts) {
 //				nodes.css('border-width', DEFAULT_BORDER_WIDTH);
 				drawNode(stateId, true);
 				
-				// emphasize edges
+				// remove edge highlight
 				var edges = cy.edges();
 				var nedges = edges.length;
 				for (var i = 0; i < nedges; i++) {
 					var edge = edges[i];
-					edge.css(edge.data().style);
+					var style = edge.data().style;
+					var defaultStyle = edge.data().defaultStyle;
+					
+					style['shadow-color'] = defaultStyle['shadow-color'];
+					style['shadow-blur'] = defaultStyle['shadow-blur'];
+					style['shadow-opacity'] = defaultStyle['shadow-opacity'];
+//					style['color'] = defaultStyle['color'];
+					
+					edge.css(style);
 				}
 				
-				node.edgesTo('').css({
-					'line-color': 'green',
-					'target-arrow-color': 'green',
-					'line-style': 'solid'
-				});
+				// emphasize edges
+//				edges.css('shadow-color', color);
+//				edges.css('shadow-blur', SELECTED_NODE_SHADOW_SIZE);
+//				edges.css('shadow-opacity', SELECTED_NODE_SHADOW_OPACITY);
+//				edges.css('color', color);
+				var edgesTo = node.edgesTo('');
+				for (var i = 0; i < edgesTo.length; i++) {
+					var edge = edgesTo[i];
+					
+					var style = edge.data().style;
+					
+					/*
+					 * node.css('shadow-color', SELECTED_NODE_SHADOW_COLOR);
+				node.css('shadow-blur', SELECTED_NODE_SHADOW_SIZE);
+				node.css('shadow-opacity', SELECTED_NODE_SHADOW_OPACITY)
+					 */
+					
+					style['shadow-color'] = SELECTED_NODE_SHADOW_COLOR;
+					style['shadow-blur'] = SELECTED_NODE_SHADOW_SIZE;
+					style['shadow-opacity'] = SELECTED_NODE_SHADOW_OPACITY;
+//					style['color'] = defaultStyle['color'];
+					
+				}
+//				node.edgesTo('').css({
+//					'line-color': 'green',
+//					'target-arrow-color': 'green',
+//					'line-style': 'solid'
+//				});
 			});
 		}
 		
@@ -1977,6 +2070,17 @@ var zoomVis = function (opts) {
 		},
 		
 		setNodeColor: setNodeColor,
+		highlightEdges: highlightEdges,
+		
+		highlightCycle: function (nodeIdV) {
+			var edgeIdV = [];
+			for (var i = 0; i < nodeIdV.length-1; i++) {
+				edgeIdV.push(nodeIdV[i] + '-' + nodeIdV[i+1]);
+			}
+			edgeIdV.push(nodeIdV[nodeIdV.length-1] + '-' + nodeIdV[0]);
+			that.highlightEdges(edgeIdV, 'yellow');
+		},
+		
 		getDefaultNodeColor: function (id) {
 			return colorGenerator.getColorStr(id);
 		},

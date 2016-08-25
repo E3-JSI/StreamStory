@@ -1884,6 +1884,33 @@ function changeControlVal(stateId, ftrIdx, val) {
 				},
 				error: handleAjaxError()
 			});
+			
+			// fetch cycles that start in this state
+			$.ajax('api/cycles', {
+				dataType: 'json',
+				data: { stateId: stateId, scale: height },
+				success: function (cycles) {
+					if (cycles.length > 0) {
+						var bestCycle = cycles[0];
+						viz.highlightCycle(bestCycle.path);
+					}
+					
+					console.log(JSON.stringify(cycles));	// TODO remove
+				},
+				error: handleAjaxError()
+			});
+		});
+		
+		$('#btn-reconfigure').click(function () {	// TODO remove me, this is only for testing!!!
+			$.ajax('api/rebuildCycles', {
+				dataType: 'json',
+			    type: 'POST',
+			    data: { name: name },
+			    success: function () {
+			    	console.log('Success!!');
+			    },
+			    error: handleAjaxError()
+			});
 		});
 		
 		viz.onEdgeSelected(function (sourceId, targetId) {

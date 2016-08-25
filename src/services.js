@@ -1101,7 +1101,7 @@ function initStreamStoryRestApi() {
 	}
 	
 	(function () {
-log.info('Registering state details service ...');
+		log.info('Registering state details service ...');
 		
 		// state details
 		app.get(API_PATH + '/stateDetails', function (req, res) {
@@ -1155,6 +1155,42 @@ log.info('Registering state details service ...');
 				res.send(result);
 				res.end();
 			} catch (e) {
+				handleServerError(e, req, res);
+			}
+		});
+		
+		app.get(API_PATH + '/cycles', function (req, res) {
+			try {
+				var stateId = parseInt(req.query.stateId);
+				var scale = parseFloat(req.query.scale);
+				
+				var model = getModel(req.sessionID, req.session);
+				
+				if (log.debug())
+					log.debug('Fetching cycles for state: %d, scale: %d', stateId, scale);
+				
+				var cycles = model.getModel().getCycles(stateId, scale);
+				
+				res.send(cycles);
+				res.end();
+			} catch (e) {
+				log.error(e, 'Failed to query cycles!');
+				handleServerError(e, req, res);
+			}
+		});
+		
+		app.post(API_PATH + '/rebuildCycles', function (req, res) {	// TODO remove me
+			try {
+				var model = getModel(req.sessionID, req.session);
+				
+				log.info('Rebuilding cycles for model: %s', model.getId());
+				
+				model.getModel().rebuildCycles();
+				
+				res.status(204);	// no content
+				res.end();
+			} catch (e) {
+				log.error(e, 'Failed to query cycles!');
 				handleServerError(e, req, res);
 			}
 		});
