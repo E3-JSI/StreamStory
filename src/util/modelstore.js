@@ -473,7 +473,7 @@ module.exports = exports = function (opts) {
 				var ignoredFieldV = initFieldV(ignoredAttrs, timeAttr, usedFields, storeNm, base);
 				var obsFieldV = initFieldV(attrs, timeAttr, usedFields, storeNm, base);
 				
-	    		var recs = new qm.RecordVector();
+	    		var recs = new qm.RecordVector(base);
 	    		
 				// fill the store
 				log.debug('Processing CSV file ...');
