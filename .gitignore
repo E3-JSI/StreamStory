@@ -2,6 +2,11 @@
 .settings 
 .project
 .jshintrc 
+
+# Vim files
+*.swp
+
+# autocomplete
 .tern-project
 
 # node modules
@@ -14,6 +19,3 @@ node-modules.tar
 /activities
 /states.*
 /friction-coeff.txt
-
-# Vim files
-*.swp
