@@ -5,6 +5,9 @@ var utils = require('./src/utils.js');
 var fields = require('./fields.js');
 var db = require('./src/db/mysqldb.js')();
 
+/*
+ * Function that adds some new ECMAScript 6 features to common classes.
+ */
 function hackClasses() {
 	if (!String.prototype.startsWith) {
 		String.prototype.startsWith = function(searchString, position) {
@@ -49,7 +52,7 @@ try {
 	}
 	
 	services.init({ base: base, pipeline: pipeline, db: db });
-	
+
 	log.info('Registering signal handlers ...');
 	log.info('Registering SIGINT handler ...');
 	process.on("SIGINT", function () {

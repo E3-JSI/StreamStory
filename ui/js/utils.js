@@ -207,6 +207,13 @@ function hsl2rgb(h, s, l) {
 }
 
 $(document).ready(function () {
+    // hack, so that console.log doesn't crash the app in IE
+    if (console == null) {
+        console = {
+            log: function () {}
+        }
+    }
+
 	var tooltipElements = $('[rel=tooltip]');
 	
 	tooltipElements.qtip({

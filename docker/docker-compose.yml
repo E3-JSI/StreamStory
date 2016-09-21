@@ -1,0 +1,27 @@
+version: "2"
+services:
+    streamstory:
+        build: ./streamstory
+        ports:
+            - "${STREAMSTORY_PORT}:8080"
+        expose:
+            - "8080"
+        volumes:
+            - ${CONFIG_DIR}:/etc/streamstory
+        depends_on:
+            - streamstory-db
+        links:
+            - streamstory-db
+    streamstory-db:
+        build: ./streamstory-db
+        environment:
+            MYSQL_ROOT_PASSWORD: root12
+            MYSQL_DATABASE: StreamStory
+            MYSQL_USER: StreamStory
+            MYSQL_PASSWORD: StreamStory
+        ports:
+            - "${DATABASE_PORT}:3306"
+        expose:
+            - "3306"
+        volumes:
+            - ${DATABASE_DIR}:/var/lib/mysql

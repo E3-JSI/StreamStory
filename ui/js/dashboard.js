@@ -279,6 +279,7 @@ function pingProgress(isRealTime) {
 			console.log('Got ping result!');
 			
 			if (xhr.status == 204) {	// no content
+                console.log('Received no content, re-pinging ...');
 				pingProgress(isRealTime);
 				return;
 			}
@@ -291,9 +292,11 @@ function pingProgress(isRealTime) {
 			}
 			
 			if (data.error != null) {
+                console.log('Received result with error! Highlighting ...');
 				$('#progress-build-model').css('background-color', 'red');
 			} else {
 				if (!data.isFinished) {
+                    console.log('Received data, but hasn\'t yet finished, re-pinging ...');
 					pingProgress(isRealTime);
 				} else {	// finished
 					console.log('Finished building the model!');
@@ -874,6 +877,81 @@ function pingProgress(isRealTime) {
 		fetchModelDetails(mid);
 	});
 	
+	//========================================================
+	// USE CASE CONFIGURATION 
+	//========================================================	
+ 
+    (function () {
+        var calcCoeffDiv = $('#div-configure-coeff');
+
+        function fetchConfig() {
+            $.ajax('api/config', {
+                dataType: 'json',
+                method: 'GET',
+                data: { properties: [
+                    'calc_coeff',
+                    'deviation_extreme_lambda',
+                    'deviation_major_lambda',
+                    'deviation_minor_lambda',
+                    'deviation_significant_lambda'
+                ] },
+                success: function (data) {
+                    var props = {};
+                    for (var i = 0; i < data.length; i++) {
+                        props[data[i].property] = data[i].value;
+                    }
+                    
+                    $('#check-calc-coeff').attr('checked', props.calc_coeff == 'true');
+                    $('#input-extreme-lambda').val(props.deviation_extreme_lambda);
+                    $('#input-major-lambda').val(props.deviation_major_lambda);
+                    $('#input-significant-lambda').val(props.deviation_significant_lambda);
+                    $('#input-minor-lambda').val(props.deviation_minor_lambda);
+                    $('#btn-fric-cancel, #btn-fric-ok').attr('disabled', 'disabled');
+                    
+                    $('#check-calc-coeff').change();
+                },
+                error: handleAjaxError()
+            });
+        }
+
+		$('#check-calc-coeff').change(function () {
+			var isChecked = $(this).is(':checked');
+			if (isChecked) {
+				// fetch the configuration from the db
+                calcCoeffDiv.removeClass('hidden');
+			}
+			else
+                calcCoeffDiv.addClass('hidden');
+		});
+
+        $('#config-done').click(function () {
+            $.ajax('api/config', {
+                method: 'POST',
+                data: {
+                    calc_coeff: $('#check-calc-coeff').is(':checked'),
+                    deviation_extreme_lambda: $('#input-extreme-lambda').val(),
+                    deviation_major_lambda: $('#input-major-lambda').val(),
+                    deviation_minor_lambda: $('#input-significant-lambda').val(),
+                    deviation_significant_lambda: $('#input-minor-lambda').val()
+                },
+                error: handleAjaxError()
+            });
+        });
+
+        $('#config-cancel').click(function () {
+            fetchConfig();
+        });
+
+        $('#config-cancel, #config-done').click(function () {
+            $('#popup-config').modal('hide');
+        });
+
+        $('#lnk-config').click(function (event) {
+            event.preventDefault();
+            $('#popup-config').modal({ show: true });
+        });
+    })();
+
 	//========================================================
 	// INITIALIZE NAVIGATION
 	//========================================================	

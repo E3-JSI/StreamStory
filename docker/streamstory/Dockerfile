@@ -66,10 +66,6 @@ RUN cd app/qminer && \
 	node-gyp build --jobs 20
 
 # STREAM STORY
-RUN echo 'sdfdsf'
-RUN echo 'sdfdsf'
-RUN echo 'sdfdsf'
-RUN echo 'sdfdsf'
 RUN cd app && \
 	git clone https://github.com/JozefStefanInstitute/StreamStory.git && \
 	cd StreamStory && \
@@ -81,6 +77,6 @@ RUN cd app && mkdir ss-db
 #==================================================
 # ENTRY POINT
 #==================================================
-EXPOSE 8283
+EXPOSE 8080 
 WORKDIR /app/StreamStory
 CMD node main.js /etc/streamstory/config-streamstory.json

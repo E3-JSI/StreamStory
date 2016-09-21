@@ -350,6 +350,21 @@ html, body {
 	right: 23px;
 }
 
+#div-timeline-scroll {
+    width: 100px;
+	position: absolute;
+	bottom: 28px;
+    left: 485px;
+}
+
+#div-timeline-scroll #btn-timeline-scroll-left {
+    float: left;
+}
+
+#div-timeline-scroll #btn-timeline-scroll-right {
+    float: right;
+}
+
 /*===============================================================
  	ADMIN TEMPLATE
 ===============================================================*/

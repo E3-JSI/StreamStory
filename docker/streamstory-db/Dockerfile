@@ -9,4 +9,5 @@ RUN git clone https://github.com/JozefStefanInstitute/StreamStory.git
 RUN cd StreamStory && \
 	git fetch && \
 	git checkout $GIT_BRANCH
-
+RUN cd StreamStory && \
+    cp init-tables.sql /docker-entrypoint-initdb.d/init.sql

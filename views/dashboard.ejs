@@ -21,18 +21,11 @@
     		<!-- Collect the nav links, forms, and other content for toggling -->
     		<div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
       			<ul class="nav navbar-nav navbar-right">
-        			<li>
-        				<!-- a id="lnk-config" href="#"><span class="glyphicon glyphicon-cog" aria-hidden="true"></span></a>
-        				<script type="text/javascript">
-        					$('#lnk-config').click(function (event) {
-        						event.preventDefault();
-        						$('#popup-config').modal({ show: true });
-        					});
-        				</script-->
-        			</li>
+                    <% if (useCase == 'mhwirth' || useCase == 'hella') { %>
         			<li>
         				<a id="lnk-config" href="#"><span class="glyphicon glyphicon-cog" aria-hidden="true"></span> Configure Triggers</a>
         			</li>
+                    <% } %>
         			<% include partials/navmenus %>
       			</ul>
     		</div><!-- /.navbar-collapse -->
@@ -468,6 +461,55 @@
 		</div>
 	</div>
 	
+    <% if (useCase == 'mhwirth' || useCase == 'hella') { %>
+	<!-- Configuration popup -->
+	<div id="popup-config" class="modal fade" role="dialog" tabindex="-1">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+    				<button type="button" class="close" data-dismiss="modal">&times;</button>
+    				<h4 class="modal-title">Configuration</h4>
+  				</div>
+  				<div class="modal-body">
+  					<div id="div-config">
+                        <% if (useCase == 'mhwirth') { %>
+                        <div>
+                            <div class="checkbox">
+                                <label>
+                                    <input id="check-calc-coeff" type="checkbox" <%= config.calc_coeff == 'true' ? 'checked="checked"' : '' %> /> Calculate firction
+                                </label>
+                            </div>
+                        </div>
+                        <div id="div-configure-coeff" class="<%= config.calc_coeff == 'true' ? '' : 'hidden' %>">
+                            <div class="form-group">
+                                <label for="input-extreme-lambda">Extreme deviation intensity</label>
+                                <input id="input-extreme-lambda" type="number" value="<%= config.deviation_extreme_lambda %>" class="form-control" />
+                            </div>
+                            <div class="form-group">
+                                <label for="input-major-lambda">Major deviation intensity</label>
+                                <input id="input-major-lambda" type="number" value="<%= config.deviation_major_lambda %>" class="form-control" />
+                            </div>
+                            <div class="form-group">
+                                <label for="input-significant-lambda">Significant deviation intensity</label>
+                                <input id="input-significant-lambda" type="number" value="<%= config.deviation_significant_lambda %>" class="form-control" />
+                            </div>
+                            <div class="form-group">
+                                <label for="input-minor-lambda">Minor deviation intensity</label>
+                                <input id="input-minor-lambda" type="number" value="<%= config.deviation_minor_lambda %>" class="form-control" />
+                            </div>
+                        </div>
+                        <% } %>
+					</div>
+  				</div>
+  				<div class="modal-footer">
+  					<button id="config-cancel" type="button" class="btn btn-default">Cancel</button>
+    				<button id="config-done" type="button" class="btn btn-success">Done</button>
+  				</div>
+			</div>
+		</div>
+	</div>
+    <% } %>
+
 	<% include partials/confirm %>
 	<% include partials/alert %>
 	

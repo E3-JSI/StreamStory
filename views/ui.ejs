@@ -19,23 +19,31 @@
     	var TIME_UNIT = '<%= model.getModel().getTimeUnit(); %>';
     
 		<% if (model.isOnline()) { %>
+
 		var PREDICTION_THRESHOLD = <%= predictionThreshold %>;
 		var TIME_HORIZON = <%= timeHorizon %>;
 		var PDF_BINS = <%= pdfBins %>;
 		var IS_MODEL_ACTIVE = <%= modelConfig.is_active == 1; %>;
+
 		<% } else { %>
+
 		var PREDICTION_THRESHOLD = 0;
 		var TIME_HORIZON = 0;
 		var PDF_BINS = 100;
 		var IS_MODEL_ACTIVE = false;
+
 		<% } %>
 		
 		<% if (theme == 'dark') { %>
+
 		var THEME = 'dark';
 		var TEXT_COLOR = 'rgb(200, 200, 200)';
+
 		<% } else { %>
+
 		var THEME = 'light';
 		var TEXT_COLOR = '#3A3A3A';
+
 		<% } %>
 	</script>
 </head>
@@ -96,87 +104,6 @@
         </div>
         <!-- /.sidebar-collapse -->
     </div>
-	
-	<!-- Configuration popup -->
-	<div id="popup-config" class="modal fade" role="dialog" tabindex="-1">
-		<div class="modal-dialog">
-			<div class="modal-content">
-				<div class="modal-header">
-    				<button type="button" class="close" data-dismiss="modal">&times;</button>
-    				<h4 class="modal-title">Configuration</h4>
-  				</div>
-  				<div class="modal-body">
-  					<div id="div-config">
-  						<div>
-  							<div>
-  								<div class="checkbox">
-									<label>
-										<input id="chk-show-probs" type="checkbox"> Show transition probabilities
-									</label>
-								</div>
-								<div class="checkbox">
-									<label>
-										<input id="chk-wheel-scroll" type="checkbox"> Enable wheel scrolling
-									</label>
-								</div>
-  							</div>
-  						</div>
-  						<% if (model.isOnline()) { %>
-							<div id="div-config-params" class="row">
-								<div class="col-md-12">
-									<label for="range-pred-threshold">Prediciton threshold: <span id="span-pred-threshold"><%= predictionThreshold %></span></label>
-									<div id="range-pred-threshold"></div>
-								</div>
-							</div>
-							<div id="div-config-params" class="row">
-								<div class="col-md-12">
-									<label for="range-time-horizon">Time horizon: <span id="span-time-horizon"><%= timeHorizon %></span></label>
-									<div id="range-time-horizon"></div>
-								</div>
-							</div>
-							<div id="div-config-params" class="row">
-								<div class="col-md-12">
-									<label for="range-pdf-bins">PDF bins: <span id="span-pdf-bins"><%= pdfBins %></span></label>
-									<div id="range-pdf-bins"></div>
-								</div>
-							</div>
-							<% if (useCase == 'mhwirth') { %>
-							<div>
-								<div class="checkbox">
-	   								<label>
-	     								<input id="check-calc-coeff" type="checkbox" <%= config.calc_coeff == 'true' ? 'checked="checked"' : '' %> /> Calculate firction
-	   								</label>
-								</div>
-							</div>
-							<div id="div-configure-coeff" class="<%= config.calc_coeff == 'true' ? '' : 'hidden' %>">
-								<div class="form-group">
-							    	<label for="input-extreme-lambda">Extreme deviation intensity</label>
-							    	<input id="input-extreme-lambda" type="number" value="<%= config.deviation_extreme_lambda %>" class="form-control" />
-							  	</div>
-							  	<div class="form-group">
-							    	<label for="input-major-lambda">Major deviation intensity</label>
-							    	<input id="input-major-lambda" type="number" value="<%= config.deviation_major_lambda %>" class="form-control" />
-							  	</div>
-							  	<div class="form-group">
-							    	<label for="input-significant-lambda">Significant deviation intensity</label>
-							    	<input id="input-significant-lambda" type="number" value="<%= config.deviation_significant_lambda %>" class="form-control" />
-							  	</div>
-							  	<div class="form-group">
-							    	<label for="input-minor-lambda">Minor deviation intensity</label>
-							    	<input id="input-minor-lambda" type="number" value="<%= config.deviation_minor_lambda %>" class="form-control" />
-							  	</div>
-							</div>
-							<% } %>
-						<% } %>
-					</div>
-  				</div>
-  				<div class="modal-footer">
-  					<button id="config-cancel" type="button" class="btn btn-default">Cancel</button>
-    				<button id="config-done" type="button" class="btn btn-success">Done</button>
-  				</div>
-			</div>
-		</div>
-	</div>
 	
 	<!-- Central components -->
 	<div id="page-wrapper" class="container-fluid" style="padding-top: 30px;">
@@ -377,6 +304,10 @@
 													<button id="btn-timeline-zoomin" type="button" class="btn btn-default btn-xs"><span class="glyphicon glyphicon-plus"></span></button><br />
 													<button id="btn-timeline-zoomout" type="button" class="btn btn-default btn-xs"><span class="glyphicon glyphicon-minus"></span></button>
 												</div>
+												<div id="div-timeline-scroll">
+													<button id="btn-timeline-scroll-left" type="button" class="btn btn-default btn-xs"><span class="glyphicon glyphicon-chevron-left"></span></button>
+													<button id="btn-timeline-scroll-right" type="button" class="btn btn-default btn-xs"><span class="glyphicon glyphicon-chevron-right"></span></button>
+												</div>
 												<div id="div-time-state-hist" style="height: 100%; margin-left: 40px; margin-right: 40px;"></div>
 											</div>
 											<div id="div-parallel-wrapper" class="tab-pane container-bottom active">
@@ -563,6 +494,58 @@
 						</div>
 					</div>
 				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Configuration popup -->
+	<div id="popup-config" class="modal fade" role="dialog" tabindex="-1">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+    				<button type="button" class="close" data-dismiss="modal">&times;</button>
+    				<h4 class="modal-title">Configuration</h4>
+  				</div>
+  				<div class="modal-body">
+  					<div id="div-config">
+  						<div>
+  							<div>
+  								<div class="checkbox">
+									<label>
+										<input id="chk-show-probs" type="checkbox"> Show transition probabilities
+									</label>
+								</div>
+								<div class="checkbox">
+									<label>
+										<input id="chk-wheel-scroll" type="checkbox"> Enable wheel scrolling
+									</label>
+								</div>
+  							</div>
+  						</div>
+                        <div id="div-config-params" class="row">
+                            <div class="col-md-12">
+                                <label for="range-pred-threshold">Prediciton threshold: <span id="span-pred-threshold"><%= predictionThreshold %></span></label>
+                                <div id="range-pred-threshold"></div>
+                            </div>
+                        </div>
+                        <div id="div-config-params" class="row">
+                            <div class="col-md-12">
+                                <label for="range-time-horizon">Time horizon: <span id="span-time-horizon"><%= timeHorizon %></span></label>
+                                <div id="range-time-horizon"></div>
+                            </div>
+                        </div>
+                        <div id="div-config-params" class="row">
+                            <div class="col-md-12">
+                                <label for="range-pdf-bins">PDF bins: <span id="span-pdf-bins"><%= pdfBins %></span></label>
+                                <div id="range-pdf-bins"></div>
+                            </div>
+                        </div>
+					</div>
+  				</div>
+  				<div class="modal-footer">
+  					<button id="config-cancel" type="button" class="btn btn-default">Cancel</button>
+    				<button id="config-done" type="button" class="btn btn-success">Done</button>
+  				</div>
 			</div>
 		</div>
 	</div>
