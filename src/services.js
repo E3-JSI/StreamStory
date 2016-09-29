@@ -371,10 +371,18 @@ function initStreamStoryHandlers(model, enable) {
 					);
 
 					var mid = model.getId();
+					var brokerMsgStr = JSON.stringify(brokerMsg);
+
+                    if (log.trace())
+                        log.trace('Sending message through the model story ...');
 					modelStore.sendMsg(model.getId(), JSON.stringify(uiMsg));
 
-					var brokerMsgStr = JSON.stringify(brokerMsg);
+                    if (log.trace())
+                        log.trace('Sending message through the broker ...');
 					broker.send(broker.PREDICTION_PRODUCER_TOPIC, brokerMsgStr);
+
+                    if (log.trace())
+                        log.trace('Sending to FZI topics ...');
 
 					var topics = fzi.getTopics(mid, fzi.PREDICTION_OPERATION);
 					for (var i = 0; i < topics.length; i++) {
