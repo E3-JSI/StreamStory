@@ -1188,7 +1188,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 		var timelineController = (function () {
 			var ZOOM_FACTOR = 1.1;
             var OFFSET_STEP = .1;
-            var MAX_ZOOM = 100;
+            var MAX_ZOOM = 10000;
 
 			var wrapperId = '#div-time-state-hist';
 			var wrapper = $(wrapperId);
@@ -1232,7 +1232,11 @@ function changeControlVal(stateId, ftrIdx, val) {
 
                 $.ajax('api/stateHistory', {
                     dataType: 'json',
-                    data: { offset: offset, range: rangeFromZoom(zoom) },
+                    data: {
+                        offset: offset,
+                        range: rangeFromZoom(zoom),
+                        n: 100
+                    },
                     success: function (scales) {
                         console.log('History received, drawing ...');
                         wrapper.html('');
@@ -1251,16 +1255,36 @@ function changeControlVal(stateId, ftrIdx, val) {
                             var timeV = [];
                             var category = 'scale-' + scaleN;
 
-                            for (var stateN = 0; stateN < states.length-1; stateN++) {
-                                var state = states[stateN];
-                                var stateId = state.id;
+                            for (var blockN = 0; blockN < states.length; blockN++) {
+                                var block = states[blockN];
+                                
+                                var start = block.start;
+                                var end = block.start + block.duration;
 
-                                var color = viz.getDefaultNodeColor(stateId);
+                                var stateH = block.states;
+                                
+                                var hue = 0;
+                                var majorityStateId = -1;
+                                var majorityStatePerc = 0;
+                                for (var stateId in stateH) {
+                                    var statePerc = stateH[stateId];
+                                    var stateColor = viz.getDefaultNodeColor(stateId);
+
+                                    if (statePerc > majorityStatePerc) {
+                                        majorityStatePerc = statePerc;
+                                        majorityStateId = stateId;
+                                    }
+                                    
+                                    hue += statePerc*stateColor.hue;
+                                }
+                                var color = viz.getDefaultNodeColor(majorityStateId);
+                                color.hue = hue;
+
                                 timeV.push({
-                                    starting_time: state.start,
-                                    ending_time: states[stateN+1].start - 1,
-                                    color: color,
-                                    'class': 'state-' + stateId
+                                    starting_time: start,
+                                    ending_time: end,
+                                    color: getHslStr(color),
+                                    'class': 'state-' + majorityStateId
                                 });
                             }
 

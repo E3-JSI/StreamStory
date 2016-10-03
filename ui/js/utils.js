@@ -206,6 +206,10 @@ function hsl2rgb(h, s, l) {
 	}
 }
 
+function getHslStr(val) {
+    return 'hsl(' + (360*val.hue / (2*Math.PI)).toFixed() + ',' + (100*val.saturation).toFixed() + '%,' + (100*val.light).toFixed() + '%)';
+}
+
 $(document).ready(function () {
     // hack, so that console.log doesn't crash the app in IE
     if (console == null) {

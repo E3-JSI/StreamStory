@@ -1140,6 +1140,7 @@ function initStreamStoryRestApi() {
 
                 var offset = req.query.offset != null ? parseFloat(req.query.offset) : undefined;
                 var range = req.query.range != null ? parseFloat(req.query.range) : undefined;
+                var maxStates = req.query.n != null ? parseInt(req.query.n) : undefined;
 
                 if (offset == null) {
                     handleBadInput(res, "Missing parameter offset!");
@@ -1149,13 +1150,17 @@ function initStreamStoryRestApi() {
                     handleBadInput(res, "Missing parameter range!");
                     return;
                 }
+                if (maxStates == null) {
+                    handleBadInput(res, 'Missing parameter maxStates!');
+                    return;
+                }
 
                 if (log.debug())
                     log.debug('Using parameters offset: %d, relWindowLen: %d', offset, range);
 
 				var model = getModel(req.sessionID, req.session);
 
-				var result = model.getHistoricalStates(offset, range);
+				var result = model.getHistoricalStates(offset, range, maxStates);
 
                 if (log.debug())
                     log.debug('Finished! Returning history ...');

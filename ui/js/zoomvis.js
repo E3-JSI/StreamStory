@@ -409,9 +409,6 @@ var zoomVis = function (opts) {
 		
 		var colorH = {};
 		
-		function getOutputStr(val) {
-			return 'hsl(' + (360*val.hue / (2*Math.PI)).toFixed() + ',' + (100*val.saturation).toFixed() + '%,' + (100*val.light).toFixed() + '%)';
-		}
 		
 		var that = {
 			init: function (levels) {
@@ -511,10 +508,10 @@ var zoomVis = function (opts) {
 				}
 			},
 			getColorStr: function (nodeId) {
-				return getOutputStr(that.getColor(nodeId));
+				return getHslStr(that.getColor(nodeId));
 			},
 			getColor: function (nodeId) {
-				return colorH[nodeId];
+				return clone(colorH[nodeId]);
 			},
 			getComplementaryColorStr: function (nodeId)	 {
 				var color = that.getColor(nodeId);
@@ -528,7 +525,7 @@ var zoomVis = function (opts) {
 				return getBrightness(rgb) >= .5 ? '#000000' : '#F0F0F0';
 			},
 			toColorStr: function (color) {
-				return getOutputStr(color)
+				return getHslStr(color)
 			}
 		}
 		
@@ -1978,7 +1975,7 @@ var zoomVis = function (opts) {
 		
 		setNodeColor: setNodeColor,
 		getDefaultNodeColor: function (id) {
-			return colorGenerator.getColorStr(id);
+			return colorGenerator.getColor(id);
 		},
 		
 		clearNodeColors: function () {

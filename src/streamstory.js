@@ -846,8 +846,8 @@ exports.StreamStory = function (opts) {
 			};
 		},
 		
-		getHistoricalStates: function (offset, zoom) {
-			var result = mc.getHistoricalStates(offset, zoom);
+		getHistoricalStates: function (offset, zoom, maxStates) {
+			var result = mc.getHistoricalStates(offset, zoom, maxStates);
 			return result;
 		},
 		
