@@ -1209,6 +1209,24 @@ function changeControlVal(stateId, ftrIdx, val) {
             var currOffset = 0;
             var currZoom = 1;
 
+            function highlightSelectedState() {
+                if (selectedStateId == null) return;
+
+                var currId = selectedStateId;
+                var parentId = null;
+
+                while (true) {
+                    parentId = viz.getParent(currId);
+                    if (parentId == null) break;
+
+                    wrapper.find('.timelineItem_state-' + currId).attr('highlighted', 'highlighted');
+
+                    if (parentId == currId) break;
+
+                    currId = parentId;
+                }
+            }
+
 			function redraw() {
 				wrapper.html('');
 
@@ -1216,9 +1234,10 @@ function changeControlVal(stateId, ftrIdx, val) {
 					.append('svg')
 					.attr('width', wrapperW)
 					.attr('height', wrapperH)
-	//				.attr("transform", "translate(" + 0 + "," + 100 + ")")
 					.datum(chartData)
 					.call(chart);
+
+                highlightSelectedState();
 
 				that.onScaleChanged();
 			}
@@ -1235,9 +1254,13 @@ function changeControlVal(stateId, ftrIdx, val) {
                     data: {
                         offset: offset,
                         range: rangeFromZoom(zoom),
-                        n: 100
+                        n: 200
                     },
-                    success: function (scales) {
+                    success: function (data) {
+                        var scales = data.window;
+                        var historyStart = data.historyStart;   // TODO do I really need these??
+                        var historyEnd = data.historyEnd;
+
                         console.log('History received, drawing ...');
                         wrapper.html('');
 
@@ -1280,12 +1303,14 @@ function changeControlVal(stateId, ftrIdx, val) {
                                 var color = viz.getDefaultNodeColor(majorityStateId);
                                 color.hue = hue;
 
-                                timeV.push({
+                                var block = {
                                     starting_time: start,
                                     ending_time: end,
                                     color: getHslStr(color),
                                     'class': 'state-' + majorityStateId
-                                });
+                                }
+
+                                timeV.push(block);
                             }
 
                             chartData.push({
@@ -1320,6 +1345,7 @@ function changeControlVal(stateId, ftrIdx, val) {
                             var tickTime = null;
                             var format = null;
 
+                            // TODO the timeline is not OK
                             if (dt < 1000*60*60*24*7) {	// one week
                                 tickTime = d3.time.hours;
                                 format = d3.time.format('%c');
@@ -1453,20 +1479,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 					if (stateId == null) return;
 
 					selectedStateId = stateId;
-
-					var currId = stateId;
-					var parentId = null;
-
-					while (true) {
-						parentId = viz.getParent(currId);
-						if (parentId == null) break;
-
-						wrapper.find('.timelineItem_state-' + currId).attr('highlighted', 'highlighted');
-
-						if (parentId == currId) break;
-
-						currId = parentId;
-					}
+                    highlightSelectedState();
 				}
 			};
 			return that;
