@@ -335,6 +335,12 @@ html, body {
  	BIG PICTURE
 ===============================================================*/
 
+#div-time-state-hist {
+    height: calc(100% - 10px);
+    margin-left: 40px;
+    margin-right: 40px;
+}
+
 #div-time-state-hist > svg > g:HOVER {
 	cursor: pointer;
 }
@@ -355,18 +361,30 @@ html, body {
 }
 
 #div-timeline-scroll {
-    width: 100px;
+    width: calc(100% - 150px);
+    height: 22px;
 	position: absolute;
-	bottom: 28px;
-    left: 485px;
+	bottom: 26px;
+    left: 75px;
+}
+
+#div-timeline-scroll #div-bp-slider {
+    width: calc(100% - 120px);
+    margin-top: 5px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 #div-timeline-scroll #btn-timeline-scroll-left {
-    float: left;
+    position: absolute;
+    top: 0px;
+    left: 10px;
 }
 
 #div-timeline-scroll #btn-timeline-scroll-right {
-    float: right;
+    position: absolute;
+    top: 0px;
+    right: 10px;
 }
 
 #div-time-state-hist .axis .tick {
