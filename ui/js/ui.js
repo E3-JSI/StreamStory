@@ -1185,13 +1185,16 @@ function changeControlVal(stateId, ftrIdx, val) {
 			$('#div-timehist-daily').html('');
 		}
 
-		var timelineController = (function () {
+		var timelineController = (function () { // TODO remove this shit!!!
 			var ZOOM_FACTOR = 1.1;
             var OFFSET_STEP = .1;
-            var MAX_ZOOM = 10000;
+            var MAX_ZOOM = 100;
 
 			var wrapperId = '#div-time-state-hist';
 			var wrapper = $(wrapperId);
+
+            var slider = $('#div-bp-slider');
+            var sliderHandle = $('#div-bp-slider-handle');
 
 			var chart = null;
 			var chartData = null;
@@ -1238,23 +1241,24 @@ function changeControlVal(stateId, ftrIdx, val) {
 					.call(chart);
 
                 highlightSelectedState();
-
 				that.onScaleChanged();
 			}
 
             function rangeFromZoom(zoom) {
                 return 1 / zoom;
             }
+            
+            function zoomFromRange(range) {
+                return 1 / range;
+            }
 
             function fetchTimeline(offset, zoom, callback) {
-                console.log('Fetching state history offset: ' + offset + ', zoom: ' + zoom + ' ...');
-
                 $.ajax('api/stateHistory', {
                     dataType: 'json',
                     data: {
                         offset: offset,
                         range: rangeFromZoom(zoom),
-                        n: 200
+                        n: 100
                     },
                     success: function (data) {
                         var scales = data.window;
@@ -1332,42 +1336,61 @@ function changeControlVal(stateId, ftrIdx, val) {
                             wrapperW = wrapper.width();
                             wrapperH = wrapper.height();
 
-                            var nTicks = 15;
+                            var nTicks = 8;
                             var minElementWidth = 10;
 
                             var nTimelines = chartData.length;
                             var margin = chart.itemMargin();
                             var itemHeight = Math.floor((wrapperH - (nTimelines-1)*margin - 70) / nTimelines);
 
-                            var dt = finestStates[finestStates.length-1].start - finestStates[0].start;
+                            var dt = (function () {
+                                var firstState = finestStates[0];
+                                var lastState = finestStates[finestStates.length-1];
+                                
+                                return lastState.start + lastState.duration - firstState.start;
+                            })();
 
-                            var tickInterval = dt / nTicks;
                             var tickTime = null;
                             var format = null;
 
-                            // TODO the timeline is not OK
-                            if (dt < 1000*60*60*24*7) {	// one week
-                                tickTime = d3.time.hours;
-                                format = d3.time.format('%c');
+                            if (dt < 1000*60*60*5) {
+                                // the total time is less than five hour
+                                tickTime = d3.time.minute;
+                                format = d3.time.format('%H:%M');
                             }
-                            else if (dt < 1000*60*60*24*365*2) {
-                                tickTime = d3.time.days;
+                            else if (dt < 1000*60*60*24*7) {	// one week
+                                tickTime = d3.time.hour;
+                                format = d3.time.format('%Hh %d %b');
+                            }
+                            else if (dt < 1000*60*60*24*30) {   // one month
+                                tickTime = d3.time.day;
+                                format = d3.time.format('%d/%m/%y');
+                            }
+                            else if (dt < 1000*60*60*24*30*6) { // half a year
+                                tickTime = d3.time.monday;
+                                format = d3.time.format('%d/%m/%y');
+                            }
+                            else if (dt < 1000*60*60*24*30*12) {    // one year
+                                tickTime = d3.time.month;
+                                format = d3.time.format('%b %y');
+                            }
+                            else if (dt < 1000*60*60*24*365*2) {    // two years
+                                tickTime = d3.time.month;
                                 format = d3.time.format('%x');
                             }
-                            else {
-                                tickTime = d3.time.months;
+                            else {  // more than two years
+                                tickTime = d3.time.year;
                                 format = d3.time.format('%Y');
                             }
-
+                            
                             chart.tickFormat({
                                 format: format,
-                                tickTime: tickTime,
-                                tickInterval: tickInterval,
+                                numTicks: nTicks,
                                 tickSize: 6,
-                                tickValues: null
                             });
 
-                            chart.width(Math.max(maxEls*minElementWidth, wrapperW));
+                            chart.width(wrapperW);
+                            // chart.width(Math.max(maxEls*minElementWidth, wrapperW));
                             chart.itemHeight(itemHeight);
                             chart.margin({ left: 50, right: 0, top: 0, bottom: 0 });
                             chart.stack();
@@ -1417,48 +1440,71 @@ function changeControlVal(stateId, ftrIdx, val) {
 
 			var that = {
 				init: function () {
+                    var handleSliderChange = true;
+
+                    function updateSlider(offset, zoom) {
+                        if (offset != currOffset || zoom != currZoom) {
+                            currOffset = offset;
+                            currZoom = zoom;
+
+                            // make sure the event will only be handled once
+                            handleSliderChange = false;
+                            slider.slider('values', 0, currOffset);
+                            handleSliderChange = true;
+                            slider.slider('values', 1, currOffset + rangeFromZoom(currZoom));
+                        }
+                    }
+
                     fetchTimeline(currOffset, currZoom, function () {
-                        addPressHandler($('#btn-timeline-zoomin'), function () {
-                            currZoom *= ZOOM_FACTOR;
-                            if (currZoom > MAX_ZOOM) {
-                                currZoom = MAX_ZOOM;
-                                return;
-                            }
-                            fetchTimeline(currOffset, currZoom);
+                        addPressHandler($('#btn-timeline-zoomin'), function (event) {
+                            updateSlider(currOffset, Math.min(MAX_ZOOM, currZoom * ZOOM_FACTOR));
                         });
 
                         addPressHandler($('#btn-timeline-zoomout'), function () {
-                            currZoom /= ZOOM_FACTOR;
-                            if (currZoom < 1) {
-                                currZoom = 1;
-                                return;
-                            }
-                            fetchTimeline(currOffset, currZoom);
+                            updateSlider(currOffset, Math.max(1, currZoom / ZOOM_FACTOR));
                         });
 
                         addPressHandler($('#btn-timeline-scroll-left'), function () {
-                            var prevOffset = currOffset;
-
-                            currOffset -= OFFSET_STEP / currZoom;
-                            if (currOffset < 0) { currOffset = 0; }
-
-                            if (currOffset != prevOffset) {
-                                fetchTimeline(currOffset, currZoom);
-                            }
+                            var newOffset = currOffset - OFFSET_STEP / currZoom;
+                            if (newOffset < 0) { newOffset = 0; }
+                            updateSlider(newOffset, currZoom);
                         });
 
                         addPressHandler($('#btn-timeline-scroll-right'), function () {
-                            var prevOffset = currOffset;
-
-                            currOffset += OFFSET_STEP / currZoom;
-
+                            var newOffset = currOffset + OFFSET_STEP / currZoom;
                             var range = rangeFromZoom(currZoom);
-                            if (currOffset + range > 1) { currOffset = 1 - range; }
-
-                            if (currOffset != prevOffset) {
-                                fetchTimeline(currOffset, currZoom);
-                            }
+                            if (newOffset + range > 1) { newOffset = 1 - range; }
+                            updateSlider(newOffset, currZoom);
                         });
+
+                        // init the timeline slider
+                        (function initSlider() {
+                            var step = .001;
+                            slider.slider({
+                                range: true,
+                                min: 0,
+                                max: 1 + step,  // need a bit more than 1, otherwise the values range from 0 to 1 - step
+                                step: step,
+                                values: [0,1],
+                                slide: function (event, ui) {
+                                },
+                                change: function (event, ui) {
+                                    if (!handleSliderChange) return true;
+
+                                    console.log('handling slider change ...');
+
+                                    var min = ui.values[0];
+                                    var max = ui.values[1];
+                                    var range = max - min;
+                                    var zoom = zoomFromRange(range);
+                                    
+                                    currZoom = zoom;
+                                    currOffset = min;
+
+                                    fetchTimeline(currOffset, currZoom);
+                                }
+                            })
+                        })();
                     });
                 },
 

@@ -327,6 +327,10 @@ html, body {
 	cursor: pointer;
 }
 
+.ui-slider .ui-slider-handle {
+    padding-left: 5px;
+}
+
 /*===============================================================
  	BIG PICTURE
 ===============================================================*/
@@ -363,6 +367,10 @@ html, body {
 
 #div-timeline-scroll #btn-timeline-scroll-right {
     float: right;
+}
+
+#div-time-state-hist .axis .tick {
+    font-size: 10px;
 }
 
 /*===============================================================
