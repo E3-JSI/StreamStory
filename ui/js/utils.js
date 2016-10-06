@@ -128,7 +128,8 @@ function showAlert(holder, wrapper, clazz, title, msg, close) {
 }
 
 function redirectToUI() {
-	window.location.replace('ui.html');
+    window.location.assign('ui.html');
+	// window.location.replace('ui.html');
 }
 
 function reloadWindow() {

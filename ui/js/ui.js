@@ -20,6 +20,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 	var MODE_SELECT_ACTIVITY_STATE = false;
 	var ui;
 	var viz;
+    var timelineController;
 	var act;
 	var firstBottomVizTab = null;
 
@@ -1185,7 +1186,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 			$('#div-timehist-daily').html('');
 		}
 
-		var timelineController = (function () { // TODO remove this shit!!!
+		timelineController = (function () {
 			var ZOOM_FACTOR = 1.1;
             var OFFSET_STEP = .1;
             var MAX_ZOOM = 100;
@@ -2169,6 +2170,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 			if (TAB_ID == 'a-default') {
 				$('#tabs-viz-bottom').find('a')[0].click();
 				viz.resetMode();
+                timelineController.init();
 				// TODO fetch the histograms
 				// TODO reload the decision tree
 			}
