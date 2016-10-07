@@ -1642,6 +1642,8 @@ function changeControlVal(stateId, ftrIdx, val) {
 				$('#chk-show-fut').change();
 			}
 
+            if (viz.getMode() == viz.MODE_ACTIVITY) return;
+
 			// highlight the state in the "Big Picture"
 			timelineController.onStateChanged(stateId);
 
