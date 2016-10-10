@@ -1,8 +1,10 @@
+/*jshint node: true */
+/*globals qm, log */
+
 var express = require('express');
 var bodyParser = require("body-parser");
 var path = require('path');
 var fs = require('fs');
-var math = require('mathjs');
 var mkdirp = require('mkdirp');
 var multer = require('multer');
 var session = require('express-session');
@@ -40,10 +42,9 @@ var titles = {
     'register.html': 'Register',
     'resetpassword.html': 'Reset Password',
     'dashboard.html': 'Dashboard',
-    'profile.html': 'Profile',
     'ui.html': 'View Model',
     'profile.html': 'Profile'
-}
+};
 
 var base;
 var db;
@@ -60,8 +61,9 @@ var intensConfig = {};
 
 function activateModel(model) {
     try {
-        if (log.info())
+        if (log.info()) {
             log.info('Activating an online model, ID: %s ...', model.getId());
+        }
 
         modelStore.add(model);
         initStreamStoryHandlers(model, true);
@@ -200,14 +202,14 @@ function handleNoPermission(req, res) {
     res.end();
 }
 
-function handleBadRequest(req, res, msg) {
-    if (log.debug())
-        log.debug('Bad request, blocking page!');
+// function handleBadRequest(req, res, msg) {
+//     if (log.debug())
+//         log.debug('Bad request, blocking page!');
 
-    res.status(404);	// bad request
-    res.send(msg != null ? msg : ('Bad request ' + req.path));
-    res.end();
-}
+//     res.status(404);	// bad request
+//     res.send(msg != null ? msg : ('Bad request ' + req.path));
+//     res.end();
+// }
 
 function handleServerError(e, req, res) {
     log.error(e, 'Exception while processing request!');
@@ -356,9 +358,9 @@ function initStreamStoryHandlers(model, enable) {
                         var ftr = obs[i];
                         metadata[ftr.name] = ftr.value;
                     }
-                    for (var i = 0; i < contr.length; i++) {
-                        var ftr = contr[i];
-                        metadata[ftr.name] = ftr.value;
+                    for (i = 0; i < contr.length; i++) {
+                        var contrFtr = contr[i];
+                        metadata[contrFtr.name] = contrFtr.value;
                     }
 
                     var brokerMsg = transform.genHistPrediction(
@@ -377,7 +379,7 @@ function initStreamStoryHandlers(model, enable) {
                     broker.send(broker.PREDICTION_PRODUCER_TOPIC, brokerMsgStr);
 
                     var topics = fzi.getTopics(mid, fzi.PREDICTION_OPERATION);
-                    for (var i = 0; i < topics.length; i++) {
+                    for (i = 0; i < topics.length; i++) {
                         var topic = topics[i].output;
                         log.info('Sending a prediction message to topic: %s', topic);
                         broker.send(topic, brokerMsgStr);
@@ -451,7 +453,7 @@ function sendPrediction(msg, timestamp) {
     var brokerMsg = transform.genExpPrediction(perHour, 'hour', timestamp);
 
     if (log.debug())
-        log.debug('Sending prediction: %s', JSON.stringify(brokerMsg))
+        log.debug('Sending prediction: %s', JSON.stringify(brokerMsg));
 
     broker.send(broker.PREDICTION_PRODUCER_TOPIC, JSON.stringify(brokerMsg));
     modelStore.distributeMsg(msgStr);
@@ -487,7 +489,7 @@ function initPipelineHandlers() {
     });
 
     // configure coefficient callback
-    {
+    (function () {
         log.info('Fetching intensities from DB ...');
         var lambdaProps = [
             'deviation_extreme_lambda',
@@ -495,6 +497,7 @@ function initPipelineHandlers() {
             'deviation_significant_lambda',
             'deviation_minor_lambda'
         ];
+
         db.getMultipleConfig({properties: lambdaProps}, function (e, result) {
             if (e != null) {
                 log.error(e, 'Failed to fetch intensities from DB!');
@@ -514,8 +517,18 @@ function initPipelineHandlers() {
             pipeline.onCoefficient(function (opts) {
                 var pdf = null;
 
-                var zscore = opts.zScore;
+                // send the coefficient to the broker, so that other components can do 
+                // calculations based no it
+                (function () {
+                    var brokerMsgStr = JSON.stringify(opts);
 
+                    if (log.debug())
+                        log.debug('Sending coefficient to the broker: %s', brokerMsgStr);
+
+                    broker.send(broker.TOPIC_PUBLISH_COEFFICIENT, brokerMsgStr);
+                })()
+
+                var zscore = opts.zScore;
                 if (zscore >= 2) {
                     if (zscore >= 5) {
                         pdf = {
@@ -545,6 +558,9 @@ function initPipelineHandlers() {
                     }));
 
                     if (pdf != null) {
+                        if (log.debug())
+                            log.debug('Sending prediction message based on the friction coefficient ...')
+
                         var msg = {
                             type: 'prediction',
                             content: {
@@ -559,7 +575,7 @@ function initPipelineHandlers() {
                 }
             });
         });
-    }
+    })();
 }
 
 function initLoginRestApi() {
@@ -1204,7 +1220,7 @@ function initStreamStoryRestApi() {
                 });
             } catch (e) {
                 log.error(e, 'Failed to query state details!');
-                andleServerError(e, req, res);
+                handleServerError(e, req, res);
             }
         });
 
@@ -1487,13 +1503,15 @@ function initStreamStoryRestApi() {
                     model.getModel().clearStateName(stateId);
                 }
 
+                var fname;
+                var props;
                 if (!model.isOnline()) {
-                    var fname = getModelFile(session);
+                    fname = getModelFile(session);
                     if (log.debug())
                         log.debug('Saving model to file: %s', fname);
                     model.save(fname);
 
-                    var props = {
+                    props = {
                         description: description
                     };
 
@@ -1522,15 +1540,15 @@ function initStreamStoryRestApi() {
 
                     if (model.getModel().isTarget(stateId) != isUndesired)
                         model.getModel().setTarget(stateId, isUndesired);
-                    var fname = getModelFile(session);
+                    fname = getModelFile(session);
 
                     if (log.debug())
                         log.debug('Saving model to file: %s', fname);
 
-                    var fname = getModelFile(session);
+                    fname = getModelFile(session);
                     model.save(fname);
 
-                    var props = {
+                    props = {
                         eventId: isUndesired ? eventId : undefined,
                         description: description
                     }
@@ -1622,6 +1640,7 @@ function initDataUploadApi() {
         }
     });
 
+    /* jshint unused: vars */
     app.post('/upload', upload.single('dataset'), function (req, res, next) {
         var sessionId = req.sessionID;
         var session = req.session;
@@ -1655,10 +1674,10 @@ function initDataUploadApi() {
                 }
 
                 // try guessing the field types
-                for (var i = 1; i < lines.length; i++) {
-                    var lineArr = lines[i];
-                    for (var j = 0; j < lineArr.length; j++) {
-                        var val = lineArr[j];
+                for (i = 1; i < lines.length; i++) {
+                    var lineV = lines[i];
+                    for (var j = 0; j < lineV.length; j++) {
+                        var val = lineV[j];
 
                         if (val == '' || isNaN(val)) {
                             attrTypes[j] = 'categorical';
@@ -1695,7 +1714,7 @@ function initDataUploadApi() {
             var username = session.username;
 
             var timeAttr = req.body.time;
-            var useTimeFtrV = req.body.useTimeFtrV;
+            // var useTimeFtrV = req.body.useTimeFtrV;
             var modelName = req.body.name;
             var description = req.body.description;
             var timeUnit = req.body.timeUnit;
@@ -1800,7 +1819,6 @@ function initDataUploadApi() {
                         attrs: attrs,
                         controlAttrs: controlAttrs,
                         ignoredAttrs: ignoredAttrs,
-                        isRealTime: isRealTime,
                         fileBuff: fileBuff,
                         clustConfig: clustConfig,
                         baseDir: baseDir
@@ -1972,8 +1990,9 @@ function initDataUploadApi() {
             }
 
             try {
+                var fname;
                 if (modelConfig.is_realtime == 1) {
-                    var fname = modelConfig.model_file;
+                    fname = modelConfig.model_file;
                     var isActive = modelConfig.is_active == 1;
 
                     if (isActive) {
@@ -2001,7 +2020,7 @@ function initDataUploadApi() {
                         });
                     }
                 } else {
-                    var fname = utils.getModelFName(modelConfig.base_dir);
+                    fname = utils.getModelFName(modelConfig.base_dir);
 
                     modelStore.loadOfflineModel(modelConfig.base_dir, function (e, baseConfig) {
                         if (e != null) {
@@ -2036,7 +2055,7 @@ function initServerApi() {
                 res.end();
             } catch (e) {
                 log.error(e, 'Failed to exit!');
-                handleServerError(e1, req, res);
+                handleServerError(e, req, res);
             }
         });
     }
@@ -2049,13 +2068,11 @@ function initServerApi() {
                 res.end();
             } catch (e) {
                 log.error(e, 'Failed fetch theme!');
-                handleServerError(e1, req, res);
+                handleServerError(e, req, res);
             }
         });
 
         app.post(API_PATH + '/theme', function (req, res) {
-            var batch = req.body;
-
             try {
                 var session = req.session;
                 var username = session.username;
@@ -2126,7 +2143,7 @@ function initServerApi() {
         });
     }
 
-    {
+    (function () {
         log.info('Registering activate model service ...');
 
         function activateModelById(req, res, modelId, activate, isFromUi) {
@@ -2138,7 +2155,7 @@ function initServerApi() {
             db.activateModel({modelId: modelId, activate: activate}, function (e1) {
                 if (e1 != null) {
                     log.error(e1, 'Failed to activate model %s!', modelId);
-                    handleServerError(e, req, res);
+                    handleServerError(e1, req, res);
                     return;
                 }
 
@@ -2147,7 +2164,7 @@ function initServerApi() {
                         db.fetchModel(modelId, function (e2, modelConfig) {
                             if (e2 != null) {
                                 log.error(e2, 'Failed to fetch a model from the DB!');
-                                handleServerError(e, req, res);
+                                handleServerError(e2, req, res);
                                 return;
                             }
 
@@ -2189,7 +2206,6 @@ function initServerApi() {
 
         app.post(API_PATH + '/removeModel', function (req, res) {
             try {
-                var session = req.session;
                 var modelId = req.body.modelId;
 
                 log.info('Removing model %d', modelId);
@@ -2210,7 +2226,6 @@ function initServerApi() {
 
         app.post(API_PATH + '/activateModel', function (req, res) {
             try {
-                var session = req.session;
                 var modelId = req.body.modelId;
                 var activate = req.body.activate;
 
@@ -2239,7 +2254,8 @@ function initServerApi() {
                 handleServerError(e, req, res);
             }
         });
-    }
+
+    })();
 
     {
         log.info('Registering model mode service ...');
@@ -2266,8 +2282,6 @@ function initServerApi() {
 
     app.post(API_PATH + '/shareModel', function (req, res) {
         try {
-            var session = req.session;
-
             var mid = req.body.modelId;
             var share = req.body.share;
 
@@ -2276,7 +2290,7 @@ function initServerApi() {
 
             db.makeModelPublic(mid, share, function (e) {
                 if (e != null) {
-                    log.error(e, 'Failed to activate model %s!', modelId);
+                    log.error(e, 'Failed to activate model %s!', mid);
                     handleServerError(e, req, res);
                     return;
                 }
@@ -2325,7 +2339,7 @@ function initConfigRestApi() {
             if (log.debug())
                 log.debug('Setting configuration %s', JSON.stringify(config));
 
-            db.setConfig(config, function (e, result) {
+            db.setConfig(config, function (e) {
                 if (e != null) {
                     log.error(e, 'Failed to update settings!');
                     handleServerError(e, req, res);
@@ -2412,6 +2426,7 @@ function initBroker() {
 
     broker.onMessage(function (msg) {
         try {
+            var val;
             if (msg.type == 'raw') {
                 if (++imported % printInterval == 0 && log.trace())
                     log.trace('Imported %d values ...', imported);
@@ -2429,7 +2444,7 @@ function initBroker() {
                 addRawMeasurement(payload);
             }
             else if (msg.type == 'enriched') {
-                var val = msg.payload;
+                val = msg.payload;
 
                 if (val.timestamp == null) {
                     val.timestamp = val.time;
@@ -2460,11 +2475,12 @@ function initBroker() {
                 //				event = transform.parseDominiksDerivedEvent(event);
                 //				//========================================================
 
-                var val = transform.parseDerivedEvent(event);
+                val = transform.parseDerivedEvent(event);
 
                 var timestamp = event.timestamp;
                 var eventName = event.eventName;
 
+                var predMsg = null;
                 if (isNaN(timestamp)) {
                     log.warn('CEP sent NaN time %s', JSON.stringify(val));
                     return;
@@ -2485,7 +2501,7 @@ function initBroker() {
 
                     var ll = val.lacqueringLineId;
                     var mm = val.mouldingMachineId;
-                    var shuttleId = val.shuttleId;
+                    // var shuttleId = val.shuttleId;
                     var deltaTm = val.timeDifference;
 
                     var minTime = transform.getMinShuttleTime(ll, mm);
@@ -2500,7 +2516,7 @@ function initBroker() {
                             log.info('Calculated timeToMolding ratio: %d', timeRatio);
 
                         if (timeRatio < 1.2) {
-                            var msg = {
+                            predMsg = {
                                 type: 'prediction',
                                 content: {
                                     time: timestamp,
@@ -2513,9 +2529,9 @@ function initBroker() {
                             };
 
                             if (log.debug())
-                                log.info('Sending prediction %s', JSON.stringify(msg));
+                                log.info('Sending prediction %s', JSON.stringify(predMsg));
 
-                            sendPrediction(msg, timestamp);
+                            sendPrediction(predMsg, timestamp);
                         }
                     }
                 } else {
@@ -2523,7 +2539,7 @@ function initBroker() {
                         log.info('Got unknown event, sending prediction ...');
                     // send prediction directly
 
-                    var msg = {
+                    predMsg = {
                         type: 'prediction',
                         content: {
                             time: timestamp,
@@ -2535,7 +2551,7 @@ function initBroker() {
                         }
                     };
 
-                    sendPrediction(msg, timestamp);
+                    sendPrediction(predMsg, timestamp);
                 }
 
                 lastCepTime = timestamp;
@@ -2577,6 +2593,18 @@ function loadActiveModels() {
         if (log.info())
             log.info('There are %d active models on startup ...', models.length);
 
+        var loadCb = function (e, model) {
+            if (e != null) {
+                log.error(e, 'Exception while loading online model!');
+                return;
+            }
+
+            if (log.debug())
+                log.debug('Activating model with id %s', model.getId());
+
+            activateModel(model);
+        }
+
         for (var i = 0; i < models.length; i++) {
             var modelConfig = models[i];
 
@@ -2584,17 +2612,7 @@ function loadActiveModels() {
                 if (log.info())
                     log.info('Initializing model %s ...', JSON.stringify(modelConfig));
 
-                modelStore.loadOnlineModel(modelConfig.model_file, function (e, model) {
-                    if (e != null) {
-                        log.error(e, 'Exception while loading online model!');
-                        return;
-                    }
-
-                    if (log.debug())
-                        log.debug('Activating model with id %s', model.getId());
-
-                    activateModel(model);
-                });
+                modelStore.loadOnlineModel(modelConfig.model_file, loadCb);
             } catch (e1) {
                 log.error(e1, 'Exception while initializing model %s', JSON.stringify(modelConfig));
             }
@@ -2658,7 +2676,9 @@ function excludeFiles(files, middleware) {
     }
 }
 
-function getPageOpts(req, res) {
+function getPageOpts(req, next) {
+    void next;
+
     var session = req.session;
     var page = getRequestedPage(req);
 

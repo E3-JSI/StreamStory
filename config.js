@@ -1,3 +1,6 @@
+/*jshint node: true */
+/*globals log, QM_MODULE_PATH */
+
 var fs = require('fs');
 var bunyan = require('bunyan');
 var logformat = require('bunyan-format');
@@ -17,21 +20,21 @@ var config = JSON.parse(configStr);	// use eval to allow comments inside the fil
 var loggerConfig = config.log.logger;
 var stream;
 if (loggerConfig.stream.type == 'stdout') {
-	console.log('Using stdout as log stream ...');
-	stream = process.stdout;
+    console.log('Using stdout as log stream ...');
+    stream = process.stdout;
 } else {	// TODO file stream doesn't work
-	console.log('Using file \'' + loggerConfig.stream.file + '\' as log stream ...');
-	stream = fs.createWriteStream(loggerConfig.stream.file);
+    console.log('Using file \'' + loggerConfig.stream.file + '\' as log stream ...');
+    stream = fs.createWriteStream(loggerConfig.stream.file);
 }
 var logStream = {
-	outputMode: loggerConfig.outputMode,
-	out: stream
+    outputMode: loggerConfig.outputMode,
+    out: stream
 };
 
 global.log = bunyan.createLogger({
-	name: 'StreamStory',
-	stream: logformat(logStream),
-	level: config.log.logger.level
+    name: 'StreamStory',
+    stream: logformat(logStream),
+    level: config.log.logger.level
 });
 
 //================================================================
@@ -45,40 +48,40 @@ exports.USE_CASE_TRAFFIC = 4;
 exports.USE_CASE_NAME = config.useCase;
 
 if (config.useCase == 'hella') {
-	exports.USE_CASE = exports.USE_CASE_HELLA;
-} 
+    exports.USE_CASE = exports.USE_CASE_HELLA;
+}
 else if (config.useCase == 'mhwirth') {
-	exports.USE_CASE = exports.USE_CASE_MHWIRTH;
+    exports.USE_CASE = exports.USE_CASE_MHWIRTH;
 }
 else if (config.useCase == 'nrg4cast') {
-	// NRG4Cast
-	exports.USE_CASE = exports.USE_CASE_NRG;
-} 
+    // NRG4Cast
+    exports.USE_CASE = exports.USE_CASE_NRG;
+}
 else if (config.useCase == 'simulation') {
-	exports.USE_CASE = exports.USE_CASE_SIMULATION;
+    exports.USE_CASE = exports.USE_CASE_SIMULATION;
 }
 else if (config.useCase == 'traffic') {
-	exports.USE_CASE = exports.USE_CASE_TRAFFIC;
+    exports.USE_CASE = exports.USE_CASE_TRAFFIC;
 }
 else {
-	log.error('Unknown use case: %s', config.USE_CASE);
-	process.exit(1);
+    log.error('Unknown use case: %s', config.USE_CASE);
+    process.exit(1);
 }
 
 // resampling interval
 if (config.resampleInterval == null) {
-	log.warn('Resampling interval is not defined in the configuration! Using default ...');
-	if (exports.USE_CASE == exports.USE_CASE_MHWIRTH) {
-		exports.STREAM_STORY_RESAMPLING_INTERVAL = 1000*10;	// 10s
-	}
-	else if (exports.USE_CASE == exports.USE_CASE_TRAFFIC) {
-		exports.STREAM_STORY_RESAMPLING_INTERVAL = 1000*60*60;	// 15min
-	} 
-	else {	// hella
-		exports.STREAM_STORY_RESAMPLING_INTERVAL = 1000*10;	// 10s
-	}
+    log.warn('Resampling interval is not defined in the configuration! Using default ...');
+    if (exports.USE_CASE == exports.USE_CASE_MHWIRTH) {
+        exports.STREAM_STORY_RESAMPLING_INTERVAL = 1000*10;	// 10s
+    }
+    else if (exports.USE_CASE == exports.USE_CASE_TRAFFIC) {
+        exports.STREAM_STORY_RESAMPLING_INTERVAL = 1000*60*60;	// 15min
+    }
+    else {	// hella
+        exports.STREAM_STORY_RESAMPLING_INTERVAL = 1000*10;	// 10s
+    }
 } else {
-	exports.STREAM_STORY_RESAMPLING_INTERVAL = config.resampleInterval;
+    exports.STREAM_STORY_RESAMPLING_INTERVAL = config.resampleInterval;
 }
 
 
@@ -96,18 +99,18 @@ exports.SAVE_ACTIVITIES = false;
 exports.SAVE_FRICTION = false;
 
 if (config.saveStates == true) {
-	log.info('Saving states ...');
-	exports.SAVE_STATES = true;
+    log.info('Saving states ...');
+    exports.SAVE_STATES = true;
 }
 
 if (config.saveActivities == true) {
-	log.info('Saving activities ...');
-	exports.SAVE_ACTIVITIES = true;
+    log.info('Saving activities ...');
+    exports.SAVE_ACTIVITIES = true;
 }
 
 if (config.saveFriction == true) {
-	log.info('Saving friction coefficients ...');
-	exports.SAVE_FRICTION = true;
+    log.info('Saving friction coefficients ...');
+    exports.SAVE_FRICTION = true;
 }
 
 //================================================================
@@ -145,12 +148,12 @@ exports.database = config.database;
 // STREAM STORY
 //================================================================
 exports.STREAM_STORY_PARAMS = {
-	transitions: {
-		type: 'continuous'
-	},
-	rndseed: 0,
-	pastStates: 2,
-	verbose: true
+    transitions: {
+        type: 'continuous'
+    },
+    rndseed: 0,
+    pastStates: 2,
+    verbose: true
 }
 
 //================================================================
@@ -188,12 +191,12 @@ global.qm.verbosity(verbosity);
 
 //create the directories if they don't exist
 try {
-	utils.createDirSync(exports.REAL_TIME_BASE_PATH);
-	utils.createDirSync(exports.REAL_TIME_MODELS_PATH);
-	utils.createDirSync(exports.USER_BASES_PATH);
+    utils.createDirSync(exports.REAL_TIME_BASE_PATH);
+    utils.createDirSync(exports.REAL_TIME_MODELS_PATH);
+    utils.createDirSync(exports.USER_BASES_PATH);
 } catch (e) {
-	log.error(e, 'Failed to create directories!');
-	process.exit(3);
+    log.error(e, 'Failed to create directories!');
+    process.exit(3);
 }
 
 log.info('Configured!');
@@ -206,5 +209,5 @@ log.info('StreamStory params: %s', JSON.stringify(exports.STREAM_STORY_PARAMS));
 log.info('Data path: %s', dataPath);
 log.info('Use-case: %s', config.useCase);
 if (exports.USE_BROKER)
-	log.info('Broker URL: %s', config.integration.brokerUrl);
+    log.info('Broker URL: %s', config.integration.brokerUrl);
 log.info('================================================');

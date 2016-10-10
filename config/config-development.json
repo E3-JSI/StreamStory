@@ -40,9 +40,9 @@
 		"producerPort": 9092
 	},
 	"useCase": "mhwirth",
-	"saveStates": true,
-	"saveActivities": true,
-	"saveFriction": true,
+	"saveStates": false,
+	"saveActivities": false,
+	"saveFriction": false,
 	"interpolation": "current",
 	"dataPath": "/mnt/raidM2T/project-data/StreamStory-meeting/"
 }
