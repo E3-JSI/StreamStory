@@ -241,7 +241,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 						if (prob == 1) {
 							msgStr = eventId;
 						} else {
-							msgStr = 100*(prob.toFixed(2)) + '% chance of arriving into ' + eventId;
+							msgStr = 100*prob.toFixed(2) + '% chance of arriving into ' + eventId;
 						}
 
 						drawMsg(msgStr, function (event) {
@@ -1234,7 +1234,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 			function redraw() {
 				wrapper.html('');
 
-				var svg = d3.select(wrapperId)
+				d3.select(wrapperId)
 					.append('svg')
 					.attr('width', wrapperW)
 					.attr('height', wrapperH)

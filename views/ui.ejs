@@ -499,6 +499,7 @@
 		</div>
 	</div>
 
+    <% if (model.isOnline()) { %>
 	<!-- Configuration popup -->
 	<div id="popup-config" class="modal fade" role="dialog" tabindex="-1">
 		<div class="modal-dialog">
@@ -550,6 +551,7 @@
 			</div>
 		</div>
 	</div>
+    <% } %>
 
 	<!-- popover for the histogram of the PDF -->
 	<div id="popover-pdf-hist" class="popover fade bottom in popover-centered">
