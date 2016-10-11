@@ -1,23 +1,12 @@
-function changeControlVal(stateId, ftrIdx, val) {
-	var data = { ftrIdx: ftrIdx, val: val };
-	if (stateId != null) data.stateId = stateId;
-
-	$.ajax('api/setControl', {
-		dataType: 'json',
-		data: data,
-		method: 'POST',
-		success: function (data) {
-			viz.setModel(data);
-		},
-		error: handleAjaxError()
-	});
-}
+/* globals PDF_BINS, TIME_HORIZON, PREDICTION_THRESHOLD, IS_MODEL_ACTIVE, TEXT_COLOR,
+ d3, cytoscape, zoomVis */
 
 (function () {
 	var STATE_COLORS = ['blue', 'red', 'green', 'yellow', 'magenta', 'cyan', 'brown', 'Wheat', 'DeepPink', 'CadetBlue'];
 
 	var TAB_ID = null;
-	var MODE_SELECT_ACTIVITY_STATE = false;
+	// var MODE_SELECT_ACTIVITY_STATE = false;
+    var UI; // constructor to create ui
 	var ui;
 	var viz;
     var timelineController;
@@ -27,6 +16,21 @@ function changeControlVal(stateId, ftrIdx, val) {
 	//=======================================================
 	// SHARED
 	//=======================================================
+    
+    // function changeControlVal(stateId, ftrIdx, val) {
+    //     var data = { ftrIdx: ftrIdx, val: val };
+    //     if (stateId != null) data.stateId = stateId;
+
+    //     $.ajax('api/setControl', {
+    //         dataType: 'json',
+    //         data: data,
+    //         method: 'POST',
+    //         success: function (data) {
+    //             viz.setModel(data);
+    //         },
+    //         error: handleAjaxError()
+    //     });
+    // }
 
 	function getFeatureInfo() {
 		var result = [];
@@ -110,7 +114,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 
 					if (contentVal != null && typeof contentVal == 'object') {
 						var keys = [];
-						for (var key in contentVal) {
+						for (key in contentVal) {
 							keys.push(key);
 						}
 
@@ -176,6 +180,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 				ws.onmessage = function (msgStr) {
 					var msg = JSON.parse(msgStr.data);
 
+                    var content;
 					if (msg.type == 'stateChanged')
 						viz.setCurrentStates(msg.content);
 					else if (msg.type == 'anomaly') {
@@ -194,7 +199,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 						drawMsg(getMsgContent('Coefficient', msg.content));
 					}
 					else if (msg.type == 'values') {
-						var content = msg.content;
+						content = msg.content;
 
 						var thumbs = $('#div-values-wrapper').children();
 
@@ -233,18 +238,18 @@ function changeControlVal(stateId, ftrIdx, val) {
 						}
 					}
 					else if (msg.type == 'statePrediction') {
-						var content = msg.content;
+						content = msg.content;
 						var eventId = content.eventId;
 						var prob = content.probability;
 
-						var msgStr;
+						var drawMsgStr;
 						if (prob == 1) {
-							msgStr = eventId;
+							drawMsgStr = eventId;
 						} else {
-							msgStr = 100*prob.toFixed(2) + '% chance of arriving into ' + eventId;
+							drawMsgStr = 100*prob.toFixed(2) + '% chance of arriving into ' + eventId;
 						}
 
-						drawMsg(msgStr, function (event) {
+						drawMsg(drawMsgStr, function () {
 							// draw a histogram of the PDF
 							var timeV = content.pdf.timeV;
 							var probV = content.pdf.probV;
@@ -254,42 +259,43 @@ function changeControlVal(stateId, ftrIdx, val) {
 								data.push([timeV[i], probV[i]]);
 							}
 
-							var min = timeV[0];
-							var max = timeV[timeV.length-1];
+							// var min = timeV[0];
+							// var max = timeV[timeV.length-1];
 
 							$('#popover-pdf-hist').slideDown();
 
-							var chart = new Highcharts.Chart({
-							    chart: {
-							        renderTo: document.getElementById('hist-pdf'),
-							        type: 'line'
-							    },
-							    title: {
-						        	floating: true,
-						        	text: ''
-						        },
-						        legend: {
-						        	enabled: false
-						        },
-							    yAxis: {
-							    	title: {
-							    		enabled: false
-							    	},
-							    	min: 0,
-							    	max: 1
-							    },
-							    plotOptions: {
-							        column: {
-							            groupPadding: 0,
-							            pointPadding: 0,
-							            borderWidth: 0
-							        }
-							    },
-							    series: [{
-							    	name: 'PDF',
-							        data: data
-							    }]
-							});
+                            // TODO highcharts not included anymore
+							// new Highcharts.Chart({
+							//     chart: {
+							//         renderTo: document.getElementById('hist-pdf'),
+							//         type: 'line'
+							//     },
+							//     title: {
+						        	// floating: true,
+						        	// text: ''
+						        // },
+						        // legend: {
+						        	// enabled: false
+						        // },
+							//     yAxis: {
+							//     	title: {
+							//     		enabled: false
+							//     	},
+							//     	min: 0,
+							//     	max: 1
+							//     },
+							//     plotOptions: {
+							//         column: {
+							//             groupPadding: 0,
+							//             pointPadding: 0,
+							//             borderWidth: 0
+							//         }
+							//     },
+							//     series: [{
+							//     	name: 'PDF',
+							//         data: data
+							//     }]
+							// });
 						});
 					}
 				};
@@ -310,7 +316,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 	//=======================================================
 
 	(function () {
-		UI = function (opts) {
+		UI = function () {
 			function privateFetchHistogram(opts) {
 				var container = opts.insertDiv != null ? opts.insertDiv : 'hist-wrapper';
 
@@ -386,19 +392,21 @@ function changeControlVal(stateId, ftrIdx, val) {
 							var colors = opts.valueColor;
 							var valStr = '';
 
-							var valArr = [];
-							for (var key in opts.value) {
-								valArr.push({ value: key, prob: opts.value[key] });
-							}
+                            (function () {
+                                var valArr = [];
+                                for (var key in opts.value) {
+                                    valArr.push({ value: key, prob: opts.value[key] });
+                                }
 
-							valArr.sort(function (v0, v1) {
-								return v1.prob - v0.prob;
-							});
+                                valArr.sort(function (v0, v1) {
+                                    return v1.prob - v0.prob;
+                                });
 
-							opts.value = {};
-							for (var i = 0; i < Math.min(10, valArr.length); i++) {
-								opts.value[valArr[i].value] = valArr[i].prob;
-							}
+                                opts.value = {};
+                                for (var i = 0; i < Math.min(10, valArr.length); i++) {
+                                    opts.value[valArr[i].value] = valArr[i].prob;
+                                }
+                            })();
 
 							for (var key in opts.value) {
 								var color = colors[key];
@@ -549,7 +557,7 @@ function changeControlVal(stateId, ftrIdx, val) {
                 value: PREDICTION_THRESHOLD,
                 min: 0,
                 max: 1,
-                step: .05,
+                step: 0.05,
                 animate: true,
                 change: function (event, ui) {
                     var val = ui.value;
@@ -561,7 +569,7 @@ function changeControlVal(stateId, ftrIdx, val) {
                 value: TIME_HORIZON,
                 min: 0,
                 max: 100,
-                step: .1,
+                step: 0.1,
                 animate: true,
                 change: function (event, ui) {
                     var val = ui.value;
@@ -636,7 +644,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 		(function () {
 			var ftrLists = $('#ul-ftrs-obs,#ul-ftrs-contr,#ul-ftrs-ign');
 			ftrLists.find('input[type=checkbox]').change(function (event) {
-				var ul = $('#ul-ftrs-obs');
+				// var ul = $('#ul-ftrs-obs');
 				var el = $(event.target);
 				var checked = el.prop('checked');
 
@@ -743,7 +751,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 				dataType: 'json',
 				data: { positions: JSON.stringify(nodePositions) },
 				method: 'POST',
-				success: function (data) {
+				success: function () {
 					showAlert($('#alert-holder'), $('#alert-wrapper-viz-config'), 'alert-success', 'Saved!', null, true);
 				},
 				error: handleAjaxError($('#alert-wrapper-viz-config'))
@@ -770,7 +778,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 		var DAYS_OF_WEEK = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 		var fontFactor = 1;
-		var DELTA_FONT_FACTOR = .1;
+		var DELTA_FONT_FACTOR = 0.1;
 
 		viz = zoomVis({
 			visContainer: 'vis_container'
@@ -781,13 +789,13 @@ function changeControlVal(stateId, ftrIdx, val) {
 
 			$('#div-tree-wrapper').removeClass('hidden');
 
-			var totalExamples = root.examples;
+			// var totalExamples = root.examples;
 
 			var nodes = [];
 			var edges = [];
 
 			var minNodeSize = 100;
-			var pieSize = minNodeSize*.8;
+			var pieSize = minNodeSize*0.8;
 			var levelH = 250;
 			var hPadding = 50;
 
@@ -803,7 +811,6 @@ function changeControlVal(stateId, ftrIdx, val) {
 			}
 
 			var currNodeId = 0;
-			var maxDepth = Number.MAX_VALUE;
 
 			(function construct(node, depth) {
 				var children = node.children;
@@ -824,8 +831,8 @@ function changeControlVal(stateId, ftrIdx, val) {
 
 					var alternatives = cut.alternatives;
 					if (alternatives.length > 0 &&
-							alternatives[0].corr > .9 &&
-							alternatives[0].p < .1) {
+							alternatives[0].corr > 0.9 &&
+							alternatives[0].p < 0.1) {
 						label += '\n(' + alternatives[0].name + ')';
 					}
 
@@ -852,12 +859,6 @@ function changeControlVal(stateId, ftrIdx, val) {
 				}
 
 				node.data = data;
-
-				if (depth == maxDepth) {
-					node.width = nodeW;
-					node.children = [];
-					return;
-				}
 
 				var totalW = 0;
 				for (var i = 0; i < children.length; i++) {
@@ -995,7 +996,6 @@ function changeControlVal(stateId, ftrIdx, val) {
 						selector: 'edge',
 						style: {
 							'content': 'data(label)',
-							'width': 4,
 							'font-size': 50,
 							'color': TEXT_COLOR,
 							'target-arrow-shape': 'triangle',
@@ -1023,7 +1023,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 
 			var opts = {
 				color: '#5bc0de',
-				alpha: .6
+				alpha: 0.6
 			};
 
 			var minBinW = 70;
@@ -1034,64 +1034,68 @@ function changeControlVal(stateId, ftrIdx, val) {
 			var dim = 0;
 			var dimInitialized = false;
 
-			for (var centroidN = 0; centroidN < allCentroids.length; centroidN++) {
-				var centroid = allCentroids[centroidN];
-				var row = {};
-				for (var ftrN = 0; ftrN < centroid.length; ftrN++) {
-					var ftr = ftrConfig[ftrN];
+            (function () {
+                for (var centroidN = 0; centroidN < allCentroids.length; centroidN++) {
+                    var centroid = allCentroids[centroidN];
+                    var row = {};
+                    for (var ftrN = 0; ftrN < centroid.length; ftrN++) {
+                        var ftr = ftrConfig[ftrN];
 
-					switch (ftr.type) {
-					case 'numeric': {
-						row[ftr.name] = toUiPrecision(centroid[ftrN]);
-						if (!dimInitialized) dim++;
-						break;
-					}
-					case 'categorical': {
-						for (var key in centroid[ftrN]) {
-							row[ftr.name + ': ' + key] = (100*centroid[ftrN][key]).toFixed();
-							if (!dimInitialized) dim++;
-						}
-						break;
-					}
-					default: {
-						throw new Error('Unknown feature type: ' + ftr.type);
-					}
-					}
-				}
-				backgroundData.push(row);
-				dimInitialized = true;
-			}
+                        switch (ftr.type) {
+                        case 'numeric': {
+                            row[ftr.name] = toUiPrecision(centroid[ftrN]);
+                            if (!dimInitialized) dim++;
+                            break;
+                        }
+                        case 'categorical': {
+                            for (var key in centroid[ftrN]) {
+                                row[ftr.name + ': ' + key] = (100*centroid[ftrN][key]).toFixed();
+                                if (!dimInitialized) dim++;
+                            }
+                            break;
+                        }
+                        default: {
+                            throw new Error('Unknown feature type: ' + ftr.type);
+                        }
+                        }
+                    }
+                    backgroundData.push(row);
+                    dimInitialized = true;
+                }
+            })();
 
-			for (var centroidN = 0; centroidN < centroids.length; centroidN++) {
-				var centroid = centroids[centroidN];
-				var row = {};
-				for (var ftrN = 0; ftrN < centroid.length; ftrN++) {
-					var ftr = ftrConfig[ftrN];
+            (function () {
+                for (var centroidN = 0; centroidN < centroids.length; centroidN++) {
+                    var centroid = centroids[centroidN];
+                    var row = {};
+                    for (var ftrN = 0; ftrN < centroid.length; ftrN++) {
+                        var ftr = ftrConfig[ftrN];
 
-					switch (ftr.type) {
-					case 'numeric': {
-						row[ftr.name] = toUiPrecision(centroid[ftrN]);
-						break;
-					}
-					case 'categorical': {
-						for (var key in centroid[ftrN]) {
-							row[ftr.name + ': ' + key] = (100*centroid[ftrN][key]).toFixed();
-						}
-						break;
-					}
-					default: {
-						throw new Error('Unknown feature type: ' + ftr.type);
-					}
-					}
-				}
-				foregroundData.push(row);
-			}
+                        switch (ftr.type) {
+                        case 'numeric': {
+                            row[ftr.name] = toUiPrecision(centroid[ftrN]);
+                            break;
+                        }
+                        case 'categorical': {
+                            for (var key in centroid[ftrN]) {
+                                row[ftr.name + ': ' + key] = (100*centroid[ftrN][key]).toFixed();
+                            }
+                            break;
+                        }
+                        default: {
+                            throw new Error('Unknown feature type: ' + ftr.type);
+                        }
+                        }
+                    }
+                    foregroundData.push(row);
+                }
+            })();
 
 			var width = dim*minBinW;
 			var fullWidthPadding = 5;
 
 			if (width < wrapper.width() - fullWidthPadding) {
-				$('#div-parallel').css('width', (wrapper.width() - fullWidthPadding) + 'px');
+				$('#div-parallel').css('width', wrapper.width() - fullWidthPadding + 'px');
 			} else {
 				$('#div-parallel').css('width', width + 'px');
 			}
@@ -1108,7 +1112,8 @@ function changeControlVal(stateId, ftrIdx, val) {
 			parcoords.on("brush", function(d) {
 			    d3.select("#grid")
 			      .datum(d.slice(0,10))
-			      .call(grid)
+			      // .call(grid)
+                  .call(undefined)      // FIXME should be grid here but grid is undefined
 			      .selectAll(".row")
 			      .on({
 			        "mouseover": function(d) { parcoords.highlight([d]) },
@@ -1161,7 +1166,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 			$.ajax('api/path', {
 				dataType: 'json',
 				method: 'GET',
-				data: { stateId: stateId, height: height, length: 4, probThreshold: .2 },
+				data: { stateId: stateId, height: height, length: 4, probThreshold: 0.2 },
 				success: function (model) {
 					viz.setSubModel(model);
 					$('#btn-viz-back').removeClass('hidden');
@@ -1188,21 +1193,21 @@ function changeControlVal(stateId, ftrIdx, val) {
 
 		timelineController = (function () {
 			var ZOOM_FACTOR = 1.1;
-            var OFFSET_STEP = .1;
+            var OFFSET_STEP = 0.1;
             var MAX_ZOOM = 100;
 
 			var wrapperId = '#div-time-state-hist';
 			var wrapper = $(wrapperId);
 
             var slider = $('#div-bp-slider');
-            var sliderHandle = $('#div-bp-slider-handle');
+            // var sliderHandle = $('#div-bp-slider-handle');
 
 			var chart = null;
 			var chartData = null;
 			var chartW = null;
 			var defaultChartW = null;
 			var minChartW = null;
-			var currX = 0;
+			// var currX = 0;
 
 			var wrapperW = null;
 			var wrapperH = null;
@@ -1263,8 +1268,8 @@ function changeControlVal(stateId, ftrIdx, val) {
                     },
                     success: function (data) {
                         var scales = data.window;
-                        var historyStart = data.historyStart;   // TODO do I really need these??
-                        var historyEnd = data.historyEnd;
+                        // var historyStart = data.historyStart;
+                        // var historyEnd = data.historyEnd;
 
                         console.log('History received, drawing ...');
                         wrapper.html('');
@@ -1277,7 +1282,7 @@ function changeControlVal(stateId, ftrIdx, val) {
                         var zoomLevels = viz.getZoomLevels();
 
                         for (var scaleN = scales.length-1; scaleN >= 0; scaleN--) {
-                            var scale = scales[scaleN].scale;
+                            // var scale = scales[scaleN].scale;
                             var zoom = zoomLevels[scaleN];
                             var states = scales[scaleN].states;
                             var timeV = [];
@@ -1308,14 +1313,12 @@ function changeControlVal(stateId, ftrIdx, val) {
                                 var color = viz.getDefaultNodeColor(majorityStateId);
                                 color.hue = hue;
 
-                                var block = {
+                                timeV.push({
                                     starting_time: start,
                                     ending_time: end,
                                     color: getHslStr(color),
                                     'class': 'state-' + majorityStateId
-                                }
-
-                                timeV.push(block);
+                                });
                             }
 
                             chartData.push({
@@ -1338,7 +1341,6 @@ function changeControlVal(stateId, ftrIdx, val) {
                             wrapperH = wrapper.height();
 
                             var nTicks = 8;
-                            var minElementWidth = 10;
 
                             var nTimelines = chartData.length;
                             var margin = chart.itemMargin();
@@ -1417,22 +1419,6 @@ function changeControlVal(stateId, ftrIdx, val) {
                             viz.setSelectedState(stateId);
                         });
 
-                        chart.hover(function (d, i, datum) {
-                            var stateClass = d['class'];
-                            var scaleClass = datum['class'];
-
-                            var stateSpl = stateClass.split('-');
-                            var scaleSpl = scaleClass.split('-');
-
-                            var stateId = stateSpl[stateSpl.length-1];
-                            var scaleN = scaleSpl[scaleSpl.length-1];
-                            // TODO
-                        });
-
-                        chart.scroll(function (x, scale) {
-//								currX = x / chart.scaleFactor();
-                        });
-
                         if (callback != null) callback();
                     },
                     error: handleAjaxError()
@@ -1457,7 +1443,7 @@ function changeControlVal(stateId, ftrIdx, val) {
                     }
 
                     fetchTimeline(currOffset, currZoom, function () {
-                        addPressHandler($('#btn-timeline-zoomin'), function (event) {
+                        addPressHandler($('#btn-timeline-zoomin'), function () {
                             updateSlider(currOffset, Math.min(MAX_ZOOM, currZoom * ZOOM_FACTOR));
                         });
 
@@ -1480,15 +1466,13 @@ function changeControlVal(stateId, ftrIdx, val) {
 
                         // init the timeline slider
                         (function initSlider() {
-                            var step = .001;
+                            var step = 0.001;
                             slider.slider({
                                 range: true,
                                 min: 0,
                                 max: 1 + step,  // need a bit more than 1, otherwise the values range from 0 to 1 - step
                                 step: step,
                                 values: [0,1],
-                                slide: function (event, ui) {
-                                },
                                 change: function (event, ui) {
                                     if (!handleSliderChange) return true;
 
@@ -1537,7 +1521,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 
 			$("#threshold_slider").slider({
 				value: prevVal,
-				min: .5,
+				min: 0.5,
 				max: 1,
 				step: 0.01,
 				animate:"slow",
@@ -1552,7 +1536,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 				slide: function (event, ui) {
 					var val = ui.value;
 
-					if (Math.abs(val - prevVal) > .15) {
+					if (Math.abs(val - prevVal) > 0.15) {
 						prevVal = val;
 						viz.setTransitionThreshold(val);
 					}
@@ -1669,27 +1653,33 @@ function changeControlVal(stateId, ftrIdx, val) {
 					$('#div-past').html('');
 
 					var ftrConfig = [];
-					for (var i = 0; i < data.features.observations.length; i++) {
-						var ftr = data.features.observations[i];
-						ftrConfig.push({
-							name: ftr.name,
-							type: ftr.type
-						});
-					}
-					for (var i = 0; i < data.features.controls.length; i++) {
-						var ftr = data.features.controls[i];
-						ftrConfig.push({
-							name: ftr.name,
-							type: ftr.type
-						});
-					}
-					for (var i = 0; i < data.features.ignored.length; i++) {
-						var ftr = data.features.ignored[i];
-						ftrConfig.push({
-							name: ftr.name,
-							type: ftr.type
-						});
-					}
+                    (function () {
+                        for (var i = 0; i < data.features.observations.length; i++) {
+                            var ftr = data.features.observations[i];
+                            ftrConfig.push({
+                                name: ftr.name,
+                                type: ftr.type
+                            });
+                        }
+                    })();
+                    (function () {
+                        for (var i = 0; i < data.features.controls.length; i++) {
+                            var ftr = data.features.controls[i];
+                            ftrConfig.push({
+                                name: ftr.name,
+                                type: ftr.type
+                            });
+                        }
+                    })();
+                    (function () {
+                        for (var i = 0; i < data.features.ignored.length; i++) {
+                            var ftr = data.features.ignored[i];
+                            ftrConfig.push({
+                                name: ftr.name,
+                                type: ftr.type
+                            });
+                        }
+                    })();
 
 					visualizeDecisionTree(data.classifyTree);
 					visualizeParcoords(data.centroids, data.allCentroids, ftrConfig);
@@ -1709,13 +1699,13 @@ function changeControlVal(stateId, ftrIdx, val) {
 							return MONTHS[monthN-1];
 						},
 						xTicks: 12,
-						labelXOffsetPerc: .5
+						labelXOffsetPerc: 0.5
 					});
 					visualizeTimeHist({
 						data: data.monthHistogram,
 						container: 'div-timehist-monthly',
 						xTicks: 31,
-						labelXOffsetPerc: .5
+						labelXOffsetPerc: 0.5
 					});
 					visualizeTimeHist({
 						data: data.weekHistogram,
@@ -1724,13 +1714,13 @@ function changeControlVal(stateId, ftrIdx, val) {
 							return DAYS_OF_WEEK[dayN];
 						},
 						xTicks: 7,
-						labelXOffsetPerc: .5
+						labelXOffsetPerc: 0.5
 					});
 					visualizeTimeHist({
 						data: data.dayHistogram,
 						container: 'div-timehist-daily',
 						xTicks: 24,
-						labelXOffsetPerc: .5
+						labelXOffsetPerc: 0.5
 					});
 
 
@@ -1756,7 +1746,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 						$('#div-event-id').addClass('hidden');
 					}
 
-					$('#chk-target').change(function (event) {
+					$('#chk-target').change(function () {
 						$('#div-button-save-state').removeClass('hidden');
 
 						var isUndesiredEvent = $('#chk-target').is(':checked');
@@ -1795,7 +1785,6 @@ function changeControlVal(stateId, ftrIdx, val) {
 						switch (type) {
 						case 'numeric': {
 							return getFtrColor(wgtV, minWgt, maxWgt);
-							break;
 						}
 						case 'categorical': {
 							var colorObj = {};
@@ -1803,7 +1792,6 @@ function changeControlVal(stateId, ftrIdx, val) {
 								colorObj[key] = getFtrColor(wgtV[key], minWgt, maxWgt);
 							}
 							return colorObj;
-							break;
 						}
 						default: {
 							throw new Error('Invalid feature type: ' + type);
@@ -1860,9 +1848,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 					var nContrFtrs = data.features.controls.length;
 
 					$.each(data.features.ignored, function (idx, val) {
-						var ftrId = nObsFtrs + nContrFtrs + idx;
 						var ftrVal = val.value;
-						var bounds = val.bounds;
 						var ftrId = nObsFtrs + nContrFtrs + idx;
 						var histContainerId = 'container-chart-' + ftrId;
 
@@ -1986,7 +1972,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 			var result = [
 			    {
 					content: 'Show Path',
-					select: function (node) {
+					select: function () {
 						showPath(id, height);
 					}
 				}
@@ -1995,7 +1981,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 			if (level > 1) {
 				result.push({
 					content: 'Zoom Into',
-					select: function (node) {
+					select: function () {
 						onZoomIntoState(id);
 					}
 				});
@@ -2004,7 +1990,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 			if (TAB_ID == 'a-activities') {
 				result.push({
 					content: 'Add to Step',
-					select: function (node) {
+					select: function () {
 						act.addActivityState(id, label);
 					}
 				});
@@ -2176,7 +2162,7 @@ function changeControlVal(stateId, ftrIdx, val) {
 				// TODO fetch the histograms
 				// TODO reload the decision tree
 			}
-			else if (TAB_ID = 'a-activities') {
+			else if (TAB_ID == 'a-activities') {
 				viz.setMode(viz.MODE_ACTIVITY);
 			}
 		});

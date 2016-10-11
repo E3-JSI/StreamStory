@@ -8,8 +8,9 @@ var zoomVis = function (opts) {
 	var MODE_ACTIVITY = 'activity';
 	
 	// colors
+    var DEFAULT_NODE_COLOR;
 	if (THEME == 'light') {
-		var DEFAULT_NODE_COLOR = '#A9A9A9';
+		DEFAULT_NODE_COLOR = '#A9A9A9';
 		var CURRENT_NODE_COLOR = '#33CC00';
 		var FUTURE_NODE_BASE_COLOR = 216;
 		
@@ -25,7 +26,7 @@ var zoomVis = function (opts) {
 		var SMALL_EDGE_COLOR = '#707070';
 		var EDGE_TEXT_COLOR = '#000000';
 	} else {
-		var DEFAULT_NODE_COLOR = '#073642';
+		DEFAULT_NODE_COLOR = '#073642';
 		var CURRENT_NODE_COLOR = '#FFA500';
 		var PREVIOUS_NODE_EDGE_COLOR = CURRENT_NODE_COLOR;
 		var FUTURE_NODE_BASE_COLOR = 216;	// green

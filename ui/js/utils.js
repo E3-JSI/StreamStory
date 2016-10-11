@@ -1,3 +1,7 @@
+/* exported isNumber, isInt, clone, getTimeUnit, formatDate, formatDateTime,
+ handleAjaxError, addPressHandler, toUiPrecision, redirectToUI, reloadWindow,
+ getHslStr, getFtrColor, getBrightness, hsl2rgb */
+
 function isNumber(val) {
 	return !isNaN(val);
 }
@@ -39,7 +43,7 @@ function formatDateTime(date) {
 }
 
 function handleAjaxError(alertField, callback) {
-	return function (xhr, status, err) {
+	return function (xhr) {
 		if (xhr.readyState == 0) {
 			console.log('Ajax error with request not initialized!');
 		} else {
@@ -160,13 +164,13 @@ function getFtrColor(val, minVal, maxVal, middleVal) {
 }
 
 function getBrightness(rgb) {
-	return .3*rgb.r + .59*rgb.g + .11*rgb.b;
+	return 0.3*rgb.r + 0.59*rgb.g + 0.11*rgb.b;
 }
 
 function hsl2rgb(h, s, l) {
 	var c = (1 - Math.abs(2*l - 1))*s;
 	var h1 = Math.round(h*360 / (120*Math.PI));	// = h * 360 / 60
-	var x = c*(1 - Math.abs((h1 % 2) - 1));
+	var x = c*(1 - Math.abs(h1 % 2 - 1));
 	
 	var red = 0;
 	var green = 0;
@@ -213,8 +217,8 @@ function getHslStr(val) {
 
 $(document).ready(function () {
     // hack, so that console.log doesn't crash the app in IE
-    if (console == null) {
-        console = {
+    if (window.console == null) {
+        window.console = {
             log: function () {}
         }
     }
@@ -223,10 +227,10 @@ $(document).ready(function () {
 	
 	tooltipElements.qtip({
 		content: {
-			title: function (event, api) {
+			title: function () {
 				return $(this).attr('title');
 			},
-			text: function (event, api) {
+			text: function () {
 				return $(this).attr('content');
 			}
 		},
