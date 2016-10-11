@@ -37,7 +37,11 @@
 		"type": "http",
 		"brokerUrl": "ipe-koi04.fzi.de",
 		"zookeperPort": 2181,
-		"producerPort": 9092
+		"producerPort": 9092,
+        "authentication": {
+            "host": "192.168.84.46",
+            "timeout": 10000
+        }
 	},
 	"useCase": "mhwirth",
 	"saveStates": false,

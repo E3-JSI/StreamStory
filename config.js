@@ -86,6 +86,22 @@ if (config.resampleInterval == null) {
 
 
 //================================================================
+// LOGIN CONFIGURATION
+//================================================================
+if (config.integration.authentication != null) {
+    log.info('Using external authentication: %s', config.integration.authentication)
+
+    exports.AUTHENTICATION_EXTERNAL = true;
+    exports.AUTHENTICATION_HOST = config.integration.authentication.host;
+    exports.AUTHENTICATION_TIMEOUT = config.integration.authentication.timeout != null ? 
+                                        config.integration.authentication.timeout :
+                                        10000;
+}
+else {
+    exports.AUTHENTICATION_EXTERNAL = false;
+}
+
+//================================================================
 // INITIALIZATION
 //================================================================
 exports.INITIALIZE_ZERO = config.qminer.initializeZeros;

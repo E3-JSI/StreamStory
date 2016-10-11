@@ -255,12 +255,6 @@ function calcFriction() {
 
     var recN = 0;
 
-    // function addToBuff(val) {
-    // 	buff.unshift(val);
-    // 	while (buff.length > BUFF_SIZE)
-    // 		buff.pop();
-    // }
-
     function resetVars() {
         buff.clear();
 
@@ -321,7 +315,8 @@ function calcFriction() {
                 eventId: useCase,
                 time: time,
                 zScore: zScore,
-                value: coeff*outputQ
+                value: coeff*outputQ,
+                std: dist_std*Math.abs(outputQ)
             });
         } else {
             log.warn('Coefficient callback is not defined!');

@@ -176,6 +176,46 @@ module.exports = {
 		if (obj == null) return null;
 		return JSON.parse(JSON.stringify(obj));
 	},
+
+    //=============================================
+    // WEB SERVER RESONSE HANDLERS
+    //=============================================
+
+    handleNoContent: function (req, res) {
+        res.status(204);	// no content
+        res.end();
+    },
+    
+    handleNoPermission: function (req, res) {
+        if (log.debug())
+            log.debug('No permission, blocking page!');
+
+        res.status(404);	// not found
+        res.send('Cannot GET ' + req.path);
+        res.end();
+    },
+
+    handleServerError: function (e, req, res) {
+        log.error(e, 'Exception while processing request!');
+        res.status(500);	// internal server error
+        res.send(e.message);
+        res.end();
+    },
+
+    handleBadInput: function (res, msg) {
+        res.status(400);	// bad request
+        res.send(msg);
+        res.end();
+    },
+
+    handleBadRequest: function (req, res, msg) {
+        if (log.debug())
+            log.debug('Bad request, blocking page!');
+
+        res.status(404);	// bad request
+        res.send(msg != null ? msg : 'Bad request ' + req.path);
+        res.end();
+    },
 	
 	//=============================================
 	// HELPER CLASSES

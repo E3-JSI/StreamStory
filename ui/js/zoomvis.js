@@ -9,10 +9,12 @@ var zoomVis = function (opts) {
 	
 	// colors
     var DEFAULT_NODE_COLOR;
+    var CURRENT_NODE_COLOR;
+    var FUTURE_NODE_BASE_COLOR;
 	if (THEME == 'light') {
 		DEFAULT_NODE_COLOR = '#A9A9A9';
-		var CURRENT_NODE_COLOR = '#33CC00';
-		var FUTURE_NODE_BASE_COLOR = 216;
+		CURRENT_NODE_COLOR = '#33CC00';
+		FUTURE_NODE_BASE_COLOR = 216;
 		
 		var DEFAULT_BORDER_COLOR = '#5A5A5A';
 		
@@ -27,9 +29,9 @@ var zoomVis = function (opts) {
 		var EDGE_TEXT_COLOR = '#000000';
 	} else {
 		DEFAULT_NODE_COLOR = '#073642';
-		var CURRENT_NODE_COLOR = '#FFA500';
-		var PREVIOUS_NODE_EDGE_COLOR = CURRENT_NODE_COLOR;
-		var FUTURE_NODE_BASE_COLOR = 216;	// green
+		CURRENT_NODE_COLOR = '#FFA500';
+		FUTURE_NODE_BASE_COLOR = 216;	// green
+
 		var DEFAULT_BORDER_COLOR = 'rgb(150, 150, 150)';
 		
 		var VIZ_NODE_COLOR = 360;
@@ -42,6 +44,8 @@ var zoomVis = function (opts) {
 		var SMALL_EDGE_COLOR = '#606060';
 		var EDGE_TEXT_COLOR = '#F0F0F0';
 	}
+
+    var PREVIOUS_NODE_EDGE_COLOR = CURRENT_NODE_COLOR;
 	
 	var SELECTED_NODE_SHADOW_COLOR = 'white';
 	var SELECTED_NODE_SHADOW_SIZE = 100;
