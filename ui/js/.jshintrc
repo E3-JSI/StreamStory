@@ -1,0 +1,28 @@
+
+{
+    "extends": "/home/lstopar/.jshintrc",
+    "jquery": true,
+    "browser": true,
+    "predef": [
+        "isNumber",
+        "isInt",
+        "clone",
+        "getTimeUnit",
+        "formatDate",
+        "formatDateTime",
+        "handleAjaxError",
+        "addPressHandler",
+        "toUiPrecision",
+        "redirectToUI",
+        "reloadWindow",
+        "getHslStr",
+        "getFtrColor",
+        "getBrightness",
+        "hsl2rgb",
+
+        "drawHistogram",
+
+        "showAlert",
+        "promptConfirm"
+    ]
+}

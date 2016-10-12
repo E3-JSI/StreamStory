@@ -32,11 +32,6 @@
   		</div><!-- /.container-fluid -->
 	</nav>
 
-    <!-- ProaSense authentication -->
-    <% if (useExternalAuth) { %>
-    <iframe src="<%-authenticationUrl" width="1" height="1" style="position: absolute; left: -10000px; top: -10000px;"></iframe>
-    <% } %>
-	
 	<div class="navbar-default sidebar" role="navigation">
         <div class="sidebar-nav navbar-collapse">
             <ul class="nav nav-pills nav-stacked">
@@ -515,9 +510,14 @@
 	</div>
     <% } %>
 
+    <!-- Various dialogs -->
 	<% include partials/confirm %>
 	<% include partials/alert %>
+
+    <!-- ProaSense authentication -->
+    <% include partials/external-auth %>
 	
+    <!-- Includes -->
 	<% include partials/includejs %>
 	<script type="text/javascript" src="lib/jquery.bootstrap-duallistbox.js"></script>
 	<script type="text/javascript" src="lib/js/jquery-ui.min.js"></script>

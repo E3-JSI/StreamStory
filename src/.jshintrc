@@ -1,0 +1,8 @@
+{
+    "extends": "/home/lstopar/.jshintrc",
+    "node": true,
+    "predef": [
+        "log",
+        "qm"
+    ]
+}

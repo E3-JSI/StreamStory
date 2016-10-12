@@ -2680,6 +2680,9 @@ function getPageOpts(req, next) {
         delete session.message;
     }
 
+    // add the options necessary for external authentication
+    externalAuth.prepDashboard(opts);
+
     return opts;
 }
 
@@ -2726,8 +2729,6 @@ function prepDashboard() {
         var session = req.session;
 
         var username = session.username;
-
-        externalAuth.prepDashboard(opts);
 
         db.fetchUserModels(username, function (e, dbModels) {
             if (e != null) {
@@ -2816,11 +2817,17 @@ function prepMainUi() {
 }
 
 function accessControl(req, res, next) {
+    // if using external authentication, then do not use access
+    // control
+    if (config.AUTHENTICATION_EXTERNAL) return next();
+
     var session = req.session;
 
     var page = getRequestedPage(req);
     var dir = getRequestedPath(req);
 
+    // if the user is not logged in => redirect them to login
+    // login is exempted from the access control
     if (!isLoggedIn(session)) {
         if (log.debug())
             log.debug('Session data missing for page %s, dir %s ...', page, dir);
@@ -2894,7 +2901,7 @@ function initServer(sessionStore, parseCookie) {
     if (config.USE_BROKER) {
         fzi.initWs(app);
     }
-    if (config.TODO) {
+    if (config.AUTHENTICATION_EXTERNAL) {
         externalAuth.initExternalAuth(app);
     }
     //==============================================

@@ -38,7 +38,7 @@
 		"brokerUrl": "ipe-koi04.fzi.de",
 		"zookeperPort": 2181,
 		"producerPort": 9092,
-        "authentication": {
+        "xauthentication": {
             "host": "192.168.84.46",
             "timeout": 10000
         }
