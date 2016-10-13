@@ -111,7 +111,7 @@ exports.initExternalAuth = function (app) {
                         }
 
                         var email = credentials.name;
-                        
+
                         log.info('Received credentials %s using the token ...', email);
 
                         loginUser(session, email, function (e) {

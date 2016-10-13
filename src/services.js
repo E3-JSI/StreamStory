@@ -483,12 +483,27 @@ function initPipelineHandlers() {
                 // send the coefficient to the broker, so that other components can do
                 // calculations based no it
                 (function () {
-                    var brokerMsgStr = JSON.stringify(opts);
+                    var optsClone = utils.clone(opts);
+                    // optsClone.timestamp = opts.time.getTime();   // TODO uncomment this!!
+                    // delete optsClone.time;
+                    var brokerMsgStr = JSON.stringify(optsClone);
 
                     if (log.debug())
                         log.debug('Sending coefficient to the broker: %s', brokerMsgStr);
 
-                    broker.send(broker.TOPIC_PUBLISH_COEFFICIENT, brokerMsgStr);
+                    var topic;
+                    switch (optsClone.eventId) {
+                        case 'swivel':
+                            topic = broker.TOPIC_PUBLISH_COEFFICIENT_SWIVEL;
+                            break;
+                        case 'gearbox':
+                            topic = broker.TOPIC_PUBLISH_COEFFICIENT_GEARBOX;
+                            break;
+                        default:
+                            throw new Error('Invalid event ID for coefficient: ' + optsClone.eventId);
+                    }
+
+                    broker.send(topic, brokerMsgStr);
                 })()
 
                 var zscore = opts.zScore;
@@ -2997,7 +3012,8 @@ exports.init = function (opts) {
     initBroker();
 
     fzi.init({
-        broker: broker
+        broker: broker,
+        modelStore: modelStore
     });
 
     log.info('Done!');

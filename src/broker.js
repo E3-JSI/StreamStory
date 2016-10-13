@@ -25,8 +25,10 @@ var topics = {
     ENRICHED_DATA_PRODUCER_TOPIC: 'si.ijs.internal.enriched',
     PREDICTION_PRODUCER_TOPIC: 'si.ijs.internal.oa_output',
     // friction coefficient output topics
-    TOPIC_PUBLISH_COEFFICIENT: 'eu.proasense.streamstory.output.coefficient'
-
+    // TOPIC_PUBLISH_COEFFICIENT_SWIVEL: 'eu.proasense.internal.sp.internal.outgoing.10002',
+    // TOPIC_PUBLISH_COEFFICIENT_GEARBOX: 'eu.proasense.internal.sp.internal.outgoing.10002'
+    TOPIC_PUBLISH_COEFFICIENT_SWIVEL: 'eu.proasense.streamstory.output.coefficient.gearbox',
+    TOPIC_PUBLISH_COEFFICIENT_GEARBOX: 'eu.proasense.streamstory.output.coefficient.swivel'
 };
 
 var client;

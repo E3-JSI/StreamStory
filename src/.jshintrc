@@ -1,5 +1,5 @@
 {
-    "extends": "/home/lstopar/.jshintrc",
+    "extends": "../.jshintrc",
     "node": true,
     "predef": [
         "log",
