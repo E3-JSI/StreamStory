@@ -5,6 +5,7 @@
 
 # Vim files
 *.swp
+.vimrc
 
 # autocomplete
 .tern-project
