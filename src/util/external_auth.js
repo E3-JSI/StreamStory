@@ -86,7 +86,8 @@ exports.initExternalAuth = function (app) {
                 return opts;
             })();
 
-            sessionStore.get(sessionId, function (session) {
+            sessionStore.get(sessionId, function (wtf, session) {
+                log.info('Found in session store: %s', JSON.stringify(arguments));
                 if (session == null) {
                     log.warn('External authentication failed, could not find session with ID: %s', sessionId);
                     utils.handleBadInput(res, 'Could not find session with provided ID!');
@@ -118,6 +119,9 @@ exports.initExternalAuth = function (app) {
                             }
 
                             var credentials = response.authc.credentials.name;
+
+                            log.info('Got from external server: %s', JSON.stringify(response));
+
                             if (credentials.name == null) {
                                 log.warn('Got NULL name from external authentication!');
                                 utils.handleServerError(new Error('Got NULL name!'), req, res);

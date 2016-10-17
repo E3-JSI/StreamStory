@@ -63,7 +63,7 @@ var integrator = (function () {
                 if (topicCountH[output] == 0) {
                     log.info('Removing topic: %s', output);
                     delete topicCountH[output];
-                    broker.removeOutputTopic(output, callback);
+                    broker.removeOutputTopic(output, cb);
                 }
                 else {
                     cb();
