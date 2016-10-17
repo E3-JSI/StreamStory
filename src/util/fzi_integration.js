@@ -1,7 +1,6 @@
 var async = require('async');
 
 var utils = require('../utils.js');
-var db = require('../db/mysqldb.js')
 
 var ACTIVITY_OPERATION = 'ActivityDetection';
 var PREDICTION_OPERATION = 'Prediction';
@@ -10,6 +9,7 @@ var STREAM_PIPES_PATH = '/streampipes';
 
 var broker = null;
 var modelstore = null;
+var db = null;
 
 var integrator = (function () {
     /*
@@ -105,62 +105,95 @@ var integrator = (function () {
                 broker.initInputTopic(input, cb);
             }
         ],
-            function (e) {
-                if (e != null) {
-                    log.error(e, 'Exception while initializing topics!');
-                    callback(e);
-                    return;
-                }
+        function (e) {
+            if (e != null) {
+                log.error(e, 'Exception while initializing topics!');
+                callback(e);
+                return;
+            }
 
-                topicCountH[input]++;
-                topicCountH[output]++;
+            topicCountH[input]++;
+            topicCountH[output]++;
 
-                callback();
-            });
+            callback();
+        });
 
         //=============================================
     }
 
-    var that = {
-        // functions
-        getTopics: function (mid, operation) {
-            if (!(mid in modelConfigH)) return [];
-            var operations = modelConfigH[mid];
-            if (!(operation in operations)) return [];
-            var pipelines = operations[operation];
+    function attachPipelineInternal(opts, callback) {
+        var mid = opts.mid;
+        var pipelineId = opts.pipelineId;
+        var operation = opts.operation;
+        var inputTopic = opts.topics.input;
+        var outputTopic = opts.topics.output;
 
-            var result = [];
-            for (var pipelineId in pipelines) {
-                result.push(pipelines[pipelineId]);
-            }
+        log.info('Attaching new pipeline mid: %s, pipelineId: %s, inputTopic: %s, outputTopic: %s', mid, pipelineId, inputTopic, outputTopic);
 
-            return result;
-        },
+        if (!(mid in modelConfigH)) {
+            modelConfigH[mid] = {}
+        }
 
-        hasTopic: function (topic) {
-            return topic in topicCountH;
-        },
+        var operations = modelConfigH[mid];
 
-        detachPipeline: function (mid, pipelineId, callback) {
-            log.info('Deleting pipeline: %s, mid: %s', pipelineId, mid);
+        if (!(operation in operations)) {
+            operations[operation] = {}
+        }
 
-            var operations = modelConfigH[mid];
+        var pipelines = operations[operation];
 
-            var operation = null;
-            for (var op in operations) {
-                if (pipelineId in operations[op]) {
-                    operation = op;
-                    break;
+        // initialize the topics
+        pipelines[pipelineId] = opts.topics;
+
+        initTopics(opts.topics, function (e) {
+            if (e != null) {
+                log.error(e, 'Exception while initializing topic for pipeline: %s', pipelineId);
+
+                delete pipelines[pipelineId];
+                if (Object.keys(pipelines).length == 0) {
+                    log.info('No pipeline configurations left, deleting ...');
+                    delete operations[operation];
+
+                    if (Object.keys(operations).length == 0) {
+                        log.info('No operation configuration left, deleting ...');
+                        delete modelConfigH[mid];
+                    }
                 }
-            }
 
-            if (operation == null) {
-                callback(new Error('Could not find operation for pipeline: ' + pipelineId));
+                callback(e);
                 return;
             }
 
-            var pipelines = operations[operation];
-            var topics = pipelines[pipelineId];
+            callback();
+        });
+    }
+
+    function detachPipelineInternal(mid, pipelineId, callback) {
+        log.info('Detaching pipeline \'%s\' for model %s', pipelineId, mid);
+
+        var operations = modelConfigH[mid];
+
+        var operation = null;
+        for (var op in operations) {
+            if (pipelineId in operations[op]) {
+                operation = op;
+                break;
+            }
+        }
+
+        if (operation == null) {
+            callback(new Error('Could not find operation for pipeline: ' + pipelineId));
+            return;
+        }
+
+        var pipelines = operations[operation];
+        var topics = pipelines[pipelineId];
+
+        db.removePipeline(pipelineId, function (e) {
+            if (e != null) {
+                callback(e);
+                return;
+            }
 
             removeTopics(topics, function (e) {
                 if (e != null) {
@@ -182,6 +215,100 @@ var integrator = (function () {
 
                 callback();
             });
+        })
+    }
+
+    var that = {
+        loadFromDb: function () {
+            setTimeout(function () {    // TODO remove this delay, first initialize the broker and then initialize the integration
+                log.info('Loading FZI pipelines from DB ...');
+
+                function attachParallel(opts) {
+                    return function (xcb) {
+                        log.info('Initializing pipeline: %s', JSON.stringify(opts));
+                        attachPipelineInternal(opts, xcb);
+                    }
+                }
+
+                db.fetchAllPipelines(function (e, pipelines) {
+                    if (e != null) {
+                        log.error('Failed to load existing pipelines from the database!');
+                        throw e;
+                    }
+
+                    var parallel = [];
+                    for (var i = 0; i < pipelines.length; i++) {
+                        parallel.push(attachParallel(pipelines[i].config));
+                    }
+
+                    async.parallel(parallel, function (e) {
+                        if (e != null) {
+                            log.fatal('Failed to load pre-exising FZI pipelines! Terminating!!!');
+                            process.exit(10);
+                        }
+                    })
+                })
+            }, 10000);
+        },
+
+        // functions
+        getTopics: function (mid, operation) {
+            if (log.trace())
+                log.trace('Fetching topics for model with ID: %s with operation %s', mid, operation);
+
+            if (!(mid in modelConfigH)) return [];
+            var operations = modelConfigH[mid];
+            if (!(operation in operations)) return [];
+            var pipelines = operations[operation];
+
+            if (log.trace())
+                log.trace('Found pipelines: %s', JSON.stringify(pipelines));
+
+            var result = [];
+            for (var pipelineId in pipelines) {
+                result.push(pipelines[pipelineId]);
+            }
+
+            return result;
+        },
+
+        hasTopic: function (topic) {
+            return topic in topicCountH;
+        },
+
+        detachPipeline: function (pipelineId, callback) {
+            log.info('Deleting pipeline: %s', pipelineId);
+
+            var mids = [];
+            var usedMids = {};
+            for (var mid in modelConfigH) {
+                var operations = modelConfigH[mid];
+                for (var operation in operations) {
+                    var pipelines = operations[operation];
+                    for (var pid in pipelines) {
+                        if (pid == pipelineId && !(mid in usedMids)) {
+                            mids.push(mid);
+                            usedMids[mid] = true;
+                        }
+                    }
+                }
+            }
+
+            function detachParallel(mid, pipelineId) {
+                return function (xcb) {
+                    detachPipelineInternal(mid, pipelineId, xcb);
+                }
+            }
+
+            var parallel = [];
+            for (var i = 0; i < mids.length; i++) {
+                parallel.push(detachParallel(mids[i], pipelineId));
+            }
+
+            async.parallel(parallel, function (e) {
+                if (e != null) return callback(e);
+                callback();
+            })
         },
 
         attachPipeline: function (opts, callback) {
@@ -206,6 +333,8 @@ var integrator = (function () {
             var pipelines = operations[operation];
 
             if (pipelineId in pipelines) {
+                log.info('Pipeline already exists, will delete pipeline and make a recursive call ...');
+
                 that.detachPipeline(mid, pipelineId, function (e) {
                     if (e != null) {
                         log.error(e, 'Exception while detaching a pipeline!');
@@ -213,57 +342,24 @@ var integrator = (function () {
                         return;
                     }
 
-                    // initialize the topics
-                    pipelines[pipelineId] = opts.topics;
-
-                    initTopics(opts.topics, function (e) {
-                        if (e != null) {
-                            log.error(e, 'Exception while initializing topic for pipeline: %s', pipelineId);
-
-                            delete pipelines[pipelineId];
-                            if (Object.keys(pipelines).length == 0) {
-                                log.info('No pipeline configurations left, deleting ...');
-                                delete operations[operation];
-
-                                if (Object.keys(operations).length == 0) {
-                                    log.info('No operation configuration left, deleting ...');
-                                    delete modelConfigH[mid];
-                                }
-                            }
-
-                            callback(e);
-                            return;
-                        }
-
-                        callback();
-                    });
+                    log.info('Pipeline deleted, making recursive call ...');
+                    that.attachPipeline(opts, callback);
                 });
             }
             else {
-                // initialize the topics
-                pipelines[pipelineId] = opts.topics;
-
-                initTopics(opts.topics, function (e) {
+                db.insertPipeline(pipelineId, opts, function (e) {
                     if (e != null) {
-                        log.error(e, 'Exception while initializing topic for pipeline: %s', pipelineId);
-
-                        delete pipelines[pipelineId];
-                        if (Object.keys(pipelines).length == 0) {
-                            log.info('No pipeline configurations left, deleting ...');
-                            delete operations[operation];
-
-                            if (Object.keys(operations).length == 0) {
-                                log.info('No operation configuration left, deleting ...');
-                                delete modelConfigH[mid];
-                            }
-                        }
-
                         callback(e);
                         return;
                     }
 
-                    callback();
-                });
+                    try {
+                        attachPipelineInternal(opts, callback);
+                    } catch (e) {
+                        log.error(e, 'Exception while inserting pipeline!');
+                        callback(e);
+                    }
+                })
             }
         }
     };
@@ -481,9 +577,13 @@ exports.initWs = function (app) {
 exports.init = function (opts) {
     if (opts.broker == null) throw new Error('Broker missing when initializing integration!');
     if (opts.modelStore == null) throw new Error('Model store missing when initializing integration!');
+    if (opts.db == null) throw new Error('DB missing when initializing integration!');
 
     broker = opts.broker;
     modelstore = opts.modelStore;
+    db = opts.db;
 
     broker.setFzi(exports);
+
+    integrator.loadFromDb();
 }

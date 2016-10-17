@@ -688,6 +688,53 @@ module.exports = function () {
                     params: vals
                 })
             });
+        },
+
+        //================================================
+        // INTEGRATION WITH FZI
+        //================================================
+
+        insertPipeline: function (pid, config, callback) {
+            var opts = {
+                pid: pid,
+                config: JSON.stringify(config)
+            }
+            connection({
+                callback: callback,
+                nextOp: query({
+                    sql: 'INSERT INTO pipelines SET ?',
+                    params: [opts]
+                })
+            });
+        },
+
+        removePipeline: function (pid, callback) {
+            connection({
+                callback: callback,
+                nextOp: query({
+                    sql: 'DELETE FROM pipelines WHERE pid = ?',
+                    params: [pid]
+                })
+            });
+        },
+
+        fetchAllPipelines: function (callback) {
+            connection({
+                callback: callback,
+                nextOp: query({
+                    sql: 'SELECT * FROM pipelines',
+                    nextOp: function (conn, onsuccess, onerror, pipelines) {
+                        var result = [];
+                        for (var i = 0; i < pipelines.length; i++) {
+                            result.push({
+                                pid: pipelines[i].pid,
+                                config: JSON.parse(pipelines[i].config)
+                            })
+                        }
+                        onsuccess(result);
+                    }
+                })
+            });
         }
     }
 

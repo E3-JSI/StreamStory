@@ -20,8 +20,8 @@ var util = require('util')
  */
 
 /* istanbul ignore next */
-var defer = typeof setImmediate === 'function'
-	? setImmediate : function(fn){ process.nextTick(fn.bind.apply(fn, arguments)) }
+var defer = typeof setImmediate === 'function' ? setImmediate :
+                                             function(fn){ process.nextTick(fn.bind.apply(fn, arguments)) }
 
 /**
  * Module exports.
@@ -33,7 +33,7 @@ function cleanup(store) {
 	if (log.trace())
 		log.trace('Cleaning up session store ...');
 	var sessions = store.sessions;
-	
+
 	var now = Date.now();
 	for (var sessionId in sessions) {
 		(function() {
@@ -41,7 +41,7 @@ function cleanup(store) {
 			var session = sessions[sessionId];
 			var expires = typeof session.cookie.expires === 'string' ? new Date(session.cookie.expires) : session.cookie.expires;
 			
-			if (expires && expires <= Date.now()) {
+			if (expires && expires <= now) {
 				if (log.trace())
 					log.trace('Session %s expired, destroying ...', sessionId);
 				store.destroy(sessionId, function () {

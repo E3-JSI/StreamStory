@@ -344,7 +344,7 @@ function initStreamStoryHandlers(model, enable) {
                     var topics = fzi.getTopics(mid, fzi.PREDICTION_OPERATION);
                     for (i = 0; i < topics.length; i++) {
                         var topic = topics[i].output;
-                        log.info('Sending a prediction message to topic: %s', topic);
+                        log.info('Sending a prediction message to topic \'%s\'', topic);
                         broker.send(topic, brokerMsgStr);
                     }
                 });
@@ -2696,7 +2696,7 @@ function getPageOpts(req, next) {
     }
 
     // add the options necessary for external authentication
-    externalAuth.prepDashboard(opts);
+    externalAuth.prepDashboard(opts, req.sessionID);
 
     return opts;
 }
@@ -2918,6 +2918,7 @@ function initServer(sessionStore, parseCookie) {
     }
     if (config.AUTHENTICATION_EXTERNAL) {
         externalAuth.initExternalAuth(app);
+        externalAuth.setSessionStore(sessionStore);
     }
     //==============================================
 
@@ -3013,7 +3014,8 @@ exports.init = function (opts) {
 
     fzi.init({
         broker: broker,
-        modelStore: modelStore
+        modelStore: modelStore,
+        db: db
     });
 
     log.info('Done!');
