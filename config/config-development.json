@@ -38,7 +38,7 @@
         "brokerUrl": "192.168.84.45",
         "zookeperPort": 2181,
         "producerPort": 9092,
-        "xauthentication": {
+        "authentication": {
             "host": "192.168.84.46",
             "timeout": 10000
         }

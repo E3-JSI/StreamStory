@@ -1,7 +1,7 @@
 # eclipse
-.settings 
+.settings
 .project
-.jshintrc 
+.jshintrc
 
 # Vim files
 *.swp
