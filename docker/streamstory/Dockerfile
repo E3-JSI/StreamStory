@@ -65,6 +65,7 @@ RUN cd app/qminer && \
 	node-gyp configure -- -DLIN_ALG_BLAS=BLAS -DLIN_ALG_LAPACKE=LAPACKE -DLIN_ALG_LIB=-llapacke && \
 	node-gyp build --jobs 20
 
+RUN echo 'Hello world'
 # STREAM STORY
 RUN cd app && \
 	git clone https://github.com/JozefStefanInstitute/StreamStory.git && \
