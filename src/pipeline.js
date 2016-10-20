@@ -604,9 +604,12 @@ function initTriggers() {
 }
 
 exports.insertRaw = function (storeNm, val) {
+    if (storeNm == null) throw new Error('Store name is undefined!');
+
     var store = base.store(storeNm);
-    if (store == null)
-        throw new Error('Could not find store with name: ' + storeNm);
+
+    if (store == null) throw new Error('Could not find store with name: ' + storeNm);
+
     store.push(val);
 
     // if we initialize all stores with zeros, then the resampler should be
