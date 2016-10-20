@@ -7,6 +7,9 @@
 *.swp
 .vimrc
 
+# Git files
+*.orig
+
 # autocomplete
 .tern-project
 
