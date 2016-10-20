@@ -145,9 +145,7 @@ module.exports = exports = function (opts) {
         } catch (e) {
             log.error(e, 'Failed to ping!');
         }
-        setTimeout(ping, config.PING_INTERVAL);
     }
-    ping();
 
     var that = {
         /**
@@ -172,6 +170,7 @@ module.exports = exports = function (opts) {
 
                 if (log.trace())
                     log.trace('Distributing to web socket: %d ...', id);
+
                 sockets[id].client.send(msg);
             } catch (e) {
                 log.error(e, 'Exception while distributig message. Web socket ID: %d', id);
@@ -182,6 +181,8 @@ module.exports = exports = function (opts) {
             wss.close();
         }
     }
+
+    setInterval(ping, config.PING_INTERVAL);
 
     return that;
 }
