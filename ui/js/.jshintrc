@@ -23,6 +23,8 @@
         "drawHistogram",
 
         "showAlert",
-        "promptConfirm"
+        "promptConfirm",
+
+        "THEME"
     ]
 }
