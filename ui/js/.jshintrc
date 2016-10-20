@@ -25,6 +25,8 @@
         "showAlert",
         "promptConfirm",
 
-        "THEME"
+        "THEME",
+
+        "cytoscape"
     ]
 }

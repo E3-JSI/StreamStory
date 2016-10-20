@@ -867,7 +867,9 @@ var zoomVis = function (opts) {
         var edges = [];
         var cumProbs = [];
         var probs = [];
-        for (var k = 0; k < transitions.length; k++) {
+
+        var k;
+        for (k = 0; k < transitions.length; k++) {
             probs.push({prob: transitions[k], idx: k});
         }
 
@@ -876,7 +878,7 @@ var zoomVis = function (opts) {
         })
 
         var cumProb = 0;
-        var k = 0;
+        k = 0;
         while (k < probs.length && probs[k].prob > 0 && cumProb <= transitionThreshold) {
             edges.push(probs[k].idx);
             cumProbs.push(1 - cumProb);
@@ -935,8 +937,11 @@ var zoomVis = function (opts) {
         var nodeIdxs = {};
 
         // add/remove nodes
-        for (var i = 0; i < levelInfo.length; i++) {
-            var node = levelInfo[i];
+        var node;
+        var nodeN;
+        var i;
+        for (i = 0; i < levelInfo.length; i++) {
+            node = levelInfo[i];
             var id = node.id;
 
             nodeIdxs[id] = i;
@@ -1010,20 +1015,20 @@ var zoomVis = function (opts) {
 
         // add/remove edges
         var takenEdgeIds = {};
-        for (var i = 0; i < added.length; i++) {
-            var node = added[i].data;
-            var nodeN = nodeIdxs[node.id];
+        for (i = 0; i < added.length; i++) {
+            node = added[i].data;
+            nodeN = nodeIdxs[node.id];
 
             addedEdges = addedEdges.concat(getEdgesWithSource(nodeN, levelJumps[level][nodeN], levelInfo));
         }
 
-        for (var i = 0; i < addedEdges.length; i++) {
+        for (i = 0; i < addedEdges.length; i++) {
             takenEdgeIds[addedEdges[i].data.id] = true;
         }
 
-        for (var i = 0; i < added.length; i++) {
-            var node = added[i].data;
-            var nodeN = nodeIdxs[node.id];
+        for (i = 0; i < added.length; i++) {
+            node = added[i].data;
+            nodeN = nodeIdxs[node.id];
 
             var edges = getEdgesWithTarget(nodeN, levelJumps[level], levelInfo);
 
@@ -1035,7 +1040,6 @@ var zoomVis = function (opts) {
 
         for (var sourceN = 0; sourceN < removed.length; sourceN++) {
             var sourceId = removed[sourceN];
-            var sourceIdx = nodeIdxs[sourceId];
 
             for (var targetN = 0; targetN < levelInfo.length; targetN++) {
                 var targetId = levelInfo[targetN].id;
@@ -1047,7 +1051,7 @@ var zoomVis = function (opts) {
             }
         }
 
-        for (var i = 0; i < removed.length; i++) {
+        for (i = 0; i < removed.length; i++) {
             removedNodeSelector += '#' + removed[i];
             if (i < removed.length-1)
                 removedNodeSelector += ',';
@@ -1250,6 +1254,10 @@ var zoomVis = function (opts) {
 
         var mode = getMode();
 
+        var prob;
+        var color;
+        var config;
+
         if (mode != MODE_ACTIVITY) {
             if (nodeId == modeConfig.selected) {
                 node.css('z-index', FOREGROUND_Z_INDEX);
@@ -1268,28 +1276,28 @@ var zoomVis = function (opts) {
                 node.css('border-color', PREVIOUS_NODE_EDGE_COLOR);
             }
             if (nodeId in modeConfig.future) {
-                var prob = futureColorFromProb(modeConfig.future[nodeId]);
-                var color = 'hsla(' + FUTURE_NODE_BASE_COLOR + ',' + (15 + Math.floor((100-15)*prob)) + '%, 55%, 1)';
+                prob = futureColorFromProb(modeConfig.future[nodeId]);
+                color = 'hsla(' + FUTURE_NODE_BASE_COLOR + ',' + (15 + Math.floor((100-15)*prob)) + '%, 55%, 1)';
                 node.css('border-color', color);
             }
 
             if (mode == MODE_PROBS) {
-                var config = modeConfig.mode.config;
+                config = modeConfig.mode.config;
                 var probs = config.probs;
-                var prob = probs[nodeId];
+                prob = probs[nodeId];
                 var intens = 100*prob;//*futureColorFromProb(prob);
 
-                var color = 'hsla(' + VIZ_NODE_COLOR + ',' + Math.ceil(intens) + '%, 55%, 1)';
+                color = 'hsla(' + VIZ_NODE_COLOR + ',' + Math.ceil(intens) + '%, 55%, 1)';
                 node.css('backgroundColor', color);
             }
             else if (mode == MODE_TARGET_FTR) {
-                var config = modeConfig.mode.config;
+                config = modeConfig.mode.config;
                 var ftrVal = config.ftrVals[nodeId];
 
                 var ftrRange = config.maxVal - config.minVal;
                 var middleVal = config.minVal + ftrRange/2;
 
-                var color = getFtrColor(ftrVal, config.minVal, config.maxVal, middleVal);
+                color = getFtrColor(ftrVal, config.minVal, config.maxVal, middleVal);
 
                 node.css('backgroundColor', color);
             }
@@ -1410,6 +1418,10 @@ var zoomVis = function (opts) {
                     edge.css(edge.data().style);
                 }
             });
+
+            // notify the handler
+            if (prevStateId != modeConfig.selected)
+                callbacks.stateSelected(null, hierarchy[currentLevel].height);
         } else {
             var stateId = parseInt(node.id());
             // set selected state
@@ -1437,11 +1449,11 @@ var zoomVis = function (opts) {
                     'line-style': 'solid'
                 });
             });
-        }
 
-        // notify the handler
-        if (prevStateId != modeConfig.selected)
-            callbacks.stateSelected(getServerNodeId(stateId), hierarchy[currentLevel].height);
+            // notify the handler
+            if (prevStateId != modeConfig.selected)
+                callbacks.stateSelected(getServerNodeId(stateId), hierarchy[currentLevel].height);
+        }
     }
 
     //===============================================================
@@ -1503,7 +1515,7 @@ var zoomVis = function (opts) {
                 var id = states[stateN].id;
                 var step = 0;
                 while (id in stateIdH) {
-                    id |= (++step) << 16;
+                    id |= ++step << 16;
                 }
 
                 if (step != 0) {
@@ -1539,9 +1551,7 @@ var zoomVis = function (opts) {
                 callbacks.onInitialized();
             },
             dataType: 'json',
-            error: function (jqXHR, jqXHR, status, err) {
-                alert("failed to receive object: " + status + ", " + err);
-            }
+            error: handleAjaxError()
         });
     }
 
@@ -1742,7 +1752,6 @@ var zoomVis = function (opts) {
 
                 cy.on('grab', 'node', function (event) {
                     var cyNode = event.cyTarget;
-                    var id = parseInt(cyNode.id());
                     var pos = cyNode.position();
 
                     startPos = { x: pos.x, y: pos.y };
@@ -1819,7 +1828,7 @@ var zoomVis = function (opts) {
                     } else {
                         cancelHover();
                     }
-                }).on('mouseout', 'edge,node', function (event) {
+                }).on('mouseout', 'edge,node', function () {
                     cancelHover();
                 });
             })();
@@ -1902,7 +1911,7 @@ var zoomVis = function (opts) {
         },
 
         setTransitionThreshold: function (threshold) {
-            transitionThreshold = Math.max(.5, Math.min(1, threshold));
+            transitionThreshold = Math.max(0.5, Math.min(1, threshold));
             redrawAll();
         },
 
@@ -1933,8 +1942,9 @@ var zoomVis = function (opts) {
             var posArr = [];
             var positions = {};
 
+            var nodeId;
             for (var level in levelNodeMap) {
-                for (var nodeId in levelNodeMap[level]) {
+                for (nodeId in levelNodeMap[level]) {
                     var node = levelNodeMap[level][nodeId];
 
                     positions[nodeId] = {
@@ -1944,7 +1954,7 @@ var zoomVis = function (opts) {
                 }
             }
 
-            for (var nodeId in positions) {
+            for (nodeId in positions) {
                 posArr.push({ id: parseInt(nodeId), position: positions[nodeId] });
             }
 
@@ -2047,7 +2057,7 @@ var zoomVis = function (opts) {
 
             cy.batch(function () {
                 var nodes = cy.nodes();
-                cy.nodes().style('font-factor', factor);
+                nodes.style('font-factor', factor);
             });
         },
 
@@ -2073,36 +2083,40 @@ var zoomVis = function (opts) {
                 useMultitasking: true,
                 stop: function () {
                     cy.batch(function () {
-                        var nodes = cy.nodes();
-                        for (var i = 0; i < nodes.length; i++) {
-                            var cyNode = nodes[i];
-                            var pos = cyNode.position();
-                            newCenter.x += pos.x;
-                            newCenter.y += pos.y;
-                        }
+                        (function () {
+                            var nodes = cy.nodes();
+                            for (var i = 0; i < nodes.length; i++) {
+                                var cyNode = nodes[i];
+                                var pos = cyNode.position();
+                                newCenter.x += pos.x;
+                                newCenter.y += pos.y;
+                            }
+                        })();
 
                         newCenter.x /= nodes.length;
                         newCenter.y /= nodes.length;
 
                         var deltaCenter = { x: center.x - newCenter.x, y: center.y - newCenter.y };
 
-                        var nodes = cy.nodes();
-                        for (var i = 0; i < nodes.length; i++) {
-                            var cyNode = nodes[i];
-                            var id = parseInt(cyNode.id());
-                            var pos = cyNode.position();
-                            var newPos = { x: pos.x + deltaCenter.x, y: pos.y + deltaCenter.y }
+                        (function () {
+                            var nodes = cy.nodes();
+                            for (var i = 0; i < nodes.length; i++) {
+                                var cyNode = nodes[i];
+                                var id = parseInt(cyNode.id());
+                                var pos = cyNode.position();
+                                var newPos = { x: pos.x + deltaCenter.x, y: pos.y + deltaCenter.y }
 
-                            cyNode.position('x', newPos.x);
-                            cyNode.position('y', newPos.y);
+                                cyNode.position('x', newPos.x);
+                                cyNode.position('y', newPos.y);
 
-                            var level = currentLevel;
-                            var node = levelNodeMap[level][id];
+                                var level = currentLevel;
+                                var node = levelNodeMap[level][id];
 
-                            var serverPos = serverPosition(newPos);
-                            node.x = serverPos.x;
-                            node.y = serverPos.y;
-                        }
+                                var serverPos = serverPosition(newPos);
+                                node.x = serverPos.x;
+                                node.y = serverPos.y;
+                            }
+                        })();
 
                         var padding = parseInt(Math.min(cy.width()*xOffset, cy.height()*yOffset).toFixed());
                         cy.fit(nodes, padding);
