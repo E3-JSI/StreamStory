@@ -63,7 +63,7 @@ var integrator = (function () {
                 if (topicCountH[output] == 0) {
                     log.info('Removing topic: %s', output);
                     delete topicCountH[output];
-                    broker.removeOutputTopic(output, callback);
+                    broker.removeOutputTopic(output, cb);
                 }
                 else {
                     cb();
@@ -294,21 +294,25 @@ var integrator = (function () {
                 }
             }
 
-            function detachParallel(mid, pipelineId) {
-                return function (xcb) {
-                    detachPipelineInternal(mid, pipelineId, xcb);
+            if (mids.length > 0) {
+                function detachParallel(mid, pipelineId) {
+                    return function (xcb) {
+                        detachPipelineInternal(mid, pipelineId, xcb);
+                    }
                 }
-            }
 
-            var parallel = [];
-            for (var i = 0; i < mids.length; i++) {
-                parallel.push(detachParallel(mids[i], pipelineId));
-            }
+                var parallel = [];
+                for (var i = 0; i < mids.length; i++) {
+                    parallel.push(detachParallel(mids[i], pipelineId));
+                }
 
-            async.parallel(parallel, function (e) {
-                if (e != null) return callback(e);
-                callback();
-            })
+                async.parallel(parallel, function (e) {
+                    if (e != null) return callback(e);
+                    callback();
+                })
+            } else {
+                callback(new Error('Could not find any models corresponding to pipeline: ' + pipelineId));
+            }
         },
 
         attachPipeline: function (opts, callback) {
@@ -318,7 +322,8 @@ var integrator = (function () {
             var inputTopic = opts.topics.input;
             var outputTopic = opts.topics.output;
 
-            log.info('Attaching new pipeline mid: %s, pipelineId: %s, inputTopic: %s, outputTopic: %s', mid, pipelineId, inputTopic, outputTopic);
+            if (log.info())
+                log.info('Attaching new pipeline mid: %s, pipelineId: %s, inputTopic: %s, outputTopic: %s', mid, pipelineId, inputTopic, outputTopic);
 
             if (!(mid in modelConfigH)) {
                 modelConfigH[mid] = {}
@@ -335,7 +340,7 @@ var integrator = (function () {
             if (pipelineId in pipelines) {
                 log.info('Pipeline already exists, will delete pipeline and make a recursive call ...');
 
-                that.detachPipeline(mid, pipelineId, function (e) {
+                that.detachPipeline(pipelineId, function (e) {
                     if (e != null) {
                         log.error(e, 'Exception while detaching a pipeline!');
                         callback(e);
@@ -558,7 +563,7 @@ exports.initWs = function (app) {
             var pipelineId = req.body.pipelineId;
             var modelId = req.body.modelId;
 
-            integrator.detachPipeline(modelId, pipelineId, function (e) {
+            integrator.detachPipeline(pipelineId, function (e) {
                 if (e != null) {
                     utils.handleServerError(e, req, res);
                     return;
