@@ -340,7 +340,7 @@ function initStreamStoryHandlers(model, enable) {
                     var brokerMsgStr = JSON.stringify(brokerMsg);
                     broker.send(broker.PREDICTION_PRODUCER_TOPIC, brokerMsgStr);
 
-                    var topics = fzi.getTopics(mid, fzi.PREDICTION_OPERATION);
+                    var topics = fzi.getTopics(fzi.PREDICTION_OPERATION, mid);
                     for (i = 0; i < topics.length; i++) {
                         var topic = topics[i].output;
                         log.info('Sending a prediction message to topic \'%s\'', topic);
@@ -379,7 +379,7 @@ function initStreamStoryHandlers(model, enable) {
                     description: '(empty)'	// TODO description
                 });
 
-                var topics = fzi.getTopics(model.getId(), fzi.ACTIVITY_OPERATION);
+                var topics = fzi.getTopics(fzi.ACTIVITY_OPERATION, model.getId());
                 for (var i = 0; i < topics.length; i++) {
                     var topic = topics[i].output;
                     log.debug('Sending activity to topic: %s', topic);
@@ -490,19 +490,31 @@ function initPipelineHandlers() {
                     if (log.debug())
                         log.debug('Sending coefficient to the broker: %s', brokerMsgStr);
 
-                    var topic;
-                    switch (optsClone.eventId) {
-                        case 'swivel':
-                            topic = broker.TOPIC_PUBLISH_COEFFICIENT_SWIVEL;
-                            break;
-                        case 'gearbox':
-                            topic = broker.TOPIC_PUBLISH_COEFFICIENT_GEARBOX;
-                            break;
-                        default:
-                            throw new Error('Invalid event ID for coefficient: ' + optsClone.eventId);
-                    }
+                    (function () {
+                        var topic;
+                        switch (optsClone.eventId) {
+                            case 'swivel':
+                                topic = broker.TOPIC_PUBLISH_COEFFICIENT_SWIVEL;
+                                break;
+                            case 'gearbox':
+                                topic = broker.TOPIC_PUBLISH_COEFFICIENT_GEARBOX;
+                                break;
+                            default:
+                                throw new Error('Invalid event ID for coefficient: ' + optsClone.eventId);
+                        }
 
-                    broker.send(topic, brokerMsgStr);
+                        broker.send(topic, brokerMsgStr);
+                    })();
+
+                    // send coefficient to any topics listening from FZI integration
+                    (function () {
+                        var topics = fzi.getTopics(fzi.FRICTION_OPERATION);
+                        for (i = 0; i < topics.length; i++) {
+                            var topic = topics[i].output;
+                            log.info('Sending a friction message to topic \'%s\'', topic);
+                            broker.send(topic, brokerMsgStr);
+                        }
+                    })();
                 })()
 
                 var zscore = opts.zScore;
@@ -3011,11 +3023,13 @@ exports.init = function (opts) {
     initPipelineHandlers();
     initBroker();
 
-    fzi.init({
-        broker: broker,
-        modelStore: modelStore,
-        db: db
-    });
+    if (config.USE_BROKER) {
+        fzi.init({
+            broker: broker,
+            modelStore: modelStore,
+            db: db
+        });
+    }
 
     log.info('Done!');
 };

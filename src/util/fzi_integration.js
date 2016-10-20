@@ -4,6 +4,7 @@ var utils = require('../utils.js');
 
 var ACTIVITY_OPERATION = 'ActivityDetection';
 var PREDICTION_OPERATION = 'Prediction';
+var FRICTION_OPERATION = 'Friction';
 
 var STREAM_PIPES_PATH = '/streampipes';
 
@@ -13,7 +14,7 @@ var db = null;
 
 var integrator = (function () {
     /*
-     * var modelIdOptsH = {
+     * var modelConfigH = {
      *		mid: {
      *			operation1: {
      *				pipelineId1: {
@@ -32,9 +33,37 @@ var integrator = (function () {
      *			...
      *		}
      *	};
+     *
+     * var modelIndependentConfigH = {
+     *     operation1: {
+     *         pipelineId1: {
+     *             topics: {
+     *                 input: '...',
+     *                 output: '...'
+     *             }
+     *         },
+     *         pipelineId2: {
+     *             topics: {
+     *                 input: '...',
+     *                 output: '...'
+     *             }
+     *         }
+     *     }
+     * }
+     *
      */
+
     var modelConfigH = {};
+    var modelIndependentConfigH = {};
     var topicCountH = {};
+
+    function isModelIndependentOperation(operation) {
+        return operation == FRICTION_OPERATION;
+    }
+
+    function isModelDependentOperation(operation) {
+        return !isModelIndependentOperation(operation);
+    }
 
     function removeTopics(topics, callback) {
         var input = topics.input;
@@ -122,53 +151,127 @@ var integrator = (function () {
     }
 
     function attachPipelineInternal(opts, callback) {
-        var mid = opts.mid;
         var pipelineId = opts.pipelineId;
         var operation = opts.operation;
         var inputTopic = opts.topics.input;
         var outputTopic = opts.topics.output;
 
-        log.info('Attaching new pipeline mid: %s, pipelineId: %s, inputTopic: %s, outputTopic: %s', mid, pipelineId, inputTopic, outputTopic);
+        if (isModelDependentOperation(operation)) {
+            var mid = opts.mid;
 
-        if (!(mid in modelConfigH)) {
-            modelConfigH[mid] = {}
-        }
+            if (log.debug())
+                log.debug('Internally attaching new pipeline mid: %s, pipelineId: %s, inputTopic: %s, outputTopic: %s', mid, pipelineId, inputTopic, outputTopic);
 
-        var operations = modelConfigH[mid];
-
-        if (!(operation in operations)) {
-            operations[operation] = {}
-        }
-
-        var pipelines = operations[operation];
-
-        // initialize the topics
-        pipelines[pipelineId] = opts.topics;
-
-        initTopics(opts.topics, function (e) {
-            if (e != null) {
-                log.error(e, 'Exception while initializing topic for pipeline: %s', pipelineId);
-
-                delete pipelines[pipelineId];
-                if (Object.keys(pipelines).length == 0) {
-                    log.info('No pipeline configurations left, deleting ...');
-                    delete operations[operation];
-
-                    if (Object.keys(operations).length == 0) {
-                        log.info('No operation configuration left, deleting ...');
-                        delete modelConfigH[mid];
-                    }
+            (function () {
+                if (!(mid in modelConfigH)) {
+                    modelConfigH[mid] = {}
                 }
 
-                callback(e);
-                return;
-            }
+                var operations = modelConfigH[mid];
 
-            callback();
-        });
+                if (!(operation in operations)) {
+                    operations[operation] = {}
+                }
+
+                var pipelines = operations[operation];
+
+                // initialize the topics
+                pipelines[pipelineId] = opts.topics;
+
+                initTopics(opts.topics, function (e) {
+                    if (e != null) {
+                        log.error(e, 'Exception while initializing topic for pipeline: %s', pipelineId);
+
+                        delete pipelines[pipelineId];
+                        if (Object.keys(pipelines).length == 0) {
+                            if (log.debug())
+                                log.debug('No pipeline configurations left, deleting ...');
+                            delete operations[operation];
+
+                            if (Object.keys(operations).length == 0) {
+                                if (log.debug())
+                                    log.debug('No operation configuration left, deleting ...');
+                                delete modelConfigH[mid];
+                            }
+                        }
+
+                        callback(e);
+                        return;
+                    }
+
+                    callback();
+                });
+            })();
+        }
+        else {
+            if (log.debug())
+                log.debug('Internally attaching new pipeline: pipelineId: %s, inputTopic: %s, outputTopic: %s');
+
+            (function () {
+                var operations = modelIndependentConfigH;
+
+                if (!(operation in operations)) {
+                    operations[operation] = {}
+                }
+
+                var pipelines = operations[operation];
+
+                // initialize the topics
+                pipelines[pipelineId] = opts.topics;
+
+                initTopics(opts.topics, function (e) {
+                    if (e != null) {
+                        log.error(e, 'Failed to initialize topics for pipeline: %s', pipelineId);
+                        // need to clean up
+
+                        delete pipelines[pipelineId];
+                        if (Object.keys(pipelines).length == 0) {
+                            if (log.debug())
+                                log.debug('No pipeline configuration left, deleting ...');
+                            delete operations[operation];
+                        }
+
+                        return callback(e);
+                    }
+
+                    return callback();
+                })
+            })();
+        }
     }
 
-    function detachPipelineInternal(mid, pipelineId, callback) {
+    function cleanupDependent(mid, operation, pipelineId) {
+        var operations = modelConfigH[mid];
+        var pipelines = operations[operation];
+
+        if (pipelines == null) throw new Error('Could not find dependent pipelines for modelId: ' + mid + ' operation: ' + operation);
+
+        delete pipelines[pipelineId];
+        if (Object.keys(pipelines).length == 0) {
+            log.info('No pipeline configurations left, deleting ...');
+            delete operations[operation];
+
+            if (Object.keys(operations).length == 0) {
+                log.info('No operation configuration left, deleting ...');
+                delete modelConfigH[mid];
+            }
+        }
+    }
+
+    function cleanupIndependent(operation, pipelineId) {
+        var operations = modelIndependentConfigH;
+        var pipelines = operations[operation];
+
+        if (pipelines == null) throw new Error('Could not find independent pipelines for operation: ' + operation);
+
+        delete pipelines[pipelineId];
+        if (Object.keys(pipelines).length == 0) {
+            log.info('No pipeline configurations left, deleting ...');
+            delete operations[operation];
+        }
+    }
+
+    function detachDependentPipeline(mid, pipelineId, callback) {
         log.info('Detaching pipeline \'%s\' for model %s', pipelineId, mid);
 
         var operations = modelConfigH[mid];
@@ -202,19 +305,41 @@ var integrator = (function () {
                     return;
                 }
 
-                delete pipelines[pipelineId];
-                if (Object.keys(pipelines).length == 0) {
-                    log.info('No pipeline configurations left, deleting ...');
-                    delete operations[operation];
-
-                    if (Object.keys(operations).length == 0) {
-                        log.info('No operation configuration left, deleting ...');
-                        delete modelConfigH[mid];
-                    }
-                }
-
+                cleanupDependent(mid, operation, pipelineId);
                 callback();
             });
+        })
+    }
+
+    function detachIndependentPipeline(pipelineId, callback) {
+        if (log.info())
+            log.info('Detaching independent pipeline \'%s\' ...', pipelineId);
+
+        var operation = null;
+        for (var op in modelIndependentConfigH) {
+            if (pipelineId in modelIndependentConfigH[op]) {
+                operation = op;
+                break;
+            }
+        }
+
+        if (operation == null) {
+            callback(new Error('Could not find operation for pipeline: ' + pipelineId));
+            return;
+        }
+
+        var pipelines = modelIndependentConfigH[operation];
+        var topics = pipelines[pipelineId];
+
+        db.removePipeline(pipelineId, function (e) {
+            if (e != null) return callback(e);
+
+            removeTopics(topics, function (e) {
+                if (e != null) return callback(e);
+
+                cleanupIndependent(operation, pipelineId);
+                callback();
+            })
         })
     }
 
@@ -252,21 +377,41 @@ var integrator = (function () {
         },
 
         // functions
-        getTopics: function (mid, operation) {
-            if (log.trace())
-                log.trace('Fetching topics for model with ID: %s with operation %s', mid, operation);
-
-            if (!(mid in modelConfigH)) return [];
-            var operations = modelConfigH[mid];
-            if (!(operation in operations)) return [];
-            var pipelines = operations[operation];
-
-            if (log.trace())
-                log.trace('Found pipelines: %s', JSON.stringify(pipelines));
-
+        getTopics: function (operation, mid) {
             var result = [];
-            for (var pipelineId in pipelines) {
-                result.push(pipelines[pipelineId]);
+
+            if (mid != null) {
+                (function () {
+                    if (log.trace())
+                        log.trace('Fetching model dependent topics for model with ID: %s with operation %s', mid, operation);
+
+                    if (!(mid in modelConfigH)) return [];
+                    var operations = modelConfigH[mid];
+                    if (!(operation in operations)) return [];
+                    var pipelines = operations[operation];
+
+                    if (log.trace())
+                        log.trace('Found pipelines: %s', JSON.stringify(pipelines));
+
+                    for (var pipelineId in pipelines) {
+                        result.push(pipelines[pipelineId]);
+                    }
+                })();
+            }
+            else {
+                (function () {
+                    if (log.trace())
+                        log.trace('Fetching model dependent topics for operation: %s', operation);
+
+                    var pipelines = modelIndependentConfigH[operation];
+
+                    if (log.trace())
+                        log.trace('Fount pipelines: %s', JSON.stringify(pipelines));
+
+                    for (var pipelineId in pipelines) {
+                        result.push(pipelines[pipelineId]);
+                    }
+                })();
             }
 
             return result;
@@ -279,92 +424,162 @@ var integrator = (function () {
         detachPipeline: function (pipelineId, callback) {
             log.info('Deleting pipeline: %s', pipelineId);
 
-            var mids = [];
-            var usedMids = {};
-            for (var mid in modelConfigH) {
-                var operations = modelConfigH[mid];
-                for (var operation in operations) {
-                    var pipelines = operations[operation];
-                    for (var pid in pipelines) {
-                        if (pid == pipelineId && !(mid in usedMids)) {
-                            mids.push(mid);
-                            usedMids[mid] = true;
-                        }
-                    }
+            var parallel = [];
+
+            function detachDependentParallel(mid, pipelineId) {
+                return function (xcb) {
+                    detachDependentPipeline(mid, pipelineId, xcb);
                 }
             }
 
-            if (mids.length > 0) {
-                function detachParallel(mid, pipelineId) {
-                    return function (xcb) {
-                        detachPipelineInternal(mid, pipelineId, xcb);
+            function detachIndependentParallel(pipelineId) {
+                return function (xcb) {
+                    detachIndependentPipeline(pipelineId, xcb);
+                }
+            }
+
+            (function () {
+                var mids = [];
+                var usedMids = {};
+                for (var mid in modelConfigH) {
+                    var operations = modelConfigH[mid];
+                    for (var operation in operations) {
+                        var pipelines = operations[operation];
+                        for (var pid in pipelines) {
+                            if (pid == pipelineId && !(mid in usedMids)) {
+                                mids.push(mid);
+                                usedMids[mid] = true;
+                            }
+                        }
                     }
                 }
 
-                var parallel = [];
                 for (var i = 0; i < mids.length; i++) {
-                    parallel.push(detachParallel(mids[i], pipelineId));
+                    parallel.push(detachDependentParallel(mids[i], pipelineId));
                 }
+            })();
 
+            (function () {
+                for (var operation in modelIndependentConfigH) {
+                    var pipelines = modelIndependentConfigH[operation];
+                    for (var pid in pipelines) {
+                        if (pid == pipelineId) {
+                            parallel.push(detachIndependentParallel(pipelineId));
+                        }
+                    }
+                }
+            })();
+
+            if (parallel.length > 0) {
                 async.parallel(parallel, function (e) {
                     if (e != null) return callback(e);
                     callback();
                 })
             } else {
-                callback(new Error('Could not find any models corresponding to pipeline: ' + pipelineId));
+                callback(new Error('Could not find any configuration corresponding to pipeline: ' + pipelineId));
             }
         },
 
         attachPipeline: function (opts, callback) {
-            var mid = opts.mid;
             var pipelineId = opts.pipelineId;
             var operation = opts.operation;
             var inputTopic = opts.topics.input;
             var outputTopic = opts.topics.output;
 
-            if (log.info())
-                log.info('Attaching new pipeline mid: %s, pipelineId: %s, inputTopic: %s, outputTopic: %s', mid, pipelineId, inputTopic, outputTopic);
+            if (!isModelIndependentOperation(operation)) {
+                var mid = opts.mid;
 
-            if (!(mid in modelConfigH)) {
-                modelConfigH[mid] = {}
-            }
+                if (log.info())
+                    log.info('Attaching new pipeline mid: %s, pipelineId: %s, inputTopic: %s, outputTopic: %s', mid, pipelineId, inputTopic, outputTopic);
 
-            var operations = modelConfigH[mid];
+                if (!(mid in modelConfigH)) {
+                    modelConfigH[mid] = {}
+                }
 
-            if (!(operation in operations)) {
-                operations[operation] = {}
-            }
+                (function () {
+                    var operations = modelConfigH[mid];
 
-            var pipelines = operations[operation];
-
-            if (pipelineId in pipelines) {
-                log.info('Pipeline already exists, will delete pipeline and make a recursive call ...');
-
-                that.detachPipeline(pipelineId, function (e) {
-                    if (e != null) {
-                        log.error(e, 'Exception while detaching a pipeline!');
-                        callback(e);
-                        return;
+                    if (!(operation in operations)) {
+                        operations[operation] = {}
                     }
 
-                    log.info('Pipeline deleted, making recursive call ...');
-                    that.attachPipeline(opts, callback);
-                });
+                    var pipelines = operations[operation];
+
+                    if (pipelineId in pipelines) {
+                        log.info('Pipeline already exists, will delete pipeline and make a recursive call ...');
+
+                        that.detachPipeline(pipelineId, function (e) {
+                            if (e != null) {
+                                log.error(e, 'Exception while detaching a pipeline!');
+                                callback(e);
+                                return;
+                            }
+
+                            log.info('Pipeline deleted, making recursive call ...');
+                            that.attachPipeline(opts, callback);
+                        });
+                    }
+                    else {
+                        db.insertPipeline(pipelineId, opts, function (e) {
+                            if (e != null) {
+                                callback(e);
+                                return;
+                            }
+
+                            try {
+                                attachPipelineInternal(opts, callback);
+                            } catch (e) {
+                                log.error(e, 'Exception while inserting pipeline!');
+                                callback(e);
+                            }
+                        })
+                    }
+                })();
             }
             else {
-                db.insertPipeline(pipelineId, opts, function (e) {
-                    if (e != null) {
-                        callback(e);
-                        return;
+                if (log.info())
+                    log.info('Attaching new pipeline independent of a model: pipelineId: %s, inputTopic: %s, outputTopic: %s', pipelineId, inputTopic, outputTopic);
+
+                (function () {
+                    var operations = modelIndependentConfigH;
+
+                    if (!(operation in operations)) {
+                        operations[operation] = {};
                     }
 
-                    try {
-                        attachPipelineInternal(opts, callback);
-                    } catch (e) {
-                        log.error(e, 'Exception while inserting pipeline!');
-                        callback(e);
+                    var pipelines = operations[operation];
+
+                    if (pipelineId in pipelines) {
+                        log.info('Pipeline already exists, will delete pipeline and make recursive call ...');
+
+                        that.detachPipeline(pipelineId, function (e) {
+                            if (e != null) {
+                                callback(e);
+                                return;
+                            }
+
+                            if (log.debug())
+                                log.debug('Pipeline deleted, making recursive call ...');
+
+                            that.attachPipeline(opts, callback);
+                        })
                     }
-                })
+                    else {
+                        db.insertPipeline(pipelineId, opts, function (e) {
+                            if (e != null) {
+                                callback(e);
+                                return;
+                            }
+
+                            try {
+                                attachPipelineInternal(opts, callback);
+                            } catch (e) {
+                                log.error(e, 'Exception while attaching model independent pipeline!');
+                                callback(e);
+                            }
+                        })
+                    }
+                })();
             }
         }
     };
@@ -375,9 +590,10 @@ var integrator = (function () {
 exports.STREAM_PIPES_PATH = STREAM_PIPES_PATH;
 exports.ACTIVITY_OPERATION = ACTIVITY_OPERATION;
 exports.PREDICTION_OPERATION = PREDICTION_OPERATION;
+exports.FRICTION_OPERATION = FRICTION_OPERATION;
 
-exports.getTopics = function (mid, operation) {
-    return integrator.getTopics(mid, operation);
+exports.getTopics = function (operation, mid) {
+    return integrator.getTopics(operation, mid);
 }
 
 exports.hasTopic = function (topic) {
@@ -561,7 +777,6 @@ exports.initWs = function (app) {
     app.post(STREAM_PIPES_PATH + '/detach', function (req, res) {
         try {
             var pipelineId = req.body.pipelineId;
-            var modelId = req.body.modelId;
 
             integrator.detachPipeline(pipelineId, function (e) {
                 if (e != null) {
