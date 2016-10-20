@@ -1,6 +1,6 @@
 
 {
-    "extends": "/home/lstopar/.jshintrc",
+    "extends": "../../.jshintrc",
     "jquery": true,
     "browser": true,
     "predef": [
