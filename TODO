@@ -1,16 +1,1 @@
-- distribution of time (timeline + days/hours)
-- boxplots zraven histogramov
-- histogrami: default tako kot zdaj, moznost zoom v lokalne vrednosti
-- STD pri povprecnih vrednostih (mediana + avg prikazi na histogramu + kvartili)
-- zoom v eno stanje
-- poglej in daj moznost alternativnih grafov (drugo kot histogram)
-- moznost izpisa najbolj informativnih atributov na stanjih
-- importance bar namesto barve (logreg)
-
-DATASETS:
-- dobi dataset MTA.info - poglej kaki so in kaj z njimi narediti
-
-ACTIVITY RECOGNITION:
-- dynamic time warping of two weighted strings
-
-AUTOMATIC NAMING: - tamperature HIGH/LOW/MEDIUM
+- vkljuci napovedovanje scrap delov v Helli v sistem

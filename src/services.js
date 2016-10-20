@@ -54,7 +54,6 @@ var storeLastTm = {};
 var totalCounts = 0;
 
 var lastRawTime = -1;
-
 var intensConfig = {};
 
 function activateModel(model) {
