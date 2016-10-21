@@ -483,8 +483,8 @@ function initPipelineHandlers() {
                 // calculations based no it
                 (function () {
                     var optsClone = utils.clone(opts);
-                    // optsClone.timestamp = opts.time.getTime();   // TODO uncomment this!!
-                    // delete optsClone.time;
+                    optsClone.timestamp = opts.time.getTime();
+                    delete optsClone.time;
                     var brokerMsgStr = JSON.stringify(optsClone);
 
                     if (log.debug())
@@ -508,8 +508,20 @@ function initPipelineHandlers() {
 
                     // send coefficient to any topics listening from FZI integration
                     (function () {
-                        var topics = fzi.getTopics(fzi.FRICTION_OPERATION);
-                        for (i = 0; i < topics.length; i++) {
+                        var operation;
+                        switch (optsClone.eventId) {
+                            case 'swivel':
+                                operation = fzi.OPERATION_FRICTION_SWIVEL;
+                                break;
+                            case 'gearbox':
+                                operation = fzi.OPERATION_FRICTION_GEARBOX;
+                                break;
+                            default:
+                                throw new Error('Invalid event ID for coefficient: ' + optsClone.eventId);
+                        }
+
+                        var topics = fzi.getTopics(operation);
+                        for (var i = 0; i < topics.length; i++) {
                             var topic = topics[i].output;
                             log.info('Sending a friction message to topic \'%s\'', topic);
                             broker.send(topic, brokerMsgStr);

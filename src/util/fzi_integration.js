@@ -4,7 +4,8 @@ var utils = require('../utils.js');
 
 var ACTIVITY_OPERATION = 'ActivityDetection';
 var PREDICTION_OPERATION = 'Prediction';
-var FRICTION_OPERATION = 'Friction';
+var OPERATION_FRICTION_GEARBOX = 'FrictionGearbox';
+var OPERATION_FRICTION_SWIVEL = 'FrictionSwivel';
 
 var STREAM_PIPES_PATH = '/streampipes';
 
@@ -58,7 +59,8 @@ var integrator = (function () {
     var topicCountH = {};
 
     function isModelIndependentOperation(operation) {
-        return operation == FRICTION_OPERATION;
+        return operation == OPERATION_FRICTION_GEARBOX ||
+               operation == OPERATION_FRICTION_SWIVEL;
     }
 
     function isModelDependentOperation(operation) {
@@ -590,7 +592,8 @@ var integrator = (function () {
 exports.STREAM_PIPES_PATH = STREAM_PIPES_PATH;
 exports.ACTIVITY_OPERATION = ACTIVITY_OPERATION;
 exports.PREDICTION_OPERATION = PREDICTION_OPERATION;
-exports.FRICTION_OPERATION = FRICTION_OPERATION;
+exports.OPERATION_FRICTION_GEARBOX = OPERATION_FRICTION_GEARBOX;
+exports.OPERATION_FRICTION_SWIVEL = OPERATION_FRICTION_SWIVEL;
 
 exports.getTopics = function (operation, mid) {
     return integrator.getTopics(operation, mid);

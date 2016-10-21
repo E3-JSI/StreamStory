@@ -1004,7 +1004,10 @@
         function visualizeParcoords(centroids, allCentroids, ftrConfig) {
             if (allCentroids.length == 0) return;
 
+            var containerId = '#div-parallel';
+
             var wrapper = $('#div-parallel-wrapper');
+            var container = $(containerId);
 
             var opts = {
                 color: '#5bc0de',
@@ -1080,13 +1083,13 @@
             var fullWidthPadding = 5;
 
             if (width < wrapper.width() - fullWidthPadding) {
-                $('#div-parallel').css('width', wrapper.width() - fullWidthPadding + 'px');
+                container.css('width', wrapper.width() - fullWidthPadding + 'px');
             } else {
-                $('#div-parallel').css('width', width + 'px');
+                container.css('width', width + 'px');
             }
 
 
-            var parcoords = d3.parcoords(opts)("#div-parallel")
+            var parcoords = d3.parcoords(opts)(containerId)
                 .data(backgroundData)
                 .render()
                 .createAxes()
