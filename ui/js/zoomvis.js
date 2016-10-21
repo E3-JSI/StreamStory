@@ -528,6 +528,7 @@ var zoomVis = function (opts) {
                 return getHslStr(that.getColor(nodeId));
             },
             getColor: function (nodeId) {
+                if (!(nodeId in colorH)) { return undefined; }
                 return clone(colorH[nodeId]);
             },
             getComplementaryColorStr: function (nodeId)	 {
@@ -1222,6 +1223,7 @@ var zoomVis = function (opts) {
     }
 
     function setNodeColor(nodeId, color) {
+        console.log(color);
         var graphNode;
         if (color != null) {
             cache.getNode(nodeId).css.backgroundColor = color;
@@ -1881,6 +1883,10 @@ var zoomVis = function (opts) {
     var that = {
 
         MODE_ACTIVITY: MODE_ACTIVITY,
+
+        isInit: function () {
+            return isInitialized();
+        },
 
         /*
          * Sets a new model which is visualized. Zoom and other properties are not

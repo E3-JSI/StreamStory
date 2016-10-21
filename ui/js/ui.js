@@ -2145,8 +2145,11 @@ $(document).ready(function () {
 
         if (TAB_ID == 'a-default') {
             $('#tabs-viz-bottom').find('a')[0].click();
-            viz.resetMode();
-            timelineController.init();
+
+            if (viz.isInit()) {
+                viz.resetMode();
+                timelineController.init();
+            }
             // TODO fetch the histograms
             // TODO reload the decision tree
         }
