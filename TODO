@@ -1,3 +1,9 @@
 - vkljuci napovedovanje scrap delov v Helli v sistem
 - socket idle problem!! popravi!!
 - poglej Markotove predloge
+(*) poimenovanje stanj v primerih, ko se sedaj napise "MEAN" - en nacin bi bil, da bi pogledal, ce je kaksna od casovnih resolucij indikativna za dano stanje (recimo mesec Oktober za stanje, ki se pojavi oz zadeve v tem smislu)
+(*) decision tree fonti so zelo majni - ali bi lahko naredil, da se da povecati fonte, podobno kot zgoraj pri mrezi
+(*) se da narediti, da bi podokna lahko malo premikal (siril, ozal)?
+(*) paralelne koordinate se niso izrisovale
+(*) kot receno - se kaksen vecji realisticni primer v bi bil zelo koristen, ko se prepricuje ljudi, da ta zadeva zmore resevati vecje aplikacije
+
