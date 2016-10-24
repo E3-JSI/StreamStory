@@ -1843,8 +1843,14 @@ var zoomVis = function (opts) {
 
     function setMode(mode, config) {
         modeConfig.mode.type = mode;
+
         if (config != null)
             modeConfig.mode.config = config;
+
+        if (mode == MODE_ACTIVITY) {
+            // reset the selected state
+            setSelectedState(null);
+        }
     }
 
     function resetMode() {
@@ -2217,5 +2223,5 @@ var zoomVis = function (opts) {
         }
     }
 
-return that;
+    return that;
 }
