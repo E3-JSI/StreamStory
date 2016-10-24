@@ -1082,8 +1082,9 @@
             var width = dim*minBinW;
             var fullWidthPadding = 5;
 
-            if (width < wrapper.width() - fullWidthPadding) {
-                container.css('width', wrapper.width() - fullWidthPadding + 'px');
+            var wrapperW = wrapper.width();
+            if (width < wrapperW - fullWidthPadding) {
+                container.css('width', wrapperW - fullWidthPadding + 'px');
             } else {
                 container.css('width', width + 'px');
             }
@@ -2163,13 +2164,6 @@ $(document).ready(function () {
 
         if (tabId == 'a-timehist') {
             $('#btns-timescale button')[0].click();
-        }
-
-        if (tabId == 'a-parcoords') {
-            $('#div-parallel-container').removeClass('hidden');
-        }
-        else {
-            $('#div-parallel-container').addClass('hidden');
         }
     });
 
