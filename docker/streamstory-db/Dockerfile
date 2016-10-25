@@ -1,7 +1,7 @@
 FROM mysql:5.7
 MAINTAINER Luka Stopar <luka.stopar@ijs.si>
 
-ENV GIT_BRANCH master
+ENV GIT_BRANCH development
 
 RUN apt-get update && apt-get install -y git
 
