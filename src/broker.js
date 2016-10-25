@@ -28,7 +28,9 @@ var topics = {
     // TOPIC_PUBLISH_COEFFICIENT_SWIVEL: 'eu.proasense.internal.sp.internal.outgoing.10002',
     // TOPIC_PUBLISH_COEFFICIENT_GEARBOX: 'eu.proasense.internal.sp.internal.outgoing.10002'
     TOPIC_PUBLISH_COEFFICIENT_SWIVEL: 'eu.proasense.streamstory.output.coefficient.gearbox',
-    TOPIC_PUBLISH_COEFFICIENT_GEARBOX: 'eu.proasense.streamstory.output.coefficient.swivel'
+    TOPIC_PUBLISH_COEFFICIENT_GEARBOX: 'eu.proasense.streamstory.output.coefficient.swivel',
+
+    TOPIC_REPLAY_START: 'replay.start'
 };
 
 var client;
@@ -38,65 +40,6 @@ var consumer;
 var msgCallback = null;
 
 var fzi = null;
-
-// var reconnectId = null;
-
-// function reconnect() {
-// 	if (reconnectId != null)  {
-// 		log.warn('Tried to reconnect while timeout already set!');
-// 		return;
-// 	}
-
-// 	return;	// TODO remove
-
-// 	log.debug('Setting timeout for reconnect ...');
-// 	reconnectId = setTimeout(function () {
-// 		log.debug('Reconnecting ...');
-
-// 		reconnectId = null;
-
-// 		initClient(function (e) {
-// 			if (e != null) {
-// 				log.error(e, 'Failed to initialize client!');
-// 				reconnect();
-// 			} else {
-// 				log.info('Client successfully initialized!');
-// 			}
-// 		});
-// 	}, RECONNECT_INTERVAL);
-// }
-
-// function reconnectCb(e) {
-// 	if (e != null) {
-// 		log.error(e, 'Failed to close client!');
-// 		callback(e);
-// 		return;
-// 	}
-
-// 	reconnect();
-// }
-
-// function closeClient(callback) {
-// 	if (client.zk.closed) {
-// 		log.info('Client already closed!');
-// 		callback();
-// 	} else if (!client.ready) {
-// 		log.info('Client is not ready, so it cannot be closed!');
-// 		callback();
-// 	} else {
-// 		log.debug('Closing the client ...');
-// 		client.close(function (e) {
-// 			if (e != null) {
-// 				log.error(e, 'Failed to close client!');
-// 				callback(e);
-// 				return;
-// 			}
-
-// 			log.info('Client closed!');
-// 			callback();
-// 		});
-// 	}
-// }
 
 function initConsumer(callback) {
     log.info('Initializing consumer ...');
@@ -109,7 +52,8 @@ function initConsumer(callback) {
         client,
         [
             {topic: topics.RAW_DATA_CONSUMER_TOPIC, partition: 0},
-            {topic: topics.CEP_DATA_CONSUMER_TOPIC, partition: 0}
+            {topic: topics.CEP_DATA_CONSUMER_TOPIC, partition: 0},
+            {topic: topics.TOPIC_REPLAY_START, partition: 0}
         ],
         {
             autoCommit: true
@@ -137,21 +81,6 @@ function initConsumer(callback) {
 
     consumer.on('error', function (e) {
         log.error(e, 'Exception in consumer!');
-
-        //		if (!consumer.ready) {
-        //			log.info('Consumer already closed!')
-        //		} else {
-        //			log.debug('Closing the consumer!');
-        //			consumer.close(function (e1) {
-        //				if (e1 != null) {
-        //					log.error(e1, 'Exception while closing the consumer!');
-        //					reconnectCb(e1);
-        //				}
-        //
-        //				log.debug('Consumer closed!');
-        //				reconnectCb();
-        //			});
-        //		}
     });
 
     consumer.on('offsetOutOfRange', function (e) {
@@ -191,6 +120,14 @@ function initConsumer(callback) {
         consumer.on('message', function (msg) {
             try {
                 var topic = msg.topic;
+
+                // check if we got any messages that are not JSON
+                if (topic == topics.TOPIC_REPLAY_START) {
+                    log.info('Received replay start message: %s', msg.value);
+                    log.info('Restarting component ...');
+                    process.exit(0);
+                }
+
                 var payload = JSON.parse(msg.value);
 
                 if (msgCallback != null) {

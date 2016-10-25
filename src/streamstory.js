@@ -2,11 +2,6 @@ var async = require('async');
 
 var streamstory = qm.streamstory;
 
-    /**
-     * StreamStory.
-     * @class
-     * @param {opts} HierarchMarkovParam - parameters. TODO typedef and describe
-     */
 exports.StreamStory = function (opts) {
     //===================================================
     // CONSTRUCTOR
