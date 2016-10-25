@@ -1,0 +1,52 @@
+{
+    "qminer": {
+        "path": "../qminer/",
+        "mode": "createClean",
+        "xmode": "openReadOnly",
+        "createPipeline": true,
+        "initializeZeros": true
+    },
+    "server": {
+        "port": 8080,
+        "pingInterval": 10000
+    },
+    "log": {
+        "logger": {
+            "level": "debug",
+            "outputMode": "short",
+            "stream": {
+                "type": "stdout",
+                "file": "log.log"
+            }
+        },
+        "print": {
+            "rawData": 10000,
+            "streamStory": 100,
+            "stores": 100000,
+            "broker": 1000,
+            "coeff": 1000
+        }
+    },
+    "database": {
+        "host": "127.0.0.1",
+        "user": "StreamStory",
+        "password": "StreamStory",
+        "database": "StreamStory"
+    },
+    "integration": {
+        "type": "broker",
+        "brokerUrl": "192.168.84.45",
+        "zookeperPort": 2181,
+        "producerPort": 9092,
+        "xauthentication": {
+            "host": "192.168.84.46",
+            "timeout": 10000
+        }
+    },
+    "useCase": "mhwirth",
+    "saveStates": false,
+    "saveActivities": false,
+    "saveFriction": false,
+    "interpolation": "current",
+    "dataPath": "/home/proasense/app/streamstory-internal/"
+}
