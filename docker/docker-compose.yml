@@ -8,6 +8,7 @@ services:
             - "8080"
         volumes:
             - ${CONFIG_DIR}:/etc/streamstory
+            - ${MODELS_DIR}:/app/ss-db
         depends_on:
             - streamstory-db
         links:
