@@ -74,7 +74,7 @@ RUN cd app && \
 
 RUN cd app && mkdir ss-db
 
-RUN apt-get install mysql-client
+RUN apt-get install -y mysql-client
 
 #==================================================
 # ENTRY POINT
