@@ -10,6 +10,8 @@ RUN cd StreamStory && \
 	git fetch --all && \
 	git checkout $GIT_BRANCH
 
+RUN echo 'Hello'
+
 RUN cd StreamStory && \
     cat init-db.sql > /docker-entrypoint-initdb.d/init.sql && \
     cat init-tables.sql >> /docker-entrypoint-initdb.d/init.sql
