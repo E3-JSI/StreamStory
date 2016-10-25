@@ -5,6 +5,7 @@ ENV GIT_BRANCH master
 
 RUN apt-get update && apt-get install -y git
 
+RUN echo 'Hello World!'
 RUN git clone https://github.com/JozefStefanInstitute/StreamStory.git
 RUN cd StreamStory && \
 	git fetch --all && \
