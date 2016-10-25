@@ -68,7 +68,9 @@ module.exports = exports = function (opts) {
                     log.debug('Socket %s idle, removing ...', id)
                 closeClient(id);
             }
-            sockets[id].gotPong = false;
+            if (id in sockets) {
+                sockets[id].gotPong = false;
+            }
         }
     }
 

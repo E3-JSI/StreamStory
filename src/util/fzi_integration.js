@@ -13,6 +13,15 @@ var broker = null;
 var modelstore = null;
 var db = null;
 
+function isModelIndependentOperation(operation) {
+    return operation == OPERATION_FRICTION_GEARBOX ||
+           operation == OPERATION_FRICTION_SWIVEL;
+}
+
+function isModelDependentOperation(operation) {
+    return !isModelIndependentOperation(operation);
+}
+
 var integrator = (function () {
     /*
      * var modelConfigH = {
@@ -57,15 +66,6 @@ var integrator = (function () {
     var modelConfigH = {};
     var modelIndependentConfigH = {};
     var topicCountH = {};
-
-    function isModelIndependentOperation(operation) {
-        return operation == OPERATION_FRICTION_GEARBOX ||
-               operation == OPERATION_FRICTION_SWIVEL;
-    }
-
-    function isModelDependentOperation(operation) {
-        return !isModelIndependentOperation(operation);
-    }
 
     function removeTopics(topics, callback) {
         var input = topics.input;
@@ -711,13 +711,14 @@ exports.initWs = function (app) {
                 utils.handleBadInput(res, 'Pipeline ID required!');
                 return;
             }
-            if (modelId == null || modelId == '') {
+            if (isModelDependentOperation(operation) && (modelId == null || modelId == '')) {
                 log.debug('Invalid model ID!');
                 utils.handleBadInput(res, 'Model ID required!');
                 // TODO also check if the model ID is valid!
                 return;
             }
-            if (operation != ACTIVITY_OPERATION && operation != PREDICTION_OPERATION) {
+            if (operation != ACTIVITY_OPERATION && operation != PREDICTION_OPERATION &&
+                    operation != OPERATION_FRICTION_SWIVEL && operation != OPERATION_FRICTION_GEARBOX) {
                 log.debug('Invalid operation ID!');
                 utils.handleBadInput(res, 'Field analyticsOperation should be either "activity" or "prediction"!');
                 // TODO check if the model can handle this operation
