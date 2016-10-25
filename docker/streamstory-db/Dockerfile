@@ -10,6 +10,7 @@ RUN git clone https://github.com/JozefStefanInstitute/StreamStory.git
 RUN cd StreamStory && \
 	git fetch --all && \
 	git checkout $GIT_BRANCH
+RUN apt-get install vim
 RUN cd StreamStory && \
     cat init-db.sql > /docker-entrypoint-initdb.d/init.sql && \
     cat init-tables.sql >> /docker-entrypoint-initdb.d/init.sql

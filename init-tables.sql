@@ -60,6 +60,7 @@ INSERT INTO config (property, value) values ('deviation_minor_lambda', '0.05');
 
 -- FZI integration
 CREATE TABLE pipelines (
-    pid VARCHAR(255) PRIMERY KEY,
-    config TEXT NOT NULL
+    pid VARCHAR(255) NOT NULL,
+    config TEXT NOT NULL,
+    PRIMARY KEY (pid)
 );
