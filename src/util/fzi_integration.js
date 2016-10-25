@@ -653,7 +653,6 @@ exports.initWs = function (app) {
                         if (model.getModel().isPredictor()) {
                             mids.push(model.getId());
                         }
-                        mids.push()
                     }
                 })();
             }
