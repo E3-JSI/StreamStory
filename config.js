@@ -197,6 +197,12 @@ exports.STORE_PRINT_INTERVAL = config.log.print.stores;
 exports.BROKER_PRINT_INTERVAL = config.log.print.broker;
 exports.COEFF_PRINT_INTERVAL = config.log.print.coeff;
 
+//================================================================
+// INTEGRATION
+//================================================================
+
+exports.RESTART_ON_REPLAY = config.restartOnReplay;
+
 // set the global qm object
 global.qm = require(QM_MODULE_PATH);
 // configure qminer log level

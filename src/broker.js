@@ -124,8 +124,13 @@ function initConsumer(callback) {
                 // check if we got any messages that are not JSON
                 if (topic == topics.TOPIC_REPLAY_START) {
                     log.info('Received replay start message: %s', msg.value);
-                    log.info('Restarting component ...');
-                    process.exit(0);
+                    if (config.RESTART_ON_REPLAY) {
+                        log.info('Restarting component ...');
+                        process.exit(0);
+                    } else {
+                        log.info('Will not restart, not configured to do so!');
+                        return;
+                    }
                 }
 
                 var payload = JSON.parse(msg.value);
