@@ -34,7 +34,7 @@
         "database": "StreamStoryDev"
     },
     "integration": {
-        "type": "broker",
+        "type": "http",
         "brokerUrl": "192.168.84.45",
         "zookeperPort": 2181,
         "producerPort": 9092,
@@ -46,7 +46,7 @@
     "useCase": "mhwirth",
     "saveStates": false,
     "saveActivities": false,
-    "saveFriction": false,
+    "saveFriction": true,
     "restartOnReplay": false,
     "interpolation": "current",
     "dataPath": "/mnt/raidM2T/project-data/StreamStory-meeting/"

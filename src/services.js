@@ -2855,31 +2855,53 @@ function prepMainUi() {
 }
 
 function accessControl(req, res, next) {
+    var session = req.session;
     // if using external authentication, then do not use access
     // control
-    if (config.AUTHENTICATION_EXTERNAL) return next();
+    if (config.AUTHENTICATION_EXTERNAL) {
+        if (isLoggedIn(session)) return next();
 
-    var session = req.session;
+        var token = req.query.token;
+        if (token != null) {    // the user is not logged in yet, but credentials are available
+            // fetch user credentials from the authentication system
+            externalAuth.fetchCredentials(token, function (e, user) {
+                if (e != null) return utils.handleServerError(e, req, res);
 
-    var page = getRequestedPage(req);
-    var dir = getRequestedPath(req);
-
-    // if the user is not logged in => redirect them to login
-    // login is exempted from the access control
-    if (!isLoggedIn(session)) {
-        if (log.debug())
-            log.debug('Session data missing for page %s, dir %s ...', page, dir);
-
-        var isAjax = req.xhr;
-        if (isAjax) {
-            if (log.debug())
-                log.debug('Session data missing for AJAX API call, blocking!');
-            utils.handleNoPermission(req, res);
-        } else {
-            redirect(res, 'login.html');
+                loginUser(session, {
+                    username: user.email,
+                    theme: user.theme
+                });
+                next();
+            })
         }
-    } else {
-        next();
+        else {
+            // the user is not logged in and the credentials are not available
+            // open the page normally, the page will then redirect the user
+            // to the login
+            next();
+        }
+    }
+    else {
+        var page = getRequestedPage(req);
+        var dir = getRequestedPath(req);
+
+        // if the user is not logged in => redirect them to login
+        // login is exempted from the access control
+        if (!isLoggedIn(session)) {
+            if (log.debug())
+                log.debug('Session data missing for page %s, dir %s ...', page, dir);
+
+            var isAjax = req.xhr;
+            if (isAjax) {
+                if (log.debug())
+                    log.debug('Session data missing for AJAX API call, blocking!');
+                utils.handleNoPermission(req, res);
+            } else {
+                redirect(res, 'login.html');
+            }
+        } else {
+            next();
+        }
     }
 }
 
@@ -2938,10 +2960,6 @@ function initServer(sessionStore, parseCookie) {
     // INTEGRATION
     if (config.USE_BROKER) {
         fzi.initWs(app);
-    }
-    if (config.AUTHENTICATION_EXTERNAL) {
-        externalAuth.initExternalAuth(app);
-        externalAuth.setSessionStore(sessionStore);
     }
     //==============================================
 

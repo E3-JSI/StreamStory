@@ -13,43 +13,10 @@ var userDetailsOpts = {
     method: 'GET'
 }
 
-function loginUser(session, email, cb) {
-    log.info('Logging in user %s ...', email);
-
-    db.userExists(email, function (e, exists) {
-        if (e != null) return cb(e);
-
-        if (!exists) {
-            log.info('User does not exist, will create new one ...');
-
-            var dummyHash = utils.hashPassword('Some dummy password!');
-
-            db.createUser(email, dummyHash, function (e) {
-                if (e != null) return cb(e);
-
-                db.fetchUserByEmail(email, function (e, user) {
-                    if (e != null) return cb(e);
-                    if (user == null) return cb(new Error('Failed to fetch the user from the database!'));
-
-                    log.info('User successfully logged in!');
-                    session.username = email;
-                    session.theme = user.theme;
-                    cb();
-                });
-            })
-        }
-        else {
-            db.fetchUserByEmail(email, function (e, user) {
-                if (e != null) return cb(e);
-                if (user == null) return cb(new Error('Failed to fetch the user from the database!'));
-
-                log.info('User successfully logged in!');
-                session.username = email;
-                session.theme = user.theme;
-                cb();
-            });
-        }
-    })
+function getCredentialsRqOpts(token) {
+    var opts = utils.clone(userDetailsOpts);
+    opts.path += '?session=' + token;
+    return opts;
 }
 
 exports.prepDashboard = function (opts, sessionId) {
@@ -63,119 +30,84 @@ exports.prepDashboard = function (opts, sessionId) {
     }
 }
 
-exports.initExternalAuth = function (app) {
-    log.info('Initializing external authentication service ...');
+exports.fetchCredentials = function (token, callback) {
+    var opts = getCredentialsRqOpts(token);
 
-    app.post('/login/token', function (req, res) {
-        try {
-            log.info('Received request with token, fetching user credentials ...');
+    var creadentialsReq = http.request(opts, function (creadentialsRes) {
+        if (creadentialsRes.statusCode < 200 || 300 <= creadentialsRes.statusCode) {
+            callback(new Error('Failed to get user credentials from external server!'));
+            return;
+        }
 
-            // use the token from the request body to query user
-            // credentials
-            var token = req.body.token;
-            var sessionId = req.body.session;
+        var msgJson = '';
+        creadentialsRes.on('data', function (chunk) {
+            msgJson += chunk;
+        });
+        creadentialsRes.on('end', function () {
+            try {
+                if (log.trace())
+                    log.trace('Received message: %s', msgJson);
 
-            if (log.debug())
-                log.debug('Token: %s', token);
-            if (log.debug())
-                log.debug('Session ID: %s', sessionId);
+                var response = JSON.parse(msgJson);
 
-            var opts = (function () {
-                var opts = utils.clone(userDetailsOpts);
-                opts.path += '?session=' + token;
-                return opts;
-            })();
-
-            sessionStore.get(sessionId, function (wtf, session) {
-                log.info('Found in session store: %s', JSON.stringify(arguments));
-                if (session == null) {
-                    log.warn('External authentication failed, could not find session with ID: %s', sessionId);
-                    utils.handleBadInput(res, 'Could not find session with provided ID!');
+                // check for success
+                if (!response.success) {
+                    log.warn('User failed to login!');
+                    callback(new Error('Got unsuccessful response!'));
                     return;
                 }
 
-                var creadentialsReq = http.request(opts, function (creadentialsRes) {
-                    if (creadentialsRes.statusCode < 200 || 300 <= creadentialsRes.statusCode) {
-                        utils.handleServerError(new Error('Failed to get user credentials from external server!'), req, res);
-                        return;
-                    }
+                var credentials = response.authc.credentials.name;
 
-                    var msgJson = '';
-                    creadentialsRes.on('data', function (chunk) {
-                        msgJson += chunk;
-                    });
-                    creadentialsRes.on('end', function () {
-                        try {
-                            if (log.trace())
-                                log.trace('Received message: %s', msgJson);
+                log.info('Got from external server: %s', JSON.stringify(response));
 
-                            var response = JSON.parse(msgJson);
+                if (credentials.name == null) {
+                    log.warn('Got NULL name from external authentication!');
+                    callback(new Error('Got NULL name!'));
+                    return;
+                }
 
-                            // check for success
-                            if (!response.success) {
-                                log.warn('User failed to login!');
-                                utils.handleServerError(new Error('Got unsuccessful response!'), req, res);
-                                return;
-                            }
+                var email = credentials.name;
 
-                            var credentials = response.authc.credentials.name;
+                log.info('Received credentials %s using the token ...', email);
 
-                            log.info('Got from external server: %s', JSON.stringify(response));
+                db.fetchUserByEmail(email, function (e, user) {
+                    if (e != null) return callback(e);
+                    if (user == null) return callback(new Error('Failed to fetch the user from the database!'));
 
-                            if (credentials.name == null) {
-                                log.warn('Got NULL name from external authentication!');
-                                utils.handleServerError(new Error('Got NULL name!'), req, res);
-                                return;
-                            }
-
-                            var email = credentials.name;
-
-                            log.info('Received credentials %s using the token ...', email);
-
-                            loginUser(session, email, function (e) {
-                                if (e != null) {
-                                    utils.handleServerError(e, req, res);
-                                    return;
-                                }
-
-                                utils.handleNoContent(req, res);
-                            })
-                        } catch (e) {
-                            utils.handleServerError(e, req, res);
-                        }
-                    });
-                })
-
-                creadentialsReq.on('socket', function (socket) {
-                    if (log.trace())
-                        log.trace('Setting timeout ...');
-
-                    socket.setTimeout(config.AUTHENTICATION_TIMEOUT);
-                    socket.on('timeout', function() {
-                        if (log.warn())
-                            log.warn('Socket timeout %s:%s, aborting request ...', opts.hostname, opts.port);
-                        creadentialsReq.abort();
-                    });
+                    callback(undefined, user);
                 });
+            } catch (e) {
+                callback(e);
+            }
+        });
+    })
 
-                creadentialsReq.on('error', function (e) {
-                    if (e.code === "ECONNRESET") {
-                        log.info('Connection reset %s:%s', opts.hostname, opts.port);
-                    } else if (e.code === 'ETIMEDOUT') {
-                        log.info('Timedout occurred for host: %s:%s', opts.hostname, opts.port);
-                    } else {
-                        log.error(e, 'Failed to send HTTP pool %s:%s', opts.hostname, opts.port);
-                    }
+    creadentialsReq.on('socket', function (socket) {
+        if (log.trace())
+            log.trace('Setting timeout ...');
 
-                    utils.handleServerError(e, req, res);
-                });
-
-                creadentialsReq.end();
-            })
-        } catch (e) {
-            utils.handleServerError(e, req, res);
-        }
+        socket.setTimeout(config.AUTHENTICATION_TIMEOUT);
+        socket.on('timeout', function() {
+            if (log.warn())
+                log.warn('Socket timeout %s:%s, aborting request ...', opts.hostname, opts.port);
+            creadentialsReq.abort();
+        });
     });
+
+    creadentialsReq.on('error', function (e) {
+        if (e.code === "ECONNRESET") {
+            log.info('Connection reset %s:%s', opts.hostname, opts.port);
+        } else if (e.code === 'ETIMEDOUT') {
+            log.info('Timedout occurred for host: %s:%s', opts.hostname, opts.port);
+        } else {
+            log.error(e, 'Failed to send HTTP pool %s:%s', opts.hostname, opts.port);
+        }
+
+        callback(e);
+    });
+
+    creadentialsReq.end();
 }
 
 exports.setSessionStore = function (store) {

@@ -6,6 +6,7 @@
 # Vim files
 *.swp
 .vimrc
+tags
 
 # Git files
 *.orig
