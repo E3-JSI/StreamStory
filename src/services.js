@@ -29,6 +29,8 @@ var WS_PATH = '/ws';
 
 var LONG_REQUEST_TIMEOUT = 1000*60*60*24;
 
+var FZI_TOKEN_KEY = 'fzi-token';
+
 var app = express();
 
 var fileBuffH = {};	// if I store the file buffer directly into the session, the request takes forever to complete
@@ -822,7 +824,12 @@ function initLoginRestApi() {
     app.post(API_PATH + '/logout', function (req, res) {
         try {
             cleanUpSession(req.sessionID, req.session);
-            redirect(res, '../login.html');
+
+            if (config.AUTHENTICATION_EXTERNAL) {
+                redirect(res, '../dashboard.html');
+            } else {
+                redirect(res, '../login.html');
+            }
         } catch (e) {
             utils.handleServerError(e, req, res);
         }
@@ -2719,7 +2726,7 @@ function getPageOpts(req, next) {
     }
 
     // add the options necessary for external authentication
-    externalAuth.prepDashboard(opts, req.sessionID);
+    externalAuth.prepDashboard(opts);
 
     return opts;
 }
@@ -2859,11 +2866,11 @@ function accessControl(req, res, next) {
     // if using external authentication, then do not use access
     // control
     if (config.AUTHENTICATION_EXTERNAL) {
-        if (isLoggedIn(session)) return next();
-
         var token = req.query.token;
-        if (token != null) {    // the user is not logged in yet, but credentials are available
-            // fetch user credentials from the authentication system
+
+        if (token == null) return next();
+
+        var fetchCredentials = function () {
             externalAuth.fetchCredentials(token, function (e, user) {
                 if (e != null) return utils.handleServerError(e, req, res);
 
@@ -2871,14 +2878,23 @@ function accessControl(req, res, next) {
                     username: user.email,
                     theme: user.theme
                 });
+
+                session[FZI_TOKEN_KEY] = token;
+
                 next();
             })
         }
-        else {
-            // the user is not logged in and the credentials are not available
-            // open the page normally, the page will then redirect the user
-            // to the login
-            next();
+
+        if (isLoggedIn(session)) {
+            if (session[FZI_TOKEN_KEY] != token) {
+                // fetch user credentials from the authentication system
+                fetchCredentials();
+            } else {
+                return next();
+            }
+        } else {
+            // fetch user credentials from the authentication system
+            fetchCredentials();
         }
     }
     else {
@@ -3062,4 +3078,8 @@ exports.init = function (opts) {
     }
 
     log.info('Done!');
+
+    if (config.AUTHENTICATION_EXTERNAL) {
+        externalAuth.setDb(db);
+    }
 };

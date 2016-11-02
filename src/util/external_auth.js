@@ -2,29 +2,28 @@ var http = require('http');
 
 var config = require('../../config.js');
 var utils = require('../utils.js');
-var db = require('../db/mysqldb.js');
 
-var sessionStore = null;
+var db = null;
 
 var userDetailsOpts = {
     hostname: config.AUTHENTICATION_HOST,
     port: 80,
-    path: 'semantic-epa-backend/api/v2/admin/sso',
+    path: '/semantic-epa-backend/api/v2/admin/sso',
     method: 'GET'
 }
 
 function getCredentialsRqOpts(token) {
     var opts = utils.clone(userDetailsOpts);
-    opts.path += '?session=' + token;
+    opts.path += '?token=' + token;
     return opts;
 }
 
-exports.prepDashboard = function (opts, sessionId) {
+exports.prepDashboard = function (opts) {
     if (config.AUTHENTICATION_EXTERNAL) {
         if (log.trace())
             log.trace('Preparing external authentication data for the page ...');
         opts.useExternalAuth = true;
-        opts.authenticationUrl = 'http://' + config.AUTHENTICATION_HOST + '/#/sso/streamstory?session=' + sessionId;
+        opts.authenticationUrl = 'http://' + config.AUTHENTICATION_HOST + '/#/sso/streamstory';
     } else {
         opts.useExternalAuth = false;
     }
@@ -33,20 +32,23 @@ exports.prepDashboard = function (opts, sessionId) {
 exports.fetchCredentials = function (token, callback) {
     var opts = getCredentialsRqOpts(token);
 
-    var creadentialsReq = http.request(opts, function (creadentialsRes) {
-        if (creadentialsRes.statusCode < 200 || 300 <= creadentialsRes.statusCode) {
-            callback(new Error('Failed to get user credentials from external server!'));
+    if (log.info())
+        log.info('Fetching credentials using options: %s', JSON.stringify(opts));
+
+    var credentialsReq = http.request(opts, function (credentialsRes) {
+        if (credentialsRes.statusCode < 200 || 300 <= credentialsRes.statusCode) {
+            callback(new Error('Failed to get user credentials from external server! Status code: ' + credentialsRes.statusCode));
             return;
         }
 
         var msgJson = '';
-        creadentialsRes.on('data', function (chunk) {
+        credentialsRes.on('data', function (chunk) {
             msgJson += chunk;
         });
-        creadentialsRes.on('end', function () {
+        credentialsRes.on('end', function () {
             try {
-                if (log.trace())
-                    log.trace('Received message: %s', msgJson);
+                if (log.debug())
+                    log.debug('Received message: %s', msgJson);
 
                 var response = JSON.parse(msgJson);
 
@@ -57,25 +59,36 @@ exports.fetchCredentials = function (token, callback) {
                     return;
                 }
 
-                var credentials = response.authc.credentials.name;
+                var credentials = response.info.authc.credentials;
 
-                log.info('Got from external server: %s', JSON.stringify(response));
-
-                if (credentials.name == null) {
-                    log.warn('Got NULL name from external authentication!');
-                    callback(new Error('Got NULL name!'));
+                if (credentials.email == null) {
+                    log.warn('Got NULL email from external authentication!');
+                    callback(new Error('Got NULL email!'));
                     return;
                 }
 
-                var email = credentials.name;
+                var email = credentials.email;
 
                 log.info('Received credentials %s using the token ...', email);
 
                 db.fetchUserByEmail(email, function (e, user) {
                     if (e != null) return callback(e);
-                    if (user == null) return callback(new Error('Failed to fetch the user from the database!'));
 
-                    callback(undefined, user);
+                    if (user == null) {
+                        var hash = utils.hashPassword('somedummypassword');
+                        db.createUser(email, hash, function (e1) {
+                            if (e1 != null) {
+                                return callback(e1);
+                            }
+
+                            db.fetchUserByEmail(email, function (e, user) {
+                                if (e != null) return callback(e);
+                                callback(undefined, user);
+                            })
+                        });
+                    } else {
+                        callback(undefined, user);
+                    }
                 });
             } catch (e) {
                 callback(e);
@@ -83,7 +96,7 @@ exports.fetchCredentials = function (token, callback) {
         });
     })
 
-    creadentialsReq.on('socket', function (socket) {
+    credentialsReq.on('socket', function (socket) {
         if (log.trace())
             log.trace('Setting timeout ...');
 
@@ -91,11 +104,11 @@ exports.fetchCredentials = function (token, callback) {
         socket.on('timeout', function() {
             if (log.warn())
                 log.warn('Socket timeout %s:%s, aborting request ...', opts.hostname, opts.port);
-            creadentialsReq.abort();
+            credentialsReq.abort();
         });
     });
 
-    creadentialsReq.on('error', function (e) {
+    credentialsReq.on('error', function (e) {
         if (e.code === "ECONNRESET") {
             log.info('Connection reset %s:%s', opts.hostname, opts.port);
         } else if (e.code === 'ETIMEDOUT') {
@@ -107,9 +120,9 @@ exports.fetchCredentials = function (token, callback) {
         callback(e);
     });
 
-    creadentialsReq.end();
+    credentialsReq.end();
 }
 
-exports.setSessionStore = function (store) {
-    sessionStore = store;
+exports.setDb = function (_db) {
+    db = _db;
 }
