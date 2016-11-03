@@ -147,13 +147,13 @@ function initGC() {
 
     var stores = base.getStoreList();
 
-    function gcaggr() {
+    function gcaggr(store) {
         return {
-            onAdd: function (val) {
+            onAdd: function () {
                 try {
-                    if (val.$store.length >= config.GC_INTERVAL) {
+                    if (store.length >= config.GC_INTERVAL) {
                         if (log.debug())
-                            log.debug('Store %s triggered GC ...', val.$store.name);
+                            log.debug('Store %s triggered GC ...', store.name);
                         base.garbageCollect();
                     }
                 } catch (e) {
@@ -163,13 +163,13 @@ function initGC() {
         }
     }
 
-    function loggerAggr() {
+    function loggerAggr(store) {
         return {
-            onAdd: function (val) {
+            onAdd: function () {
                 try {
-                    var len = val.$store.length;
+                    var len = store.length;
                     if (len % config.STORE_PRINT_INTERVAL == 0 && log.debug())
-                        log.debug('Store %s has %d records ...', val.$store.name, len);
+                        log.debug('Store %s has %d records ...', store.name, len);
                 } catch (e) {
                     log.error(e, 'Exception while printing store statistics!');
                 }
@@ -184,20 +184,20 @@ function initGC() {
         var store = base.store(storeName);
 
         if (log.debug())
-            log.debug('Initializing store %s ...', JSON.stringify(store));
+            log.debug('Initializing store %s ...', store.name);
 
         // garbagge collector for the stores that have a window
         if (storeJson.window != null) {
             log.info('Adding GC trigger to store %s ...', storeName);
 
-            store.addTrigger(gcaggr());
+            store.addTrigger(gcaggr(store));
         }
 
         log.info('Adding print trigger to store %s ...', storeName);
 
         // print statistics on all the stores
         try {
-            store.addTrigger(loggerAggr());
+            store.addTrigger(loggerAggr(store));
         } catch (e) {
             log.error(e, 'Failed to add print trigger to store: %s', storeName);
         }

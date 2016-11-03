@@ -521,8 +521,8 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 							val = parseFloat(fin.readString());
 						},
 						onAdd: function (rec) {
-							var makeUpRot = rec['tr_rot_makeup'];
-							var breakOutRot = rec['tr_rot_breakout'];
+							var makeUpRot = rec.tr_rot_makeup;
+							var breakOutRot = rec.tr_rot_breakout;
 							
 							if (breakOutRot > makeUpRot) {
 								val = -breakOutRot;
@@ -558,9 +558,9 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 							val = parseFloat(fin.readString());
 						},
 						onAdd: function (rec) {
-							var spinningIn = rec['hrn_spinning_in'];
-							var spinningOut = rec['hrn_spinning_out'];
-							var clampClosed = rec['hrn_spinner_clamp_closed'];
+							var spinningIn = rec.hrn_spinning_in;
+							var spinningOut = rec.hrn_spinning_out;
+							var clampClosed = rec.hrn_spinner_clamp_closed;
 							
 							if (clampClosed) {
 								if (spinningIn > 0) {
@@ -591,22 +591,22 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 				create: function () {
 					var val = 0;
 					
-					return {
-						type: 'javaScript',
-						name: 'HrnTravelVelocity',
-						saveJson: function () {
-							return { val: val };
-						},
-						save: function (fout) {
-							fout.write(val + '');
-						},
-						load: function (fin) {
-							val = parseFloat(fin.readString());
-						},
-						onAdd: function (rec) {
-							var forward = rec['travel_forward'];
-							var backward = rec['travel_backward'];
-							var absVal = rec['hrn_travel_valve'];
+                    return {
+                        type: 'javaScript',
+                        name: 'HrnTravelVelocity',
+                        saveJson: function () {
+                            return { val: val };
+                        },
+                        save: function (fout) {
+                            fout.write(val + '');
+                        },
+                        load: function (fin) {
+                            val = parseFloat(fin.readString());
+                        },
+                        onAdd: function (rec) {
+                            var forward = rec.travel_forward;
+                            var backward = rec.travel_backward;
+                            var absVal = rec.hrn_travel_valve;
 							
 							if (forward > 0) {
 								val = absVal;
@@ -645,9 +645,9 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 							val = parseFloat(fin.readString());
 						},
 						onAdd: function (rec) {
-							var up = rec['hrn_elevate_up'];
-							var down = rec['hrn_elevate_down'];
-							var absVal = rec['hrn_elevation_up_down'];
+							var up = rec.hrn_elevate_up;
+							var down = rec.hrn_elevate_down;
+							var absVal = rec.hrn_elevation_up_down;
 							
 							if (up > 0) {
 								val = absVal;
@@ -734,7 +734,7 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 						},
 						onAdd: function (rec) {
 							var mean = rec['Hook load 3h mean'];
-							var hl = rec['hook_load'];
+							var hl = rec.hook_load;
 							
 							val = (hl - mean) / mean;
 							
@@ -775,7 +775,7 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 						},
 						onAdd: function (rec) {
 							var mean = rec['Hook load 3h mean'];
-							var hl = rec['hook_load'];
+							var hl = rec.hook_load;
 							val = hl - mean;
 						},
 						getFloat: function () {
@@ -867,6 +867,7 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 	    
 	    enrichedStore.window = WINDOW_SIZE;
 	    oaInStore.window = WINDOW_SIZE;
+        streamStoryStore.window = WINDOW_SIZE;
 	    
 	    return rawStores.concat(otherStores)
 	    					  .concat([enrichedStore, oaInStore, streamStoryStore]);
