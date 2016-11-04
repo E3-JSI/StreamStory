@@ -1,0 +1,69 @@
+1) clone StreamStory using git:
+    git clone https://github.com/JozefStefanInstitute/StreamStory.git
+
+
+2) setup the directory structure and environment variables
+    To run, StreamStory needs three directories and two ports, which must be defined using environment variables. 
+
+    Create data directories using the following commands:
+        mkdir -p ~/streamstory-data/db
+        mkdir -p ~/streamstory-data/models
+    Create a configuration directory using the following command:
+        mkdir -p ~/config
+
+
+3) initialize environment variables:
+    Create a file which initializes the enrivonment variables needed to run StreamStory. Examples are aready provided, so you can just edit them to match your system.
+
+        cp StreamStory/docker/env/nissa.sh streamstory-env.sh
+
+    Edit file 'streamstory-env.sh'. Use the following configuration:
+        export DATABASE_DIR=~/streamstory-data/db
+        export MODELS_DIR=~/streamstory-data/models
+        export CONFIG_DIR=~/config
+        export STREAMSTORY_PORT=8181
+        export DATABASE_PORT=3308
+
+    Apply the environment variables. Note that this step will have to be performed every time StreamStory is run from a new shell:
+        source streamstory-env.sh
+
+
+4) compile StreamStory and initialize the database:
+
+    Save the currrent directory:
+        pushd .
+    Compile StreamStory:
+        cd StreamStory/docker
+        docker-compose build
+    Initialize the database. Run the following command and wait for the database to initialize. After 5 minutes stop the command using CTRL-c:
+        docker-compose up streamstory-db
+    Return to the directory where you started:
+        popd
+
+5) setup the configuration file
+
+    StreamStory expects a JSON configuration file in directory defined by environment variable $CONFIG_DIR. To configure StreamStory we will edit a predefined configuration:
+        cp StreamStory/docker/config-streamstory.json $CONFIG_DIR/config-streamstory.json
+    Open file '$CONFIG_DIR/config-streamstory.json' and set the following options:
+        - integration.brokerUrl:            set to the URL of the broker
+        - integration.authentication.host:  set to the URL of the StreamPipes component
+        - useCase:                          set to either 'mhwirth' or 'hella' 
+
+6) verify that the installation succeeded
+
+    Run the following commands to start StreamStory:
+        pushd .
+        cd StreamStory/docker
+        docker-compose up
+    Now open your browser and go to: %HOST:8181. You should see StreamStory's landing page. If this is not the case, then please contact the system administrator.
+
+    If the you were able to see the landing page, then stop the component using CTRL-c and go back to your previous directory using 'popd'.
+
+7) run StreamStory
+
+    To run StreamStory execute the following commands:
+        cd StreamStory/docker
+        docker-compose up
+    To run the component in the background use the following commands:
+        cd StreamStory/docker
+        docker-compose up -d
