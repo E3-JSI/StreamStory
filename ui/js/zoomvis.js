@@ -1132,11 +1132,13 @@ var zoomVis = function (opts) {
             cy.endBatch();
     }
 
-    function redrawAll() {
+    function redrawAll(forceRedraw) {
         cy.startBatch();
 
         setCurrentLevel(currentLevel, true);
-        // redraw({ isInBatch: true });
+        if (forceRedraw) {
+            redraw({ isInBatch: true });
+        }
         redrawSpecial(true);
 
         cy.endBatch();
@@ -1924,7 +1926,7 @@ var zoomVis = function (opts) {
 
         setTransitionThreshold: function (threshold) {
             transitionThreshold = Math.max(0.5, Math.min(1, threshold));
-            redrawAll();
+            redrawAll(true);
         },
 
         setProbDist: function (dist) {

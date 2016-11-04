@@ -62,8 +62,10 @@
 7) run StreamStory
 
     To run StreamStory execute the following commands:
+        source streamstory-env.sh
         cd StreamStory/docker
         docker-compose up
     To run the component in the background use the following commands:
+        source streamstory-env.sh
         cd StreamStory/docker
         docker-compose up -d

@@ -5,4 +5,4 @@
 (*) kot receno - se kaksen vecji realisticni primer v bi bil zelo koristen, ko se prepricuje ljudi, da ta zadeva zmore resevati vecje aplikacije
 
 NUJNO:
-- nastavljanje manj povezav ne deluje (spodnji scroll bar)
+- ko assignas state v activity, se spodaj prikazujejo vejice
