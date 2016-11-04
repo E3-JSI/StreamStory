@@ -2122,7 +2122,7 @@
 
                 var stateStr = name != null ? name : label;
 
-                $('#div-curr-activity-step').find('.thumbnail').append((currStepSize > 0 ? ', ' : '') + '<span id="step-' + currStepN + '-' + stateId + '" style="display: none;">' + stateStr + '</span>');
+                $('#div-curr-activity-step').find('.thumbnail').append('<span id="step-' + currStepN + '-' + stateId + '" style="display: none;">' + stateStr + '</span>');
 
                 // set the background in the visualization
                 viz.setNodeColor(stateId, getStepColor());
