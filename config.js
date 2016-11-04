@@ -93,7 +93,7 @@ if (config.integration.authentication != null) {
 
     exports.AUTHENTICATION_EXTERNAL = true;
     exports.AUTHENTICATION_HOST = config.integration.authentication.host;
-    exports.AUTHENTICATION_TIMEOUT = config.integration.authentication.timeout != null ? 
+    exports.AUTHENTICATION_TIMEOUT = config.integration.authentication.timeout != null ?
                                         config.integration.authentication.timeout :
                                         10000;
 }
@@ -163,11 +163,13 @@ exports.database = config.database;
 //================================================================
 // STREAM STORY
 //================================================================
+var seed = config.seed != null ? config.seed : 0;
+
 exports.STREAM_STORY_PARAMS = {
     transitions: {
         type: 'continuous'
     },
-    rndseed: 0,
+    rndseed: seed,
     pastStates: 2,
     verbose: true
 }

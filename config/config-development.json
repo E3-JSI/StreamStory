@@ -44,6 +44,7 @@
         }
     },
     "useCase": "mhwirth",
+    "seed": 1,
     "saveStates": false,
     "saveActivities": false,
     "saveFriction": true,
