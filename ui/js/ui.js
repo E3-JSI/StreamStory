@@ -1136,19 +1136,19 @@
             });
         }
 
-        function onZoomIntoState(stateId) {
-            // get the sub model
-            $.ajax('api/subModel', {
-                dataType: 'json',
-                method: 'GET',
-                data: { stateId: stateId },
-                success: function (model) {
-                    viz.setSubModel(model);
-                    $('#btn-viz-back').removeClass('hidden');
-                },
-                error: handleAjaxError()
-            });
-        }
+        // function onZoomIntoState(stateId) {
+        //     // get the sub model
+        //     $.ajax('api/subModel', {
+        //         dataType: 'json',
+        //         method: 'GET',
+        //         data: { stateId: stateId },
+        //         success: function (model) {
+        //             viz.setSubModel(model);
+        //             $('#btn-viz-back').removeClass('hidden');
+        //         },
+        //         error: handleAjaxError()
+        //     });
+        // }
 
         function showPath(stateId, height) {
             // get the sub model
@@ -1959,22 +1959,22 @@
 
         viz.onStateCtxMenu(function (id, label, level, height) {
             var result = [
-                {
-                    content: 'Show Path',
-                    select: function () {
-                        showPath(id, height);
-                    }
-                }
+                // {
+                //     content: 'Show Path',
+                //     select: function () {
+                //         showPath(id, height);
+                //     }
+                // }
             ];
 
-            if (level > 1) {
-                result.push({
-                    content: 'Zoom Into',
-                    select: function () {
-                        onZoomIntoState(id);
-                    }
-                });
-            }
+            // if (level > 1) {
+            //     result.push({
+            //         content: 'Zoom Into',
+            //         select: function () {
+            //             onZoomIntoState(id);
+            //         }
+            //     });
+            // }
 
             if (TAB_ID == 'a-activities') {
                 result.push({

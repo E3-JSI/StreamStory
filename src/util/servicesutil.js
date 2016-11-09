@@ -110,7 +110,8 @@ module.exports = exports = function (opts) {
         socket.on('pong', function () {
             if (log.trace())
                 log.trace('Received pong %d', id);
-            sockets[id].gotPong = true;
+            if (id in sockets)
+                sockets[id].gotPong = true;
         });
 
         socket.on('error', function (e) {
