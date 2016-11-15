@@ -1,5 +1,8 @@
 - vkljuci napovedovanje scrap delov v Helli v sistem
-- socket idle problem!! popravi!!
 (*) decision tree fonti so zelo majni - ali bi lahko naredil, da se da povecati fonte, podobno kot zgoraj pri mrezi
 (*) se da narediti, da bi podokna lahko malo premikal (siril, ozal)?
 (*) kot receno - se kaksen vecji realisticni primer v bi bil zelo koristen, ko se prepricuje ljudi, da ta zadeva zmore resevati vecje aplikacije
+
+NUJNO!!!!!!!!!!!!!
+- preveri, ce deluje menjava current state-a kot pricakovano
+-- zgleda, da je problem pri previous state-u
