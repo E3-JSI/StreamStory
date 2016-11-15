@@ -1276,9 +1276,9 @@ var zoomVis = function (opts) {
                 node.css('border-color', CURRENT_NODE_COLOR);
                 //				node.css('backgroundColor', CURRENT_NODE_COLOR);
             }
-            if (nodeId in modeConfig.past) {
-                node.css('border-color', PREVIOUS_NODE_EDGE_COLOR);
-            }
+            // if (nodeId in modeConfig.past) {
+            //     node.css('border-color', PREVIOUS_NODE_EDGE_COLOR);
+            // }
             if (nodeId in modeConfig.future) {
                 prob = futureColorFromProb(modeConfig.future[nodeId]);
                 color = 'hsla(' + FUTURE_NODE_BASE_COLOR + ',' + (15 + Math.floor((100-15)*prob)) + '%, 55%, 1)';
