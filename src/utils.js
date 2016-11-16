@@ -30,12 +30,13 @@ function closeBase(base) {
         base.close();
     }
 
-    log.info('Done!');
+    log.info('Base closed!');
 }
 
 function exit(base) {
     log.info('Closing application ...');
     closeBase(base);
+    log.info('exiting ...');
     process.exit(1);
 }
 
