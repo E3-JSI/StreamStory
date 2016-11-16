@@ -72,7 +72,7 @@ module.exports = exports = function (opts) {
         store[modelId].socketIds[socketId] = socketId;
     }
 
-    function initFieldV(fieldConfig, timeField, usedFields, storeNm, base) {
+    function initFieldV(fieldConfig, timeField, usedFields, storeNm) {
         var fields = [];
         for (var i = 0; i < fieldConfig.length; i++) {
             var field = fieldConfig[i];
@@ -485,63 +485,70 @@ module.exports = exports = function (opts) {
                     var nLines = lines.length;
 
                     for (var entryN = 0; entryN < nLines; entryN++) {
-                        var lineArr = lines[entryN];
+                        var lineArr;
 
-                        if (++lineN % 10000 == 0 && log.debug()) {
-                            log.debug('Read %d lines ...', lineN);
-                        }
+                        try {
+                            lineArr = lines[entryN];
 
-                        if (lineN % 1000 == 0) {
-                            updateProgress(username, false, 20, 'Read ' + lineN + ' lines ...');
-                        }
-
-                        var recJson = {};
-                        for (var i = 0; i < headers.length; i++) {
-                            var attr = headers[i].name;
-                            var type = headerTypes[i];
-
-                            if (attr == '') continue;
-
-                            if (type == 'time') {
-                                var date = new Date(parseFloat(lineArr[i]));
-                                var qmDate = utils.dateToQmDate(date);
-                                if (log.trace())
-                                    log.trace('Parsed date: %s', date.toString());
-
-                                recJson[attr] = qmDate;
-                                timeV.push(date.getTime());
+                            if (++lineN % 10000 == 0 && log.debug()) {
+                                log.debug('Read %d lines ...', lineN);
                             }
-                            else if (type == 'numeric') {
-                                var val = lineArr[i];
 
-                                if (attr in attrSet && isNaN(val)) {
-                                    log.warn('Invalid line: %s', JSON.stringify(lineArr));
-                                    throw new Error('Received non-numeric for field: ' + attr + ', val: ' + val);
+                            if (lineN % 1000 == 0) {
+                                updateProgress(username, false, 20, 'Read ' + lineN + ' lines ...');
+                            }
+
+                            var recJson = {};
+                            for (var i = 0; i < headers.length; i++) {
+                                var attr = headers[i].name;
+                                var type = headerTypes[i];
+
+                                if (attr == '') continue;
+
+                                if (type == 'time') {
+                                    var date = new Date(parseFloat(lineArr[i]));
+                                    var qmDate = utils.dateToQmDate(date);
+                                    if (log.trace())
+                                        log.trace('Parsed date: %s', date.toString());
+
+                                    recJson[attr] = qmDate;
+                                    timeV.push(date.getTime());
                                 }
+                                else if (type == 'numeric') {
+                                    var val = lineArr[i];
 
-                                val = parseFloat(lineArr[i]);
+                                    if (attr in attrSet && isNaN(val)) {
+                                        log.warn('Invalid line: %s', JSON.stringify(lineArr));
+                                        throw new Error('Received non-numeric for field: ' + attr + ', val: ' + val);
+                                    }
 
-                                if (isNaN(val)) { val = 0; }
+                                    val = parseFloat(lineArr[i]);
 
-                                recJson[attr] = parseFloat(val);
+                                    if (isNaN(val)) { val = 0; }
+
+                                    recJson[attr] = parseFloat(val);
+                                }
+                                else if (type == 'nominal') {
+                                    var val = lineArr[i];
+
+                                    if (val == null || val == '') val = '(missing)';
+
+                                    recJson[attr] = val.toString();
+                                }
+                                else {
+                                    throw new Error('Unknown field type when parsing CSV: ' + type);
+                                }
                             }
-                            else if (type == 'nominal') {
-                                var val = lineArr[i];
 
-                                if (val == null || val == '') val = '(missing)';
+                            if (log.trace())
+                                log.trace('Inserting value: %s', JSON.stringify(recJson));
 
-                                recJson[attr] = val.toString();
-                            }
-                            else {
-                                throw new Error('Unknown field type when parsing CSV: ' + type);
-                            }
+                            // create the actual record and update the feature spaces
+                            recs.push(store.newRecord(recJson));
+                        } catch (e) {
+                            log.error(e, 'Exception while parsing line ' + lineN + ': ' + JSON.stringify(lineArr));
+                            throw e;
                         }
-
-                        if (log.trace())
-                            log.trace('Inserting value: %s', JSON.stringify(recJson));
-
-                        // create the actual record and update the feature spaces
-                        recs.push(store.newRecord(recJson));
                     }
                 }, function onEnd(e) {
                     if (e != null) {
