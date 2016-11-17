@@ -1511,7 +1511,7 @@
             $("#threshold_slider").slider({
                 value: prevVal,
                 min: 0.5,
-                max: 1,
+                max: 1.01,
                 step: 0.01,
                 animate:"slow",
                 orientation: "hotizontal",
