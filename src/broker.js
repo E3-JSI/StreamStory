@@ -125,11 +125,12 @@ function initConsumer(callback) {
                 if (topic == topics.TOPIC_REPLAY_START) {
                     log.info('Received replay start message: %s', msg.value);
                     if (config.RESTART_ON_REPLAY) {
-                        log.info('Restarting component in 5 seconds ...');
+                        log.info('Will restart after a small delay ...');
 
                         setTimeout(function () {
+                            log.info('Restarting ...');
                             process.exit(0);
-                        }, 5000)
+                        }, 5000);
                         return;
                     } else {
                         log.info('Will not restart, not configured to do so!');
