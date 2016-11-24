@@ -130,6 +130,7 @@ function initConsumer(callback) {
                         setTimeout(function () {
                             process.exit(0);
                         }, 5000)
+                        return;
                     } else {
                         log.info('Will not restart, not configured to do so!');
                         return;
