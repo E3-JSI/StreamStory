@@ -51,6 +51,7 @@ RUN npm install -g node-gyp@$NODE_GYP_VERSION
 # make the directory structure
 RUN mkdir app
 
+RUN echo 'refreshing qminer ...'
 # QMINER
 RUN cd app && \
 	git clone https://github.com/lstopar/qminer.git && \
@@ -65,6 +66,8 @@ RUN cd app/qminer && \
 	node-gyp configure -- -DLIN_ALG_BLAS=BLAS -DLIN_ALG_LAPACKE=LAPACKE -DLIN_ALG_LIB=-llapacke && \
 	node-gyp build --jobs 20
 
+RUN echo 'Refreshing streamstory ...'
+
 # STREAM STORY
 RUN cd app && \
 	git clone https://github.com/JozefStefanInstitute/StreamStory.git && \
@@ -73,6 +76,10 @@ RUN cd app && \
 	npm install
 
 RUN cd app && mkdir ss-db
+
+# TODO remove
+RUN which npm
+RUN readlink /usr/bin/npm
 
 #==================================================
 # ENTRY POINT

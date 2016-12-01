@@ -276,6 +276,7 @@ exports.initInputTopic = function (topic, callback) {
 }
 
 exports.initOutputTopic = function (topic, callback) {
+    if (!config.USE_BROKER) return;
     if (callback == null) throw new Error('Callback undefined!');
 
     log.info('Adding output topic: ' + topic);
@@ -297,6 +298,7 @@ exports.initOutputTopic = function (topic, callback) {
 }
 
 exports.removeInputTopic = function (topic, callback) {
+    if (!config.USE_BROKER) return;
     if (callback == null) throw new Error('Callback not defined!');
 
     log.info('Removing input topic: ' + topic);
@@ -322,6 +324,7 @@ exports.removeInputTopic = function (topic, callback) {
 }
 
 exports.removeOutputTopic = function (topic, callback) {
+    if (!config.USE_BROKER) return;
     if (callback == null) throw new Error('Callback not defined!');
 
     log.info('Removing output topic: ' + topic);

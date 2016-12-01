@@ -2,7 +2,7 @@ var async = require('async');
 
 var utils = require('../utils.js');
 
-var ACTIVITY_OPERATION = 'ActivityDetection';
+var ACTIVITY_OPERATION = 'Activity';
 var PREDICTION_OPERATION = 'Prediction';
 var OPERATION_FRICTION_GEARBOX = 'FrictionGearbox';
 var OPERATION_FRICTION_SWIVEL = 'FrictionSwivel';
@@ -370,7 +370,7 @@ var integrator = (function () {
 
                     async.parallel(parallel, function (e) {
                         if (e != null) {
-                            log.fatal('Failed to load pre-exising FZI pipelines! Terminating!!!');
+                            log.fatal(e, 'Failed to load pre-exising FZI pipelines! Terminating!!!');
                             process.exit(10);
                         }
                     })
@@ -609,18 +609,20 @@ exports.initWs = function (app) {
             var username = req.query.username;
             var operation = req.query.analyticsOperation;
 
-            log.info('Received StreamPipes request for models for user: %s', username);
+            log.info('Received StreamPipes request for models for user: %s, operation: %s', username, operation);
 
             if (username == null || username == '') {
+                log.info('Username not present!');
                 utils.handleBadInput(res, 'User field missing!');
                 return;
             }
 
             if (operation != ACTIVITY_OPERATION &&
-                operation != PREDICTION_OPERATION) {
-                    utils.handleBadInput(res, 'Field analyticsOperation should be either "activity" or "prediction"!');
-                    return;
-                }
+                        operation != PREDICTION_OPERATION) {
+                log.info('Invalid operation!');
+                utils.handleBadInput(res, 'Field analyticsOperation should be either "activity" or "prediction"!');
+                return;
+            }
 
             var activeModels = modelstore.getActiveModels();
 
@@ -629,7 +631,10 @@ exports.initWs = function (app) {
 
             var mids = [];
 
-            if (operation  == integrator.ACTIVITY_OPERATION) {
+            if (operation == ACTIVITY_OPERATION) {
+                if (log.debug())
+                    log.debug('FZI requested activity operation ...');
+                
                 (function () {
                     if (log.debug())
                         log.debug('Requested activities ...');
@@ -644,6 +649,9 @@ exports.initWs = function (app) {
                 })();
             }
             else {	// prediction
+                if (log.debug())
+                    log.debug('FZI requested prediction operation ...');
+
                 (function () {
                     if (log.debug())
                         log.debug('Requested predictive models ...');

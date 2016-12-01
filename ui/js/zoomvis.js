@@ -1225,7 +1225,6 @@ var zoomVis = function (opts) {
     }
 
     function setNodeColor(nodeId, color) {
-        console.log(color);
         var graphNode;
         if (color != null) {
             cache.getNode(nodeId).css.backgroundColor = color;

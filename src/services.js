@@ -2974,7 +2974,7 @@ function initServer(sessionStore, parseCookie) {
 
     //==============================================
     // INTEGRATION
-    if (config.USE_BROKER) {
+    if (true || config.USE_BROKER) {    // TODO fixme, remove the true
         fzi.initWs(app);
     }
     //==============================================
@@ -3069,7 +3069,7 @@ exports.init = function (opts) {
     initPipelineHandlers();
     initBroker();
 
-    if (config.USE_BROKER) {
+    if (true || config.USE_BROKER) {    // TODO fixme, remove the true
         fzi.init({
             broker: broker,
             modelStore: modelStore,
