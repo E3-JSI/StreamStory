@@ -117,66 +117,66 @@ module.exports = function () {
         }
     }
 
-    function unlockTable(conn, onsuccess, onerror) {
-        return function (result) {
-            if (log.trace())
-                log.trace('Unlocking tables ...');
+//     function unlockTable(conn, onsuccess, onerror) {
+//         return function (result) {
+//             if (log.trace())
+//                 log.trace('Unlocking tables ...');
 
-            query({
-                sql: 'UNLOCK TABLES',
-                nextOp: function (conn, onsuccess, onerror) {
-                    onsuccess(result);
-                }
-            })(conn, onsuccess, function (e) {
-                log.error(e, 'Critical, failed to unlock tables! This is very bad!');
-                onerror(e);
-            });
-        }
-    }
+//             query({
+//                 sql: 'UNLOCK TABLES',
+//                 nextOp: function (conn, onsuccess) {
+//                     onsuccess(result);
+//                 }
+//             })(conn, onsuccess, function (e) {
+//                 log.error(e, 'Critical, failed to unlock tables! This is very bad!');
+//                 onerror(e);
+//             });
+//         }
+//     }
 
-    function unlockTableErr(conn, onsuccess, onerror) {
-        return function (e)	 {
-            log.error(e, 'Exception while table locked!');
+//     function unlockTableErr(conn, onsuccess, onerror) {
+//         return function (e)	 {
+//             log.error(e, 'Exception while table locked!');
 
-            query({
-                sql: 'UNLOCK TABLES',
-                nextOp: function (conn, onsuccess, onerror) {
-                    onerror(e);
-                }
-            })(conn, onsuccess, function (e) {
-                log.error(e, 'Critical, failed to unlock tables! This is very bad!');
-                onerror(e);
-            })
-        }
-    }
+//             query({
+//                 sql: 'UNLOCK TABLES',
+//                 nextOp: function (conn, onsuccess, onerror) {
+//                     onerror(e);
+//                 }
+//             })(conn, onsuccess, function (e) {
+//                 log.error(e, 'Critical, failed to unlock tables! This is very bad!');
+//                 onerror(e);
+//             })
+//         }
+//     }
 
-    function lockTable(opts) {
-        var tables = opts.tables;
-        var nextOp = opts.nextOp;
+    // function lockTable(opts) {
+    //     var tables = opts.tables;
+    //     var nextOp = opts.nextOp;
 
-        var sql = 'LOCK TABLE ';
-        for (var i = 0; i < tables.length; i++) {
-            sql += tables[i] + ' WRITE';
-            if (i < tables.length-1)
-                sql += ',';
-        }
+    //     var sql = 'LOCK TABLE ';
+    //     for (var i = 0; i < tables.length; i++) {
+    //         sql += tables[i] + ' WRITE';
+    //         if (i < tables.length-1)
+    //             sql += ',';
+    //     }
 
-        return function (conn, onsuccess, onerror, data) {
-            if (log.trace())
-                log.trace('Locking tables %s', JSON.stringify(tables));
+    //     return function (conn, onsuccess, onerror, data) {
+    //         if (log.trace())
+    //             log.trace('Locking tables %s', JSON.stringify(tables));
 
-            query({
-                sql: sql,
-                nextOp: function (conn, onsuccess, onerror) {
-                    if (nextOp != null) {
-                        nextOp(conn, unlockTable(conn, onsuccess, onerror), unlockTableErr(conn, onsuccess, onerror), data)
-                    } else {
-                        unlockTable(conn, onsuccess, onerror)(data);
-                    }
-                }
-            })(conn, onsuccess, onerror);
-        }
-    }
+    //         query({
+    //             sql: sql,
+    //             nextOp: function (conn, onsuccess, onerror) {
+    //                 if (nextOp != null) {
+    //                     nextOp(conn, unlockTable(conn, onsuccess, onerror), unlockTableErr(conn, onsuccess, onerror), data)
+    //                 } else {
+    //                     unlockTable(conn, onsuccess, onerror)(data);
+    //                 }
+    //             }
+    //         })(conn, onsuccess, onerror);
+    //     }
+    // }
 
     function query(opts) {
         var sql = opts.sql;
@@ -210,28 +210,28 @@ module.exports = function () {
     // HELPER FUNCTIONS
     //===============================================================
 
-    function storeModel(opts, callback) {
-        var username = opts.username;
+    // function storeModel(opts, callback) {
+    //     var username = opts.username;
 
-        that.createUser(username, function (e) {
-            if (e != null) {
-                callback(e);
-                return;
-            }
+    //     that.createUser(username, function (e) {
+    //         if (e != null) {
+    //             callback(e);
+    //             return;
+    //         }
 
-            pool.getConnection(function (e1, conn) {
-                if (e1 != null) {
-                    callback(e1);
-                    return;
-                }
+    //         pool.getConnection(function (e1, conn) {
+    //             if (e1 != null) {
+    //                 callback(e1);
+    //                 return;
+    //             }
 
-                conn.query('INSERT INTO model SET ?', opts, function (e2, result) {
-                    conn.release();
-                    callback(e2, result);
-                });
-            });
-        });
-    };
+    //             conn.query('INSERT INTO model SET ?', opts, function (e2, result) {
+    //                 conn.release();
+    //                 callback(e2, result);
+    //             });
+    //         });
+    //     });
+    // };
 
     function storeGeneralModel(opts) {
         var values = opts.values;
@@ -268,7 +268,8 @@ module.exports = function () {
                 } else {
                     query({
                         sql: 'INSERT INTO user SET ?',
-                        params: {email: username, passwd: password}
+                        params: {email: username, passwd: password},
+                        nextOp: nextOp
                     })(conn, onsuccess, onerror);
                 }
             }
@@ -405,7 +406,7 @@ module.exports = function () {
                             query({
                                 sql: 'INSERT INTO online_model SET ?',
                                 params: { mid: modelId, is_active: is_active },
-                                nextOp: function (conn, onsuccess, onerror, results) {
+                                nextOp: function (conn, onsuccess) {
                                     onsuccess(modelId);
                                 }
                             })(conn, onsuccess, onerror);
@@ -430,7 +431,7 @@ module.exports = function () {
                             query({
                                 sql: 'INSERT INTO offline_model SET ?',
                                 params: { mid: modelId, base_dir: baseDir },
-                                nextOp: function (conn, onsuccess, onerror, results) {
+                                nextOp: function (conn, onsuccess) {
                                     onsuccess(modelId);
                                 }
                             })(conn, onsuccess, onerror);
@@ -652,9 +653,12 @@ module.exports = function () {
         },
         setConfig: function (config, callback) {
             var props = [];
-            for (var prop in config) {
-                props.push(prop);
-            }
+
+            (function () {
+                for (var prop in config) {
+                    props.push(prop);
+                }
+            })();
 
             if (props.length == 0) {
                 callback();
@@ -663,22 +667,72 @@ module.exports = function () {
 
             var queryStr = 'REPLACE INTO config (property, value) VALUES ';
             var vals = [];
-            for (var i = 0; i < props.length; i++) {
-                var prop = props[i];
 
-                queryStr += '(?, ?)';
-                vals.push(prop);
-                vals.push(config[prop]);
+            (function () {
+                for (var i = 0; i < props.length; i++) {
+                    var prop = props[i];
 
-                if (i < props.length - 1)
-                    queryStr += ', ';
-            }
+                    queryStr += '(?, ?)';
+                    vals.push(prop);
+                    vals.push(config[prop]);
+
+                    if (i < props.length - 1)
+                        queryStr += ', ';
+                }
+            })();
 
             connection({
                 callback: callback,
                 nextOp: query({
                     sql: queryStr,
                     params: vals
+                })
+            });
+        },
+
+        //================================================
+        // INTEGRATION WITH FZI
+        //================================================
+
+        insertPipeline: function (pid, config, callback) {
+            var opts = {
+                pid: pid,
+                config: JSON.stringify(config)
+            }
+            connection({
+                callback: callback,
+                nextOp: query({
+                    sql: 'INSERT INTO pipelines SET ?',
+                    params: [opts]
+                })
+            });
+        },
+
+        removePipeline: function (pid, callback) {
+            connection({
+                callback: callback,
+                nextOp: query({
+                    sql: 'DELETE FROM pipelines WHERE pid = ?',
+                    params: [pid]
+                })
+            });
+        },
+
+        fetchAllPipelines: function (callback) {
+            connection({
+                callback: callback,
+                nextOp: query({
+                    sql: 'SELECT * FROM pipelines',
+                    nextOp: function (conn, onsuccess, onerror, pipelines) {
+                        var result = [];
+                        for (var i = 0; i < pipelines.length; i++) {
+                            result.push({
+                                pid: pipelines[i].pid,
+                                config: JSON.parse(pipelines[i].config)
+                            })
+                        }
+                        onsuccess(result);
+                    }
                 })
             });
         }

@@ -86,6 +86,22 @@ if (config.resampleInterval == null) {
 
 
 //================================================================
+// LOGIN CONFIGURATION
+//================================================================
+if (config.integration.authentication != null) {
+    log.info('Using external authentication: %s', config.integration.authentication)
+
+    exports.AUTHENTICATION_EXTERNAL = true;
+    exports.AUTHENTICATION_HOST = config.integration.authentication.host;
+    exports.AUTHENTICATION_TIMEOUT = config.integration.authentication.timeout != null ?
+                                        config.integration.authentication.timeout :
+                                        10000;
+}
+else {
+    exports.AUTHENTICATION_EXTERNAL = false;
+}
+
+//================================================================
 // INITIALIZATION
 //================================================================
 exports.INITIALIZE_ZERO = config.qminer.initializeZeros;
@@ -147,11 +163,13 @@ exports.database = config.database;
 //================================================================
 // STREAM STORY
 //================================================================
+var seed = config.seed != null ? config.seed : 0;
+
 exports.STREAM_STORY_PARAMS = {
     transitions: {
         type: 'continuous'
     },
-    rndseed: 0,
+    rndseed: seed,
     pastStates: 2,
     verbose: true
 }
@@ -180,6 +198,12 @@ exports.STREAM_STORY_PRINT_INTERVAL = config.log.print.streamStory;
 exports.STORE_PRINT_INTERVAL = config.log.print.stores;
 exports.BROKER_PRINT_INTERVAL = config.log.print.broker;
 exports.COEFF_PRINT_INTERVAL = config.log.print.coeff;
+
+//================================================================
+// INTEGRATION
+//================================================================
+
+exports.RESTART_ON_REPLAY = config.restartOnReplay;
 
 // set the global qm object
 global.qm = require(QM_MODULE_PATH);

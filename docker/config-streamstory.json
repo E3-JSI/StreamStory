@@ -1,13 +1,13 @@
 {
     "qminer": {
-        "path": "../qminer/",
+        "path": "/app/qminer/",
         "mode": "createClean",
         "xmode": "openReadOnly",
         "createPipeline": true,
         "initializeZeros": true
     },
     "server": {
-        "port": 8483,
+        "port": 8080,
         "pingInterval": 10000
     },
     "log": {
@@ -21,34 +21,33 @@
         },
         "print": {
             "rawData": 10000,
-            "streamStory": 100,
+            "streamStory": 1000,
             "stores": 100000,
             "broker": 1000,
             "coeff": 1000
         }
     },
     "database": {
-        "host": "localhost",
-        "user": "StreamStory",
-        "password": "StreamStory",
-        "database": "StreamStoryHella"
+        "host": "streamstory-db",
+        "user": "root",
+        "password": "root12",
+        "database": "StreamStory"
     },
     "integration": {
-        "type": "http",
+        "type": "broker",
         "brokerUrl": "192.168.84.45",
         "zookeperPort": 2181,
         "producerPort": 9092,
-        "xauthentication": {
+        "authentication": {
             "host": "192.168.84.46",
             "timeout": 10000
         }
     },
-    "useCase": "hella",
-    "seed": 1,
+    "useCase": "mhwirth",
     "saveStates": false,
     "saveActivities": false,
-    "saveFriction": true,
-    "restartOnReplay": false,
+    "saveFriction": false,
+    "restartOnReplay": true,
     "interpolation": "current",
-    "dataPath": "/mnt/raidM2T/project-data/StreamStory-hella-eval2/"
+    "dataPath": "/app/ss-db/"
 }

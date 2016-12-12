@@ -147,13 +147,13 @@ function initGC() {
 
     var stores = base.getStoreList();
 
-    function gcaggr() {
+    function gcaggr(store) {
         return {
-            onAdd: function (val) {
+            onAdd: function () {
                 try {
-                    if (val.$store.length >= config.GC_INTERVAL) {
+                    if (store.length >= config.GC_INTERVAL) {
                         if (log.debug())
-                            log.debug('Store %s triggered GC ...', val.$store.name);
+                            log.debug('Store %s triggered GC ...', store.name);
                         base.garbageCollect();
                     }
                 } catch (e) {
@@ -163,13 +163,13 @@ function initGC() {
         }
     }
 
-    function loggerAggr() {
+    function loggerAggr(store) {
         return {
-            onAdd: function (val) {
+            onAdd: function () {
                 try {
-                    var len = val.$store.length;
+                    var len = store.length;
                     if (len % config.STORE_PRINT_INTERVAL == 0 && log.debug())
-                        log.debug('Store %s has %d records ...', val.$store.name, len);
+                        log.debug('Store %s has %d records ...', store.name, len);
                 } catch (e) {
                     log.error(e, 'Exception while printing store statistics!');
                 }
@@ -184,20 +184,20 @@ function initGC() {
         var store = base.store(storeName);
 
         if (log.debug())
-            log.debug('Initializing store %s ...', JSON.stringify(store));
+            log.debug('Initializing store %s ...', store.name);
 
         // garbagge collector for the stores that have a window
         if (storeJson.window != null) {
             log.info('Adding GC trigger to store %s ...', storeName);
 
-            store.addTrigger(gcaggr());
+            store.addTrigger(gcaggr(store));
         }
 
         log.info('Adding print trigger to store %s ...', storeName);
 
         // print statistics on all the stores
         try {
-            store.addTrigger(loggerAggr());
+            store.addTrigger(loggerAggr(store));
         } catch (e) {
             log.error(e, 'Failed to add print trigger to store: %s', storeName);
         }
@@ -254,12 +254,6 @@ function calcFriction() {
     var prevEvalTime = 0;
 
     var recN = 0;
-
-    // function addToBuff(val) {
-    // 	buff.unshift(val);
-    // 	while (buff.length > BUFF_SIZE)
-    // 		buff.pop();
-    // }
 
     function resetVars() {
         buff.clear();
@@ -321,7 +315,8 @@ function calcFriction() {
                 eventId: useCase,
                 time: time,
                 zScore: zScore,
-                value: coeff*outputQ
+                value: coeff*outputQ,
+                std: dist_std*Math.abs(outputQ)
             });
         } else {
             log.warn('Coefficient callback is not defined!');
@@ -609,9 +604,12 @@ function initTriggers() {
 }
 
 exports.insertRaw = function (storeNm, val) {
+    if (storeNm == null) throw new Error('Store name is undefined!');
+
     var store = base.store(storeNm);
-    if (store == null)
-        throw new Error('Could not find store with name: ' + storeNm);
+
+    if (store == null) throw new Error('Could not find store with name: ' + storeNm);
+
     store.push(val);
 
     // if we initialize all stores with zeros, then the resampler should be
