@@ -2,101 +2,101 @@
 <html lang="en">
 <head>
     <% include partials/head %>
-    <link rel="stylesheet" href="lib/jquer-ui.css">	
-    
+    <link rel="stylesheet" href="lib/jquer-ui.css">
+
     <script type="text/javascript" src="lib/jquery-ui.min.js"></script>
     <script type="text/javascript" src="lib/bootstrap/js/bootstrap.min.js"></script>
 
-	<style>
-		.dl-horizontal dt {
-		    white-space: normal;
-		    width: 200px;
-		    text-align: left;
-		}
-	</style>
-    
+    <style>
+        .dl-horizontal dt {
+            white-space: normal;
+            width: 200px;
+            text-align: left;
+        }
+    </style>
+
     <script type="text/javascript">
-    	var TIME_UNIT = '<%= model.getModel().getTimeUnit(); %>';
-    
-		<% if (model.isOnline()) { %>
+        var TIME_UNIT = '<%= model.getModel().getTimeUnit(); %>';
 
-		var PREDICTION_THRESHOLD = <%= predictionThreshold %>;
-		var TIME_HORIZON = <%= timeHorizon %>;
-		var PDF_BINS = <%= pdfBins %>;
-		var IS_MODEL_ACTIVE = <%= modelConfig.is_active == 1; %>;
+        <% if (model.isOnline()) { %>
 
-		<% } else { %>
+        var PREDICTION_THRESHOLD = <%= predictionThreshold %>;
+        var TIME_HORIZON = <%= timeHorizon %>;
+        var PDF_BINS = <%= pdfBins %>;
+        var IS_MODEL_ACTIVE = <%= modelConfig.is_active == 1; %>;
 
-		var PREDICTION_THRESHOLD = 0;
-		var TIME_HORIZON = 0;
-		var PDF_BINS = 100;
-		var IS_MODEL_ACTIVE = false;
+        <% } else { %>
 
-		<% } %>
-		
-		<% if (theme == 'dark') { %>
+        var PREDICTION_THRESHOLD = 0;
+        var TIME_HORIZON = 0;
+        var PDF_BINS = 100;
+        var IS_MODEL_ACTIVE = false;
 
-		var THEME = 'dark';
-		var TEXT_COLOR = 'rgb(200, 200, 200)';
+        <% } %>
 
-		<% } else { %>
+        <% if (theme == 'dark') { %>
 
-		var THEME = 'light';
-		var TEXT_COLOR = '#3A3A3A';
+        var THEME = 'dark';
+        var TEXT_COLOR = 'rgb(200, 200, 200)';
 
-		<% } %>
-	</script>
+        <% } else { %>
+
+        var THEME = 'light';
+        var TEXT_COLOR = '#3A3A3A';
+
+        <% } %>
+    </script>
 </head>
 <body>
-	<nav class="navbar navbar-default">
-  		<div class="container-fluid">
-  			<% include partials/navlogo %>
+    <nav class="navbar navbar-default">
+        <div class="container-fluid">
+            <% include partials/navlogo %>
 
-    		<!-- Collect the nav links, forms, and other content for toggling -->
-    		<div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
-      			<ul class="nav navbar-nav navbar-right">
-        			<% if (model.isOnline()) { %>
-        			<li>
-        				<a id="lnk-msgs" href="#" data-placement="bottom" data-toggle="popover" title="Popover Header" data-content="Some content inside the popover">
-        					(<span id="span-num-msgs">0</span>)&nbsp;<span class="glyphicon glyphicon-comment" aria-hidden="true"></span>
-        				</a>
-        				<div id="content-msgs" class="popover fade bottom in" style="max-width: 350px; width: 350px; left: -230px; top: 50px; display: none;">
-							<div class="arrow" style="left: 260px;"></div>
-							<div id="vis_options" class="container-fluid">
-								<div style="padding-top: 12px; padding-bottom: 12px;">
-									<div class="row">
-										<div id="div-messages" class="col-md-12">
-											<ul id="list-msg" class="list-group"></ul>
-										</div>
-									</div>
-								</div>
-							</div>
-						</div>
-        			</li>
-        			<li>
-        				<a id="lnk-config" href="#"><span class="glyphicon glyphicon-cog" aria-hidden="true"></span> Settings</a>
-        			</li>
-        			<% } %>
-        			<% include partials/navmenus %>
-      			</ul>
-    		</div><!-- /.navbar-collapse -->
-  		</div><!-- /.container-fluid -->
-	</nav>
-	
-	<div class="navbar-default sidebar" role="navigation">
+            <!-- Collect the nav links, forms, and other content for toggling -->
+            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                <ul class="nav navbar-nav navbar-right">
+                    <% if (model.isOnline()) { %>
+                    <li>
+                        <a id="lnk-msgs" href="#" data-placement="bottom" data-toggle="popover" title="Popover Header" data-content="Some content inside the popover">
+                            (<span id="span-num-msgs">0</span>)&nbsp;<span class="glyphicon glyphicon-comment" aria-hidden="true"></span>
+                        </a>
+                        <div id="content-msgs" class="popover fade bottom in" style="max-width: 350px; width: 350px; left: -230px; top: 50px; display: none;">
+                            <div class="arrow" style="left: 260px;"></div>
+                            <div id="vis_options" class="container-fluid">
+                                <div style="padding-top: 12px; padding-bottom: 12px;">
+                                    <div class="row">
+                                        <div id="div-messages" class="col-md-12">
+                                            <ul id="list-msg" class="list-group"></ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                    <li>
+                        <a id="lnk-config" href="#"><span class="glyphicon glyphicon-cog" aria-hidden="true"></span> Settings</a>
+                    </li>
+                    <% } %>
+                    <% include partials/navmenus %>
+                </ul>
+            </div><!-- /.navbar-collapse -->
+        </div><!-- /.container-fluid -->
+    </nav>
+
+    <div class="navbar-default sidebar" role="navigation">
         <div class="sidebar-nav navbar-collapse">
             <ul class="nav nav-pills nav-stacked">
                 <li>
                     <a id="a-default" href="#" data-target="#tab-tree, #tab-details" data-toggle="pill">
-                    	<span class="glyphicon glyphicon-search" aria-hidden="true"></span>
-                    	View
+                        <span class="glyphicon glyphicon-search" aria-hidden="true"></span>
+                        View
                     </a>
                 </li>
                 <% if (model.isOnline()) { %>
                 <li>
                     <a id="a-activities" href="#" data-target="#tab-add-activity, #tab-activities" data-toggle="pill">
-                    	<span class="glyphicon glyphicon-facetime-video" aria-hidden="true"></span>
-                    	Activities
+                        <span class="glyphicon glyphicon-facetime-video" aria-hidden="true"></span>
+                        Activities
                     </a>
                 </li>
                 <% } %>
@@ -104,6 +104,7 @@
         </div>
         <!-- /.sidebar-collapse -->
     </div>
+<<<<<<< HEAD
 	
 	<!-- Central components -->
 	<div id="page-wrapper" class="container-fluid" style="padding-top: 30px;">
@@ -524,6 +525,428 @@
 								</div>
   							</div>
   						</div>
+=======
+
+    <!-- Central components -->
+    <div id="page-wrapper" class="container-fluid" style="padding-top: 30px;">
+        <div class="row">
+            <div class="col-md-8">
+                <!-- main visualization -->
+                <div class="row">
+                    <div class="col-md-12">
+                        <div id="parent_container" class="panel panel-default main-vis">
+                            <div class="panel-heading clearfix">
+                                <span class="glyphicon glyphicon-info-sign info-panel-left" rel="tooltip" title="Visualization Panel" content="This panel shows the dataset in a qualitative manner using a hierarchy of states and transitions.<br /><br />To browse through the hierarchy use either the mouse wheel or the vertical scroll bar on the left.<br /><br />Click on a state to view more details."></span>
+                                <h4 class="panel-title pull-left" style="margin-top: 2px;">Visualization - <%= modelConfig.name %> <span id="span-zoom" class="component-title-additional">&nbsp;(Zoom: <span id="span-zoom-val">0</span>%)</span></h4>
+                                <!-- toggler for the visualization options -->
+                                <button id="vis-toggler" class="btn btn-default btn-xs pull-right" aria-label="Left Align">
+                                    <span class="glyphicon glyphicon-align-justify" aria-hidden="true"></span> Options
+                                </button>
+                                <span class="pull-right component-title-additional">
+                                    <% if (model.isOnline()) { %>
+                                    <span id="span-no-active"><%= activeModelCount %></span> online models,
+                                    <% } %>
+                                    time unit:&nbsp;<span id="span-tu"><%= model.getModel().getTimeUnit() %></span>&nbsp;&nbsp;&nbsp;
+                                </span>
+                                <button id="btn-viz-back" class="btn btn-link btn-xs pull-right hidden" aria-label="Left Align">
+                                    <span class="glyphicon glyphicon glyphicon-menu-left" aria-hidden="true"></span> Back
+                                </button>
+                                <!-- options for the visualization component -->
+                                <div id="content-options" class="popover fade bottom in">
+                                    <div class="arrow"></div>
+                                    <div id="vis_options" class="container-fluid">
+                                        <div style="padding-top: 12px; padding-bottom: 12px;">
+                                            <div class="row">
+                                                <div id="div-ftrs" class="col-md-12">
+                                                    <%
+                                                    var ftrDesc = model.getFtrDesc();
+                                                    var observations = ftrDesc.observation;
+                                                    var controls = ftrDesc.control;
+                                                    var ignored = ftrDesc.ignored;
+                                                    var featureInfo = observations.concat(controls).concat(ignored);
+                                                    %>
+                                                    <div class="form-group">
+                                                        <h4>Show attribute</h4>
+                                                        <ul id="ul-ftrs-obs" class="ul-show-ftrs">
+                                                        <% for (var ftrN = 0; ftrN < observations.length; ftrN++) { %>
+                                                            <li>
+                                                                <input type="checkbox" value="<%= ftrN %>" /> <%= observations[ftrN].name %>
+                                                                <input type="hidden" value="<%= observations[ftrN].type %>" />
+                                                            </li>
+                                                        <% } %>
+                                                        </ul>
+                                                        <% if (controls.length > 0) { %>
+                                                            <h5>Control Attributes</h5>
+                                                            <ul id="ul-ftrs-contr" class="ul-show-ftrs">
+                                                            <% for (var ftrN = 0; ftrN < controls.length; ftrN++) { %>
+                                                                <li>
+                                                                    <input type="checkbox" value="<%= ftrN + observations.length %>" /> <%= controls[ftrN].name %>
+                                                                    <input type="hidden" value="<%= controls[ftrN].type %>" />
+                                                                </li>
+                                                            <% } %>
+                                                            </ul>
+                                                        <% } %>
+                                                        <% if (ignored.length > 0) { %>
+                                                            <h5>Ignored Attributes</h5>
+                                                            <ul id="ul-ftrs-ign" class="ul-show-ftrs">
+                                                            <% for (var ftrN = 0; ftrN < ignored.length; ftrN++) { %>
+                                                                <li>
+                                                                    <input type="checkbox" value="<%= ftrN + observations.length + controls.length %>" /> <%= ignored[ftrN].name %>
+                                                                    <input type="hidden" value="<%= ignored[ftrN].type %>" />
+                                                                </li>
+                                                            <% } %>
+                                                            </ul>
+                                                        <% } %>
+                                                    </div>
+                                                    <% if (controls.length > 0) { %>
+                                                    <div class="form-group">
+                                                        <h4>Adjust control</h4>
+                                                        <div class="checkbox">
+                                                            <label><input id="chk-sim-inputs" type="checkbox" /> Simulate inputs</label>
+                                                        </div>
+                                                        <div id="div-ftrs-control">
+                                                        <% for (var controlN = 0; controlN < controls.length; controlN++) {
+                                                            var values = controls[controlN].values;
+                                                            var ftrId = observations.length + controlN; %>
+                                                            <div class="form-group">
+                                                                <label for="<%= ftrId %>"><%= controls[controlN].name + ' (' + bounds.min.toFixed(2) + ' to ' + bounds.max.toFixed(2) + ')' %></label>
+                                                                <div id="<%= ftrId %>" class="slider-contr"></div>
+                                                            </div>
+                                                            <script type="text/javascript">
+                                                                $('#<%= ftrId %>').slider({
+                                                                    value: <%= (values.min + values.max) / 2 %>,
+                                                                    min: <%= values.min %>,
+                                                                    max: <%= values.max %>,
+                                                                    step: <%= (values.max - values.min) / 100 %>,
+                                                                    animate:"slow",
+                                                                    orientation: "hotizontal",
+                                                                    disabled: true,
+                                                                    change: function (event, ui) {
+                                                                        var shouldFire = $('#chk-sim-inputs').is(':checked');
+                                                                        if (shouldFire) {
+                                                                            var val = $(this).slider('value');
+                                                                            var ftrId = $(this).attr('id');
+                                                                            changeControlVal(null, ftrId, val);
+                                                                        }
+                                                                    }
+                                                                });
+                                                            </script>
+                                                        <% } %>
+                                                        </div>
+                                                    </div>
+                                                    <% } %>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div  class="col-md-12">
+                                                    <div class="form-group">
+                                                        <h4>View future</h4>
+                                                        <input type="checkbox" id="chk-show-fut" />Show future
+                                                        <div id="div-future-opts" class="hidden">
+                                                            <div id="rng-time-probs"></div>
+                                                            <div id="div-fut-time"></div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div id="container-buttons" class="col-md-12" style="padding-top: 12px;">
+                                                    <div id="alert-wrapper-viz-config" class="form-group"></div>
+                                                    <div class="form-group">
+                                                        <% if (model.isOnline()) { %>
+                                                            <% if (modelConfig.is_active == 1) { %>
+                                                            <input type="button" id="btn-activate" value="Deactivate Model" class="btn btn-warning btn-block" />
+                                                            <% } else { %>
+                                                            <input type="button" id="btn-activate" value="Activate Model" class="btn btn-success btn-block" />
+                                                            <% } %>
+                                                        <% } %>
+                                                        <input type="button" id="btn-reconfigure" value="Reconfigure Model" class="btn btn-default btn-block" />
+                                                        <input type="button" id="btn-reset-sim" value="Reset Simulation" class="btn btn-block btn-default<%= model.getModel().isAnyControlFtrSet() ? ' hidden' : ' ' %>" style="margin-top: 5px;" />
+                                                        <input type="button" id="btn-layout" value="Auto Layout" class="btn btn-default btn-block" />
+                                                        <input type="button" id="btn-png" value="Save as PNG" class="btn btn-default btn-block" />
+                                                        <input type="button" id="btn-save" value="Save Model" class="btn btn-primary btn-block" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="vis-wrapper" class="panel-body nopadding">
+                                <div id="slider_container">
+                                    <div id="slider_item_div"></div>
+                                </div>
+                                <div id="vis_container" class="nopadding"></div>
+                                <div id="threshold_slider"></div>
+                                <div id="div-font-zoom">
+                                    <button id="btn-font-increase" type="button" class="btn btn-default btn-xs"><span class="glyphicon glyphicon-plus"></span> Font</button><br />
+                                    <button id="btn-font-decrease" type="button" class="btn btn-default btn-xs"><span class="glyphicon glyphicon-minus"></span> Font</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- live data -->
+                <% if (model.isOnline()) { %>
+                <div class="row row-values">
+                    <div id="thumbnail-online-vals" class="hidden">
+                        <div class="col-md-2" style="height: calc(100% - 5px); margin-bottom: 5px;">
+                            <div class="thumbnail thumbnail-values" style="height: calc(100% - 5px); margin-bottom: 5px;">
+                                <div class="txt-wrapper"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="div-values-wrapper" style="height: 100%"></div>
+                </div>
+                <% } %>
+                <!-- parcoords, time histogram, explanation tree -->
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="tab-content" style="width: 100%;">
+                            <div id="tab-tree" role="tabpanel" class="tab-pane fade active" style="width: 100%;">
+                                <div class="panel panel-default" style="width: 100%;">
+                                    <div class="panel-body nopadding" style="width: 100%;">
+                                        <ul id="tabs-viz-bottom" class="nav nav-tabs">
+                                            <li role="presentation">
+                                                <a id="a-time-state-hist" href="#" data-target="#div-time-state-hist-wrapper" data-toggle="tab">State History</a>
+                                            </li>
+                                            <li role="presentation" class="active">
+                                                <a id="a-parcoords" href="#" data-target="#div-parallel-wrapper" data-toggle="tab">Coordinates</a>
+                                            </li>
+                                            <li role="presentation">
+                                                <a id="a-timehist" href="#" data-target="#div-timehist-wrapper" data-toggle="tab">Time</a>
+                                            </li>
+                                            <li role="presentation">
+                                                <a href="#" data-target="#div-tree-wrapper" data-toggle="tab">Explanation Tree</a>
+                                            </li>
+                                        </ul>
+                                        <div id="tab-content-bottom" class="tab-content" style="width: 100%;">
+                                            <div id="div-time-state-hist-wrapper" class="tab-pane container-bottom parcoords active">
+                                                <div id="div-timeline-zoom">
+                                                    <button id="btn-timeline-zoomin" type="button" class="btn btn-default btn-xs"><span class="glyphicon glyphicon-plus"></span></button><br />
+                                                    <button id="btn-timeline-zoomout" type="button" class="btn btn-default btn-xs"><span class="glyphicon glyphicon-minus"></span></button>
+                                                </div>
+                                                <div id="div-time-state-hist"></div>
+                                                <div id="div-timeline-scroll">
+                                                    <button id="btn-timeline-scroll-left" type="button" class="btn btn-default btn-xs"><span class="glyphicon glyphicon-chevron-left"></span></button>
+                                                    <div id="div-bp-slider"></div>
+                                                    <button id="btn-timeline-scroll-right" type="button" class="btn btn-default btn-xs"><span class="glyphicon glyphicon-chevron-right"></span></button>
+                                                </div>
+                                            </div>
+                                            <div id="div-parallel-wrapper" class="tab-pane container-bottom parcoords">
+                                                <div id="div-parallel-container">
+                                                    <div id="div-parallel" class="parcoords"></div>
+                                                </div>
+                                            </div>
+                                            <div id="div-timehist-wrapper" class="tab-pane container-bottom parcoords container-chart">
+                                                <div id="btns-timescale" class="btn-group btn-group-xs" role="group" aria-label="...">
+                                                    <button id="btn-toggle-timehist-global" type="button" class="btn btn-default active">Global</button>
+                                                    <button id="btn-toggle-timehist-yearly" type="button" class="btn btn-default">Yearly</button>
+                                                    <button id="btn-toggle-timehist-monthly" type="button" class="btn btn-default">Monthly</button>
+                                                    <button id="btn-toggle-timehist-weekly" type="button" class="btn btn-default">Weekly</button>
+                                                    <button id="btn-toggle-timehist-daily" type="button" class="btn btn-default">Daily</button>
+                                                </div>
+
+                                                <div id="div-timehist-container">
+                                                    <div id="div-timehist-global" class="timehist"></div>
+                                                    <div id="div-timehist-yearly" class="timehist hidden"></div>
+                                                    <div id="div-timehist-monthly" class="timehist hidden"></div>
+                                                    <div id="div-timehist-weekly" class="timehist hidden"></div>
+                                                    <div id="div-timehist-daily" class="timehist hidden"></div>
+                                                </div>
+                                            </div>
+                                            <div id="div-tree-wrapper" class="tab-pane container-bottom">
+                                                <div id="div-tree-container" style="height: 100%;width: 100%;" class="nopadding"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <% if (model.isOnline()) { %>
+                            <div id="tab-add-activity" role="tabpanel" class="tab-pane fade active">
+                                <div id="div-activity-wrapper" class="panel panel-default container-bottom">
+                                    <div class="panel-heading">Configure Activity</div>
+                                    <div id="div-activity-conf" class="panel-body scrollable">
+                                        <div id="div-activity-currconf" class="row">
+                                            <div id="div-curr-activity-step" class="col-xs-4 col-md-2 step-wrapper">
+                                                <span class="thumbnail" style="overflow-y: auto;"></span>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="txt-activity-name">Name</label>
+                                                    <input id="txt-activity-name" type="text" class="form-control" />
+                                                </div>
+                                                <div id="alert-wrapper-activity" class="form-group"></div>
+                                                <div class="form-group">
+                                                    <button id="btn-activity-add-step" type="button" class="btn btn-info">Add Step</button>
+                                                    <button id="btn-activity-cancel" type="button" class="btn btn-default">Cancel</button>
+                                                    <button id="btn-activity-save" type="button" class="btn btn-success">Save</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <!-- state details -->
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="tab-content">
+                            <div id="tab-details" role="tabpanel" class="tab-pane fade active">
+                                <div id="container-details" class="panel panel-default main-vis"<%- !model.isOnline() ? ' style="height: 964px;"' : ' style="height: 600px;"' %>>
+                                    <div class="panel-heading">Details</div>
+                                    <div id="div-details" class="panel-body nopadding scrollable">
+                                        <div id="wrapper-state-details" class="container-fluid" style="display: none;">
+                                            <div class="row">
+                                                <div id="div-ftrs" class="col-md-12">
+                                                    <div class="form-group">
+                                                        <label for="txt-name">State name</label>
+                                                        <input id="txt-name" type="text" class="form-control" />
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label for="txt-state-description">Description</label>
+                                                        <textarea id="txt-state-description" class="form-control" rows="3"></textarea>
+                                                    </div>
+                                                    <% if (model.isOnline()) { %>
+                                                    <div class="form-group">
+                                                        <div class="checkbox">
+                                                            <label>
+                                                                <input id="chk-target" type="checkbox" /> Is event
+                                                            </label>
+                                                        </div>
+                                                        <div id="div-event-id" class="hidden">
+                                                            <label for="txt-event-id">Event id (used for notifications)</label>
+                                                            <input id="txt-event-id" type="text" class="form-control" />
+                                                        </div>
+                                                    </div>
+                                                    <% } %>
+                                                    <div id="alert-wrapper-save-state" class="form-group"></div>
+                                                    <div id="div-button-save-state" class="form-group" class="hidden">
+                                                        <input id="btn-button-save-state" type="button" class="btn btn-success" value="Save" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div id="div-ftrs" class="col-md-12">
+                                                    <h3>Attributes</h3>
+                                                    <div class="row">
+                                                        <div id="div-attrs" class="col-md-12"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div id="wrapper-transition-details" class="container-fluid" style="display: none;">
+                                            <div class="row">
+                                                <div id="div-ftrs" class="col-md-12">
+                                                    <h3>Transition from state <span id="span-trans-source"></span> to state <span id="span-trans-target"></span></h3>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-md-12">
+                                                    <h3>Attributes</h3>
+                                                    <div id="div-trans-ftrs" class="col-md-12"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- thumbnail with the histograms for attributes -->
+                                        <div id="div-thumbnail" style="display: none;">
+                                            <div class="col-md-6 thumb-col">
+                                                <div class="thumbnail">
+                                                    <div class="container-chart img-thumbnail" style="width: 100%;"></div>
+                                                    <div class="caption">
+                                                        <h6 class="attr-name" style="word-wrap: break-word;"></h6>
+                                                        <p>
+                                                            <span class="attr-val"></span>
+                                                            <span class="div-ftr-range" style="display: none;">
+                                                                <div class="range-contr-val"></div>
+                                                            </span>
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <% if (model.isOnline()) { %>
+                            <div id="tab-activities" role="tabpanel" class="tab-pane fade active">
+                                <div id="container-activities" class="panel panel-default main-vis">
+                                    <div class="panel-heading">Manage Activities</div>
+                                    <div id="div-activities" class="panel-body nopadding scrollable">
+                                        <div class="table-responsive">
+                                            <table id="table-activities" class="table table-striped table-hover table-models">
+                                                <thead>
+                                                </thead>
+                                                <tbody>
+                                                    <% var activities = model.getModel().getActivities(); %>
+                                                    <% for (var i = 0; i < activities.length; i++) { %>
+                                                    <tr>
+                                                        <td class="td-name"><%= activities[i].name %> (<%= activities[i].steps %>)</td>
+                                                        <td class="td-btns">
+                                                            <span class="pull-right span-btns">
+                                                                <button class="btn btn-danger btn-xs btn-remove" aria-label="Left Align"><span class="glyphicon glyphicon-remove"></span> Remove</button>
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                    <% } %>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+                <!-- messages -->
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="row">
+                            <div id="div-msg-0-wrapper" class="col-md-12"></div>
+                        </div>
+                        <div class="row">
+                            <div id="div-msg-1-wrapper" class="col-md-12"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <% if (model.isOnline()) { %>
+    <!-- Configuration popup -->
+    <div id="popup-config" class="modal fade" role="dialog" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title">Settings</h4>
+                </div>
+                <div class="modal-body">
+                    <div id="div-config">
+                        <div class="hidden">
+                            <div>
+                                <div class="checkbox">
+                                    <label>
+                                        <input id="chk-show-probs" type="checkbox"> Show transition probabilities
+                                    </label>
+                                </div>
+                                <div class="checkbox">
+                                    <label>
+                                        <input id="chk-wheel-scroll" type="checkbox"> Enable wheel scrolling
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+>>>>>>> 0a2017a76b53053b6dfa30053ba807d1d1935f6e
                         <div id="div-config-params" class="row">
                             <div class="col-md-12">
                                 <label for="range-pred-threshold">Prediciton threshold: <span id="span-pred-threshold"><%= predictionThreshold %></span></label>
@@ -542,17 +965,18 @@
                                 <div id="range-pdf-bins"></div>
                             </div>
                         </div>
-					</div>
-  				</div>
-  				<div class="modal-footer">
-  					<button id="config-cancel" type="button" class="btn btn-default">Cancel</button>
-    				<button id="config-done" type="button" class="btn btn-success">Done</button>
-  				</div>
-			</div>
-		</div>
-	</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="config-cancel" type="button" class="btn btn-default">Cancel</button>
+                    <button id="config-done" type="button" class="btn btn-success">Done</button>
+                </div>
+            </div>
+        </div>
+    </div>
     <% } %>
 
+<<<<<<< HEAD
 	<!-- popover for the histogram of the PDF -->
 	<div id="popover-pdf-hist" class="popover fade bottom in popover-centered">
 		<a class="glyphicon glyphicon-remove btn-close" onclick="$('#popover-pdf-hist').slideUp();"></a>
@@ -575,5 +999,29 @@
 	
 	<% include partials/confirm %>
 	<% include partials/alert %>
+=======
+    <!-- popover for the histogram of the PDF -->
+    <div id="popover-pdf-hist" class="popover fade bottom in popover-centered">
+        <a class="glyphicon glyphicon-remove btn-close" onclick="$('#popover-pdf-hist').slideUp();"></a>
+        <div id="hist-pdf" style="width: 100%; height: 100%;"></div>
+    </div>
+
+    <script type="text/javascript" src="lib/jquery.qtip.min.js"></script>
+    <script type="text/javascript" src="lib/cytoscape.js"></script>
+    <script type="text/javascript" src="lib/cytoscape-qtip.js"></script>
+    <script type="text/javascript" src="lib/cytoscape-ctxmenu.js"></script>
+    <script type="text/javascript" src="lib/d3.js"></script>
+    <script type="text/javascript" src="lib/d3.parcoords.js"></script>
+    <script type="text/javascript" src="lib/d3-timeline.js"></script>
+    <script type="text/javascript" src="lib/d3-tip.js"></script>
+    <script src="https://cdn.rawgit.com/cpettitt/dagre/v0.7.4/dist/dagre.min.js"></script>
+    <script type="text/javascript" src="js/zoomvis.js"></script>
+    <script type="text/javascript" src="js/hist.js"></script>
+    <script type="text/javascript" src="js/utils.js"></script>
+    <script type="text/javascript" src="js/ui.js"></script>
+
+    <% include partials/confirm %>
+    <% include partials/alert %>
+>>>>>>> 0a2017a76b53053b6dfa30053ba807d1d1935f6e
     <% include partials/external-auth %>
 </body>
