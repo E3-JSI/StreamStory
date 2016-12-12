@@ -191,8 +191,8 @@ module.exports = exports = function (opts) {
 
         var callback = status.progressCallback;
         if (callback != null) {
-            var progress = popProgress(username);
-            callback(status.error, progress.isFinished, progress.progress, progress.message);
+            var prog = popProgress(username);
+            callback(status.error, prog.isFinished, prog.progress, prog.message);
         }
     }
 
@@ -364,10 +364,12 @@ module.exports = exports = function (opts) {
             });
         },
         loadSaveModel: function (modelConf) {
+            var fname;
+            var model;
             if (modelConf.is_realtime == 1) {
-                var fname = modelConf.model_file;
+                fname = modelConf.model_file;
 
-                var model = StreamStory({
+                model = StreamStory({
                     base: base,
                     fname: fname
                 });
@@ -375,8 +377,7 @@ module.exports = exports = function (opts) {
                 model.save(fname);
             } else {
                 var baseDir = modelConf.base_dir;
-                var dbDir = utils.getDbDir(baseDir);
-                var fname = utils.getModelFName(baseDir);
+                fname = utils.getModelFName(baseDir);
 
                 var userBase = new qm.Base({
                     mode: 'openReadOnly',
@@ -386,7 +387,7 @@ module.exports = exports = function (opts) {
                 if (log.debug())
                     log.debug('Loading model from file %s ...', fname);
 
-                var model = StreamStory({
+                model = StreamStory({
                     base: userBase,
                     fname: fname
                 });
@@ -443,7 +444,6 @@ module.exports = exports = function (opts) {
                 var timeUnit = opts.timeUnit;
                 var headers = opts.headers;
                 var timeAttr = opts.timeAttr;
-                var useTimeFtrV = opts.useTimeFtrV;
                 var hierarchyType = opts.hierarchyType;
                 var attrs = opts.attrs;
                 var controlAttrs = opts.controlAttrs;
@@ -457,12 +457,13 @@ module.exports = exports = function (opts) {
 
                 var attrSet = {};
                 var typeH = {};
-                for (var i = 0; i < attrs.length; i++) {
+                var i;
+                for (i = 0; i < attrs.length; i++) {
                     attrSet[attrs[i]] = true;
                     typeH[attrs[i].name] = attrs[i].type;
                 }
 
-                for (var i = 0; i < headers.length; i++) {
+                for (i = 0; i < headers.length; i++) {
                     var header = headers[i].name;
                     headerTypes.push(header in typeH ? typeH[header] : 'numeric');
                 }
@@ -480,9 +481,27 @@ module.exports = exports = function (opts) {
 
                 var timeV = new qm.la.Vector({ vals: 0, mxVals: 200000 });
 
+                // a method that checks if a line is empty
+                var isEmptyLine = function (lineArr) {
+                    if (lineArr.length == 0) { return true; }
+                    for (var i = 0; i < lineArr.length; i++) {
+                        if (lineArr[i] != null && lineArr[i].length > 0) {
+                            return false;
+                        }
+                    }
+                    return true;
+                }
+
                 var lineN = 0;
+                // used to try and detect the end of the CSV,
+                // even though there may still be empty lines
+                var consecutiveEmptyCount = 0;
+                var MAX_CONSECUTIVE_EMPTY_LINES = 2;
                 qm.fs.readCsvAsync(fileBuff, { offset: 1 }, function onBatch(lines) {
                     var nLines = lines.length;
+
+                    // check if we are already at the end of the file
+                    if (consecutiveEmptyCount >= MAX_CONSECUTIVE_EMPTY_LINES) return;
 
                     for (var entryN = 0; entryN < nLines; entryN++) {
                         var lineArr;
@@ -490,12 +509,27 @@ module.exports = exports = function (opts) {
                         try {
                             lineArr = lines[entryN];
 
+                            if (log.trace())
+                                log.trace('Processing line: %s', JSON.stringify(lineArr));
+
                             if (++lineN % 10000 == 0 && log.debug()) {
                                 log.debug('Read %d lines ...', lineN);
                             }
 
                             if (lineN % 1000 == 0) {
                                 updateProgress(username, false, 20, 'Read ' + lineN + ' lines ...');
+                            }
+
+                            // heuristics for end of file
+                            if (consecutiveEmptyCount >= MAX_CONSECUTIVE_EMPTY_LINES) { 
+                                log.info('Heuristics say we have encountered the end of file. Will ignore further lines ...');
+                                break;
+                            }
+                            // check if the line is empty, if it is, ignore it
+                            if (isEmptyLine(lineArr)) {
+                                log.debug('skipping empty line');
+                                consecutiveEmptyCount++;
+                                continue;
                             }
 
                             var recJson = {};
@@ -545,6 +579,7 @@ module.exports = exports = function (opts) {
 
                             // create the actual record and update the feature spaces
                             recs.push(store.newRecord(recJson));
+                            consecutiveEmptyCount = 0;
                         } catch (e) {
                             log.error(e, 'Exception while parsing line ' + lineN + ': ' + JSON.stringify(lineArr));
                             throw e;
