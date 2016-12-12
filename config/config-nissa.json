@@ -7,7 +7,7 @@
         "initializeZeros": true
     },
     "server": {
-        "port": 8483,
+        "port": 8080,
         "pingInterval": 10000
     },
     "log": {
@@ -28,13 +28,13 @@
         }
     },
     "database": {
-        "host": "localhost",
+        "host": "127.0.0.1",
         "user": "StreamStory",
         "password": "StreamStory",
-        "database": "StreamStoryHella"
+        "database": "StreamStory"
     },
     "integration": {
-        "type": "http",
+        "type": "broker",
         "brokerUrl": "192.168.84.45",
         "zookeperPort": 2181,
         "producerPort": 9092,
@@ -43,12 +43,10 @@
             "timeout": 10000
         }
     },
-    "useCase": "hella",
-    "seed": 1,
+    "useCase": "mhwirth",
     "saveStates": false,
     "saveActivities": false,
-    "saveFriction": true,
-    "restartOnReplay": false,
+    "saveFriction": false,
     "interpolation": "current",
-    "dataPath": "/mnt/raidM2T/project-data/StreamStory-hella-eval2/"
+    "dataPath": "/home/proasense/app/streamstory-internal/"
 }

@@ -299,7 +299,7 @@
 										  	</li>
 										</ul>
 										<div id="tab-content-bottom" class="tab-content" style="width: 100%;">
-											<div id="div-time-state-hist-wrapper" class="tab-pane container-bottom parcoords">
+											<div id="div-time-state-hist-wrapper" class="tab-pane container-bottom parcoords active">
 												<div id="div-timeline-zoom">
 													<button id="btn-timeline-zoomin" type="button" class="btn btn-default btn-xs"><span class="glyphicon glyphicon-plus"></span></button><br />
 													<button id="btn-timeline-zoomout" type="button" class="btn btn-default btn-xs"><span class="glyphicon glyphicon-minus"></span></button>
@@ -311,8 +311,8 @@
 													<button id="btn-timeline-scroll-right" type="button" class="btn btn-default btn-xs"><span class="glyphicon glyphicon-chevron-right"></span></button>
 												</div>
 											</div>
-											<div id="div-parallel-wrapper" class="tab-pane container-bottom active">
-												<div id="div-parallel-container" class="hidden">
+											<div id="div-parallel-wrapper" class="tab-pane container-bottom parcoords">
+												<div id="div-parallel-container">
 													<div id="div-parallel" class="parcoords"></div>
 												</div>
 											</div>
@@ -506,11 +506,11 @@
 			<div class="modal-content">
 				<div class="modal-header">
     				<button type="button" class="close" data-dismiss="modal">&times;</button>
-    				<h4 class="modal-title">Configuration</h4>
+    				<h4 class="modal-title">Settings</h4>
   				</div>
   				<div class="modal-body">
   					<div id="div-config">
-  						<div>
+  						<div class="hidden">
   							<div>
   								<div class="checkbox">
 									<label>
@@ -575,4 +575,5 @@
 	
 	<% include partials/confirm %>
 	<% include partials/alert %>
+    <% include partials/external-auth %>
 </body>

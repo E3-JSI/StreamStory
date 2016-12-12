@@ -271,7 +271,6 @@ html, body {
 }
 
 #div-tree-wrapper, #div-parallel-wrapper, #div-timehist-wrapper, #div-time-state-hist-wrapper {
-	/*display: initial !important;*/
 	display: block !important;
 	width: calc(100% - 32px);	/* inherits the width from col-md-8, which has 15px padding on both sides and a small border */
 	visibility: hidden;
@@ -288,10 +287,12 @@ html, body {
 }
 
 #div-parallel-container {
+    width: 100%;
 	height: 100%;
 }
 
 #div-parallel {
+    width: 100%;
 	height: calc(100% - 20px);
 }
 

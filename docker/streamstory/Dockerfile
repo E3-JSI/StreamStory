@@ -79,4 +79,4 @@ RUN cd app && mkdir ss-db
 #==================================================
 EXPOSE 8080 
 WORKDIR /app/StreamStory
-CMD node main.js /etc/streamstory/config-streamstory.json
+CMD sleep 10 && ./run.sh /etc/streamstory/config-streamstory.json

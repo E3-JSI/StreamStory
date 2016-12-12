@@ -1,6 +1,3 @@
-/*jshint node: true */
-/*globals qm, log */
-
 var express = require('express');
 var bodyParser = require("body-parser");
 var path = require('path');
@@ -17,6 +14,7 @@ var config = require('../config.js');
 var fields = require('../fields.js');
 var transform = require('./util/transform.js');
 var fzi = require('./util/fzi_integration.js');
+var externalAuth = require('./util/external_auth.js');
 
 var ModelStore = require('./util/modelstore.js');
 var WebSocketWrapper = require('./util/servicesutil.js');
@@ -30,6 +28,8 @@ var DATA_PATH = '/data';
 var WS_PATH = '/ws';
 
 var LONG_REQUEST_TIMEOUT = 1000*60*60*24;
+
+var FZI_TOKEN_KEY = 'fzi-token';
 
 var app = express();
 
@@ -56,7 +56,6 @@ var storeLastTm = {};
 var totalCounts = 0;
 
 var lastRawTime = -1;
-
 var intensConfig = {};
 
 function activateModel(model) {
@@ -187,41 +186,6 @@ function redirect(res, page) {
     if (log.debug())
         log.debug('Redirecting to %s ...', page);
     res.redirect(page);
-}
-
-//=====================================================
-// NON-SUCCESSFUL RESPONSES
-//=====================================================
-
-function handleNoPermission(req, res) {
-    if (log.debug())
-        log.debug('No permission, blocking page!');
-
-    res.status(404);	// not found
-    res.send('Cannot GET ' + req.path);
-    res.end();
-}
-
-// function handleBadRequest(req, res, msg) {
-//     if (log.debug())
-//         log.debug('Bad request, blocking page!');
-
-//     res.status(404);	// bad request
-//     res.send(msg != null ? msg : ('Bad request ' + req.path));
-//     res.end();
-// }
-
-function handleServerError(e, req, res) {
-    log.error(e, 'Exception while processing request!');
-    res.status(500);	// internal server error
-    res.send(e.message);
-    res.end();
-}
-
-function handleBadInput(res, msg) {
-    res.status(400);	// bad request
-    res.send(msg);
-    res.end();
 }
 
 function addRawMeasurement(val) {
@@ -378,10 +342,10 @@ function initStreamStoryHandlers(model, enable) {
                     var brokerMsgStr = JSON.stringify(brokerMsg);
                     broker.send(broker.PREDICTION_PRODUCER_TOPIC, brokerMsgStr);
 
-                    var topics = fzi.getTopics(mid, fzi.PREDICTION_OPERATION);
+                    var topics = fzi.getTopics(fzi.PREDICTION_OPERATION, mid);
                     for (i = 0; i < topics.length; i++) {
                         var topic = topics[i].output;
-                        log.info('Sending a prediction message to topic: %s', topic);
+                        log.info('Sending a prediction message to topic \'%s\'', topic);
                         broker.send(topic, brokerMsgStr);
                     }
                 });
@@ -417,7 +381,7 @@ function initStreamStoryHandlers(model, enable) {
                     description: '(empty)'	// TODO description
                 });
 
-                var topics = fzi.getTopics(model.getId(), fzi.ACTIVITY_OPERATION);
+                var topics = fzi.getTopics(fzi.ACTIVITY_OPERATION, model.getId());
                 for (var i = 0; i < topics.length; i++) {
                     var topic = topics[i].output;
                     log.debug('Sending activity to topic: %s', topic);
@@ -517,15 +481,54 @@ function initPipelineHandlers() {
             pipeline.onCoefficient(function (opts) {
                 var pdf = null;
 
-                // send the coefficient to the broker, so that other components can do 
+                // send the coefficient to the broker, so that other components can do
                 // calculations based no it
                 (function () {
-                    var brokerMsgStr = JSON.stringify(opts);
+                    var optsClone = utils.clone(opts);
+                    optsClone.timestamp = opts.time.getTime();
+                    delete optsClone.time;
+                    var brokerMsgStr = JSON.stringify(optsClone);
 
                     if (log.debug())
                         log.debug('Sending coefficient to the broker: %s', brokerMsgStr);
 
-                    broker.send(broker.TOPIC_PUBLISH_COEFFICIENT, brokerMsgStr);
+                    (function () {
+                        var topic;
+                        switch (optsClone.eventId) {
+                            case 'swivel':
+                                topic = broker.TOPIC_PUBLISH_COEFFICIENT_SWIVEL;
+                                break;
+                            case 'gearbox':
+                                topic = broker.TOPIC_PUBLISH_COEFFICIENT_GEARBOX;
+                                break;
+                            default:
+                                throw new Error('Invalid event ID for coefficient: ' + optsClone.eventId);
+                        }
+
+                        broker.send(topic, brokerMsgStr);
+                    })();
+
+                    // send coefficient to any topics listening from FZI integration
+                    (function () {
+                        var operation;
+                        switch (optsClone.eventId) {
+                            case 'swivel':
+                                operation = fzi.OPERATION_FRICTION_SWIVEL;
+                                break;
+                            case 'gearbox':
+                                operation = fzi.OPERATION_FRICTION_GEARBOX;
+                                break;
+                            default:
+                                throw new Error('Invalid event ID for coefficient: ' + optsClone.eventId);
+                        }
+
+                        var topics = fzi.getTopics(operation);
+                        for (var i = 0; i < topics.length; i++) {
+                            var topic = topics[i].output;
+                            log.info('Sending a friction message to topic \'%s\'', topic);
+                            broker.send(topic, brokerMsgStr);
+                        }
+                    })();
                 })()
 
                 var zscore = opts.zScore;
@@ -606,7 +609,7 @@ function initLoginRestApi() {
             db.fetchUserByEmail(username, function (e, user) {
                 if (e != null) {
                     log.error(e, 'Exception while checking if user exists!');
-                    handleServerError(e, req, res);
+                    utils.handleServerError(e, req, res);
                     return;
                 }
 
@@ -631,7 +634,7 @@ function initLoginRestApi() {
                 }
             });
         } catch (e) {
-            handleServerError(e, req, res);
+            utils.handleServerError(e, req, res);
         }
     });
 
@@ -679,7 +682,7 @@ function initLoginRestApi() {
             db.userExists(username, function (e, exists) {
                 if (e != null) {
                     log.error(e, 'Exception while checking if user exists!');
-                    handleServerError(e, req, res);
+                    utils.handleServerError(e, req, res);
                     return;
                 }
 
@@ -692,7 +695,7 @@ function initLoginRestApi() {
                     db.createUser(username, hash, function (e1) {
                         if (e1 != null) {
                             log.error(e1, 'Exception while creating a new user!');
-                            handleServerError(e1, req, res);
+                            utils.handleServerError(e1, req, res);
                             return;
                         }
 
@@ -702,7 +705,7 @@ function initLoginRestApi() {
                 }
             });
         } catch (e) {
-            handleServerError(e, req, res);
+            utils.handleServerError(e, req, res);
         }
     });
 
@@ -716,7 +719,7 @@ function initLoginRestApi() {
 
             db.userExists(email, function (e, exists) {
                 if (e != null) {
-                    handleServerError(e, req, res);
+                    utils.handleServerError(e, req, res);
                     return;
                 }
 
@@ -727,7 +730,7 @@ function initLoginRestApi() {
                     db.updatePassword(email, hash, function (e1) {
                         if (e1 != null) {
                             log.error(e, 'Failed to update password!');
-                            handleServerError(e1, req, res);
+                            utils.handleServerError(e1, req, res);
                             return;
                         }
 
@@ -739,7 +742,7 @@ function initLoginRestApi() {
                         utils.sendEmail(opts, function (e2) {
                             if (e2 != null) {
                                 log.error(e2, 'Failed to send email!');
-                                handleServerError(e2, req, res);
+                                utils.handleServerError(e2, req, res);
                                 return;
                             }
 
@@ -751,7 +754,7 @@ function initLoginRestApi() {
             })
         } catch (e) {
             log.error(e, 'Exception while resetting password!');
-            handleServerError(e, req, res);
+            utils.handleServerError(e, req, res);
         }
     });
 
@@ -766,22 +769,22 @@ function initLoginRestApi() {
             var password1 = req.body.repeat;
 
             if (password == null || password == '') {
-                handleBadInput(res, 'Password missing!');
+                utils.handleBadInput(res, 'Password missing!');
                 return;
             }
 
             if (password.length < 4) {
-                handleBadInput(res, 'The password must be at least 6 characters long!');
+                utils.handleBadInput(res, 'The password must be at least 6 characters long!');
                 return;
             }
 
             if (password1 == null || password1 == '') {
-                handleBadInput(res, 'Please repeat password!');
+                utils.handleBadInput(res, 'Please repeat password!');
                 return;
             }
 
             if (password != password1) {
-                handleBadInput(res, 'Passwords don\'t match!');
+                utils.handleBadInput(res, 'Passwords don\'t match!');
                 return;
             }
 
@@ -790,12 +793,12 @@ function initLoginRestApi() {
             db.fetchUserPassword(email, function (e, storedHash) {
                 if (e != null) {
                     log.error(e, 'Exception while fetching user password!');
-                    handleServerError(e, req, res);
+                    utils.handleServerError(e, req, res);
                     return;
                 }
 
                 if (hashOld != storedHash) {
-                    handleBadInput(res, 'Passwords don\'t match!');
+                    utils.handleBadInput(res, 'Passwords don\'t match!');
                     return;
                 }
 
@@ -804,7 +807,7 @@ function initLoginRestApi() {
                 db.updatePassword(email, hash, function (e1) {
                     if (e1 != null) {
                         log.error(e, 'Failed to update password!');
-                        handleServerError(e1, req, res);
+                        utils.handleServerError(e1, req, res);
                         return;
                     }
 
@@ -814,16 +817,21 @@ function initLoginRestApi() {
             });
         } catch (e) {
             log.error(e, 'Exception while changing password!');
-            handleServerError(e, req, res);
+            utils.handleServerError(e, req, res);
         }
     });
 
     app.post(API_PATH + '/logout', function (req, res) {
         try {
             cleanUpSession(req.sessionID, req.session);
-            redirect(res, '../login.html');
+
+            if (config.AUTHENTICATION_EXTERNAL) {
+                redirect(res, '../dashboard.html');
+            } else {
+                redirect(res, '../login.html');
+            }
         } catch (e) {
-            handleServerError(e, req, res);
+            utils.handleServerError(e, req, res);
         }
     });
 }
@@ -863,7 +871,7 @@ function initStreamStoryRestApi() {
                 res.end();
             } catch (e) {
                 log.error(e, 'Failed to save visualization model!');
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
             }
         });
     }
@@ -889,7 +897,7 @@ function initStreamStoryRestApi() {
                 res.end();
             } catch (e) {
                 log.error(e, 'Failed to query MHWirth multilevel visualization!');
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
             }
         });
 
@@ -903,7 +911,7 @@ function initStreamStoryRestApi() {
                 res.end();
             } catch (e) {
                 log.error(e, 'Failed to query MHWirth multilevel visualization!');
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
             }
         });
 
@@ -914,7 +922,7 @@ function initStreamStoryRestApi() {
                 res.end();
             } catch (e) {
                 log.error(e, 'Failed to query MHWirth multilevel visualization!');
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
             }
         });
     }
@@ -932,7 +940,7 @@ function initStreamStoryRestApi() {
                 res.end();
             } catch (e) {
                 log.error(e, 'Failed to query for the model!');
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
             }
         });
 
@@ -949,7 +957,7 @@ function initStreamStoryRestApi() {
                 res.end();
             } catch (e) {
                 log.error(e, 'Failed to query for a sub-model!');
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
             }
         });
 
@@ -969,7 +977,7 @@ function initStreamStoryRestApi() {
                 res.end();
             } catch (e) {
                 log.error(e, 'Failed to query for state path!');
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
             }
         });
 
@@ -982,7 +990,7 @@ function initStreamStoryRestApi() {
                 res.end();
             } catch (e) {
                 log.error(e, 'Failed to query MHWirth multilevel visualization!');
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
             }
         });
     }
@@ -1003,7 +1011,7 @@ function initStreamStoryRestApi() {
                 res.end();
             } catch (e) {
                 log.error(e, 'Failed to query MHWirth multilevel visualization!');
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
             }
         });
     }
@@ -1029,7 +1037,7 @@ function initStreamStoryRestApi() {
                 res.end();
             } catch (e) {
                 log.error(e, 'Failed to query MHWirth multilevel visualization!');
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
             }
         });
 
@@ -1053,7 +1061,7 @@ function initStreamStoryRestApi() {
                 }
             } catch (e) {
                 log.error(e, 'Failed to query MHWirth multilevel visualization!');
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
             }
         });
 
@@ -1076,7 +1084,7 @@ function initStreamStoryRestApi() {
                 }
             } catch (e) {
                 log.error(e, 'Failed to query MHWirth multilevel visualization!');
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
             }
         });
 
@@ -1095,7 +1103,7 @@ function initStreamStoryRestApi() {
                 res.end();
             } catch (e) {
                 log.error(e, 'Failed to query MHWirth multilevel visualization!');
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
             }
         });
 
@@ -1111,7 +1119,7 @@ function initStreamStoryRestApi() {
                 res.end();
             } catch (e) {
                 log.error(e, 'Failed to query MHWirth multilevel visualization!');
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
             }
         });
     }
@@ -1134,7 +1142,7 @@ function initStreamStoryRestApi() {
 
                 db.fetchStateProperties(model.getId(), stateId, ['eventId', 'description'], function (e, stateProps) {
                     if (e != null) {
-                        handleServerError(e, req, res);
+                        utils.handleServerError(e, req, res);
                         return;
                     }
 
@@ -1146,7 +1154,7 @@ function initStreamStoryRestApi() {
                 });
             } catch (e) {
                 log.error(e, 'Failed to query state details!');
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
             }
         });
 
@@ -1159,15 +1167,15 @@ function initStreamStoryRestApi() {
                 var maxStates = req.query.n != null ? parseInt(req.query.n) : undefined;
 
                 if (offset == null) {
-                    handleBadInput(res, "Missing parameter offset!");
+                    utils.handleBadInput(res, "Missing parameter offset!");
                     return;
                 }
                 if (range == null) {
-                    handleBadInput(res, "Missing parameter range!");
+                    utils.handleBadInput(res, "Missing parameter range!");
                     return;
                 }
                 if (maxStates == null) {
-                    handleBadInput(res, 'Missing parameter maxStates!');
+                    utils.handleBadInput(res, 'Missing parameter maxStates!');
                     return;
                 }
 
@@ -1184,7 +1192,7 @@ function initStreamStoryRestApi() {
                 res.send(result);
                 res.end();
             } catch (e) {
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
             }
         });
 
@@ -1200,7 +1208,7 @@ function initStreamStoryRestApi() {
                 db.fetchModel(modelId, function (e, modelConfig) {
                     if (e != null) {
                         log.error(e, 'Failed to fetch model details!');
-                        handleServerError(e, req, res);
+                        utils.handleServerError(e, req, res);
                         return;
                     }
 
@@ -1220,7 +1228,7 @@ function initStreamStoryRestApi() {
                 });
             } catch (e) {
                 log.error(e, 'Failed to query state details!');
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
             }
         });
 
@@ -1237,7 +1245,7 @@ function initStreamStoryRestApi() {
                 db.setModelDescription(mid, desc, function (e) {
                     if (e != null) {
                         log.error(e, 'Failed to update model description!');
-                        handleServerError(e, req, res);
+                        utils.handleServerError(e, req, res);
                         return;
                     }
 
@@ -1246,7 +1254,7 @@ function initStreamStoryRestApi() {
                 });
             } catch (e) {
                 log.error(e, 'Failed to set model details!');
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
             }
         });
 
@@ -1263,17 +1271,17 @@ function initStreamStoryRestApi() {
 
                 // perform checks
                 if (name == null || name == '') {
-                    handleBadInput(res, 'Activity name missing!');
+                    utils.handleBadInput(res, 'Activity name missing!');
                     return;
                 }
                 if (sequence == null || sequence.length == 0) {
-                    handleBadInput(res, 'Missing the sequence of states!');
+                    utils.handleBadInput(res, 'Missing the sequence of states!');
                     return;
                 }
                 for (var i = 0; i < sequence.length; i++) {
                     var stateIds = sequence[i];
                     if (stateIds == null || stateIds.length == 0) {
-                        handleBadInput(res, 'Empty states in sequence!');
+                        utils.handleBadInput(res, 'Empty states in sequence!');
                         return;
                     }
                 }
@@ -1290,7 +1298,7 @@ function initStreamStoryRestApi() {
                 res.end();
             } catch (e) {
                 log.error(e, 'Failed to set activity!');
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
             }
         });
 
@@ -1304,7 +1312,7 @@ function initStreamStoryRestApi() {
                     log.debug('Removing activity %s for model %d ...', name, model.getId());
 
                 if (name == null || name == '') {
-                    handleBadInput(res, 'Activity name missing!');
+                    utils.handleBadInput(res, 'Activity name missing!');
                     return;
                 }
 
@@ -1318,7 +1326,7 @@ function initStreamStoryRestApi() {
                 res.end();
             } catch (e) {
                 log.error(e, 'Failed to set activity!');
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
             }
         });
 
@@ -1336,7 +1344,7 @@ function initStreamStoryRestApi() {
                 if (isUndesired) {
                     db.fetchStateProperty(model.getId(), stateId, 'eventId', function (e, eventId) {
                         if (e != null) {
-                            handleServerError(e, req, res);
+                            utils.handleServerError(e, req, res);
                             return;
                         }
 
@@ -1349,7 +1357,7 @@ function initStreamStoryRestApi() {
                 }
             } catch (e) {
                 log.error(e, 'Failed to query target details!');
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
             }
         });
 
@@ -1367,7 +1375,7 @@ function initStreamStoryRestApi() {
                 res.end();
             } catch (e) {
                 log.error(e, 'Failed to query state details!');
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
             }
         });
 
@@ -1383,7 +1391,7 @@ function initStreamStoryRestApi() {
                 res.end();
             } catch (e) {
                 log.error(e, 'Failed to query time explanation!');
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
             }
         });
 
@@ -1402,7 +1410,7 @@ function initStreamStoryRestApi() {
                 res.end();
             } catch (e) {
                 log.error(e, 'Failed to query histogram!');
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
             }
         });
 
@@ -1421,7 +1429,7 @@ function initStreamStoryRestApi() {
                 res.end();
             } catch (e) {
                 log.error(e, 'Failed to query histogram!');
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
             }
         });
 
@@ -1437,7 +1445,7 @@ function initStreamStoryRestApi() {
                 res.end();
             } catch (e) {
                 log.error(e, 'Failed to query histogram!');
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
             }
         });
 
@@ -1453,7 +1461,7 @@ function initStreamStoryRestApi() {
                 res.end();
             } catch (e) {
                 log.error(e, 'Failed to query time explanation!');
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
             }
         });
 
@@ -1473,7 +1481,7 @@ function initStreamStoryRestApi() {
                 res.end();
             } catch (e) {
                 log.error(e, 'Failed to fetch the distribution of a feature!');
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
             }
         });
 
@@ -1517,7 +1525,7 @@ function initStreamStoryRestApi() {
 
                     db.setStateProperties(mid, stateId, props, function (e) {
                         if (e != null) {
-                            handleServerError(e, req, res);
+                            utils.handleServerError(e, req, res);
                             return;
                         }
 
@@ -1531,7 +1539,7 @@ function initStreamStoryRestApi() {
 
                     if (isUndesired && (eventId == null || eventId == '')) {
                         log.warn('The state is marked undesired, but the eventId is missing!');
-                        handleBadInput(res, 'Undesired event without an event id!');
+                        utils.handleBadInput(res, 'Undesired event without an event id!');
                         return;
                     }
 
@@ -1554,7 +1562,7 @@ function initStreamStoryRestApi() {
                     }
                     db.setStateProperties(mid, stateId, props, function (e) {
                         if (e != null) {
-                            handleServerError(e, req, res);
+                            utils.handleServerError(e, req, res);
                             return;
                         }
 
@@ -1564,7 +1572,7 @@ function initStreamStoryRestApi() {
                 }
             } catch (e) {
                 log.error(e, 'Failed to set name of state %d to %s', stateId, stateNm);
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
             }
         });
 
@@ -1586,7 +1594,7 @@ function initStreamStoryRestApi() {
                 res.end();
             } catch (e) {
                 log.error(e, 'Failed to control %d by factor %d', ftrId, val);
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
             }
         });
 
@@ -1607,7 +1615,7 @@ function initStreamStoryRestApi() {
                 res.end();
             } catch (e) {
                 log.error(e, 'Failed to reset control!');
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
             }
         });
 
@@ -1622,7 +1630,7 @@ function initStreamStoryRestApi() {
                 res.end();
             } catch (e) {
                 log.error(e, 'Failed to query the state of control features!');
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
             }
         });
     })();
@@ -1646,7 +1654,7 @@ function initDataUploadApi() {
         var session = req.session;
 
         if (req.file == null) {
-            handleServerError(new Error('File not uploaded in the upload request!'), req, res);
+            utils.handleServerError(new Error('File not uploaded in the upload request!'), req, res);
             return;
         }
 
@@ -1690,7 +1698,7 @@ function initDataUploadApi() {
             function onEnd(e) {
                 if (e != null) {
                     log.error(e, 'Exception while reading CSV headers!');
-                    handleServerError(e, req, res);
+                    utils.handleServerError(e, req, res);
                     return;
                 }
 
@@ -1746,7 +1754,7 @@ function initDataUploadApi() {
             mkdirp(dbDir, function (e) {
                 if (e != null) {
                     log.error(e, 'Failed to create base directory!');
-                    handleServerError(e, req, res);
+                    utils.handleServerError(e, req, res);
                     return;
                 }
 
@@ -1844,12 +1852,12 @@ function initDataUploadApi() {
                     });
                 } catch (e) {
                     log.error(e, 'Exception while uploading a new dataset!');
-                    handleServerError(e, req, res);
+                    utils.handleServerError(e, req, res);
                 }
             });
         } catch (e) {
             log.error(e, 'Exception while building model!');
-            handleServerError(e, req, res);
+            utils.handleServerError(e, req, res);
         }
     }
 
@@ -1888,7 +1896,7 @@ function initDataUploadApi() {
             res.end();
         } catch (e) {
             log.error(e, 'Failed to send progress to the UI!');
-            handleServerError(e, req, res);
+            utils.handleServerError(e, req, res);
         }
     }
 
@@ -1935,7 +1943,7 @@ function initDataUploadApi() {
             }
         } catch (e) {
             log.error(e, 'Failed to check model progress!');
-            handleServerError(e, req, res);
+            utils.handleServerError(e, req, res);
         }
     });
 
@@ -1960,7 +1968,7 @@ function initDataUploadApi() {
                     fs.mkdir(userDirNm, function (e) {
                         if (e != null) {
                             log.error(e, 'Failed to create directory!');
-                            handleServerError(e, req, res);
+                            utils.handleServerError(e, req, res);
                             return;
                         }
                         createModel(req, res);
@@ -1969,7 +1977,7 @@ function initDataUploadApi() {
             });
         } catch (e) {
             log.error(e, 'Exception while creating user directory!');
-            handleServerError(e, req, res);
+            utils.handleServerError(e, req, res);
         }
     });
 
@@ -1985,7 +1993,7 @@ function initDataUploadApi() {
         db.fetchModel(modelId, function (e, modelConfig) {
             if (e != null) {
                 log.error(e, 'Failed to get base info for user: %s', username);
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
                 return;
             }
 
@@ -2010,7 +2018,7 @@ function initDataUploadApi() {
                         modelStore.loadOnlineModel(modelConfig.model_file, function (e, model) {
                             if (e != null) {
                                 log.error(e, 'Exception while loading online model!');
-                                handleServerError(e, req, res);
+                                utils.handleServerError(e, req, res);
                                 return;
                             }
 
@@ -2025,7 +2033,7 @@ function initDataUploadApi() {
                     modelStore.loadOfflineModel(modelConfig.base_dir, function (e, baseConfig) {
                         if (e != null) {
                             log.error(e, 'Exception while loading offline model!');
-                            handleServerError(e, req, res);
+                            utils.handleServerError(e, req, res);
                             return;
                         }
 
@@ -2036,7 +2044,7 @@ function initDataUploadApi() {
                 }
             } catch (e1) {
                 log.error(e1, 'Failed to initialize model!');
-                handleServerError(e1, req, res);
+                utils.handleServerError(e1, req, res);
             }
         });
     });
@@ -2055,7 +2063,7 @@ function initServerApi() {
                 res.end();
             } catch (e) {
                 log.error(e, 'Failed to exit!');
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
             }
         });
     }
@@ -2068,7 +2076,7 @@ function initServerApi() {
                 res.end();
             } catch (e) {
                 log.error(e, 'Failed fetch theme!');
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
             }
         });
 
@@ -2082,7 +2090,7 @@ function initServerApi() {
                 db.updateTheme(username, theme, function (e) {
                     if (e != null) {
                         log.error(e, 'Exception while setting theme!');
-                        handleServerError(e, req, res);
+                        utils.handleServerError(e, req, res);
                         return;
                     }
 
@@ -2092,7 +2100,7 @@ function initServerApi() {
                 });
             } catch (e) {
                 log.error(e, 'Failed to set theme!');
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
             }
         });
     }
@@ -2120,7 +2128,7 @@ function initServerApi() {
                 res.end();
             } catch (e) {
                 log.error(e, 'Failed to process raw measurement!');
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
             }
         });
     }
@@ -2133,7 +2141,7 @@ function initServerApi() {
             db.countActiveModels(function (e, result) {
                 if (e != null) {
                     log.error(e, 'Failed to count the number of active models!');
-                    handleServerError(e, req, res);
+                    utils.handleServerError(e, req, res);
                     return;
                 }
 
@@ -2155,7 +2163,7 @@ function initServerApi() {
             db.activateModel({modelId: modelId, activate: activate}, function (e1) {
                 if (e1 != null) {
                     log.error(e1, 'Failed to activate model %s!', modelId);
-                    handleServerError(e1, req, res);
+                    utils.handleServerError(e1, req, res);
                     return;
                 }
 
@@ -2164,7 +2172,7 @@ function initServerApi() {
                         db.fetchModel(modelId, function (e2, modelConfig) {
                             if (e2 != null) {
                                 log.error(e2, 'Failed to fetch a model from the DB!');
-                                handleServerError(e2, req, res);
+                                utils.handleServerError(e2, req, res);
                                 return;
                             }
 
@@ -2199,7 +2207,7 @@ function initServerApi() {
                     }
                 } catch (e2) {
                     log.error(e2, 'Model activated in the DB, but failed to activate it in the app!');
-                    handleServerError(e2, req, res);
+                    utils.handleServerError(e2, req, res);
                 }
             });
         }
@@ -2212,7 +2220,7 @@ function initServerApi() {
 
                 db.deleteModel(modelId, function (e) {
                     if (e != null) {
-                        return handleServerError(e, req, res);
+                        return utils.handleServerError(e, req, res);
                     }
 
                     res.status(204);
@@ -2220,7 +2228,7 @@ function initServerApi() {
                 });
             } catch (e) {
                 log.error(e, 'Failed to process raw measurement!');
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
             }
         });
 
@@ -2235,7 +2243,7 @@ function initServerApi() {
                 activateModelById(req, res, modelId, activate, false);
             } catch (e) {
                 log.error(e, 'Failed to process raw measurement!');
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
             }
         });
 
@@ -2251,7 +2259,7 @@ function initServerApi() {
                 activateModelById(req, res, model.getId(), activate, true);
             } catch (e) {
                 log.error(e, 'Failed to process raw measurement!');
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
             }
         });
 
@@ -2267,7 +2275,7 @@ function initServerApi() {
             db.fetchModel(model.getId(), function (e, modelConfig) {
                 if (e != null) {
                     log.error(e, 'Failed to get model mode from the DB!');
-                    handleServerError(e, req, res);
+                    utils.handleServerError(e, req, res);
                     return;
                 }
 
@@ -2291,7 +2299,7 @@ function initServerApi() {
             db.makeModelPublic(mid, share, function (e) {
                 if (e != null) {
                     log.error(e, 'Failed to activate model %s!', mid);
-                    handleServerError(e, req, res);
+                    utils.handleServerError(e, req, res);
                     return;
                 }
 
@@ -2300,7 +2308,7 @@ function initServerApi() {
             });
         } catch (e) {
             log.error(e, 'Failed to process raw measurement!');
-            handleServerError(e, req, res);
+            utils.handleServerError(e, req, res);
         }
     });
 }
@@ -2319,7 +2327,7 @@ function initConfigRestApi() {
             db.getMultipleConfig({properties: properties}, function (e, result) {
                 if (e != null) {
                     log.error(e, 'Failed to fetch properties from DB!');
-                    handleServerError(e, req, res);
+                    utils.handleServerError(e, req, res);
                     return;
                 }
 
@@ -2328,7 +2336,7 @@ function initConfigRestApi() {
             });
         } catch (e) {
             log.error(e, 'Failed to query configuration!');
-            handleServerError(e, req, res);
+            utils.handleServerError(e, req, res);
         }
     });
 
@@ -2342,7 +2350,7 @@ function initConfigRestApi() {
             db.setConfig(config, function (e) {
                 if (e != null) {
                     log.error(e, 'Failed to update settings!');
-                    handleServerError(e, req, res);
+                    utils.handleServerError(e, req, res);
                     return;
                 }
 
@@ -2357,7 +2365,7 @@ function initConfigRestApi() {
             });
         } catch (e) {
             log.error(e, 'Failed to set configuration!');
-            handleServerError(e, req, res);
+            utils.handleServerError(e, req, res);
         }
     });
 }
@@ -2717,6 +2725,9 @@ function getPageOpts(req, next) {
         delete session.message;
     }
 
+    // add the options necessary for external authentication
+    externalAuth.prepDashboard(opts);
+
     return opts;
 }
 
@@ -2767,7 +2778,7 @@ function prepDashboard() {
         db.fetchUserModels(username, function (e, dbModels) {
             if (e != null) {
                 log.error(e, 'Failed to fetch user models!');
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
                 return;
             }
 
@@ -2802,7 +2813,7 @@ function prepDashboard() {
 
             addUseCaseOpts(opts, function (e, opts) {
                 if (e != null) {
-                    handleServerError(e, req, res);
+                    utils.handleServerError(e, req, res);
                     return;
                 }
                 opts.models = models;
@@ -2822,7 +2833,7 @@ function prepMainUi() {
         db.fetchModel(model.getId(), function (e, modelConfig) {
             if (e != null) {
                 log.error(e, 'Failed to fetch model configuration from the DB!');
-                handleServerError(e, req, res);
+                utils.handleServerError(e, req, res);
                 return;
             }
 
@@ -2836,7 +2847,7 @@ function prepMainUi() {
                 db.countActiveModels(function (e1, result) {
                     if (e1 != null) {
                         log.error(e1, 'Failed to count the number of active models!');
-                        handleServerError(e, req, res);
+                        utils.handleServerError(e, req, res);
                         return;
                     }
 
@@ -2852,24 +2863,61 @@ function prepMainUi() {
 
 function accessControl(req, res, next) {
     var session = req.session;
+    // if using external authentication, then do not use access
+    // control
+    if (config.AUTHENTICATION_EXTERNAL) {
+        var token = req.query.token;
 
-    var page = getRequestedPage(req);
-    var dir = getRequestedPath(req);
+        if (token == null) return next();
 
-    if (!isLoggedIn(session)) {
-        if (log.debug())
-            log.debug('Session data missing for page %s, dir %s ...', page, dir);
+        var fetchCredentials = function () {
+            externalAuth.fetchCredentials(token, function (e, user) {
+                if (e != null) return utils.handleServerError(e, req, res);
 
-        var isAjax = req.xhr;
-        if (isAjax) {
-            if (log.debug())
-                log.debug('Session data missing for AJAX API call, blocking!');
-            handleNoPermission(req, res);
-        } else {
-            redirect(res, 'login.html');
+                loginUser(session, {
+                    username: user.email,
+                    theme: user.theme
+                });
+
+                session[FZI_TOKEN_KEY] = token;
+
+                next();
+            })
         }
-    } else {
-        next();
+
+        if (isLoggedIn(session)) {
+            if (session[FZI_TOKEN_KEY] != token) {
+                // fetch user credentials from the authentication system
+                fetchCredentials();
+            } else {
+                return next();
+            }
+        } else {
+            // fetch user credentials from the authentication system
+            fetchCredentials();
+        }
+    }
+    else {
+        var page = getRequestedPage(req);
+        var dir = getRequestedPath(req);
+
+        // if the user is not logged in => redirect them to login
+        // login is exempted from the access control
+        if (!isLoggedIn(session)) {
+            if (log.debug())
+                log.debug('Session data missing for page %s, dir %s ...', page, dir);
+
+            var isAjax = req.xhr;
+            if (isAjax) {
+                if (log.debug())
+                    log.debug('Session data missing for AJAX API call, blocking!');
+                utils.handleNoPermission(req, res);
+            } else {
+                redirect(res, 'login.html');
+            }
+        } else {
+            next();
+        }
     }
 }
 
@@ -2903,7 +2951,7 @@ function initServer(sessionStore, parseCookie) {
     app.use(API_PATH + '/', bodyParser.urlencoded({ extended: false, limit: '50Mb' }));
     app.use(API_PATH + '/', bodyParser.json({limit: '50Mb'}));
     app.use(DATA_PATH + '/', bodyParser.json({limit: '50Mb'}));
-    app.use(fzi.STREAM_PIPES_PATH + '/', bodyParser.json({limit: '50Mb'}));	// TODO
+    app.use(fzi.STREAM_PIPES_PATH + '/', bodyParser.json({limit: '50Mb'}));
     app.use(fzi.STREAM_PIPES_PATH + '/', bodyParser.urlencoded({ extended: false, limit: '50Mb' }));
 
     // when a session expires, redirect to index
@@ -2924,9 +2972,12 @@ function initServer(sessionStore, parseCookie) {
     initConfigRestApi();
     initDataUploadApi();
 
+    //==============================================
+    // INTEGRATION
     if (config.USE_BROKER) {
         fzi.initWs(app);
     }
+    //==============================================
 
     var sessionExcludeDirs = ['/login', '/js', '/css', '/img', '/lib', '/popups', '/material', '/landing', '/streampipes', '/data'];
     var sessionExcludeFiles = ['index.html', 'login.html', 'register.html', 'resetpassword.html'];
@@ -3018,9 +3069,17 @@ exports.init = function (opts) {
     initPipelineHandlers();
     initBroker();
 
-    fzi.init({
-        broker: broker
-    });
+    if (config.USE_BROKER) {
+        fzi.init({
+            broker: broker,
+            modelStore: modelStore,
+            db: db
+        });
+    }
 
     log.info('Done!');
+
+    if (config.AUTHENTICATION_EXTERNAL) {
+        externalAuth.setDb(db);
+    }
 };

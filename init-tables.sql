@@ -57,3 +57,10 @@ INSERT INTO config (property, value) values ('deviation_extreme_lambda', '3.888'
 INSERT INTO config (property, value) values ('deviation_major_lambda', '0.648');
 INSERT INTO config (property, value) values ('deviation_significant_lambda', '0.1');
 INSERT INTO config (property, value) values ('deviation_minor_lambda', '0.05');
+
+-- FZI integration
+CREATE TABLE pipelines (
+    pid VARCHAR(255) NOT NULL,
+    config TEXT NOT NULL,
+    PRIMARY KEY (pid)
+);

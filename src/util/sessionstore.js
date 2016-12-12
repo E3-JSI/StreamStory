@@ -20,8 +20,8 @@ var util = require('util')
  */
 
 /* istanbul ignore next */
-var defer = typeof setImmediate === 'function'
-	? setImmediate : function(fn){ process.nextTick(fn.bind.apply(fn, arguments)) }
+var defer = typeof setImmediate === 'function' ? setImmediate :
+                                             function(fn){ process.nextTick(fn.bind.apply(fn, arguments)) }
 
 /**
  * Module exports.
@@ -32,24 +32,26 @@ module.exports = StreamStoryStore
 function cleanup(store) {
 	if (log.trace())
 		log.trace('Cleaning up session store ...');
+
 	var sessions = store.sessions;
-	
-	var now = Date.now();
+    var now = Date.now();
+
+    var cleanupSession = function (sessionId) {
+        var session = sessions[sessionId];
+        var expires = typeof session.cookie.expires === 'string' ? new Date(session.cookie.expires) : session.cookie.expires;
+        
+        if (expires && expires <= now) {
+            if (log.trace())
+                log.trace('Session %s expired, destroying ...', sessionId);
+            store.destroy(sessionId, function () {
+                if (log.trace())
+                    log.trace('Destroyed session: %s', sessionId);
+            });
+        }
+    }
+
 	for (var sessionId in sessions) {
-		(function() {
-			var localSessionId = sessionId;
-			var session = sessions[sessionId];
-			var expires = typeof session.cookie.expires === 'string' ? new Date(session.cookie.expires) : session.cookie.expires;
-			
-			if (expires && expires <= Date.now()) {
-				if (log.trace())
-					log.trace('Session %s expired, destroying ...', sessionId);
-				store.destroy(sessionId, function () {
-					if (log.trace())
-						log.trace('Destroyed session: %s', localSessionId);
-		    	});
-			}
-		})();
+        cleanupSession(sessionId);
 	}
 }
 
@@ -97,7 +99,7 @@ StreamStoryStore.prototype.all = function all(callback) {
 		}
 	}
 
-	callback && defer(callback, null, sessions)
+	callback && defer(callback, null, sessions)     // jshint ignore:line
 }
 
 /**
@@ -111,7 +113,7 @@ StreamStoryStore.prototype.clear = function clear(callback) {
 	if (log.trace())
 		log.trace('Clear called ...');
 	this.sessions = Object.create(null)
-	callback && defer(callback)
+	callback && defer(callback) // jshint ignore:line
 }
 
 /**
@@ -127,7 +129,7 @@ StreamStoryStore.prototype.destroy = function destroy(sessionId, callback) {
 	this.emit('preDestroy', sessionId, this.sessions[sessionId]);
 	delete this.sessions[sessionId];
 	this.emit('postDestroy', sessionId);
-	callback && defer(callback)
+	callback && defer(callback) // jshint ignore:line 
 }
 
 /**
@@ -173,7 +175,7 @@ StreamStoryStore.prototype.set = function set(sessionId, session, callback) {
 	if (log.trace())
 		log.trace('Set called, sessionId: %s, session: %s ...', sessionId, JSON.stringify(session));
 	this.sessions[sessionId] = session;
-	callback && defer(callback)
+	callback && defer(callback)     // jshint ignore:line
 }
 
 /**
@@ -200,7 +202,7 @@ StreamStoryStore.prototype.touch = function touch(sessionId, session, callback) 
 			log.trace('New session cookie: %s', JSON.stringify(session.cookie));
 	}
 
-	callback && defer(callback)
+	callback && defer(callback)     // jshint ignore:line
 }
 
 StreamStoryStore.prototype.regenerate = function (req, fn) {

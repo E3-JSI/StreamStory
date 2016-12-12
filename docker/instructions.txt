@@ -1,0 +1,6 @@
+- docker-compose build
+- source env/nissa.sh
+- docker-compose up streamstory-db
+-- wait a minute until initialization completes
+-- press CTRL-c to stop the container gracefully
+- docker-compose up

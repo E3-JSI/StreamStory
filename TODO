@@ -1,16 +1,8 @@
-- distribution of time (timeline + days/hours)
-- boxplots zraven histogramov
-- histogrami: default tako kot zdaj, moznost zoom v lokalne vrednosti
-- STD pri povprecnih vrednostih (mediana + avg prikazi na histogramu + kvartili)
-- zoom v eno stanje
-- poglej in daj moznost alternativnih grafov (drugo kot histogram)
-- moznost izpisa najbolj informativnih atributov na stanjih
-- importance bar namesto barve (logreg)
+- vkljuci napovedovanje scrap delov v Helli v sistem
+(*) decision tree fonti so zelo majni - ali bi lahko naredil, da se da povecati fonte, podobno kot zgoraj pri mrezi
+(*) se da narediti, da bi podokna lahko malo premikal (siril, ozal)?
+(*) kot receno - se kaksen vecji realisticni primer v bi bil zelo koristen, ko se prepricuje ljudi, da ta zadeva zmore resevati vecje aplikacije
 
-DATASETS:
-- dobi dataset MTA.info - poglej kaki so in kaj z njimi narediti
-
-ACTIVITY RECOGNITION:
-- dynamic time warping of two weighted strings
-
-AUTOMATIC NAMING: - tamperature HIGH/LOW/MEDIUM
+NUJNO!!!!!!!!!!!!!
+- preveri, ce deluje menjava current state-a kot pricakovano
+-- zgleda, da je problem pri previous state-u
