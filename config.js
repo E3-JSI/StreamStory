@@ -174,15 +174,13 @@ exports.STREAM_STORY_PARAMS = {
     verbose: true
 }
 
-//================================================================
-// INTEGRATION
-//================================================================
-exports.USE_BROKER = config.integration.type == 'broker';
-exports.integration = config.integration;
+exports.MEAN_STATE_LABEL = config.meanStateLabel != null ?
+                                config.meanStateLabel : '';
 
 //================================================================
 // PIPELINE
 //================================================================
+
 exports.GC_INTERVAL = 10000000
 
 //================================================================
@@ -202,6 +200,9 @@ exports.COEFF_PRINT_INTERVAL = config.log.print.coeff;
 //================================================================
 // INTEGRATION
 //================================================================
+
+exports.USE_BROKER = config.integration.type == 'broker';
+exports.integration = config.integration;
 
 exports.RESTART_ON_REPLAY = config.restartOnReplay;
 

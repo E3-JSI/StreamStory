@@ -2830,6 +2830,8 @@ function prepMainUi() {
 
         var model = session.model;
 
+        opts.MEAN_STATE_LABEL = config.MEAN_STATE_LABEL;
+
         db.fetchModel(model.getId(), function (e, modelConfig) {
             if (e != null) {
                 log.error(e, 'Failed to fetch model configuration from the DB!');
