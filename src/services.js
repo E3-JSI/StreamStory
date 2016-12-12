@@ -33,7 +33,7 @@ var FZI_TOKEN_KEY = 'fzi-token';
 
 var app = express();
 
-var fileBuffH = {};	// if I store the file buffer directly into the session, the request takes forever to complete
+var fileBuffH = {}; // if I store the file buffer directly into the session, the request takes forever to complete
 
 var titles = {
     '': 'Index',
@@ -378,7 +378,7 @@ function initStreamStoryHandlers(model, enable) {
                     activityId: activityName,
                     startTime: start,
                     endTime: end,
-                    description: '(empty)'	// TODO description
+                    description: '(empty)'  // TODO description
                 });
 
                 var topics = fzi.getTopics(fzi.ACTIVITY_OPERATION, model.getId());
@@ -536,22 +536,22 @@ function initPipelineHandlers() {
                     if (zscore >= 5) {
                         pdf = {
                             type: 'exponential',
-                            lambda: intensConfig.deviation_extreme_lambda		// degradation occurs once per month
+                            lambda: intensConfig.deviation_extreme_lambda       // degradation occurs once per month
                         };
-                    } else if (zscore >= 4) {									// major deviation
+                    } else if (zscore >= 4) {                                   // major deviation
                         pdf = {
                             type: 'exponential',
-                            lambda: intensConfig.deviation_major_lambda			// degradation occurs once per two months
+                            lambda: intensConfig.deviation_major_lambda         // degradation occurs once per two months
                         };
-                    } else if (zscore >= 3) {									// significant deviation
+                    } else if (zscore >= 3) {                                   // significant deviation
                         pdf = {
                             type: 'exponential',
-                            lambda: intensConfig.deviation_significant_lambda	// degradation occurs once per year
+                            lambda: intensConfig.deviation_significant_lambda   // degradation occurs once per year
                         };
-                    } else {													// (zscore >= 2) minor deviation
+                    } else {                                                    // (zscore >= 2) minor deviation
                         pdf = {
                             type: 'exponential',
-                            lambda: intensConfig.deviation_minor_lambda			// degradation occurs once per two years
+                            lambda: intensConfig.deviation_minor_lambda         // degradation occurs once per two years
                         };
                     }
 
@@ -811,7 +811,7 @@ function initLoginRestApi() {
                         return;
                     }
 
-                    res.status(204);	// no content
+                    res.status(204);    // no content
                     res.end();
                 });
             });
@@ -850,7 +850,7 @@ function initStreamStoryRestApi() {
                 var positions = req.body.positions != null ? JSON.parse(req.body.positions) : null;
 
                 if (model == null) {
-                    res.status(401);	// unauthorized
+                    res.status(401);    // unauthorized
                     res.end();
                     return;
                 }
@@ -893,7 +893,7 @@ function initStreamStoryRestApi() {
                 paramObj[paramName] = paramVal;
 
                 model.getModel().setParams(paramObj);
-                res.status(204);	// no content
+                res.status(204);    // no content
                 res.end();
             } catch (e) {
                 log.error(e, 'Failed to query MHWirth multilevel visualization!');
@@ -1249,7 +1249,7 @@ function initStreamStoryRestApi() {
                         return;
                     }
 
-                    res.status(204);	// no content
+                    res.status(204);    // no content
                     res.end();
                 });
             } catch (e) {
@@ -1294,7 +1294,7 @@ function initStreamStoryRestApi() {
                     log.debug('Saving model to file: %s', fname);
                 model.save(fname);
 
-                res.status(204);	// no content
+                res.status(204);    // no content
                 res.end();
             } catch (e) {
                 log.error(e, 'Failed to set activity!');
@@ -1322,7 +1322,7 @@ function initStreamStoryRestApi() {
                     log.debug('Saving model to file: %s', fname);
                 model.save(fname);
 
-                res.status(204);	// no content
+                res.status(204);    // no content
                 res.end();
             } catch (e) {
                 log.error(e, 'Failed to set activity!');
@@ -1529,7 +1529,7 @@ function initStreamStoryRestApi() {
                             return;
                         }
 
-                        res.status(204);	// no content
+                        res.status(204);    // no content
                         res.end();
                     });
                 }
@@ -1566,7 +1566,7 @@ function initStreamStoryRestApi() {
                             return;
                         }
 
-                        res.status(204);	// no content
+                        res.status(204);    // no content
                         res.end();
                     });
                 }
@@ -1640,8 +1640,8 @@ function initDataUploadApi() {
     log.info('Initializing data upload API ...');
 
     var upload = multer({
-        storage: multer.memoryStorage(),				// will have file.buffer
-        fileFilter: function (req, file, callback) {	// only accept csv files
+        storage: multer.memoryStorage(),                // will have file.buffer
+        fileFilter: function (req, file, callback) {    // only accept csv files
             var passes = qmutil.stringEndsWith(file.originalname, '.csv');
             log.debug('Filtering uploaded file %s. File passess filter: ' + passes, JSON.stringify(file));
             callback(undefined, passes);
@@ -1714,7 +1714,7 @@ function initDataUploadApi() {
 
     function createModel(req, res) {
         try {
-            req.connection.setTimeout(LONG_REQUEST_TIMEOUT);	// set long timeout since the processing can take quite long
+            req.connection.setTimeout(LONG_REQUEST_TIMEOUT);    // set long timeout since the processing can take quite long
 
             var session = req.session;
             var sessionId = req.sessionID;
@@ -1770,7 +1770,7 @@ function initDataUploadApi() {
                         storeNm = fields.STREAM_STORY_STORE;
                         userBase = base;
                         store = base.store(storeNm);
-                    } else {	// not real-time => create a new base and store
+                    } else {    // not real-time => create a new base and store
                         if (log.debug())
                             log.debug('Creating new base and store ...');
 
@@ -1833,7 +1833,7 @@ function initDataUploadApi() {
                     }
 
                     // finish the request
-                    res.status(204);	// no content
+                    res.status(204);    // no content
                     res.end();
 
                     // build the model
@@ -1926,7 +1926,7 @@ function initDataUploadApi() {
                         modelStore.clearProgressCallback(username);
 
                     if (!res.finished) {
-                        res.status(204);	// no content
+                        res.status(204);    // no content
                         res.end();
                     }
                 }, 30000);
@@ -2009,7 +2009,7 @@ function initDataUploadApi() {
 
                         var model = modelStore.getModel(modelId);
                         saveToSession(sessionId, session, base, model, modelId, fname);
-                        res.status(204);	// no content
+                        res.status(204);    // no content
                         res.end();
                     } else {
                         if (log.debug())
@@ -2023,7 +2023,7 @@ function initDataUploadApi() {
                             }
 
                             saveToSession(sessionId, session, base, model, modelId, fname);
-                            res.status(204);	// no content
+                            res.status(204);    // no content
                             res.end();
                         });
                     }
@@ -2038,7 +2038,7 @@ function initDataUploadApi() {
                         }
 
                         saveToSession(sessionId, session, baseConfig.base, baseConfig.model, modelId, fname);
-                        res.status(204);	// no content
+                        res.status(204);    // no content
                         res.end();
                     });
                 }
@@ -2134,7 +2134,7 @@ function initServerApi() {
     }
 
     {
-        log.info('Registering count active models service ...');	// TODO remove after doing it with EJS
+        log.info('Registering count active models service ...');    // TODO remove after doing it with EJS
         app.get(API_PATH + '/countActiveModels', function (req, res) {
             log.debug('Fetching the number of active models from the DB ...');
 
@@ -2186,8 +2186,8 @@ function initServerApi() {
                                     log.debug('Activating model with id %s', model.getId());
 
                                 if (isFromUi) {
-                                    //									var currModel = getModel(sessionId, session);
-                                    //									deactivateModel(currModel);
+                                    //                                  var currModel = getModel(sessionId, session);
+                                    //                                  deactivateModel(currModel);
                                     session.model = model;
                                 }
 
@@ -2360,7 +2360,7 @@ function initConfigRestApi() {
                     pipeline.setCalcCoeff(config.calc_coeff == 'true');
                 }
 
-                res.status(204);	// no content
+                res.status(204);    // no content
                 res.end();
             });
         } catch (e) {
@@ -2380,7 +2380,7 @@ function initBroker() {
 
     var lastCepTime = 0;
 
-    var enrichedFields = [	// FIXME remove this
+    var enrichedFields = [  // FIXME remove this
         {"name": "time", "type": "datetime"},
         {"name": "hook_load", "type": "float"},
         {"name": "hoist_press_A", "type": "float"},
@@ -2444,10 +2444,10 @@ function initBroker() {
                 if (log.trace())
                     log.trace('Received raw measurement: %s', JSON.stringify(payload));
 
-                //				//========================================================
-                //				// TODO remove this
-                //				payload = transform.parseDominiksRawEvent(msg);
-                //				//========================================================
+                //              //========================================================
+                //              // TODO remove this
+                //              payload = transform.parseDominiksRawEvent(msg);
+                //              //========================================================
 
                 addRawMeasurement(payload);
             }
@@ -2462,7 +2462,7 @@ function initBroker() {
                 val.time = utils.dateToQmDate(new Date(val.timestamp));
                 delete val.timestamp;
 
-                for (var i = 0; i < enrichedFields.length; i++) {	// FIXME remove this
+                for (var i = 0; i < enrichedFields.length; i++) {   // FIXME remove this
                     if (!(enrichedFields[i].name in val))
                         val[enrichedFields[i].name] = 0;
                 }
@@ -2478,10 +2478,10 @@ function initBroker() {
 
                 var event = msg.payload;
 
-                //				//========================================================
-                //				// TODO remove this
-                //				event = transform.parseDominiksDerivedEvent(event);
-                //				//========================================================
+                //              //========================================================
+                //              // TODO remove this
+                //              event = transform.parseDominiksDerivedEvent(event);
+                //              //========================================================
 
                 val = transform.parseDerivedEvent(event);
 
@@ -2937,7 +2937,7 @@ function initServer(sessionStore, parseCookie) {
     var sess = session({
         unset: 'destroy',
         store: sessionStore,
-        cookie: { maxAge: 1000*60*60*24 },	// the cookie will last for 1 day
+        cookie: { maxAge: 1000*60*60*24 },  // the cookie will last for 1 day
         resave: true,
         saveUninitialized: true
     });
