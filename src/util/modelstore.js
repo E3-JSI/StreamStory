@@ -539,6 +539,7 @@ module.exports = exports = function (opts) {
 
                                 if (attr == '') continue;
 
+                                var val;
                                 if (type == 'time') {
                                     var date = new Date(parseFloat(lineArr[i]));
                                     var qmDate = utils.dateToQmDate(date);
@@ -549,7 +550,7 @@ module.exports = exports = function (opts) {
                                     timeV.push(date.getTime());
                                 }
                                 else if (type == 'numeric') {
-                                    var val = lineArr[i];
+                                    val = lineArr[i];
 
                                     if (attr in attrSet && isNaN(val)) {
                                         log.warn('Invalid line: %s', JSON.stringify(lineArr));
@@ -563,7 +564,7 @@ module.exports = exports = function (opts) {
                                     recJson[attr] = parseFloat(val);
                                 }
                                 else if (type == 'nominal') {
-                                    var val = lineArr[i];
+                                    val = lineArr[i];
 
                                     if (val == null || val == '') val = '(missing)';
 
@@ -644,8 +645,9 @@ module.exports = exports = function (opts) {
                                 config.REAL_TIME_MODELS_PATH + new Date().getTime() + '.bin' :
                                 utils.getModelFName(baseDir);
 
+                            var dbOpts;
                             if (isRealTime) {
-                                var dbOpts = {
+                                dbOpts = {
                                     username: username,
                                     model_file: fname,
                                     dataset: datasetName,
@@ -671,7 +673,7 @@ module.exports = exports = function (opts) {
                                 });
                             } else {
                                 // store the model into the DB
-                                var dbOpts = {
+                                dbOpts = {
                                     username: username,
                                     base_dir: baseDir,
                                     model_file: fname,
