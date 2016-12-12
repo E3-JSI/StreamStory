@@ -605,7 +605,8 @@ var zoomVis = function (opts) {
 	
 	function getNodeLabel(node) {
 		var label = node.name != null ? node.name : node.autoName;
-		
+
+        if (label == null) label = 'MEAN';
 		if (label == null) label = '';//node.label;
 		
 		var spl = label.split(/\s+/);
