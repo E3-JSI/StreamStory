@@ -4,7 +4,7 @@
     "devel": true,
     "freeze": true,
     "curly": false,
-    "singleGroups": true,
+    "singleGroups": false,
     "eqeqeq": false,
     "eqnull": true,
     "funcscope": false,

@@ -2,6 +2,26 @@
  handleAjaxError, addPressHandler, toUiPrecision, redirectToUI, reloadWindow,
  getHslStr, getFtrColor, getBrightness, hsl2rgb */
 
+var StreamStory = {};
+
+StreamStory.Utils = {};
+
+StreamStory.Utils.asyncExecutor = function (callback) {
+    // var currReqId = 0;
+    var nReq = 0;
+    var nRes = 0;
+    return function (executeMe) {
+        // var reqId = currReqId++;
+        nReq++;
+        executeMe(function () {
+            nRes++;
+            if (nReq == nRes) {
+                callback();
+            }
+        })
+    }
+}
+
 function isNumber(val) {
     return !isNaN(val);
 }
@@ -52,10 +72,10 @@ function handleAjaxError(alertField, callback) {
             } else {
                 alert(xhr.responseText);
             }
-
-            if (callback != null)
-                callback();
         }
+
+        if (callback != null)
+            callback();
     }
 }
 

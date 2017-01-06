@@ -558,16 +558,12 @@ module.exports = exports = function (opts) {
                                     }
 
                                     val = parseFloat(lineArr[i]);
-
                                     if (isNaN(val)) { val = 0; }
-
                                     recJson[attr] = parseFloat(val);
                                 }
                                 else if (type == 'nominal') {
                                     val = lineArr[i];
-
                                     if (val == null || val == '') val = '(missing)';
-
                                     recJson[attr] = val.toString();
                                 }
                                 else {

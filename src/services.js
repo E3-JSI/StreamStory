@@ -27,7 +27,7 @@ var API_PATH = '/api';
 var DATA_PATH = '/data';
 var WS_PATH = '/ws';
 
-var LONG_REQUEST_TIMEOUT = 1000*60*60*24;
+var LONG_REQUEST_TIMEOUT = 1000*60*60*24;   // 24 hours
 
 var FZI_TOKEN_KEY = 'fzi-token';
 
@@ -408,19 +408,22 @@ function initStreamStoryHandlers(model, enable) {
     }
 }
 
-function sendPrediction(msg, timestamp) {
-    var msgStr = JSON.stringify(msg);
-
+function sendPrediction(msg, timestamp, eventProps) {
     var perMonth = msg.content.pdf.lambda;
     var perHour = perMonth / (30*24);
 
-    var brokerMsg = transform.genExpPrediction(perHour, 'hour', timestamp);
+    var brokerMsg = transform.genExpPrediction(perHour, 'hour', timestamp, eventProps);
 
-    if (log.debug())
-        log.debug('Sending prediction: %s', JSON.stringify(brokerMsg));
+    var modelMsgStr = JSON.stringify(msg);
+    var brokerMsgStr = JSON.stringify(brokerMsg);
 
-    broker.send(broker.PREDICTION_PRODUCER_TOPIC, JSON.stringify(brokerMsg));
-    modelStore.distributeMsg(msgStr);
+    if (log.debug()) {
+        log.debug('Sending exponential prediction to broker: %s', brokerMsgStr);
+        log.debug('Sending exponential prediciton to all the models: %s', modelMsgStr)
+    }
+
+    broker.send(broker.PREDICTION_PRODUCER_TOPIC, brokerMsgStr);
+    modelStore.distributeMsg(modelMsgStr);
 }
 
 function initPipelineHandlers() {
@@ -522,6 +525,9 @@ function initPipelineHandlers() {
                                 throw new Error('Invalid event ID for coefficient: ' + optsClone.eventId);
                         }
 
+                        if (log.info())
+                            log.info('Will send prediction message to FZI topics:\n%s', brokerMsgStr);
+
                         var topics = fzi.getTopics(operation);
                         for (var i = 0; i < topics.length; i++) {
                             var topic = topics[i].output;
@@ -573,7 +579,13 @@ function initPipelineHandlers() {
                             }
                         };
 
-                        sendPrediction(msg, opts.time);
+                        var proasenseEventProps = {
+                            coeff: opts.value,
+                            std: opts.std,
+                            zScore: opts.zScore
+                        }
+
+                        sendPrediction(msg, opts.time, proasenseEventProps);
                     }
                 }
             });
