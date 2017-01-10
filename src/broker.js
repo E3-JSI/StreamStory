@@ -134,7 +134,7 @@ function initConsumer(callback) {
                             log.info('Will restart after a small delay ...');
 
                             resetTimeoutId = setTimeout(function () {
-                                log.info('Restarting ...');
+                                log.info('Restarting, received %d restart events ...', nResetEvents);
                                 process.exit(0);
                             }, 5000);
                         } else {
