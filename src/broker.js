@@ -109,11 +109,14 @@ function initConsumer(callback) {
         });
     });
 
-    {
+    (function () {
         log.info('Adding broker message handler ...');
 
         var nReceivedRaw = 0;
         var nReceivedCep = 0;
+
+        var nResetEvents = 0;
+        var resetTimeoutId = null;
 
         // var nFromDominik = 0;
 
@@ -125,12 +128,18 @@ function initConsumer(callback) {
                 if (topic == topics.TOPIC_REPLAY_START) {
                     log.info('Received replay start message: %s', msg.value);
                     if (config.RESTART_ON_REPLAY) {
-                        log.info('Will restart after a small delay ...');
+                        log.info('Received %d reset events ...', ++nResetEvents);
 
-                        setTimeout(function () {
-                            log.info('Restarting ...');
-                            process.exit(0);
-                        }, 5000);
+                        if (resetTimeoutId == null) {
+                            log.info('Will restart after a small delay ...');
+
+                            resetTimeoutId = setTimeout(function () {
+                                log.info('Restarting ...');
+                                process.exit(0);
+                            }, 5000);
+                        } else {
+                            log.info('Reset already triggered!');
+                        }
                         return;
                     } else {
                         log.info('Will not restart, not configured to do so!');
@@ -167,7 +176,7 @@ function initConsumer(callback) {
                 log.error(e, 'Exception while receiving message!');
             }
         });
-    }
+    })();
 
     log.info('Consumer initialized!');
 }
