@@ -1502,6 +1502,10 @@ var zoomVis = function (opts) {
             dataType: 'json',
             data: { state: currStateId, level: height },
             success: function (states) {
+                // check if the current state has changed in the meanwhile (usually
+                // due to a slow connection)
+                if (currStateId != modeConfig.current) return;
+
                 for (var i = 0; i < Math.min(3, states.length); i++) {
                     var stateId = states[i].id;
 

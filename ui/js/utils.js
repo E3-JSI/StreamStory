@@ -164,18 +164,11 @@ function showAlert(holder, wrapper, clazz, title, msg, close) {
 
 function redirectToUI() {
     window.location.assign('ui.html');
-    // window.location.replace('ui.html');
 }
 
 function reloadWindow() {
     window.location.reload();
 }
-
-//function mod(val, base) {
-//	var result = val % base;
-//	if (result < 0) result += base;
-//	return result;
-//}
 
 function getFtrColor(val, minVal, maxVal, middleVal) {
     if (middleVal == null) middleVal = 0;
