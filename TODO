@@ -3,6 +3,18 @@
 (*) se da narediti, da bi podokna lahko malo premikal (siril, ozal)?
 (*) kot receno - se kaksen vecji realisticni primer v bi bil zelo koristen, ko se prepricuje ljudi, da ta zadeva zmore resevati vecje aplikacije
 
-NUJNO!!!!!!!!!!!!!
-- preveri, ce deluje menjava current state-a kot pricakovano
--- zgleda, da je problem pri previous state-u
+==============================================================
+==============================================================
+- vcasih current state zgine, daj en if pogoj, da ga future state-i ne morejo povoziti
+- When scrolling in the browser, if you scroll into the Model, you start zooming in/out of the model.
+- If you cancel on making an activity on the colors on the bar does not update
+- Click on activities, then back to View. The state diagram color is  reset. Select option, uncheck Slips open, and check and color come back again.
+- Adding one state too much in Activities. Is impossible to delete the extra added.
+- Build progress “Finished” and the model become visible in the Active model but “Build Progress” appears continuously and prevent new actions. (Reported issue, next before next session)
+- Two vertical scroll bars within the same window is not good for navigation
+- When we have to find first occurrence time with “Zoom”: -when you zoom in enough, so on the horizontal axis shows time and not date, I can not know in which date I am.
+-- I would like, that when we are zoomed enough in to see the time e.g “1:30”, to see between which date I am.
+- When state “S” Is chosen and it turns orange, one of states with name “10th -15th” has Black font on dark blue background, which makes it unreadable.
+-- When we chose one state which turns it orange, another one turns dark blue with black fonts, which makes it unreadable.
+- The artribute selection window rescrolls to the top after selecting an artribute, it is unnecesarily repetitive.
+- The rounded set of states only moves as a group, moving either of the three states moves the whole group.
