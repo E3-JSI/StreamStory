@@ -131,6 +131,14 @@ html, body {
   	width: 80%;
 }
 
+#threshold_slider, #slider_item_div {
+    opacity: 0;
+}
+
+#threshold_slider, #threshold_slider span, #slider_item_div, #slider_item_div span {
+    cursor: pointer;
+}
+
 .tooltip-div-explain {
 	font-size: 10px;
 	line-height: 11px;

@@ -1538,24 +1538,102 @@
             return that;
         })();
 
+        function equipSlider(opts) {
+            var HIDE_DURATION = 500;
+            var HIDDEN_OPACITY = 0.05;
+
+            var slider = opts.slider;
+            var value = opts.value;
+            var min = opts.min;
+            var max = opts.max;
+            var step = opts.step;
+            var orientation = opts.orientation;
+
+            var onSlide = opts.onSlide;
+            var onChange = opts.onChange;
+
+            // defaults
+            if (orientation == null) orientation = 'vertical';
+            if (onSlide == null) onSlide = function () {};
+
+            var isOver = false;
+            var isFading = false;
+            var isSliding = false;
+            var isVisible = true;
+
+            var show = function () {
+                isOver = true;
+
+                if (isSliding || isFading || isVisible) return;
+
+                isFading = true;
+                slider.animate({ opacity: 1 }, {
+                    duration: 1,
+                    complete: function () {
+                        isFading = false;
+                        isVisible = true;
+                        if (!isOver) {
+                            hide();
+                        }
+                    }
+                })
+            }
+
+            var hide = function (duration) {
+                isOver = false;
+
+                if (isSliding || isFading || !isVisible) return;
+
+                if (duration == null) duration = HIDE_DURATION;
+
+                isFading = true;
+                slider.animate({ opacity: HIDDEN_OPACITY }, {
+                    duration: duration,
+                    complete: function () {
+                        isFading = false;
+                        isVisible = false;
+                        if (isOver) {
+                            show();
+                        }
+                    }
+                })
+            }
+
+            slider.slider({
+                value: value,
+                min: min,
+                max: max,
+                step: step,
+                animate:"slow",
+                orientation: orientation,
+                change: onChange,
+                slide: onSlide,
+                start: function () {
+                    isSliding = true;
+                },
+                stop: function () {
+                    isSliding = false;
+                    if (!isOver) {
+                        hide();
+                    }
+                }
+            });
+
+            hide(1);
+            slider.hover(show, hide);
+        }
+
         (function () {
             var prevVal = 1;
 
-            $("#threshold_slider").slider({
+            equipSlider({
+                slider: $("#threshold_slider"),
                 value: prevVal,
                 min: 0.5,
                 max: 1.01,
                 step: 0.01,
-                animate:"slow",
-                orientation: "hotizontal",
-                change: function (event, ui) {
-                    var val = ui.value;
-                    if (val != prevVal) {
-                        prevVal = val;
-                        viz.setTransitionThreshold(val);
-                    }
-                },
-                slide: function (event, ui) {
+                orientation: 'horizontal',
+                onSlide: function (event, ui) {
                     var val = ui.value;
 
                     if (Math.abs(val - prevVal) > 0.15) {
@@ -1563,20 +1641,40 @@
                         viz.setTransitionThreshold(val);
                     }
                 },
-            });
+                onChange: function (event, ui) {
+                    var val = ui.value;
+                    if (val != prevVal) {
+                        prevVal = val;
+                        viz.setTransitionThreshold(val);
+                    }
+                }
+            })
         })();
 
-        $("#slider_item_div").slider({
-            value: 100,//viz.getZoom(),
-            min: 0,//viz.getMinZoom(),
-            max: 100,//viz.getMaxZoom(),
-            step: 1,//0.01,
-            animate:"slow",
-            orientation: "vertical",
-            slide: function (event, ui) {
-                viz.setScale(ui.value);
-            }
-        });
+        (function () {
+            var prevVal = 100;
+            equipSlider({
+                slider: $("#slider_item_div"),
+                min: 0,
+                max: 100,
+                step: 1,
+                onSlide: function (event, ui) {
+                    var val = ui.value;
+
+                    if (Math.abs(val - prevVal) > 10) {
+                        prevVal = val;
+                        viz.setScale(val);
+                    }
+                },
+                onChange: function (event, ui) {
+                    var val = ui.value;
+                    if (val != prevVal) {
+                        prevVal = val;
+                        viz.setScale(ui.value);
+                    }
+                }
+            })
+        })();
 
         $('#btns-timescale button').click(function () {
             $('#btns-timescale button').removeClass('active');
