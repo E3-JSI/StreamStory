@@ -25,3 +25,4 @@ node-modules.tar
 /states.*
 /friction-coeff.txt
 /replay
+/output

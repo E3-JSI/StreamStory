@@ -113,6 +113,7 @@ exports.INTERPOLATION = config.interpolation;
 exports.SAVE_STATES = false;
 exports.SAVE_ACTIVITIES = false;
 exports.SAVE_FRICTION = false;
+exports.OUTPUT_DIR = 'output/';
 
 if (config.saveStates == true) {
     log.info('Saving states ...');

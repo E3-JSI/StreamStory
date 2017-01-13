@@ -76,7 +76,7 @@ function initStreamAggregates() {
         for (var i = 0; i < zeroFlds.length; i++) {
             var name = zeroFlds[i];
 
-            log.debug('Initializing default value for store %s ...', name);
+            log.trace('Initializing default value for store %s ...', name);
 
             var val = {
                 time_ms: startTm,
@@ -85,8 +85,8 @@ function initStreamAggregates() {
             };
 
             log.info('Initializing store %s ...', name);
-            if (log.debug())
-                log.debug('Inserting value %s ...', JSON.stringify(val));
+            if (log.trace())
+                log.trace('Inserting value %s ...', JSON.stringify(val));
 
             base.store(name).push(val);
         }
@@ -372,7 +372,7 @@ function calcFriction() {
             checkOutlierGearbox(coeffGearbox, avgTempGearbox, intervalEndTm);
 
             if (save && config.SAVE_FRICTION) {
-                utils.appendLine('friction-coeff.txt', JSON.stringify({
+                utils.outputLine('friction-coeff.txt', JSON.stringify({
                     start: intervalStartTm,
                     end: intervalEndTm,
                     gearbox: {
