@@ -511,7 +511,31 @@
                 </div>
                 <div class="modal-body">
                     <div id="div-config">
-                        <div class="hidden">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label for="range-pred-threshold">Prediciton threshold: <span id="span-pred-threshold"><%= predictionThreshold %></span></label>
+                                    <div id="range-pred-threshold"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label for="range-time-horizon">Time horizon: <span id="span-time-horizon"><%= timeHorizon %></span></label>
+                                    <div id="range-time-horizon"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label for="range-pdf-bins">PDF bins: <span id="span-pdf-bins"><%= pdfBins %></span></label>
+                                    <div id="range-pdf-bins"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group hidden">
                             <div>
                                 <div class="checkbox">
                                     <label>
@@ -523,24 +547,6 @@
                                         <input id="chk-wheel-scroll" type="checkbox"> Enable wheel scrolling
                                     </label>
                                 </div>
-                            </div>
-                        </div>
-                        <div id="div-config-params" class="row">
-                            <div class="col-md-12">
-                                <label for="range-pred-threshold">Prediciton threshold: <span id="span-pred-threshold"><%= predictionThreshold %></span></label>
-                                <div id="range-pred-threshold"></div>
-                            </div>
-                        </div>
-                        <div id="div-config-params" class="row">
-                            <div class="col-md-12">
-                                <label for="range-time-horizon">Time horizon: <span id="span-time-horizon"><%= timeHorizon %></span></label>
-                                <div id="range-time-horizon"></div>
-                            </div>
-                        </div>
-                        <div id="div-config-params" class="row">
-                            <div class="col-md-12">
-                                <label for="range-pdf-bins">PDF bins: <span id="span-pdf-bins"><%= pdfBins %></span></label>
-                                <div id="range-pdf-bins"></div>
                             </div>
                         </div>
                     </div>
