@@ -1,0 +1,45 @@
+#===================================
+# 1 MODEL
+#===================================
+
+PREDICTING STATES: 0
+MATCHING ACTIVITIES: 0
+throughput: 1504 events / second (min: 1183, max: 2456)
+latency: 1.57 milliseconds (min: 1.31, max: 4.81)
+
+
+PREDICTING STATES: 1
+MATCHING ACTIVITIES: 0
+throughput: 1551 events / second (min: 1118, max: 2626)
+latency: 3.68 milliseconds (min: 2.31, max: 10.51)
+
+PREDICTING STATES: 5
+MATCHING ACTIVITIES: 0
+throughput: 1727 events / second (min: 1276, max: 2232)
+latency: 8.87 milliseconds (min: 4.62 max: 18.39)
+
+#===================================
+
+PREDICTING STATES: 0
+MATCHING ACTIVITIES (length 4): 1
+throughput: 1596 events / second (min: 1331, max: 2266)
+latency: 1.54 milliseconds (min: 1.25, max: 4.02)
+
+PREDICTING STATES: 0
+MATCHING ACTIVITIES (length 4): 5
+throughput: 1491 events / second (min: 1305, max: 2109)
+latency: 1.70 milliseconds (min: 1.34, max: 4.26)
+
+#===================================
+# 2 MODELS
+#===================================
+
+throughput: 1488 events / second (min: 1224, max: 2369)
+latency: 1.45 milliseconds (min: 1.22, max: 3.9)
+
+#===================================
+# 5 MODELS
+#===================================
+
+throughput: 1584 events / second (min: 1017, max: 2371)
+latency: 1.67 milliseconds (min: 1.4, max: 4.82)

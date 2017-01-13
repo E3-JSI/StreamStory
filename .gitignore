@@ -18,6 +18,9 @@ tags
 node_modules/
 node-modules.tar
 
+# node-gyp
+/build
+
 # output files
 /predictions-*
 /activities-*
