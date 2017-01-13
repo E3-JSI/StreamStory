@@ -19,6 +19,12 @@ var externalAuth = require('./util/external_auth.js');
 var ModelStore = require('./util/modelstore.js');
 var WebSocketWrapper = require('./util/servicesutil.js');
 
+var perf = require('./util/perf_tools.js');
+
+var throughput = perf.throughput();
+// var latency = perf.latency();
+// var toc = function () {};
+
 var qmutil = qm.qm_util;
 
 var UI_PATH = '/';
@@ -219,6 +225,8 @@ function addRawMeasurement(val) {
         if (log.trace())
             log.trace('Inserting raw measurement %s', JSON.stringify(insertVal));
 
+        // toc = latency.tic();
+
         pipeline.insertRaw(storeNm, insertVal);
         storeLastTm[storeNm] = timestamp;
         lastRawTime = timestamp;
@@ -234,8 +242,11 @@ function initStreamStoryHandlers(model, enable) {
     log.info('Registering StreamStory callbacks for model %s ...', model.getId());
 
     if (enable) {
-        log.info('Registering state changed callback ...');
+        log.debug('Registering state changed callback ...');
         model.onStateChanged(function (date, states) {
+            // toc();
+            // latency.print();
+
             if (log.debug())
                 log.debug('State changed: %s', JSON.stringify(states));
 
@@ -252,7 +263,7 @@ function initStreamStoryHandlers(model, enable) {
             }
         });
 
-        log.info('Registering anomaly callback ...');
+        log.debug('Registering anomaly callback ...');
         model.onAnomaly(function (desc) {
             if (log.info())
                 log.info('Anomaly detected: %s TODO: currently ignoring!', desc);
@@ -260,7 +271,7 @@ function initStreamStoryHandlers(model, enable) {
             // TODO not notifying anyone!
         });
 
-        log.info('Registering outlier callback ...');
+        log.debug('Registering outlier callback ...');
         model.onOutlier(function (ftrV) {
             if (log.info())
                 log.info('Outlier detected!');
@@ -273,7 +284,7 @@ function initStreamStoryHandlers(model, enable) {
             broker.send(broker.PREDICTION_PRODUCER_TOPIC, JSON.stringify(brokerMsg));
         });
 
-        log.info('Registering prediction callback ...');
+        log.debug('Registering prediction callback ...');
         model.onPrediction(function (date, currState, targetState, prob, probV, timeV) {
             if (log.info())
                 log.info('Sending prediction, with PDF length: %d', probV.length);
@@ -354,7 +365,7 @@ function initStreamStoryHandlers(model, enable) {
             }
         });
 
-        log.info('Registering activity callback ...');
+        log.debug('Registering activity callback ...');
         model.getModel().onActivity(function (startTm, endTm, activityName) {
             if (log.info())
                 log.info('Detected activity %s at time %s to %s!', activityName, startTm.toString(), endTm.toString());
@@ -1734,7 +1745,6 @@ function initDataUploadApi() {
             var username = session.username;
 
             var timeAttr = req.body.time;
-            // var useTimeFtrV = req.body.useTimeFtrV;
             var modelName = req.body.name;
             var description = req.body.description;
             var timeUnit = req.body.timeUnit;
@@ -2000,7 +2010,8 @@ function initDataUploadApi() {
 
         var modelId = req.body.modelId;
 
-        log.info('User %s selected model %s ...', username, modelId);
+        if (log.info())
+            log.info('User %s selected model %s ...', username, modelId);
 
         db.fetchModel(modelId, function (e, modelConfig) {
             if (e != null) {
@@ -2117,24 +2128,31 @@ function initServerApi() {
         });
     }
 
-    {
+    (function () {
         log.info('Registering push data service ...');
 
-        var imported = 0;
-        var printInterval = 10000;
+        var batchN = 0;
 
         app.post(DATA_PATH + '/push', function (req, res) {
             var batch = req.body;
 
             try {
-                for (var i = 0; i < batch.length; i++) {
-                    var instance = batch[i];
-
-                    if (++imported % printInterval == 0 && log.trace())
-                        log.trace('Imported %d values ...', imported);
-
-                    addRawMeasurement(instance);
+                if (batchN == 1) {
+                    throughput.init();
                 }
+
+                for (var i = 0; i < batch.length; i++) {
+                    addRawMeasurement(batch[i]);
+                }
+
+                if (batchN >= 1) {
+                    throughput.update(batch.length);
+                    if (batchN % 100 == 0) {
+                        throughput.print();
+                    }
+                }
+
+                batchN++;
 
                 res.status(204);
                 res.end();
@@ -2143,7 +2161,7 @@ function initServerApi() {
                 utils.handleServerError(e, req, res);
             }
         });
-    }
+    })();
 
     {
         log.info('Registering count active models service ...');	// TODO remove after doing it with EJS
@@ -2274,10 +2292,9 @@ function initServerApi() {
                 utils.handleServerError(e, req, res);
             }
         });
-
     })();
 
-    {
+    (function () {
         log.info('Registering model mode service ...');
         app.get(API_PATH + '/modelMode', function (req, res) {
             log.debug('Fetching model mode from the db DB ...');
@@ -2298,7 +2315,7 @@ function initServerApi() {
                 res.end();
             });
         });
-    }
+    })();
 
     app.post(API_PATH + '/shareModel', function (req, res) {
         try {
@@ -2993,8 +3010,24 @@ function initServer(sessionStore, parseCookie) {
     }
     //==============================================
 
-    var sessionExcludeDirs = ['/login', '/js', '/css', '/img', '/lib', '/popups', '/material', '/landing', '/streampipes', '/data'];
-    var sessionExcludeFiles = ['index.html', 'login.html', 'register.html', 'resetpassword.html'];
+    var sessionExcludeDirs = [
+        '/login',
+        '/js',
+        '/css',
+        '/img',
+        '/lib',
+        '/popups',
+        '/material',
+        '/landing',
+        '/streampipes',
+        '/data'
+    ];
+    var sessionExcludeFiles = [
+        'index.html',
+        'login.html',
+        'register.html',
+        'resetpassword.html'
+    ];
 
     app.use(excludeDirs(sessionExcludeDirs, excludeFiles(sessionExcludeFiles, accessControl)));
 

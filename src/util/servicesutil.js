@@ -6,7 +6,6 @@ var config = require('../../config.js');
 // WEBSOCKET WRAPPER
 //=============================================================
 
-
 module.exports = exports = function (opts) {
     log.info('Creating web socket server ...');
 

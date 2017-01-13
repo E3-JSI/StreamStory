@@ -151,8 +151,9 @@ function initConsumer(callback) {
 
                 if (msgCallback != null) {
                     if (topic == topics.RAW_DATA_CONSUMER_TOPIC) {
-                        if (nReceivedRaw++ % config.BROKER_PRINT_INTERVAL == 0 && log.debug())
+                        if (nReceivedRaw++ % config.BROKER_PRINT_INTERVAL == 0 && log.debug()) {
                             log.debug('Received %d raw data messages ...', nReceivedRaw);
+                        }
 
                         msgCallback({type: 'raw', payload: payload});
                     } else if (topic == topics.CEP_DATA_CONSUMER_TOPIC) {
