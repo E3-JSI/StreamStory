@@ -514,6 +514,31 @@
         //========================================================
 
         (function () {
+            var initSlider = function (config) {
+                var slider = config.slider;
+                var valSpan = config.valSpan;
+                var min = config.min;
+                var max = config.max;
+                var step = config.step;
+                var value = config.value;
+                // iniitalize the slider
+                slider.slider({
+                    value: value,
+                    min: min,
+                    max: max,
+                    step: step,
+                    animate: true,
+                    slide: function (event, ui) {
+                        var val = ui.value;
+                        valSpan.html(toUiPrecision(val));
+                    },
+                    change: function (event, ui) {
+                        var val = ui.value;
+                        valSpan.html(toUiPrecision(val));
+                    }
+                });
+            }
+
             $('#lnk-config').click(function (event) {
                 event.preventDefault();
                 $('#popup-config').modal({ show: true });
@@ -537,42 +562,33 @@
                 $('#popup-config').modal('hide');
             });
 
-            // setup the configuration sliders
-            $('#range-pred-threshold').slider({
-                value: PREDICTION_THRESHOLD,
+
+            initSlider({
+                slider: $('#range-pred-threshold'),
+                valSpan: $('#span-pred-threshold'),
                 min: 0,
-                max: 1,
+                max: 1 + 0.05,
                 step: 0.05,
-                animate: true,
-                change: function (event, ui) {
-                    var val = ui.value;
-                    $('#span-pred-threshold').html(val);
-                }
-            });
+                value: PREDICTION_THRESHOLD
+            })
 
-            $('#range-time-horizon').slider({
-                value: TIME_HORIZON,
+            initSlider({
+                slider: $('#range-time-horizon'),
+                valSpan: $('#span-time-horizon'),
                 min: 0,
-                max: 100,
+                max: 100 + 0.1,
                 step: 0.1,
-                animate: true,
-                change: function (event, ui) {
-                    var val = ui.value;
-                    $('#span-time-horizon').html(val + ' ' + getTimeUnit() + 's');
-                }
-            });
+                value: TIME_HORIZON
+            })
 
-            $('#range-pdf-bins').slider({
-                value: PDF_BINS,
+            initSlider({
+                slider: $('#range-pdf-bins'),
+                valSpan: $('#span-pdf-bins'),
                 min: 100,
                 max: 10000,
                 step: 10,
-                animate: true,
-                change: function (event, ui) {
-                    var val = ui.value;
-                    $('#span-pdf-bins').html(val);
-                }
-            });
+                value: PDF_BINS
+            })
 
             $(document).ready(function () {
                 $('#popup-config').modal({ show: false });

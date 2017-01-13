@@ -6,17 +6,17 @@ var StreamStory = {};
 
 StreamStory.Utils = {};
 
-StreamStory.Utils.asyncExecutor = function (callback) {
+StreamStory.Utils.asyncExecutor = function (onAllFinished) {
     // var currReqId = 0;
     var nReq = 0;
     var nRes = 0;
-    return function (executeMe) {
+    return function execute(task) {
         // var reqId = currReqId++;
         nReq++;
-        executeMe(function () {
+        task(function done() {
             nRes++;
             if (nReq == nRes) {
-                callback();
+                onAllFinished();
             }
         })
     }
@@ -111,19 +111,30 @@ function addPressHandler(btn, callback) {
 }
 
 function countDecimals(value) {
-    if(Math.floor(value) === value) return 0;
+    if (Math.floor(value) === value) return 0;
     return value.toString().split(".")[1].length || 0;
 }
 
 function toUiPrecision(val) {
-    if (val > 1000) {
-        return val.toFixed();
-    } else {
-        var decimals = countDecimals(val);
-        if (decimals == 0)
-            return val.toFixed();
-        else
-            return val.toPrecision(Math.min(decimals, 3));
+    var N_DIGITS = 3;
+    var magnitude = Math.floor(Math.log10(Math.abs(val)));
+    var decimals;
+    if (magnitude >= N_DIGITS) { // > 1000
+        return val + '';
+    }
+    else if (magnitude < 0) { // < 1
+        decimals = countDecimals(val);
+        var len = decimals + magnitude + 1;
+        return val.toPrecision(1 + Math.max(0, Math.min(len-1, N_DIGITS + magnitude)));
+    }
+    else {
+        decimals = countDecimals(val);
+        if (decimals == 0) {
+            return val + '';
+        } else {
+            var m = magnitude + 1;
+            return val.toPrecision(m + Math.min(decimals, Math.max(0, N_DIGITS - m)));
+        }
     }
 }
 

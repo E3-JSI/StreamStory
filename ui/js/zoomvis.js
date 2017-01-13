@@ -118,7 +118,7 @@ var zoomVis = function (opts) {
 
             var asyncExecute = StreamStory.Utils.asyncExecutor(function () {
                 var tt = $('<div />');
-                
+
                 // name
                 if (name != null) {
                     var nameDiv = $('<h3 />');
@@ -147,7 +147,7 @@ var zoomVis = function (opts) {
                 if ($('#div-explain-' + data.id).html() != null) {
                     ruleExplainDiv.html($('#div-explain-' + data.id).html());
                 }
-                
+
                 asyncExecute(function (done) {
                     $.ajax('api/explanation', {
                         dataType: 'json',
@@ -266,7 +266,7 @@ var zoomVis = function (opts) {
                 if ($('#div-narration-' + data.id).html() != null) {
                     narrationDiv.html($('#div-narration-' + data.id).html());
                 }
-                
+
                 asyncExecute(function (done) {
                     $.ajax('api/stateNarration', {
                         dataType: 'json',
