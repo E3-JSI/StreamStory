@@ -2,7 +2,7 @@ var async = require('async');
 
 var utils = require('../utils.js');
 
-var ACTIVITY_OPERATION = 'Activity';
+var ACTIVITY_OPERATION = 'ActivityDetection';
 var PREDICTION_OPERATION = 'Prediction';
 var OPERATION_FRICTION_GEARBOX = 'FrictionGearbox';
 var OPERATION_FRICTION_SWIVEL = 'FrictionSwivel';

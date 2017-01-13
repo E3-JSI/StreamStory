@@ -1,4 +1,4 @@
-USE StreamStory;
+-- USE StreamStory;
 
 CREATE TABLE user (
 	email VARCHAR(100) PRIMARY KEY,

@@ -113,6 +113,7 @@ exports.INTERPOLATION = config.interpolation;
 exports.SAVE_STATES = false;
 exports.SAVE_ACTIVITIES = false;
 exports.SAVE_FRICTION = false;
+exports.OUTPUT_DIR = 'output/';
 
 if (config.saveStates == true) {
     log.info('Saving states ...');
@@ -174,15 +175,13 @@ exports.STREAM_STORY_PARAMS = {
     verbose: true
 }
 
-//================================================================
-// INTEGRATION
-//================================================================
-exports.USE_BROKER = config.integration.type == 'broker';
-exports.integration = config.integration;
+exports.MEAN_STATE_LABEL = config.meanStateLabel != null ?
+                                config.meanStateLabel : '';
 
 //================================================================
 // PIPELINE
 //================================================================
+
 exports.GC_INTERVAL = 10000000
 
 //================================================================
@@ -202,6 +201,9 @@ exports.COEFF_PRINT_INTERVAL = config.log.print.coeff;
 //================================================================
 // INTEGRATION
 //================================================================
+
+exports.USE_BROKER = config.integration.type == 'broker';
+exports.integration = config.integration;
 
 exports.RESTART_ON_REPLAY = config.restartOnReplay;
 

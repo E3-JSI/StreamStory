@@ -19,6 +19,12 @@ var externalAuth = require('./util/external_auth.js');
 var ModelStore = require('./util/modelstore.js');
 var WebSocketWrapper = require('./util/servicesutil.js');
 
+var perf = require('./util/perf_tools.js');
+
+var throughput = perf.throughput();
+// var latency = perf.latency();
+// var toc = function () {};
+
 var qmutil = qm.qm_util;
 
 var UI_PATH = '/';
@@ -27,7 +33,7 @@ var API_PATH = '/api';
 var DATA_PATH = '/data';
 var WS_PATH = '/ws';
 
-var LONG_REQUEST_TIMEOUT = 1000*60*60*24;
+var LONG_REQUEST_TIMEOUT = 1000*60*60*24;   // 24 hours
 
 var FZI_TOKEN_KEY = 'fzi-token';
 
@@ -219,6 +225,8 @@ function addRawMeasurement(val) {
         if (log.trace())
             log.trace('Inserting raw measurement %s', JSON.stringify(insertVal));
 
+        // toc = latency.tic();
+
         pipeline.insertRaw(storeNm, insertVal);
         storeLastTm[storeNm] = timestamp;
         lastRawTime = timestamp;
@@ -234,8 +242,11 @@ function initStreamStoryHandlers(model, enable) {
     log.info('Registering StreamStory callbacks for model %s ...', model.getId());
 
     if (enable) {
-        log.info('Registering state changed callback ...');
+        log.debug('Registering state changed callback ...');
         model.onStateChanged(function (date, states) {
+            // toc();
+            // latency.print();
+
             if (log.debug())
                 log.debug('State changed: %s', JSON.stringify(states));
 
@@ -252,7 +263,7 @@ function initStreamStoryHandlers(model, enable) {
             }
         });
 
-        log.info('Registering anomaly callback ...');
+        log.debug('Registering anomaly callback ...');
         model.onAnomaly(function (desc) {
             if (log.info())
                 log.info('Anomaly detected: %s TODO: currently ignoring!', desc);
@@ -260,7 +271,7 @@ function initStreamStoryHandlers(model, enable) {
             // TODO not notifying anyone!
         });
 
-        log.info('Registering outlier callback ...');
+        log.debug('Registering outlier callback ...');
         model.onOutlier(function (ftrV) {
             if (log.info())
                 log.info('Outlier detected!');
@@ -273,7 +284,7 @@ function initStreamStoryHandlers(model, enable) {
             broker.send(broker.PREDICTION_PRODUCER_TOPIC, JSON.stringify(brokerMsg));
         });
 
-        log.info('Registering prediction callback ...');
+        log.debug('Registering prediction callback ...');
         model.onPrediction(function (date, currState, targetState, prob, probV, timeV) {
             if (log.info())
                 log.info('Sending prediction, with PDF length: %d', probV.length);
@@ -354,7 +365,7 @@ function initStreamStoryHandlers(model, enable) {
             }
         });
 
-        log.info('Registering activity callback ...');
+        log.debug('Registering activity callback ...');
         model.getModel().onActivity(function (startTm, endTm, activityName) {
             if (log.info())
                 log.info('Detected activity %s at time %s to %s!', activityName, startTm.toString(), endTm.toString());
@@ -408,19 +419,22 @@ function initStreamStoryHandlers(model, enable) {
     }
 }
 
-function sendPrediction(msg, timestamp) {
-    var msgStr = JSON.stringify(msg);
-
+function sendPrediction(msg, timestamp, eventProps) {
     var perMonth = msg.content.pdf.lambda;
     var perHour = perMonth / (30*24);
 
-    var brokerMsg = transform.genExpPrediction(perHour, 'hour', timestamp);
+    var brokerMsg = transform.genExpPrediction(perHour, 'hour', timestamp, eventProps);
 
-    if (log.debug())
-        log.debug('Sending prediction: %s', JSON.stringify(brokerMsg));
+    var modelMsgStr = JSON.stringify(msg);
+    var brokerMsgStr = JSON.stringify(brokerMsg);
 
-    broker.send(broker.PREDICTION_PRODUCER_TOPIC, JSON.stringify(brokerMsg));
-    modelStore.distributeMsg(msgStr);
+    if (log.debug()) {
+        log.debug('Sending exponential prediction to broker: %s', brokerMsgStr);
+        log.debug('Sending exponential prediciton to all the models: %s', modelMsgStr)
+    }
+
+    broker.send(broker.PREDICTION_PRODUCER_TOPIC, brokerMsgStr);
+    modelStore.distributeMsg(modelMsgStr);
 }
 
 function initPipelineHandlers() {
@@ -522,6 +536,9 @@ function initPipelineHandlers() {
                                 throw new Error('Invalid event ID for coefficient: ' + optsClone.eventId);
                         }
 
+                        if (log.info())
+                            log.info('Will send prediction message to FZI topics:\n%s', brokerMsgStr);
+
                         var topics = fzi.getTopics(operation);
                         for (var i = 0; i < topics.length; i++) {
                             var topic = topics[i].output;
@@ -573,7 +590,13 @@ function initPipelineHandlers() {
                             }
                         };
 
-                        sendPrediction(msg, opts.time);
+                        var proasenseEventProps = {
+                            coeff: opts.value,
+                            std: opts.std,
+                            zScore: opts.zScore
+                        }
+
+                        sendPrediction(msg, opts.time, proasenseEventProps);
                     }
                 }
             });
@@ -1722,7 +1745,6 @@ function initDataUploadApi() {
             var username = session.username;
 
             var timeAttr = req.body.time;
-            // var useTimeFtrV = req.body.useTimeFtrV;
             var modelName = req.body.name;
             var description = req.body.description;
             var timeUnit = req.body.timeUnit;
@@ -1988,7 +2010,8 @@ function initDataUploadApi() {
 
         var modelId = req.body.modelId;
 
-        log.info('User %s selected model %s ...', username, modelId);
+        if (log.info())
+            log.info('User %s selected model %s ...', username, modelId);
 
         db.fetchModel(modelId, function (e, modelConfig) {
             if (e != null) {
@@ -2105,24 +2128,31 @@ function initServerApi() {
         });
     }
 
-    {
+    (function () {
         log.info('Registering push data service ...');
 
-        var imported = 0;
-        var printInterval = 10000;
+        var batchN = 0;
 
         app.post(DATA_PATH + '/push', function (req, res) {
             var batch = req.body;
 
             try {
-                for (var i = 0; i < batch.length; i++) {
-                    var instance = batch[i];
-
-                    if (++imported % printInterval == 0 && log.trace())
-                        log.trace('Imported %d values ...', imported);
-
-                    addRawMeasurement(instance);
+                if (batchN == 1) {
+                    throughput.init();
                 }
+
+                for (var i = 0; i < batch.length; i++) {
+                    addRawMeasurement(batch[i]);
+                }
+
+                if (batchN >= 1) {
+                    throughput.update(batch.length);
+                    if (batchN % 100 == 0) {
+                        throughput.print();
+                    }
+                }
+
+                batchN++;
 
                 res.status(204);
                 res.end();
@@ -2131,7 +2161,7 @@ function initServerApi() {
                 utils.handleServerError(e, req, res);
             }
         });
-    }
+    })();
 
     {
         log.info('Registering count active models service ...');    // TODO remove after doing it with EJS
@@ -2262,10 +2292,9 @@ function initServerApi() {
                 utils.handleServerError(e, req, res);
             }
         });
-
     })();
 
-    {
+    (function () {
         log.info('Registering model mode service ...');
         app.get(API_PATH + '/modelMode', function (req, res) {
             log.debug('Fetching model mode from the db DB ...');
@@ -2286,7 +2315,7 @@ function initServerApi() {
                 res.end();
             });
         });
-    }
+    })();
 
     app.post(API_PATH + '/shareModel', function (req, res) {
         try {
@@ -2830,6 +2859,8 @@ function prepMainUi() {
 
         var model = session.model;
 
+        opts.MEAN_STATE_LABEL = config.MEAN_STATE_LABEL;
+
         db.fetchModel(model.getId(), function (e, modelConfig) {
             if (e != null) {
                 log.error(e, 'Failed to fetch model configuration from the DB!');
@@ -2974,13 +3005,29 @@ function initServer(sessionStore, parseCookie) {
 
     //==============================================
     // INTEGRATION
-    if (true || config.USE_BROKER) {    // TODO fixme, remove the true
+    if (config.USE_BROKER) {
         fzi.initWs(app);
     }
     //==============================================
 
-    var sessionExcludeDirs = ['/login', '/js', '/css', '/img', '/lib', '/popups', '/material', '/landing', '/streampipes', '/data'];
-    var sessionExcludeFiles = ['index.html', 'login.html', 'register.html', 'resetpassword.html'];
+    var sessionExcludeDirs = [
+        '/login',
+        '/js',
+        '/css',
+        '/img',
+        '/lib',
+        '/popups',
+        '/material',
+        '/landing',
+        '/streampipes',
+        '/data'
+    ];
+    var sessionExcludeFiles = [
+        'index.html',
+        'login.html',
+        'register.html',
+        'resetpassword.html'
+    ];
 
     app.use(excludeDirs(sessionExcludeDirs, excludeFiles(sessionExcludeFiles, accessControl)));
 
@@ -3069,7 +3116,7 @@ exports.init = function (opts) {
     initPipelineHandlers();
     initBroker();
 
-    if (true || config.USE_BROKER) {    // TODO fixme, remove the true
+    if (config.USE_BROKER) {
         fzi.init({
             broker: broker,
             modelStore: modelStore,

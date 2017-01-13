@@ -40,5 +40,6 @@
 	},
 	"useCase": "traffic",
 	"interpolation": "current",
+    "meanStateLabel": "MEAN",
 	"dataPath": "/mnt/raidM2T/project-data/StreamStory/StreamStory-demo/"
 }

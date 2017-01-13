@@ -109,11 +109,14 @@ function initConsumer(callback) {
         });
     });
 
-    {
+    (function () {
         log.info('Adding broker message handler ...');
 
         var nReceivedRaw = 0;
         var nReceivedCep = 0;
+
+        var nResetEvents = 0;
+        var resetTimeoutId = null;
 
         // var nFromDominik = 0;
 
@@ -125,8 +128,19 @@ function initConsumer(callback) {
                 if (topic == topics.TOPIC_REPLAY_START) {
                     log.info('Received replay start message: %s', msg.value);
                     if (config.RESTART_ON_REPLAY) {
-                        log.info('Restarting component ...');
-                        process.exit(0);
+                        log.info('Received %d reset events ...', ++nResetEvents);
+
+                        if (resetTimeoutId == null) {
+                            log.info('Will restart after a small delay ...');
+
+                            resetTimeoutId = setTimeout(function () {
+                                log.info('Restarting, received %d restart events ...', nResetEvents);
+                                process.exit(0);
+                            }, 5000);
+                        } else {
+                            log.info('Reset already triggered!');
+                        }
+                        return;
                     } else {
                         log.info('Will not restart, not configured to do so!');
                         return;
@@ -137,8 +151,9 @@ function initConsumer(callback) {
 
                 if (msgCallback != null) {
                     if (topic == topics.RAW_DATA_CONSUMER_TOPIC) {
-                        if (nReceivedRaw++ % config.BROKER_PRINT_INTERVAL == 0 && log.debug())
+                        if (nReceivedRaw++ % config.BROKER_PRINT_INTERVAL == 0 && log.debug()) {
                             log.debug('Received %d raw data messages ...', nReceivedRaw);
+                        }
 
                         msgCallback({type: 'raw', payload: payload});
                     } else if (topic == topics.CEP_DATA_CONSUMER_TOPIC) {
@@ -162,7 +177,7 @@ function initConsumer(callback) {
                 log.error(e, 'Exception while receiving message!');
             }
         });
-    }
+    })();
 
     log.info('Consumer initialized!');
 }

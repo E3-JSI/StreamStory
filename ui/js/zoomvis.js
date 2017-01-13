@@ -58,7 +58,7 @@ var zoomVis = function (opts) {
         EDGE_TEXT_COLOR = '#F0F0F0';
     }
 
-    var PREVIOUS_NODE_EDGE_COLOR = CURRENT_NODE_COLOR;
+    // var PREVIOUS_NODE_EDGE_COLOR = CURRENT_NODE_COLOR;
 
     var SELECTED_NODE_SHADOW_COLOR = 'white';
     var SELECTED_NODE_SHADOW_SIZE = 100;
@@ -104,236 +104,268 @@ var zoomVis = function (opts) {
     var nodeQtipOpts = clone(DEFAULT_QTIP_OPTS);
     var edgeQtipOpts = clone(DEFAULT_QTIP_OPTS);
 
-    nodeQtipOpts.content = function (event, api) {
-        var data = this.data();
-        var name = data.style.content;//name;
-        var label = data.style.label;
+    (function () {
+        nodeQtipOpts.content = function (event, api) {
+            var data = this.data();
+            var name = data.style.content;//name;
+            var label = data.style.label;
 
-        var tooltip = $('<div />');
+            // async sections
+            var ruleExplainDiv = $('<div />');
+            var undesiredDiv = $('<div />');
+            var narrationDiv = $('<div />');
+            var timeIntervalDiv = $('<div />');
 
-        // name
-        if (name != null) {
-            var nameDiv = $('<h3 />');
-            nameDiv.html(name + ' (' + label + ')');
-            tooltip.append(nameDiv);
-        }
+            var asyncExecute = StreamStory.Utils.asyncExecutor(function () {
+                var tt = $('<div />');
+                
+                // name
+                if (name != null) {
+                    var nameDiv = $('<h3 />');
+                    nameDiv.html(name + ' (' + label + ')');
+                    tt.append(nameDiv);
+                }
+                // time
+                var timeDiv = $('<div />');
+                timeDiv.html('Typically lasts <strong>' + data.holdingTime.toPrecision(2) + ' ' + getTimeUnit() + 's</strong>');
 
-        // holding time
-        var timeDiv = $('<div />');
-        timeDiv.html('Typically lasts <strong>' + data.holdingTime.toPrecision(2) + ' ' + getTimeUnit() + 's</strong>');
-        tooltip.append(timeDiv);
+                // async stuff
+                tt.append(undesiredDiv);
+                tt.append(narrationDiv);
+                tt.append(timeDiv);
+                tt.append(timeIntervalDiv);
+                tt.append(ruleExplainDiv);
 
-        // undesired event properties
-        var undesiredDiv = $('<div />');
-        undesiredDiv.attr('id', 'div-tooltip-undesired-' + data.id);
-        undesiredDiv.addClass('tooltip-undesired');
-        if ($('#div-tooltip-undesired-' + data.id).html() != null) {
-            undesiredDiv.html($('#div-tooltip-undesired-' + data.id).html());
-        }
-        tooltip.append(undesiredDiv);
+                api.set('content.text', tt.html());
+                // api.reposition(undefined, false);
+            });
 
-        var narrationDiv = $('<div />');
-        narrationDiv.attr('id', 'div-narration-' + data.id);
-        narrationDiv.addClass('tooltip-div-narration');
-        if ($('#div-narration-' + data.id).html() != null) {
-            narrationDiv.html($('#div-narration-' + data.id).html());
-        }
-        tooltip.append(narrationDiv);
+            // rule explanation
+            (function () {
+                ruleExplainDiv.attr('id', 'div-explain-' + data.id);
+                ruleExplainDiv.addClass('tooltip-div-explain');
+                if ($('#div-explain-' + data.id).html() != null) {
+                    ruleExplainDiv.html($('#div-explain-' + data.id).html());
+                }
+                
+                asyncExecute(function (done) {
+                    $.ajax('api/explanation', {
+                        dataType: 'json',
+                        method: 'GET',
+                        data: { stateId: getServerNodeId(data.id) },
+                        success: function (union) {
+                            var score = function (interserct) {
+                                return interserct.covered*interserct.purity;
+                            }
 
-        var timeIntervalDiv = $('<div />');
-        timeIntervalDiv.attr('id', 'div-tminterval-' + data.id);
-        timeIntervalDiv.addClass('tooltip-div-tminterval');
-        if ($('#div-tminterval-' + data.id).html() != null) {
-            timeIntervalDiv.html($('#div-tminterval-' + data.id).html());
-        }
-        tooltip.append(timeIntervalDiv);
+                            union.sort(function (inter1, inter2) {
+                                return score(inter2) - score(inter1);
+                            });
 
-        var ruleExplainDiv = $('<div />');
-        ruleExplainDiv.attr('id', 'div-explain-' + data.id);
-        ruleExplainDiv.addClass('tooltip-div-explain');
-        if ($('#div-explain-' + data.id).html() != null) {
-            ruleExplainDiv.html($('#div-explain-' + data.id).html());
-        }
-        tooltip.append(ruleExplainDiv);
+                            var bestScore = score(union[0]);
+                            var lastN = 0;
+                            while (lastN < union.length-1 && score(union[lastN+1]) > bestScore / 10) {
+                                lastN++;
+                            }
 
-        setTimeout(function () {
-            $.ajax('api/explanation', {
-                dataType: 'json',
-                method: 'GET',
-                data: { stateId: getServerNodeId(data.id) },
-                success: function (union) {
-                    var score = function (interserct) {
-                        return interserct.covered*interserct.purity;
-                    }
+                            if (union.length > 1) {
+                                union.splice(lastN+1);
+                            }
 
-                    union.sort(function (inter1, inter2) {
-                        return score(inter2) - score(inter1);
-                    });
+                            // construct the rules
+                            var unionStr = '';
+                            for (var i = 0; i < union.length; i++) {
+                                var intersect = union[i];
+                                var intersectStr = '';
+                                var terms = intersect.terms;
 
-                    var bestScore = score(union[0]);
-                    var lastN = 0;
-                    while (lastN < union.length-1 && score(union[lastN+1]) > bestScore / 10) {
-                        lastN++;
-                    }
+                                // sort the terms
+                                terms.sort(function (t1, t2) {
+                                    if (t2.feature < t1.feature)
+                                        return -1;
+                                    else if (t2.feature > t1.feature)
+                                        return 1;
+                                    else return 0;
+                                });
 
-                    if (union.length > 1) {
-                        union.splice(lastN+1);
-                    }
+                                for (var j = 0; j < terms.length; j++) {
+                                    var term = terms[j];
 
-                    // construct the rules
-                    var unionStr = '';
-                    for (var i = 0; i < union.length; i++) {
-                        var intersect = union[i];
-                        var intersectStr = '';
-                        var terms = intersect.terms;
+                                    intersectStr += '&#09;';
 
-                        // sort the terms
-                        terms.sort(function (t1, t2) {
-                            if (t2.feature < t1.feature)
-                                return -1;
-                            else if (t2.feature > t1.feature)
-                                return 1;
-                            else return 0;
-                        });
+                                    if (term.le != null || term.gt != null) {
+                                        if (term.le != null && term.gt != null) {
+                                            intersectStr += term.feature + ' &isin; (' + toUiPrecision(term.gt) + ', ' + toUiPrecision(term.le) + ']';
+                                        } else if (term.le != null) {
+                                            intersectStr += term.feature + ' \u2264 ' + toUiPrecision(term.le);
+                                        } else {
+                                            intersectStr += term.feature + ' > ' + toUiPrecision(term.gt);
+                                        }
+                                    }
+                                    else if (term.eq != null) {
+                                        intersectStr += term.feature + ' = ' + term.eq;
+                                    }
+                                    else if (term.neq != null) {
+                                        intersectStr += term.feature + ' \u2260 ' + term.neq;
+                                    }
+                                    else {
+                                        throw new Error('Feature explanation le, gt, eq and neq are all NULL!');
+                                    }
 
-                        for (var j = 0; j < terms.length; j++) {
-                            var term = terms[j];
+                                    if (j < terms.length-1)
+                                        intersectStr += '<br />';
+                                }
 
-                            intersectStr += '&#09;';
+                                unionStr += '<br />' + intersectStr + '<br />';
 
-                            if (term.le != null || term.gt != null) {
-                                if (term.le != null && term.gt != null) {
-                                    intersectStr += term.feature + ' &isin; (' + toUiPrecision(term.gt) + ', ' + toUiPrecision(term.le) + ']';
-                                } else if (term.le != null) {
-                                    intersectStr += term.feature + ' \u2264 ' + toUiPrecision(term.le);
-                                } else {
-                                    intersectStr += term.feature + ' > ' + toUiPrecision(term.gt);
+                                if (i < union.length-1) {
+                                    unionStr += '<br />';
                                 }
                             }
-                            else if (term.eq != null) {
-                                intersectStr += term.feature + ' = ' + term.eq;
+
+                            ruleExplainDiv.html('It can be characterized by the following rules:<br />' + unionStr);
+
+                            done();
+                        },
+                        error: handleAjaxError(null, done)
+                    });
+                })
+            })();
+
+            // event id
+            (function () {
+                undesiredDiv.attr('id', 'div-tooltip-undesired-' + data.id);
+                undesiredDiv.addClass('tooltip-undesired');
+                if ($('#div-tooltip-undesired-' + data.id).html() != null) {
+                    undesiredDiv.html($('#div-tooltip-undesired-' + data.id).html());
+                }
+
+                asyncExecute(function (done) {
+                    $.ajax('api/targetProperties', {
+                        dataType: 'json',
+                        method: 'GET',
+                        data: { stateId: getServerNodeId(data.id) },
+                        success: function (props) {
+                            if (props.isUndesired) {
+                                undesiredDiv.html('Event id: ' + props.eventId);
+                            } else {
+                                undesiredDiv.html('');
                             }
-                            else if (term.neq != null) {
-                                intersectStr += term.feature + ' \u2260 ' + term.neq;
+
+                            done();
+                        },
+                        error: handleAjaxError(null, done)
+                    });
+                })
+            })();
+
+            // state narration
+            (function () {
+                narrationDiv.attr('id', 'div-narration-' + data.id);
+                narrationDiv.addClass('tooltip-div-narration');
+                if ($('#div-narration-' + data.id).html() != null) {
+                    narrationDiv.html($('#div-narration-' + data.id).html());
+                }
+                
+                asyncExecute(function (done) {
+                    $.ajax('api/stateNarration', {
+                        dataType: 'json',
+                        method: 'GET',
+                        data: { stateId: getServerNodeId(data.id) },
+                        success: function (narration) {
+                            if (narration.length == 0) return done();
+
+                            var p = $('<p />');
+                            var html = 'The state is characterized by ';
+
+                            var n = Math.min(3, narration.length);
+                            for (var i = 0; i < n; i++) {
+                                var item = narration[i];
+
+                                var ftr = item.ftrId;
+                                var type = item.type;
+                                switch (type) {
+                                    case 'numeric': {
+                                        var level = item.ftrDesc;
+                                        html += '<strong>' + level + ' ' + ftr + '</strong>';
+                                        break;
+                                    }
+                                    case 'categorical': {
+                                        html += '<strong>' + ftr + ' is ' + item.bin + '</strong>';
+                                        break;
+                                    }
+                                    default: {
+                                        throw new Error('Unknown feature type: ' + type);
+                                    }
+                                }
+
+                                if (i < n - 2) {
+                                    html += ', ';
+                                } else if (i == n - 2) {
+                                    html += ' and ';
+                                }
                             }
-                            else {
-                                throw new Error('Feature explanation le, gt, eq and neq are all NULL!');
+
+                            p.html(html);
+                            narrationDiv.html('').append(p);
+
+                            done();
+                        },
+                        error: handleAjaxError(null, done)
+                    });
+                })
+            })();
+
+            // time explanation
+            (function () {
+                timeIntervalDiv.attr('id', 'div-tminterval-' + data.id);
+                timeIntervalDiv.addClass('tooltip-div-tminterval');
+                if ($('#div-tminterval-' + data.id).html() != null) {
+                    timeIntervalDiv.html($('#div-tminterval-' + data.id).html());
+                }
+
+                asyncExecute(function (done) {
+                    $.ajax('api/timeExplain', {
+                        dataType: 'json',
+                        method: 'GET',
+                        data: { stateId: getServerNodeId(data.id) },
+                        success: function (timeExplain) {
+                            if (timeExplain == null || timeExplain.length == 0) return done();
+
+                            var p = $('<p />');
+                            // var html = 'The state occurs ';
+                            var html = '';
+
+                            for (var i = 0; i < timeExplain.length; i++) {
+                                var item = timeExplain[i];
+
+                                var start = item.start;
+                                var end = item.end;
+
+                                if (start != end) {
+                                    html += ' between <strong>' + start + '</strong> and <strong>' + end + '</strong>'
+                                } else {
+                                    html += ' in <strong>' + start + '</strong>';
+                                }
+
+                                if (i < timeExplain.length - 1) {
+                                    html += ', ';
+                                }
                             }
 
-                            if (j < terms.length-1)
-                                intersectStr += '<br />';
-                        }
+                            p.html(html);
+                            timeIntervalDiv.html('').append(p);
 
-                        unionStr += '<br />' + intersectStr + '<br />';
+                            done();
+                        },
+                        error: handleAjaxError(null, done)
+                    });
+                })
+            })();
 
-                        if (i < union.length-1) {
-                            unionStr += '<br />';
-                        }
-                    }
-
-                    $('#div-explain-' + data.id).html('It can be characterized by the following rules:<br />' + unionStr);
-                    api.reposition(undefined, false);
-                },
-                error: handleAjaxError()
-            });
-
-            $.ajax('api/targetProperties', {
-                dataType: 'json',
-                method: 'GET',
-                data: { stateId: getServerNodeId(data.id) },
-                success: function (props) {
-                    if (props.isUndesired) {
-                        $('#div-tooltip-undesired-' + data.id).html('Event id: ' + props.eventId);
-                    } else {
-                        $('#div-tooltip-undesired-' + data.id).html('');
-                    }
-
-                    api.reposition(undefined, false);
-                },
-                error: handleAjaxError()
-            });
-
-            $.ajax('api/timeExplain', {
-                dataType: 'json',
-                method: 'GET',
-                data: { stateId: getServerNodeId(data.id) },
-                success: function (timeExplain) {
-                    if (timeExplain == null || timeExplain.length == 0) return;
-
-                    var p = $('<p />');
-                    var html = 'The state occurs ';
-
-                    for (var i = 0; i < timeExplain.length; i++) {
-                        var item = timeExplain[i];
-
-                        var start = item.start;
-                        var end = item.end;
-
-                        if (start != end) {
-                            html += ' between <strong>' + start + '</strong> and <strong>' + end + '</strong>'
-                        } else {
-                            html += ' in <strong>' + start + '</strong>';
-                        }
-
-                        if (i < timeExplain.length - 1) {
-                            html += ', ';
-                        }
-                    }
-
-                    p.html(html);
-                    $('#div-tminterval-' + data.id).html('').append(p);
-                },
-                error: handleAjaxError()
-            });
-
-            $.ajax('api/stateNarration', {
-                dataType: 'json',
-                method: 'GET',
-                data: { stateId: getServerNodeId(data.id) },
-                success: function (narration) {
-                    if (narration.length == 0) return;
-
-                    var p = $('<p />');
-                    var html = 'The state is characterized by ';
-
-                    var n = Math.min(3, narration.length);
-                    for (var i = 0; i < n; i++) {
-                        var item = narration[i];
-
-                        var ftr = item.ftrId;
-                        var type = item.type;
-                        switch (type) {
-                            case 'numeric': {
-                                var level = item.ftrDesc;
-                                html += '<strong>' + level + ' ' + ftr + '</strong>';
-                                break;
-                            }
-                            case 'categorical': {
-                                html += '<strong>' + ftr + ' is ' + item.bin + '</strong>';
-                                break;
-                            }
-                            default: {
-                                throw new Error('Unknown feature type: ' + type);
-                            }
-                        }
-
-                        if (i < n - 2) {
-                            html += ', ';
-                        } else if (i == n - 2) {
-                            html += ' and ';
-                        }
-                    }
-
-                    p.html(html);
-                    $('#div-narration-' + data.id).html('').append(p);
-                },
-                error: handleAjaxError()
-            });
-        }, 10);
-
-
-        return tooltip.html();
-    };
+            return 'Loading ...';
+        };
+    })();
 
     nodeQtipOpts.show.event = 'hover';
     nodeQtipOpts.hide.event = 'hovercancel';

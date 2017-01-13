@@ -665,11 +665,11 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
                 return retVal;
             }
             else if (sensorId == 'moulding') {
-                log.warn('Unknown moulding sensor: %s', JSON.stirngify(val));
+                log.warn('Unknown moulding sensor: %s', JSON.stringify(val));
                 return [];
             }
             else {
-                log.warn('Unknown sensorId: %s', JSON.stirngify(val));
+                log.warn('Unknown sensorId: %s', JSON.stringify(val));
                 return [];
             }
         }
@@ -845,12 +845,25 @@ module.exports.parseDominiksDerivedEvent = function (event) {
     }
 }
 
-module.exports.genExpPrediction = function (lambda, timeUnit, date) {
+module.exports.genExpPrediction = function (lambda, timeUnit, date, misc) {
+    // construct the event properties
+    var eventProperties = {
+        timeUnit: timeUnit
+    }
+    if (misc != null) {
+        for (var key in misc) {
+            if (key in eventProperties) {
+                log.warn('Key \'' + key + '\' already in eventProperties when generating exponential prediction!');
+            }
+            eventProperties[key] = misc[key];
+        }
+    }
+    // construct the message
     var msg = {
         timestamp: date.getTime(),
         eventName: 'prediction',
         params: [lambda],
-        eventProperties: { timeUnit: timeUnit },
+        eventProperties: eventProperties,
         pdfType: 'exponential'
     };
 

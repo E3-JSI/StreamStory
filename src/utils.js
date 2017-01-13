@@ -181,6 +181,10 @@ exports.createDirSync = function (dir) {
     }
 }
 
+exports.outputLine = function (fname, line) {
+    exports.appendLine(config.OUTPUT_DIR + fname, line);
+}
+
 exports.appendLine = function (fname, line) {
     try {
         var fd = fs.openSync(fname, 'a');

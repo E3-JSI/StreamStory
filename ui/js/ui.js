@@ -1247,6 +1247,46 @@
                 return 1 / range;
             }
 
+            function getTimeConfig(dt) {
+                var tickTime = null;
+                var format = null;
+
+                if (dt < 1000*60*60*5) {
+                    // the total time is less than five hour
+                    tickTime = d3.time.minute;
+                    format = d3.time.format('%H:%M');
+                }
+                else if (dt < 1000*60*60*24*7) {	// one week
+                    tickTime = d3.time.hour;
+                    format = d3.time.format('%Hh %d %b');
+                }
+                else if (dt < 1000*60*60*24*30) {   // one month
+                    tickTime = d3.time.day;
+                    format = d3.time.format('%d/%m/%y');
+                }
+                else if (dt < 1000*60*60*24*30*6) { // half a year
+                    tickTime = d3.time.monday;
+                    format = d3.time.format('%d/%m/%y');
+                }
+                else if (dt < 1000*60*60*24*30*12) {    // one year
+                    tickTime = d3.time.month;
+                    format = d3.time.format('%b %y');
+                }
+                else if (dt < 1000*60*60*24*365*2) {    // two years
+                    tickTime = d3.time.month;
+                    format = d3.time.format('%x');
+                }
+                else {  // more than two years
+                    tickTime = d3.time.year;
+                    format = d3.time.format('%Y');
+                }
+
+                return {
+                    tickTime: tickTime,
+                    format: format
+                }
+            }
+
             function fetchTimeline(offset, zoom, callback) {
                 $.ajax('api/stateHistory', {
                     dataType: 'json',
@@ -1260,7 +1300,6 @@
                         // var historyStart = data.historyStart;
                         // var historyEnd = data.historyEnd;
 
-                        console.log('History received, drawing ...');
                         wrapper.html('');
 
                         // preprocess the data
@@ -1323,9 +1362,8 @@
 
                         // draw the elements
                         (function () {
-                            var finestStates = scales[0].states;
-
                             chart = d3.timeline();
+
                             wrapperW = wrapper.width();
                             wrapperH = wrapper.height();
 
@@ -1336,47 +1374,21 @@
                             var itemHeight = Math.floor((wrapperH - (nTimelines-1)*margin - 70) / nTimelines);
 
                             var dt = (function () {
+                                var finestStates = scales[0].states;
+
                                 var firstState = finestStates[0];
                                 var lastState = finestStates[finestStates.length-1];
 
                                 return lastState.start + lastState.duration - firstState.start;
                             })();
 
-                            var tickTime = null;
-                            var format = null;
+                            var config = getTimeConfig(dt);
 
-                            if (dt < 1000*60*60*5) {
-                                // the total time is less than five hour
-                                tickTime = d3.time.minute;
-                                format = d3.time.format('%H:%M');
-                            }
-                            else if (dt < 1000*60*60*24*7) {	// one week
-                                tickTime = d3.time.hour;
-                                format = d3.time.format('%Hh %d %b');
-                            }
-                            else if (dt < 1000*60*60*24*30) {   // one month
-                                tickTime = d3.time.day;
-                                format = d3.time.format('%d/%m/%y');
-                            }
-                            else if (dt < 1000*60*60*24*30*6) { // half a year
-                                tickTime = d3.time.monday;
-                                format = d3.time.format('%d/%m/%y');
-                            }
-                            else if (dt < 1000*60*60*24*30*12) {    // one year
-                                tickTime = d3.time.month;
-                                format = d3.time.format('%b %y');
-                            }
-                            else if (dt < 1000*60*60*24*365*2) {    // two years
-                                tickTime = d3.time.month;
-                                format = d3.time.format('%x');
-                            }
-                            else {  // more than two years
-                                tickTime = d3.time.year;
-                                format = d3.time.format('%Y');
-                            }
+                            // var tickTime = config.tickTime;
+                            // var format = config.format;
 
                             chart.tickFormat({
-                                format: format,
+                                format: config.format,
                                 numTicks: nTicks,
                                 tickSize: 6,
                             });
@@ -1384,7 +1396,12 @@
                             chart.width(wrapperW);
                             // chart.width(Math.max(maxEls*minElementWidth, wrapperW));
                             chart.itemHeight(itemHeight);
-                            chart.margin({ left: 50, right: 0, top: 0, bottom: 0 });
+                            chart.margin({
+                                left: 50,
+                                right: 0,
+                                top: -itemHeight + 15,  // fixes the large margin when there are not a lot of timelines
+                                bottom: 0
+                            });
                             chart.stack();
 
                             redraw();
