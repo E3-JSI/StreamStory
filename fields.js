@@ -908,6 +908,8 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 	}
 	
 	exports.getStreamAggrFields = function (base) {
+        log.info('Fetching stream aggregate fields ...');
+
 		var result = {
 			merger: [],
 			resampler: []
@@ -926,8 +928,8 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 			if (isCurrentInterpolation(fieldNm))
 				interpolation = 'current';
 			
-			if (log.info())
-				log.info('Field %s is using %s interpolation ...', fieldNm, interpolation);
+			if (log.trace())
+				log.trace('Field %s is using %s interpolation ...', fieldNm, interpolation);
 			
 			result.resampler.push({
 				name: fieldNm,
@@ -946,8 +948,8 @@ if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
 			if (isCurrentInterpolation(fieldNm))
 				interpolation = 'current';
 			
-			if (log.info())
-				log.info('Field %s is using %s interpolation ...', fieldNm, interpolation);
+			if (log.trace())
+				log.trace('Field %s is using %s interpolation ...', fieldNm, interpolation);
 			
 			if (fieldNm != 'coeff_swivel' && fieldNm != 'coeff_gearbox') {
 				result.merger.push({
