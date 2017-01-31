@@ -315,7 +315,7 @@ function calcFriction() {
         if (log.info())
             log.info('Residual: use-case=%s, %d, z=%d, p=%d, time=%d', useCase, residual, zScore, pVal, time);
 
-        var opts = {
+        var info = {
             eventId: useCase,
             time: time,
             zScore: zScore,
@@ -324,12 +324,12 @@ function calcFriction() {
         }
 
         if (opts.coefficientCb != null) {
-            opts.coefficientCb(opts);
+            opts.coefficientCb(info);
         } else {
             log.warn('Coefficient callback is not defined!');
         }
 
-        return opts;
+        return info;
     }
 
     function checkOutlierSwivel(coeff, temp, time) {

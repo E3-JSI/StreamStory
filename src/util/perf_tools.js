@@ -37,13 +37,13 @@ exports.throughput = function () {
         print: function () {
             var totalDt = process.hrtime(startTime);
             var throughtput = totalMsgs / seconds(totalDt);
-            log.info('================================');
-            log.info('THROUGHPUT');
-            log.info('throughput: %d', throughtput);
-            log.info('throughput (last): %d', lastThroughput);
-            log.info('minimum: %d', minThroughput);
-            log.info('maximum: %d', maxThroughput);
-            log.info('================================');
+            log.debug('================================');
+            log.debug('THROUGHPUT');
+            log.debug('throughput: %d', throughtput);
+            log.debug('throughput (last): %d', lastThroughput);
+            log.debug('minimum: %d', minThroughput);
+            log.debug('maximum: %d', maxThroughput);
+            log.debug('================================');
         }
     }
 }
@@ -70,13 +70,13 @@ exports.latency = function () {
             }
         },
         print: function () {
-            log.info('================================');
-            log.info('LATENCY');
-            log.info('number of measurements: %d', n);
-            log.info('average latency: %d', totalDur / n);
-            log.info('minimum: %d', minDur);
-            log.info('maximum: %d', maxDur);
-            log.info('================================');
+            log.debug('================================');
+            log.debug('LATENCY');
+            log.debug('number of measurements: %d', n);
+            log.debug('average latency: %d', totalDur / n);
+            log.debug('minimum: %d', minDur);
+            log.debug('maximum: %d', maxDur);
+            log.debug('================================');
         }
     }
 }
