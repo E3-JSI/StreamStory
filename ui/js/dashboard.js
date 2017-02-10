@@ -1,6 +1,4 @@
-function getContainerFromTable(table) {
-    return table.parent().parent().parent().parent().parent().parent();
-}
+var configureController = null;
 
 function getModelIdFromTr(tr) {
     return tr.attr('id').split('-')[1];
@@ -210,7 +208,7 @@ function share() {
             method: 'POST',
             contentType: 'application/json',
             data: JSON.stringify({ modelId: mid, share: true }),
-            success: function (data, status, xhr) {
+            success: function () {
                 tr.parent().remove(tr.attr('id'));
                 $('#table-models-public').find('tbody').append(tr);
 
@@ -245,7 +243,7 @@ function unshare() {
             method: 'POST',
             contentType: 'application/json',
             data: JSON.stringify({ modelId: mid, share: false }),
-            success: function (data, status, xhr) {
+            success: function () {
                 tr.parent().remove(tr.attr('id'));
                 $('#table-models-offline').find('tbody').append(tr);
 
@@ -269,491 +267,1331 @@ function unshare() {
     return false;
 }
 
-function pingProgress(isRealTime) {
-    console.log('Pinging for model progress ...');
-
-    $.ajax('api/pingProgress', {
-        method: 'GET',
-        contentType: 'application/json',
-        success: function (data, status, xhr) {
-            console.log('Got ping result!');
-
-            if (xhr.status == 204) {	// no content
-                console.log('Received no content, re-pinging ...');
-                pingProgress(isRealTime);
-                return;
-            }
-
-            $('#progress-build-model').css('width', data.progress + '%');
-            $('#progress-build-model').html(data.message);
-
-            if (data.isFinished) {
-                $('#btn-add-online,#btn-add-offline').removeAttr('disabled', 'disabled');
-            }
-
-            if (data.error != null) {
-                console.log('Received result with error! Highlighting ...');
-                $('#progress-build-model').css('background-color', 'red');
-            } else {
-                if (!data.isFinished) {
-                    console.log('Received data, but hasn\'t yet finished, re-pinging ...');
-                    pingProgress(isRealTime);
-                } else {	// finished
-                    console.log('Finished building the model!');
-
-                    var mid = data.mid;
-
-                    // fetch the new model
-                    $.ajax('api/modelDetails', {
-                        dataType: 'json',
-                        method: 'GET',
-                        data: { modelId: mid },
-                        success: function (data) {
-                            var table = isRealTime ? $('#table-models-active') : $('#table-models-offline');
-
-                            var tr = $('<tr />');
-                            tr.attr('id', (isRealTime ? 'active-' : 'offline-') + data.mid);
-                            tr.addClass('ui-sortable-handle');
-                            tr.mousedown(onFetchDetails);
-
-                            var nameTd = $('<td />');
-                            var dateTd = $('<td />');
-                            var buttonsTd = $('<td />');
-
-                            nameTd.addClass('td-model-name');
-                            nameTd.html(data.name);
-
-                            dateTd.addClass('td-model-date');
-                            dateTd.html(formatDate(new Date(data.creationDate)));
-
-                            buttonsTd.addClass('td-btns');
-
-                            tr.append(nameTd);
-                            tr.append(dateTd);
-                            tr.append(buttonsTd);
-
-                            // initialize the buttons
-                            var buttonSpan = $('<span class="pull-right span-btns" />');
-
-                            var btnView = $('<button class="btn btn-info btn-xs btn-view" aria-label="Left Align"><span class="glyphicon glyphicon-eye-open"></span> View</button>');
-                            btnView.click(onViewModel);
-
-                            buttonSpan.append(btnView);
-                            buttonsTd.append(buttonSpan);
-
-                            if (isRealTime) {
-                                var deactivateBtn = $('<button class="btn btn-danger btn-xs btn-deactivate tbl-btn-offset" aria-label="Left Align"><span class="glyphicon glyphicon-off"></span> Deactivate</button>');
-                                deactivateBtn.click(deactivate);
-                                buttonSpan.prepend(deactivateBtn);
-                            } else {
-                                var shareBtn = $('<button class="btn btn-default btn-xs btn-share tbl-btn-offset" aria-label="Left Align" style="margin-right: 4px;"><span class="glyphicon glyphicon-globe"></span> Share</button>');
-                                shareBtn.click(share);
-                                buttonSpan.prepend(shareBtn);
-                            }
-
-                            table.find('tbody').append(tr);
-
-                            console.log('Setting closing timeout ...');
-                            setTimeout(function () {
-                                console.log('Closing ...');
-                                $('#div-model-progress').addClass('hidden');
-                                $('#progress-build-model').css('width', '0%');
-                            }, 5000);
-                        },
-                        error: handleAjaxError()
-                    });
-                }
-            }
-        },
-        error: handleAjaxError(null, function () {
-            $('#div-model-progress').addClass('hidden');
-        })
-    });
-}
-
 (function () {
-    var newModelPopup = $('#popup-data-upload');
+    //=======================================================
+    // MODEL
+    //=======================================================
 
-    //========================================================
-    // ADDING A NEW MODEL
-    //========================================================
+    function ConfigureFormModel() {}
 
-    function checkConfigureDataset() {
-        var isOK = true;
-
-        var radio = $('#radio-time');
-        var timeVal = radio.find('input:radio').val();
-
-        // check if all the values are there
-        var hasTimeAttr = timeVal != null && timeVal != '';
-        var hasData = $('#input-choose-upload').val() != '';
-        var hasName = $('#input-model-name').val() != '';
-        var clustAlg = $('#select-clust').val();
-
-        if (!hasTimeAttr || !hasData || !hasName)
-            isOK = false;
-
-        if (clustAlg == null || clustAlg == '')
-            isOK = false;
-
-        if (clustAlg == 'kmeans') {
-            // check K
-            var k = $('#input-kmeans-k').val();
-            if (!isInt(k)) isOK = false;
-        } else if (clustAlg == 'dpmeans') {
-            // check lambda and min, max
-            var minStates = $('#input-dpmeans-minstates').val();
-            var maxStates = $('#input-dpmeans-maxstates').val();
-            var lambda = $('#input-dpmeans-lambda').val();
-
-            if (minStates != null && minStates != '' && isNaN(minStates)) isOk = false;
-            if (maxStates != null && maxStates != '' && isNaN(maxStates)) isOk = false;
-            if (isNaN(lambda)) isOk = false;
-        }
-
-        if (isOK)
-            $('#btn-done').removeAttr('disabled');
-        else
-            $('#btn-done').attr('disabled', 'disabled');
-
-        return isOK;
-    }
-
-    $('#input-model-name').keyup(checkConfigureDataset);
-
-    $('#input-choose-upload').change(function () {
-        $('#form-phase2').hide(0);
-        $('#form-phase3').hide(0);
-        $('#form-phase4').hide(0);
-
-        var hasData = $('#input-choose-upload').val() != '';
-
-        if (!hasData) return;
-
-        console.log('Uploading the file ...');
-
-        var form = $('#form-upload');
-        var formData = new FormData(form[0]);
-
-        var action = form.attr('action');
-        var enctype = form.attr('enctype');
-        var method = form.attr('method');
-
-        $('#progress-file-upload').css('width', '0%');
-        $('#progress-file-upload').html('0%');
-
-        $('#chk-include-time-ftrv').prop('checked', true);
-
-        console.log('Uploading file:');
-        console.log('Enctype: ' + enctype);
-        console.log('Method: ' + method);
-
-        $.ajax(action, {
+    ConfigureFormModel.prototype.uploadData = function (data, onProgress, done) {
+        $.ajax(data.action, {
             contentType: false,
-            enctype: enctype,
-            data: formData,
-            method: method,
+            enctype: data.enctype,
+            data: data.formData,
+            method: data.method,
             processData: false,
             xhr: function () {
                 var myXhr = $.ajaxSettings.xhr();
                 if (myXhr.upload) { // Check if upload property exists
                     myXhr.upload.addEventListener('progress', function (event) {
                         if (event.lengthComputable) {
-                            var prog = (100*(event.loaded / event.total)).toFixed(0);
-                            $('#progress-file-upload').css('width', prog + '%');
-                            $('#progress-file-upload').html(prog + '%');
-                            console.log('progress: ' + prog);
+                            var prog = event.loaded / event.total;
+                            onProgress(prog);
                         }
                     }, false); // For handling the progress of the upload
                 }
                 return myXhr;
             },
-            success: function (data, status, xhr) {
-                var fields = data.headers;
-                var guessedTypes = {};
-
-                for (var i = 0; i < data.types.length; i++) {
-                    guessedTypes[fields[i].name] = data.types[i];
-                }
-
-                var select = $('#select-attrs');
-
-                // clear the attributes
-                select.html('');
-                for (var i = 0; i < fields.length; i++) {
-                    var attr = fields[i].name;
-                    select.append('<option value="' + attr.replace(/\"/g, '&quot;') + '">' + attr + '</option>');
-                }
-
-                select.bootstrapDualListbox({
-                    showFilterInputs: true,
-                    selectedListLabel: 'Selected Attributes',
-                    nonSelectedListLabel: 'Ignored Attributes'
-                });
-                select.bootstrapDualListbox('refresh');
-
-                select.change(function () {
-                    $('#form-phase3').hide(0);
-                    $('#form-phase4').hide(0);
-
-                    var selectedAttrs = select.val();
-
-                    if (selectedAttrs == null) return;
-
-                    // set the time radio selector
-                    var timeRadio = $('#radio-time');
-                    timeRadio.html('');	// clear the element
-
-                    for (var i = 0; i < selectedAttrs.length; i++) {
-                        var div = $('<div class="radio" />')
-                        var label = $('<label />');
-                        var input = $('<input />');
-
-                        input.attr('type', 'radio');
-                        input.attr('name', 'attr-time');
-                        input.val(selectedAttrs[i]);
-
-                        label.append(input);
-                        label.append(selectedAttrs[i]);
-                        div.append(label);
-                        timeRadio.append(div);
-                    }
-
-                    timeRadio.find('input:radio').change(function () {
-                        var timeAttr = $(this).val();
-                        var selectControls = $('#select-controls');
-                        var selectIgnored = $('#select-ignored');
-
-                        // clear the attributes
-                        selectControls.html('');
-                        selectIgnored.html('');
-                        for (var i = 0; i < selectedAttrs.length; i++) {
-                            var attr = selectedAttrs[i];
-                            if (attr != timeAttr) {
-                                selectControls.append('<option value="' + attr.replace(/\"/g, '&quot;') + '">' + attr + '</option>');
-                                selectIgnored.append('<option value="' + attr.replace(/\"/g, '&quot;') + '">' + attr + '</option>');
-                            }
-                        }
-
-                        // populate the attribute type section
-                        var typeDiv = $('#div-select-attr-types');
-                        typeDiv.html('');
-                        for (var i = 0; i < selectedAttrs.length; i++) {
-                            var attr = selectedAttrs[i];
-                            var type = guessedTypes[attr];
-
-                            if (attr == timeAttr) continue;
-
-                            var div = $('<div style="height: 27px;" />');
-                            var inputSpan = $('<span class="pull-right" style="clear: both;" />');
-
-                            var numLabel = $('<label>Numeric: </label>');
-                            var nomLabel = $('<label>Categorical: </label>');
-                            var inputNum = $('<input type="radio" value="numeric" />');
-                            var inputNom = $('<input type="radio" value="nominal" />');
-
-                            inputNum.attr('id', 'radio-type-num-' + i);
-                            inputNom.attr('id', 'radio-type-cat-' + i);
-                            inputNum.attr('name', 'radio-type-' + i);
-                            inputNom.attr('name', 'radio-type-' + i);
-
-                            numLabel.attr('for', 'radio-type-num-' + i);
-                            nomLabel.attr('for', 'radio-type-cat-' + i);
-
-                            if (type == 'numeric') {
-                                inputNum.attr('checked', 'checked');
-                            } else if (type == 'categorical') {
-                                inputNom.attr('checked', 'checked');
-                            }
-
-                            inputSpan.append(numLabel);
-                            inputSpan.append(inputNum);
-                            inputSpan.append('&nbsp;');
-                            inputSpan.append(nomLabel);
-                            inputSpan.append(inputNom);
-
-                            div.html(attr);
-                            div.append(inputSpan);
-
-                            typeDiv.append(div);
-                        }
-
-                        selectControls.bootstrapDualListbox({
-                            showFilterInputs: false,
-                            nonSelectedListLabel: 'State Attributes',
-                            selectedListLabel: 'Transition Atrtibutes'
-                        });
-                        selectIgnored.bootstrapDualListbox({
-                            showFilterInputs: false,
-                            nonSelectedListLabel: 'State Attributes',
-                            selectedListLabel: 'Ignored Atrtibutes'
-                        });
-                        selectControls.change(function () {
-                            var controlV = selectControls.val();
-
-                            var controlH = {};
-
-                            for (var i = 0; i < controlV.length; i++) {
-                                controlH[controlV[i]] = true;
-                            }
-
-                            for (var attrN = 0; attrN < selectedAttrs.length; attrN++) {
-                                var attr = selectedAttrs[attrN];
-
-                                if (attr in controlH) {
-                                    selectIgnored.remove(attr);
-                                }
-                            }
-                            selectIgnored.bootstrapDualListbox('refresh');
-                        });
-                        selectIgnored.change(function () {
-                            var ignoredV = selectIgnored.val();
-                            for (var i = 0; i < ignoredV.length; i++) {
-                                var ignored = ignoredV[i];
-                                selectControls.remove('option[value="' + ignored.replace(/\"/g, '&quot;') + '"]');	// TODO
-                            }
-                            selectControls.bootstrapDualListbox('refresh');
-                        });
-                        selectControls.bootstrapDualListbox('refresh');
-                        selectIgnored.bootstrapDualListbox('refresh');
-
-                        // show the attribute selection
-                        $('#form-phase4').show();
-                    });
-
-                    timeRadio.find('input:radio').change(checkConfigureDataset);
-
-                    $('#form-phase3').show(0);
-                });
-
-                $('#form-phase2').show();
+            success: function (data) {
+                done(undefined, data);
             },
-            error: handleAjaxError()
-        });
-    });
-
-    $('#select-clust').change(function () {
-        var val = $(this).val();
-
-        if (val != 'kmeans') $('#div-config-kmeans').addClass('hidden');
-        if (val != 'dpmeans') $('#div-config-dpmeans').addClass('hidden');
-
-        if (val == 'kmeans') $('#div-config-kmeans').removeClass('hidden');
-        if (val == 'dpmeans') $('#div-config-dpmeans').removeClass('hidden');
-    });
-
-    $('#btn-done').click(function () {
-        var btn = $(this);
-
-        if (!checkConfigureDataset()) return;
-
-        $('#progress-build-model').css('background-color', '');
-        $('#progress-build-model-wrapper').show(0);
-
-        var attrs = $('#select-attrs').val();
-        var timeAttr = $('#radio-time').find('input:checked').val();
-        var useTimeFtrV = $('#chk-include-time-ftrv').is(':checked');
-        var controlAttrs = $('#select-controls').val();
-        var ignoredAttrs = $('#select-ignored').val();
-        var isRealTime = $('#check-realtime').is(':checked');
-        var clustAlg = $('#select-clust').val();
-        var hierarchyType = $('#select-hierarchy').val();
-        var name = $('#input-model-name').val();
-        var desc = $('#input-model-desc').val();
-
-        if (controlAttrs == null) controlAttrs = [];
-        if (ignoredAttrs == null) ignoredAttrs = [];
-
-        var typeH = {};
-        for (var i = 0; i < attrs.length; i++) {
-            var attr = attrs[i];
-            typeH[attr] = 'time';
-        }
-
-        var typeDiv = $('#div-select-attr-types');
-        $.each(typeDiv.children('div'), function (i, divEl) {
-            var div = $(divEl);
-            $('input[name=radio-type-4]:checked')
-            var checked = div.find('input[type=radio]:checked');
-
-            var idx = checked.attr('id').split('-')[3];
-            var attr = attrs[idx];
-            var type = checked.val();
-            typeH[attr] = type;
-        });
-
-        for (var i = 0; i < attrs.length; i++) {
-            attrs[i] = {
-                name: attrs[i].replace('&quot;', '"'),
-                type: typeH[attrs[i]]
+            error: function (xhr, status, err) {
+                done(err);
             }
+        })
+    }
+
+    //=======================================================
+    // CONTROLLER
+    //=======================================================
+
+    function ConfigureFormController(opts) {
+        if (opts.model == null) throw new Error('Model missing!');
+        if (opts.view == null) throw new Error('View missing!');
+        if (opts.done == null) throw new Error('Done callback missing!');
+
+        var self = this;
+
+        // form phases
+        self._PHASE_UPLOAD_FILE = 1;
+        self._PHASE_SELECT_ATTRIBUTES = 2;
+        self._PHASE_CONFIGURE_TIME = 3;
+        self._PHASE_CONFIGURE_ATTRS = 4;
+        self._PHASE_FINAL = 5;
+
+        // default values
+        self._DEFAULT_TIME_UNIT = 'hour';
+        self._DEFAULT_INCLUDE_TIME_FTRV = true;
+        // clustering
+        self._DEFAULT_CLUST_ALGORITHM = 'kmeans';
+        self._DEFAULT_KMEANS_K = 12;
+        self._DEFAULT_DPMEANS_MINSTATES = 10;
+        self._DEFAULT_DPMEANS_MAXSTATES = 30;
+        self._DEFAULT_DPMEANS_LAMBDA = 0.8;
+        // hierarchy
+        self._DEFAULT_HIERARCHY = 'aggClust';
+
+        self._callbacks = {
+            done: opts.done
         }
 
-        for (var i = 0; i < controlAttrs.length; i++) {
-            controlAttrs[i] = {
-                name: controlAttrs[i].replace('&quot;', '"'),
-                type: typeH[controlAttrs[i]]
-            }
+        self.model = opts.model;
+        self.view = opts.view;
+
+        // internal variables
+        self.currPhase = self._PHASE_UPLOAD_FILE;
+
+        // internal variables
+        self.isRealTime = true;
+        self.availableAttributes = null;
+        self.guessedTypes = null;
+
+        // output variables
+        // phase 2
+        self.selectedAttributes = [];
+        // phase 3
+        self.timeAttr = null;
+        self.includeTimeFtrV = null;
+        self.timeUnit = null;
+        // phase 4
+        self.attrTypeH = {};
+        self.attrDiffH = {};
+        // phase 5
+        self.clustOpts = null;
+        self.hierarchyType = null;
+        self.controlAttrH = {};
+        self.ignoredAttrH = {};
+        self.modelName = null;
+        self.modelDescription = null;
+
+        self.registerHandlers();
+    }
+
+    ConfigureFormController.prototype.registerHandlers = function () {
+        var self = this;
+
+        var model = self.model;
+        var view = self.view;
+
+        var addViewHandler = function (event, handler) {
+            view.on(event, function () {
+                console.log('\'' + event + '\' fired with data: ' + JSON.stringify(arguments));
+                handler.apply(self, arguments);
+            })
         }
 
-        for (var i = 0; i < ignoredAttrs.length; i++) {
-            ignoredAttrs[i] = {
-                name: ignoredAttrs[i].replace('&quot;', '"'),
-                type: typeH[ignoredAttrs[i]]
+        addViewHandler('fileRead', function (data) {
+            self._setPhase(self._PHASE_UPLOAD_FILE);
+            view.setUploadProgress(0);
+
+            if (data == null) return;
+
+            var onProgress = function (prog) {
+                view.setUploadProgress(prog);
             }
+
+            var done = function (e, data) {
+                if (e != null) {
+                    self._setAvailableAttrs(null, null);
+                    return self._showError(e);
+                }
+
+                view.setUploadProgress(100);
+
+                var fields = data.headers;
+                var guessedTypes = (function () {
+                    var guessedTypes = {};
+                    for (var i = 0; i < data.types.length; i++) {
+                        guessedTypes[fields[i].name] = data.types[i];
+                    }
+                    return guessedTypes;
+                })();
+
+                self._setAvailableAttrs(fields, guessedTypes);
+            }
+
+            model.uploadData(data, onProgress, done);
+        })
+
+        addViewHandler('attributesSelected', function (attrs) {
+            self._setSelectedAttrs(attrs);
+        })
+
+        addViewHandler('timeUnitChanged', function (opts) {
+            self._setTimeUnit(opts.value, false);
+        })
+
+        addViewHandler('includeTimeFeaturesChanged', function (opts) {
+            self._setIncludeTimeFtrV(opts.value, false);
+        })
+
+        addViewHandler('timeAttrSelected', function (timeAttr) {
+            self._setTimeAttr(timeAttr);
+        })
+
+        addViewHandler('attributeTypeChanged', function (opts) {
+            var attr = opts.attr;
+            var type = opts.type;
+            self.attrTypeH[attr] = type;
+        })
+
+        addViewHandler('includeDerivChanged', function (opts) {
+            if (opts.value) {
+                self.attrDiffH[opts.attribute] = true;
+            } else {
+                delete self.attrDiffH[opts.attribute];
+            }
+        })
+
+        addViewHandler('controlAttributesChanged', function (controlH) {
+            self.controlAttrH = controlH;
+            var availableAttrs = self._getConfigurableAttrs();
+            for (var attr in controlH) {
+                if (attr in self.ignoredAttrH) {
+                    delete self.ignoredAttrH[attr];
+                }
+            }
+            availableAttrs = availableAttrs.filter(function (val) {
+                return !(val in controlH);
+            })
+            view.showSelectIgnoredAttrs(availableAttrs, self.ignoredAttrH);
+        })
+
+        addViewHandler('ignoredAttributesChanged', function (ignoredH) {
+            self.ignoredAttrH = ignoredH;
+            var availableAttrs = self._getConfigurableAttrs();
+            for (var attr in ignoredH) {
+                if (attr in self.controlAttrH) {
+                    delete self.controlAttrH[attr];
+                }
+            }
+            availableAttrs = availableAttrs.filter(function (val) {
+                return !(val in ignoredH);
+            })
+            view.showSelectControlAttrs(availableAttrs, self.controlAttrH);
+        })
+
+        addViewHandler('clusteringParamChanged', function (opts) {
+            if (opts.param == 'algorithm') {
+                self._handleClustAlgChange(opts.value, false);
+            } else {
+                self.clustOpts[opts.param] = opts.value;
+            }
+        })
+
+        addViewHandler('hierarchyTypeChanged', function (opts) {
+            self._setHierarchyType(opts.value, false);
+        })
+
+        addViewHandler('modelNameChanged', function (name) {
+            self._setModelName(name, false);
+        })
+
+        addViewHandler('modelDescriptionChanged', function (opts) {
+            self._setModelDescription(opts.value, false);
+        })
+
+        addViewHandler('doneClicked', self._finish)
+    }
+
+    ConfigureFormController.prototype._handleClustAlgChange = function (value, refreshView) {
+        if (refreshView == null) refreshView = true;
+
+        var self = this;
+
+        self.clustOpts = {};
+        self._setClustering(value, refreshView);
+
+        // set the values
+        if (value == 'dpmeans') {
+            self._setDpMeansMinStates(self._DEFAULT_DPMEANS_MINSTATES);
+            self._setDpMeansMaxStates(self._DEFAULT_DPMEANS_MAXSTATES);
+            self._setDpMeansLambda(self._DEFAULT_DPMEANS_LAMBDA);
+        } else {
+            self._setKMeansK(self._DEFAULT_KMEANS_K);
         }
+
+        self.view.showKMeans(value == 'kmeans');
+        self.view.showDpMeans(value == 'dpmeans');
+    }
+
+    // SET VALUES
+
+    ConfigureFormController.prototype._resetUploadFile = function () {
+        var self = this;
+        self.view.setUploadProgress(0);
+        self.view.setUploadFile(null);
+    }
+
+    ConfigureFormController.prototype._setAvailableAttrs = function (attrs, guessedTypes) {
+        var self = this;
+
+        // store the data
+        self.availableAttributes = attrs;
+        self.guessedTypes = guessedTypes;
+
+        if (attrs != null) {
+            self.view.showAvailableAttrs(attrs);
+            self._setPhase(self._PHASE_SELECT_ATTRIBUTES);
+        }
+    }
+
+    ConfigureFormController.prototype._setSelectedAttrs = function (attrs) {
+        var self = this;
+
+        if (attrs == null || attrs.length == 0) {
+            self._setPhase(self._PHASE_SELECT_ATTRIBUTES);
+            return;
+        }
+
+        self.selectedAttributes = attrs;
+        // show configure time attribute
+        self.view.showSelectTimeAttr(attrs);
+        // set the default time unit
+        self._setTimeUnit(self._DEFAULT_TIME_UNIT);
+        // check configure time attributes
+        self._setIncludeTimeFtrV(self._DEFAULT_INCLUDE_TIME_FTRV);
+
+        // change the phase
+        self._setPhase(self._PHASE_CONFIGURE_TIME);
+    }
+
+    ConfigureFormController.prototype._setTimeAttr = function (value) {
+        var self = this;
+
+        self.timeAttr = value;
+        self.controlAttrH = {};
+        self.ignoredAttrH = {};
+
+        if (value == null) return;
+
+        var configurableAttrs = self._getConfigurableAttrs();
+        for (var i = 0; i < configurableAttrs.length; i++) {
+            var attr = configurableAttrs[i];
+            self.attrTypeH[attr] = self.guessedTypes[attr];
+        }
+
+        // show attributes for configuration
+        self._setConfigurableAttrs(configurableAttrs, self.guessedTypes);
+        // switch phase
+        self._setPhase(self._PHASE_FINAL);
+    }
+
+    ConfigureFormController.prototype._setTimeUnit = function (value, refreshView) {
+        if (refreshView == null) refreshView = true;
+
+        this.timeUnit = value;
+        if (refreshView) {
+            this.view.setTimeUnit(value);
+        }
+    }
+
+    ConfigureFormController.prototype._setIncludeTimeFtrV = function (value, refreshView) {
+        if (refreshView == null) refreshView = true;
+
+        this.includeTimeFtrV = value;
+        if (refreshView) {
+            this.view.setIncludeTimeFtrV(value);
+        }
+    }
+
+    ConfigureFormController.prototype._setConfigurableAttrs = function (configurableAttrs,
+            guessedTypes, refreshView) {
+        var self = this;
+
+        if (refreshView == null) refreshView = true;
+
+        if (refreshView) {
+            // show attribute types
+            self.view.showSelectAttrTypes(configurableAttrs, self.guessedTypes);
+            // show add change of attribute
+            self.view.showConfigureDerivatives(configurableAttrs);
+            // show select control attributes
+            self.view.showSelectControlAttrs(configurableAttrs);
+            // show select ignored attributes
+            self.view.showSelectIgnoredAttrs(configurableAttrs);
+        }
+    }
+
+    ConfigureFormController.prototype._setClustering = function (value, refreshView) {
+        if (refreshView == null) refreshView = true;
+
+        this.clustOpts.algorithm = value;
+        if (refreshView) {
+            this.view.setClusteringAlgorithm(value);
+        }
+    }
+
+    ConfigureFormController.prototype._setDpMeansMinStates = function (value, refreshView) {
+        if (refreshView == null) refreshView = true;
+
+        this.clustOpts.minStates = value;
+        if (refreshView) {
+            this.view.setDpMeansMinStates(value);
+        }
+    }
+
+    ConfigureFormController.prototype._setDpMeansMaxStates = function (value, refreshView) {
+        if (refreshView == null) refreshView = true;
+
+        this.clustOpts.maxStates = value;
+        if (refreshView) {
+            this.view.setDpMeansMaxStates(value);
+        }
+    }
+
+    ConfigureFormController.prototype._setDpMeansLambda = function (value, refreshView) {
+        if (refreshView == null) refreshView = true;
+
+        this.clustOpts.lambda = value;
+        if (refreshView) {
+            this.view.setDpMeansLambda(value);
+        }
+    }
+
+    ConfigureFormController.prototype._setKMeansK = function (value, refreshView) {
+        if (refreshView == null) refreshView = true;
+        console.log('setting kmeans k ...');
+
+        this.clustOpts.k = value;
+        if (refreshView) {
+            this.view.setKMeansK(value);
+        }
+    }
+
+    ConfigureFormController.prototype._setDpMeansMinStates = function (value, refreshView) {
+        if (refreshView == null) refreshView = true;
+
+        this.clustOpts.minStates = value;
+        if (refreshView) {
+            this.view.setDpMeansMinStates(value);
+        }
+    }
+
+    ConfigureFormController.prototype._setHierarchyType = function (value, refreshView) {
+        if (refreshView == null) refreshView = true;
+
+        this.hierarchyType = value;
+        if (refreshView) {
+            this.view.setHierarchyType(value);
+        }
+    }
+
+    ConfigureFormController.prototype._setModelName = function (value, refreshView) {
+        if (refreshView == null) refreshView = true;
+
+        var self = this;
+
+        self.modelName = value;
+
+        if (refreshView) {
+            self.view.setModelName(value);
+        }
+
+        // check if all the configuration is present
+        self._checkEnableDone();
+    }
+
+    ConfigureFormController.prototype._setModelDescription = function (value, refreshView) {
+        if (refreshView == null) refreshView = true;
+
+        this.modelDescription = value;
+        if (refreshView) {
+            this.view.setModelDescription(value);
+        }
+
+        // check if all the configuration is present
+        this._checkEnableDone();
+    }
+
+    //==================================
+
+    ConfigureFormController.prototype._resetVals = function () {
+        var self = this;
+        self._resetUploadFile();
+        self._setPhase(self._PHASE_UPLOAD_FILE);
+    }
+
+    ConfigureFormController.prototype.setIsRealTime = function (isRealTime) {
+        this.isRealTime = isRealTime;
+    }
+
+    ConfigureFormController.prototype.show = function (show) {
+        var self = this;
+        if (show) {
+            self._resetVals();
+        }
+        self.view.show(show);
+    }
+
+    ConfigureFormController.prototype._checkValuesPresent = function () {
+        var self = this;
+        // phase 1 is implicit
+        // phase 2
+        if (self.selectedAttributes == null || self.selectedAttributes.length == 0)
+            return false;
+        // phase 3
+        if (self.timeAttr == null || self.timeUnit == null)
+            return false;
+        // phase 4
+        if (self.attrTypeH == null || Object.keys(self.attrTypeH).length == 0)
+            return false;
+        if (self.modelName == null || self.modelName == '')
+            return false;
+        if (self.hierarchyType == null)
+            return false;
+
+        // check the clustering
+        if (self.clustOpts == null || self.clustOpts.algorithm == null)
+            return false;
+        if (self.clustOpts.algorithm == 'kmeans') {
+            var k = self.clustOpts.k;
+            if (!isInt(k)) return false;
+        } else if (self.clustOpts.algorithm == 'dpmeans') {
+            var maxStates = self.clustOpts.maxStates;
+            var minStates = self.clustOpts.minStates;
+            var lambda = self.clustOpts.lambda;
+
+            if (minStates != null && minStates != '' && isNaN(minStates)) return false;
+            if (maxStates != null && maxStates != '' && isNaN(maxStates)) return false;
+            if (isNaN(lambda)) return false;
+        } else {
+            return false;
+        }
+
+        return true;
+    }
+
+    ConfigureFormController.prototype._checkEnableDone = function () {
+        this.view.enableDone(this._checkValuesPresent());
+    }
+
+    ConfigureFormController.prototype._finish = function () {
+        var self = this;
+
+        if (!self._checkValuesPresent()) {
+            console.log('Dataset configuration not complete!');
+            return
+        }
+
+        var attrs = (function () {
+            var attrs = [];
+            for (var i = 0; i < self.selectedAttributes.length; i++) {
+                var attr = self.selectedAttributes[i];
+                var type = attr == self.timeAttr ? 'time' : self.attrTypeH[attr];
+                attrs.push({
+                    name: attr.replace('&quot;', '"'),
+                    type: type
+                })
+            }
+            return attrs;
+        })();
+
+        var controlAttrs = (function () {
+            var controlAttrs = [];
+            for (var attr in self.controlAttrH) {
+                var type = attr == self.timeAttr ? 'time' : self.attrTypeH[attr];
+                controlAttrs.push({
+                    name: attr,
+                    type: type
+                })
+            }
+            return controlAttrs;
+        })();
+
+        var ignoredAttrs = (function () {
+            var ignoredAttrs = [];
+            for (var attr in self.ignoredAttrH) {
+                var type = attr == self.timeAttr ? 'time' : self.attrTypeH[attr];
+                ignoredAttrs.push({
+                    name: attr,
+                    type: type
+                })
+            }
+            return ignoredAttrs;
+        })();
+
+        var includeDerivAttrs = (function () {
+            var result = [];
+            for (var attr in self.attrDiffH) {
+                var type = attr == self.timeAttr ? 'time' : self.attrTypeH[attr];
+                result.push({
+                    name: attr,
+                    type: type
+                });
+            }
+            return result;
+        })();
+
+        var clustData = (function () {
+            if (self.clustOpts.algorithm == 'kmeans') {
+                return {
+                    type: 'kmeans',
+                    k: self.clustOpts.k,
+                    includeTimeFeatures: self.includeTimeFtrV,
+                }
+            } else {
+                var result = {
+                    type: 'dpmeans',
+                    lambda: self.clustOpts.lambda,
+                    includeTimeFeatures: self.includeTimeFtrV,
+                }
+
+                var minStates = self.clustOpts.minStates;
+                var maxStates = self.clustOpts.maxStates;
+
+                if (minStates != null && minStates != '')
+                    result.minStates = minStates;
+                if (maxStates != null && maxStates != '')
+                    result.maxStates = maxStates;
+
+                return result;
+            }
+        })();
 
         var data = {
-            username: $('#input-email').val(),
-            time: timeAttr,
-            timeUnit: $('#select-tu').val(),
+            time: self.timeAttr,
+            timeUnit: self.timeUnit,
             attrs: attrs,
             controlAttrs: controlAttrs,
             ignoredAttrs: ignoredAttrs,
-            hierarchyType: hierarchyType,
-            isRealTime: isRealTime,
-            name: name,
-            description: desc
+            derivAttrs: includeDerivAttrs,
+            hierarchyType: self.hierarchyType,
+            isRealTime: self.isRealTime,
+            name: self.modelName,
+            description: self.modelDescription,
+            clust: clustData
         }
 
-        if (clustAlg == 'kmeans') {
-            data.clust = {
-                type: clustAlg,
-                k: parseInt($('#input-kmeans-k').val()),
-                includeTimeFeatures: useTimeFtrV,
-            }
-        } else if (clustAlg == 'dpmeans') {
-            data.clust = {
-                type: clustAlg,
-                lambda: parseFloat($('#input-dpmeans-lambda').val()),
-                includeTimeFeatures: useTimeFtrV,
-            }
+        self._callbacks.done(undefined, data);
+    }
 
-            var minStates = $('#input-dpmeans-minstates').val();
-            var maxStates = $('#input-dpmeans-maxstates').val();
+    ConfigureFormController.prototype._getConfigurableAttrs = function () {
+        var self = this;
+        var configurableAttrs = [];
+        for (var i = 0; i < self.selectedAttributes.length; i++) {
+            var attr = self.selectedAttributes[i];
+            if (attr != self.timeAttr) {
+                configurableAttrs.push(attr);
+            }
+        }
+        return configurableAttrs;
+    }
 
-            if (minStates != null && minStates != '')
-                data.clust.minStates = minStates;
-            if (maxStates != null && maxStates != '')
-                data.clust.maxStates = maxStates;
+    ConfigureFormController.prototype._setPhase = function (phase) {
+        var self = this;
+
+        if (phase == self.currPhase) { return; }
+
+        switch (phase) {
+            case self._PHASE_UPLOAD_FILE: {
+                self._setAvailableAttrs(null, null);
+                // show appropriate phases
+                this.view.showPhaseSelectAttr(false);
+                this.view.showPhaseConfigureTime(false);
+                this.view.showPhaseConfigureAttrs(false);
+                this.view.showPhaseFinal(false);
+                break;
+            }
+            case self._PHASE_SELECT_ATTRIBUTES: {
+                // show appropriate phases
+                this.view.showPhaseSelectAttr(true);
+                this.view.showPhaseConfigureTime(false);
+                this.view.showPhaseConfigureAttrs(false);
+                this.view.showPhaseFinal(false);
+                break;
+            }
+            case self._PHASE_CONFIGURE_TIME: {
+                self._setTimeAttr(null);
+                // show appropriate phases
+                this.view.showPhaseSelectAttr(true);
+                this.view.showPhaseConfigureTime(true);
+                this.view.showPhaseConfigureAttrs(false);
+                this.view.showPhaseFinal(false);
+                break;
+            }
+            case self._PHASE_CONFIGURE_ATTRS: {
+                // show appropriate phases
+                this.view.showPhaseSelectAttr(true);
+                this.view.showPhaseConfigureTime(true);
+                this.view.showPhaseConfigureAttrs(true);
+                this.view.showPhaseFinal(false);
+                break;
+            }
+            case self._PHASE_FINAL: {
+                self._handleClustAlgChange(self._DEFAULT_CLUST_ALGORITHM);
+                self._setHierarchyType(self._DEFAULT_HIERARCHY);
+                self._setModelName(null);
+                self._setModelDescription(null);
+                // show appropriate phases
+                this.view.showPhaseSelectAttr(true);
+                this.view.showPhaseConfigureTime(true);
+                this.view.showPhaseConfigureAttrs(true);
+                this.view.showPhaseFinal(true);
+                break;
+            }
+            default:
+                throw new Error('Unknown form phase: ' + phase);
         }
 
+        self.currPhase = phase;
+    }
+
+    ConfigureFormController.prototype._showError = function (err) {
+        var msg = typeof err == 'string' ? err : err.message;
+        this.view.showAlert(msg);
+    }
+
+    //=======================================================
+    // VIEW
+    //=======================================================
+
+    function ConfigureFormView() {
+        var self = this;
+
+        self._callbacks = {
+            fileRead: [],
+            attributesSelected: [],
+            timeAttrSelected: [],
+            includeDerivChanged: [],
+            timeUnitChanged: [],
+            includeTimeFeaturesChanged: [],
+            attributeTypeChanged: [],
+            clusteringParamChanged: [],
+            hierarchyTypeChanged: [],
+            controlAttributesChanged: [],
+            ignoredAttributesChanged: [],
+            modelNameChanged: [],
+            modelDescriptionChanged: [],
+            doneClicked: []
+        }
+
+        self._fireEvents = true;
+
+        self.initHandlers();
+    }
+
+    ConfigureFormView.prototype.initHandlers = function () {
+        var self = this;
+
+        var handleChange = function (input, event, key, transform) {
+            if (transform == null) transform = function (val) { return val; }
+
+            input.change(function () {
+                var val = $(this).val();
+                if (val == null || val == '') {
+                    self.fire(event, { param: key, value: null });
+                } else {
+                    self.fire(event, { param: key, value: transform(val) });
+                }
+            })
+        }
+
+        var handleClustChange = function (input, key, transform) {
+            handleChange(input, 'clusteringParamChanged', key, transform);
+        }
+
+        $('#input-choose-upload').change(function () {
+            var hasData = $('#input-choose-upload').val() != '';
+
+            if (!hasData) {
+                self.fire('fileRead', null);
+                return;
+            }
+
+            var form = $('#form-upload');
+
+            var data = {
+                formData: new FormData(form[0]),
+                action: form.attr('action'),
+                enctype: form.attr('enctype'),
+                method: form.attr('method')
+            }
+
+            self.fire('fileRead', data);
+        });
+
+        handleChange($('#select-tu'), 'timeUnitChanged', 'timeUnit');
+
+        $('#chk-include-time-ftrv').change(function () {
+            var val = $(this).is(':checked');
+            self.fire('includeTimeFeaturesChanged', { param: 'includeTimeFeatures', value: val });
+        })
+
+        // clustering parameters
+        handleClustChange($('#select-clust'), 'algorithm');
+        handleClustChange($('#input-kmeans-k'), 'k', parseInt);
+        handleClustChange($('#input-dpmeans-minstates'), 'minStates', parseInt);
+        handleClustChange($('#input-dpmeans-maxstates'), 'maxStates', parseInt);
+        handleClustChange($('#input-dpmeans-lambda'), 'lambda', parseFloat);
+
+        // hierarchy type
+        handleChange($('#select-hierarchy'), 'hierarchyTypeChanged', 'type');
+
+        $('#input-model-name').keyup(function () {
+            var val = $('#input-model-name').val();
+            if (val == '') val = null;
+            self.fire('modelNameChanged', val);
+        });
+
+        // description
+        handleChange($('#input-model-desc'), 'modelDescriptionChanged', 'description');
+
+        $('#btn-done').click(function () {
+            self.fire('doneClicked');
+        });
+    }
+
+    // SET VALUE
+
+    ConfigureFormView.prototype.setUploadFile = function (value) {
+        this._setTextValue($('#input-choose-upload'), value);
+    }
+
+    ConfigureFormView.prototype.setTimeUnit = function (value) {
+        this._setSelectValue($('#select-tu'), value);
+    }
+
+    ConfigureFormView.prototype.setIncludeTimeFtrV = function (value) {
+        this._setCheckValue($('#chk-include-time-ftrv'), value);
+    }
+
+    ConfigureFormView.prototype.setClusteringAlgorithm = function (value) {
+        this._setSelectValue($('#select-clust'), value);
+    }
+
+    ConfigureFormView.prototype.setDpMeansMinStates = function (value) {
+        this._setTextValue($('#input-dpmeans-minstates'), value);
+    }
+
+    ConfigureFormView.prototype.setDpMeansMaxStates = function (value) {
+        this._setTextValue($('#input-dpmeans-maxstates'), value);
+    }
+
+    ConfigureFormView.prototype.setDpMeansLambda = function (value) {
+        this._setTextValue($('#input-dpmeans-lambda'), value);
+    }
+
+    ConfigureFormView.prototype.setKMeansK = function (value) {
+        this._setTextValue($('#input-kmeans-k'), value);
+    }
+
+    ConfigureFormView.prototype.setHierarchyType = function (value) {
+        this._setSelectValue($('#select-hierarchy'), value);
+    }
+
+    ConfigureFormView.prototype.setModelName = function (value) {
+        this._setTextValue($('#input-model-name'), value);
+    }
+
+    ConfigureFormView.prototype.setModelDescription = function (value) {
+        this._setTextValue($('#input-model-desc'), value);
+    }
+
+
+    ConfigureFormView.prototype._setTextValue = function (input, value) {
+        var self = this;
+        self._fireEvents = false;
+        input.val(value != null ? value : '');
+        self._fireEvents = true;
+    }
+
+    ConfigureFormView.prototype._setSelectValue = function (input, value) {
+        var self = this;
+        self._fireEvents = false;
+        input.val(value);
+        self._fireEvents = true;
+    }
+
+    ConfigureFormView.prototype._setCheckValue = function (input, checked) {
+        var self = this;
+        self._fireEvents = false;
+        input.prop('checked', checked);
+        self._fireEvents = true;
+    }
+
+    // RENDERING
+
+    ConfigureFormView.prototype.showAvailableAttrs = function (fields) {
+        var self = this;
+
+        var select = $('#select-attrs');
+        // clear the attributes
+        select.html('');
+
+        if (fields == null || fields.length == 0) return;
+
+        for (var i = 0; i < fields.length; i++) {
+            var attr = fields[i].name;
+            select.append('<option value="' + attr.replace(/\"/g, '&quot;') + '">' + attr + '</option>');
+        }
+        select.bootstrapDualListbox({
+            showFilterInputs: true,
+            selectedListLabel: 'Selected Attributes',
+            nonSelectedListLabel: 'Ignored Attributes'
+        });
+        select.bootstrapDualListbox('refresh');
+
+        select.change(function () {
+            var data = select.val();
+            self.fire('attributesSelected', data);
+        })
+    }
+
+    ConfigureFormView.prototype.showSelectTimeAttr = function (selectedAttrs) {
+        var self = this;
+
+        var timeRadio = $('#radio-time');
+        timeRadio.html('');	// clear the element
+
+        for (var i = 0; i < selectedAttrs.length; i++) {
+            var div = $('<div class="radio" />')
+            var label = $('<label />');
+            var input = $('<input />');
+
+            input.attr('type', 'radio');
+            input.attr('name', 'attr-time');
+            input.val(selectedAttrs[i]);
+
+            label.append(input);
+            label.append(selectedAttrs[i]);
+            div.append(label);
+            timeRadio.append(div);
+        }
+
+        timeRadio.find('input:radio').change(function () {
+            var timeAttr = $(this).val();
+            self.fire('timeAttrSelected', timeAttr);
+        });
+    }
+
+    ConfigureFormView.prototype.showSelectAttrTypes = function (attributes, predefTypes) {
+        var self = this;
+
+        var typeDiv = $('#div-select-attr-types');
+        typeDiv.html('');
+        for (var i = 0; i < attributes.length; i++) {
+            var attr = attributes[i];
+            var type = predefTypes[attr];
+
+            var div = $('<div style="height: 27px;" />');
+            var inputSpan = $('<span class="pull-right" style="clear: both;" />');
+
+            var numLabel = $('<label>Numeric: </label>');
+            var nomLabel = $('<label>Categorical: </label>');
+            var inputNum = $('<input type="radio" value="numeric" />');
+            var inputNom = $('<input type="radio" value="nominal" />');
+
+            inputNum.attr('id', 'radio-type-num-' + i);
+            inputNom.attr('id', 'radio-type-cat-' + i);
+            inputNum.attr('name', 'radio-type-' + i);
+            inputNom.attr('name', 'radio-type-' + i);
+
+            numLabel.attr('for', 'radio-type-num-' + i);
+            nomLabel.attr('for', 'radio-type-cat-' + i);
+
+            if (type == 'numeric') {
+                inputNum.attr('checked', 'checked');
+            } else if (type == 'categorical') {
+                inputNom.attr('checked', 'checked');
+            }
+
+            inputSpan.append(numLabel);
+            inputSpan.append(inputNum);
+            inputSpan.append('&nbsp;');
+            inputSpan.append(nomLabel);
+            inputSpan.append(inputNom);
+
+            div.html(attr);
+            div.append(inputSpan);
+
+            typeDiv.append(div);
+        }
+
+        typeDiv.find('input:radio').change(function () {
+            var el = $(this);
+            var parent = el.parent();
+            var checkedEl = parent.find('input[type=radio]:checked');
+            var checkedElId = checkedEl.attr('id');
+            var idx = parseInt(checkedElId.substring(checkedElId.lastIndexOf('-')+1));
+            var attr = attributes[idx];
+            var type = checkedEl.val();
+            self.fire('attributeTypeChanged', { attr: attr, type: type });
+        });
+    }
+
+    ConfigureFormView.prototype.showConfigureDerivatives = function (attributes) {
+        var self = this;
+
+        var container = $('#div-select-add-deriv');
+        container.html('');
+        for (var i = 0; i < attributes.length; i++) {
+            var attr = attributes[i];
+
+            var div = $('<div class="checkbox">' + attr + '</div>');
+            var input = $('<span class="pull-right"><input type="checkbox" id="chk-add-deriv-' + i + '" /></span>');
+
+            div.append(input);
+            container.append(div);
+        }
+
+        container.find('input').change(function () {
+            var chk = $(this);
+            var id = chk.attr('id');
+            id = parseInt(id.substring(id.lastIndexOf('-')+1));
+
+            var attr = attributes[id];
+            var val = chk.is(':checked');
+            self.fire('includeDerivChanged', { attribute: attr, value: val });
+        })
+    }
+
+    ConfigureFormView.prototype.showSelectControlAttrs = function (selectedAttrs, selected) {
+        var self = this;
+        console.log('showing control attrs ...');
+
+        if (selected == null) selected = {};
+
+        var selectControls = $('#select-controls');
+        selectControls.html('');
+        for (var i = 0; i < selectedAttrs.length; i++) {
+            var attr = selectedAttrs[i];
+            var option = $('<option value="' + attr.replace(/\"/g, '&quot;') + '">' + attr + '</option>');
+            if (attr in selected) {
+                option.attr('selected', 'selected');
+            }
+            selectControls.append(option);
+        }
+
+        selectControls.bootstrapDualListbox({
+            showFilterInputs: false,
+            nonSelectedListLabel: 'State Attributes',
+            selectedListLabel: 'Transition Atrtibutes'
+        });
+
+        selectControls.off('change');
+        selectControls.change(function () {
+            var controlV = selectControls.val();
+            if (controlV == null) { controlV = []; }
+
+            var controlH = (function () {
+                var controlH = {};
+                for (var i = 0; i < controlV.length; i++) {
+                    controlH[controlV[i]] = true;
+                }
+                return controlH
+            })();
+
+            self.fire('controlAttributesChanged', controlH);
+        });
+
+        selectControls.bootstrapDualListbox('refresh');
+    }
+
+    ConfigureFormView.prototype.showSelectIgnoredAttrs = function (selectedAttrs, selected) {
+        var self = this;
+        console.log('showing ignored attrs ...');
+
+        if (selected == null) selected = {};
+
+        var selectIgnored = $('#select-ignored');
+        selectIgnored.html('');
+        for (var i = 0; i < selectedAttrs.length; i++) {
+            var attr = selectedAttrs[i];
+            var option = $('<option value="' + attr.replace(/\"/g, '&quot;') + '">' + attr + '</option>');
+            if (attr in selected) {
+                option.attr('selected', 'selected');
+            }
+            selectIgnored.append(option);
+        }
+
+        selectIgnored.bootstrapDualListbox({
+            showFilterInputs: false,
+            nonSelectedListLabel: 'State Attributes',
+            selectedListLabel: 'Ignored Atrtibutes'
+        });
+
+        selectIgnored.off('change');
+        selectIgnored.change(function () {
+            var ignoredV = selectIgnored.val();
+            if (ignoredV == null) { ignoredV = []; }
+
+            var ignoredH = (function () {
+                var ignoredH = {};
+                for (var i = 0; i < ignoredV.length; i++) {
+                    ignoredH[ignoredV[i]] = true;
+                }
+                return ignoredH;
+            })();
+
+            self.fire('ignoredAttributesChanged', ignoredH);
+        })
+
+        selectIgnored.bootstrapDualListbox('refresh');
+    }
+
+    ConfigureFormView.prototype.showKMeans = function (show) {
+        if (show) {
+            $('#div-config-kmeans').removeClass('hidden');
+        } else {
+            $('#div-config-kmeans').addClass('hidden');
+        }
+    }
+
+    ConfigureFormView.prototype.showDpMeans = function (show) {
+        if (show) {
+            $('#div-config-dpmeans').removeClass('hidden');
+        } else {
+            $('#div-config-dpmeans').addClass('hidden');
+        }
+    }
+
+    ConfigureFormView.prototype.setUploadProgress = function (progress) {
+        var progStr = progress.toFixed();
+        $('#progress-file-upload').css('width', progStr + '%');
+        $('#progress-file-upload').html(progStr + '%');
+    }
+
+    ConfigureFormView.prototype.enableDone = function (enable) {
+        if (enable) {
+            $('#btn-done').removeAttr('disabled');
+        } else {
+            $('#btn-done').attr('disabled', 'disabled');
+        }
+    }
+
+    // PHASES
+
+    ConfigureFormView.prototype.showPhaseSelectAttr = function (show) {
+        this._showElement($('#form-phase-select-attrs'), show);
+    }
+    ConfigureFormView.prototype.showPhaseConfigureTime = function (show) {
+        this._showElement($('#form-phase-configure-time'), show);
+    }
+    ConfigureFormView.prototype.showPhaseConfigureAttrs = function (show) {
+        this._showElement($('#form-phase-configure-attrs'), show);
+    }
+    ConfigureFormView.prototype.showPhaseFinal = function (show) {
+        this._showElement($('#form-phase-configure-alg'), show);
+    }
+
+    ConfigureFormView.prototype.showAlert = function (msg) {
+        showAlert($('#alert-holder'), $('#alert-wrapper-create-model'), 'alert-danger', msg, null, true);
+    }
+
+    // SHOW / HIDE
+
+    ConfigureFormView.prototype._showElement = function (el, show) {
+        if (show == null) { show = true; }
+        if (show) {
+            el.show();
+        } else {
+            el.hide();
+        }
+    }
+
+    ConfigureFormView.prototype.show = function (show) {
+        if (show) {
+            $('#popup-data-upload').modal('show');
+        } else {
+            $('#popup-data-upload').modal('hide');
+        }
+    }
+
+    // EVENTS
+
+    ConfigureFormView.prototype.on = function (event, handler) {
+        var self = this;
+        if (!(event in self._callbacks)) throw new Error('Invalid event: ' + event);
+        self._callbacks[event].push(handler);
+    }
+
+    ConfigureFormView.prototype.fire = function (event, data) {
+        var self = this;
+
+        if (!(event in self._callbacks)) throw new Error('Invalid event: ' + event);
+        if (!self._fireEvents) return;
+
+        var handlers = self._callbacks[event];
+        for (var i = 0; i < handlers.length; i++) {
+            handlers[i](data);
+        }
+    }
+
+    //===================================================
+    // DASHBOARD MODEL
+    //===================================================
+
+    function DashboardModel() {}
+
+    DashboardModel.prototype.constructModel = function (data, onProgress, done) {
+        var self = this;
         $.ajax('api/buildModel', {
             method: 'POST',
             contentType: 'application/json',
             data: JSON.stringify(data),
             timeout: 1000*60*60*24,	// 1 day
-            success: function (data) {
-                newModelPopup.modal('hide');
-                $('#div-model-progress').removeClass('hidden');
-                pingProgress(isRealTime);
+            success: function () {
+                $('#progress-build-model').css('background-color', ''); // TODO move this somewhere
+                self._pingProgress(onProgress, done);
             },
-            error: handleAjaxError()
+            error: handleAjaxError(null, done)
         });
+    }
 
-        $('#btn-add-online,#btn-add-offline').attr('disabled', 'disabled');
-        btn.attr('disabled', 'disabled');
-    });
+    DashboardModel.prototype._pingProgress = function (onProgress, done) {
+        var self = this;
+
+        console.log('Pinging for model progress ...');
+
+        $.ajax('api/pingProgress', {
+            method: 'GET',
+            contentType: 'application/json',
+            success: function (data, status, xhr) {
+                console.log('Got ping result!');
+
+                if (xhr.status == 204) {	// no content
+                    console.log('Received no content, re-pinging ...');
+                    self._pingProgress(onProgress, done);
+                    return;
+                }
+
+                onProgress(data.progress, data.message);
+
+                if (data.error != null) {
+                    done(data.error);
+                } else {
+                    if (!data.isFinished) {
+                        console.log('Received data, but hasn\'t yet finished, re-pinging ...');
+                        self._pingProgress(onProgress, done);
+                    } else {	// finished
+                        done(undefined, data);
+                    }
+                }
+            },
+            error: handleAjaxError(null, function () {
+                $('#div-model-progress').addClass('hidden');
+            })
+        });
+    }
+
+
+    $(document).ready(function () {
+        var dashboardModel = new DashboardModel();
+        var configModel = new ConfigureFormModel();
+        var configView = new ConfigureFormView();
+
+        var onModelProgress = function (prog, msg) {
+            $('#progress-build-model').css('width', prog + '%');
+            $('#progress-build-model').html(msg);
+        }
+
+        var onModelDone = function (e, data) {
+            $('#btn-add-online,#btn-add-offline').removeAttr('disabled', 'disabled');
+
+            if (e != null) {
+                console.log('Received result with error! Highlighting ...');
+                $('#progress-build-model').css('background-color', 'red');
+                return;
+            }
+            // self.show(false);
+            console.log('Finished building the model!');
+
+            var mid = data.mid;
+
+            // fetch the new model
+            $.ajax('api/modelDetails', {
+                dataType: 'json',
+                method: 'GET',
+                data: { modelId: mid },
+                success: function (data) {
+                    var isRealTime = data.isRealTime;
+                    var table = isRealTime ? $('#table-models-active') : $('#table-models-offline');
+
+                    var tr = $('<tr />');
+                    tr.attr('id', (isRealTime ? 'active-' : 'offline-') + data.mid);
+                    tr.addClass('ui-sortable-handle');
+                    tr.mousedown(onFetchDetails);
+
+                    var nameTd = $('<td />');
+                    var dateTd = $('<td />');
+                    var buttonsTd = $('<td />');
+
+                    nameTd.addClass('td-model-name');
+                    nameTd.html(data.name);
+
+                    dateTd.addClass('td-model-date');
+                    dateTd.html(formatDate(new Date(data.creationDate)));
+
+                    buttonsTd.addClass('td-btns');
+
+                    tr.append(nameTd);
+                    tr.append(dateTd);
+                    tr.append(buttonsTd);
+
+                    // initialize the buttons
+                    var buttonSpan = $('<span class="pull-right span-btns" />');
+
+                    var btnView = $('<button class="btn btn-info btn-xs btn-view" aria-label="Left Align"><span class="glyphicon glyphicon-eye-open"></span> View</button>');
+                    btnView.click(onViewModel);
+
+                    buttonSpan.append(btnView);
+                    buttonsTd.append(buttonSpan);
+
+                    if (isRealTime) {
+                        var deactivateBtn = $('<button class="btn btn-danger btn-xs btn-deactivate tbl-btn-offset" aria-label="Left Align"><span class="glyphicon glyphicon-off"></span> Deactivate</button>');
+                        deactivateBtn.click(deactivate);
+                        buttonSpan.prepend(deactivateBtn);
+                    } else {
+                        var shareBtn = $('<button class="btn btn-default btn-xs btn-share tbl-btn-offset" aria-label="Left Align" style="margin-right: 4px;"><span class="glyphicon glyphicon-globe"></span> Share</button>');
+                        shareBtn.click(share);
+                        buttonSpan.prepend(shareBtn);
+                    }
+
+                    table.find('tbody').append(tr);
+
+                    console.log('Setting closing timeout ...');
+                    setTimeout(function () {
+                        console.log('Closing ...');
+                        $('#div-model-progress').addClass('hidden');
+                        $('#progress-build-model').css('width', '0%');
+                    }, 5000);
+                },
+                error: handleAjaxError()
+            });
+        }
+
+        var onConfig = function (e, data) {
+            configureController.show(false);
+
+            if (e != null) {
+                var msg = typeof e == 'string' ? e : e.message;
+                showAlert($('#alert-holder'), $('#alert-wrapper-main'), 'alert-danger', msg, null, true);
+                return;
+            }
+
+            $('#div-model-progress').removeClass('hidden');
+
+            var isRealTime = data.isRealTime;
+
+            dashboardModel.constructModel(data, onModelProgress, function (e, data) {
+                if (data != null) {
+                    data.isRealTime = isRealTime;
+                }
+                onModelDone(e, data);
+            });
+        }
+
+        configureController = new ConfigureFormController({
+            model: configModel,
+            view: configView,
+            done: onConfig,
+        })
+    })
+})();
+
+(function () {
 
     //========================================================
     // TABLES
@@ -781,7 +1619,7 @@ function pingProgress(isRealTime) {
             items: {
                 view: {
                     name: 'View',
-                    callback: function (event) {
+                    callback: function () {
                         var tr = $(this);
                         var mid = getModelIdFromTr(tr);
                         viewModel(mid);
@@ -807,34 +1645,14 @@ function pingProgress(isRealTime) {
     // BUTTONS ON THE DASHBOARD
     //========================================================
 
-    function clearConfigureDataset() {
-        $('#input-choose-upload').val('');
-        $('#select-attrs').val('');
-        $('#select-tu').val('hour');
-        $('#select-clust').val('kmeans');
-        $('#input-kmeans-k').val('12');
-        $('#input-dpmeans-minstates').val('10');
-        $('#input-dpmeans-maxstates').val('30');
-        $('#input-dpmeans-lambda').val('0.8');
-        $('#select-hierarchy').val('aggClust');
-        $('#input-model-name').val('');
-        $('#input-model-desc').val('');
-
-        $('#input-choose-upload').change();
-        $('#progress-file-upload').css('width','0%');
-        $('#progress-file-upload').html('0%');
-    }
-
     $('#btn-add-online').click(function () {
-        clearConfigureDataset();
-        $('#check-realtime').prop('checked', true);
-        newModelPopup.modal('show');
+        configureController.setIsRealTime(true);
+        configureController.show(true);
     });
 
     $('#btn-add-offline').click(function () {
-        clearConfigureDataset();
-        $('#check-realtime').prop('checked', false);
-        newModelPopup.modal('show');
+        configureController.setIsRealTime(false);
+        configureController.show(true);
     });
 
     $('.btn-view').click(onViewModel);
@@ -862,7 +1680,7 @@ function pingProgress(isRealTime) {
             dataType: 'json',
             data: { modelId: mid, description: desc },
             method: 'POST',
-            success: function (data, status, xhr) {
+            success: function () {
                 $('#div-model-details-btns').addClass('hidden');
                 showAlert($('#alert-holder'), $('#alert-wrapper-model-details'), 'alert-success', 'Details saved!', null, true);
             },

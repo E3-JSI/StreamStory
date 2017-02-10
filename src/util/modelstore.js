@@ -452,6 +452,7 @@ module.exports = exports = function (opts) {
                 var fileBuff = opts.fileBuff;
                 var clustConfig = opts.clustConfig;
                 var baseDir = opts.baseDir;
+                var derivAttrs = opts.derivAttrs;
 
                 var headerTypes = [];
 
@@ -608,7 +609,8 @@ module.exports = exports = function (opts) {
                             config: modelParams,
                             obsFieldV: obsFieldV,
                             controlFieldV: controlFieldV,
-                            ignoredFieldV: ignoredFieldV
+                            ignoredFieldV: ignoredFieldV,
+                            derivFieldV: derivAttrs
                         });
 
                         // fit the model

@@ -25,6 +25,7 @@ exports.StreamStory = function (opts) {
     var obsFtrConf = null;	// TODO these are not saved and loaded
     var contrFtrConf = null;
     var ignFtrConf = null;
+    var derivativeFtrIds = null; 
 
     if (opts.base != null && opts.config != null) {
         mc = new streamstory._StreamStory(opts.config);
@@ -38,6 +39,29 @@ exports.StreamStory = function (opts) {
             obsFtrConf = opts.obsFieldV;
             contrFtrConf = opts.controlFieldV;
             ignFtrConf = opts.ignoredFieldV;
+
+            // construct feature IDs for the derivative features
+            derivativeFtrIds = (function () {
+                var result = [];
+
+                var ftrNames = getAllFtrNames();
+                var derivFieldV = opts.derivFieldV;
+                
+                var derivFtrH = {};
+                for (var i = 0; i < derivFieldV.length; i++) {
+                    derivFtrH[derivFieldV[i].name] = true;
+                }
+
+                for (var ftrId = 0; ftrId < ftrNames.length; ftrId++) {
+                    var ftr = ftrNames[ftrId];
+                    if (ftr in derivFtrH) {
+                        result.push(ftrId);
+                    }
+                }
+
+                return result;
+            })();
+
         }
         else {
             throw new Error('Missing feature space configuration!');
@@ -161,6 +185,10 @@ exports.StreamStory = function (opts) {
 
     function getIgnoredFtrNames() {
         return getFtrNames(getIgnoredFtrSpace());
+    }
+
+    function getAllFtrNames() {
+        return getObsFtrNames().concat(getControlFtrNames()).concat(getIgnoredFtrNames());
     }
 
     function getFtrName(ftrId) {
@@ -538,6 +566,7 @@ exports.StreamStory = function (opts) {
                     ignored: data.ignoredColMat,
                     times: timeV,
                     batchV: batchEndV,
+                    derivativeFtrIds: derivativeFtrIds,
                     ftrInfo: {
                         observation: genFtrInfo(obsFtrConf, getObsFtrSpace()),
                         control: genFtrInfo(contrFtrConf, getContrFtrSpace()),
@@ -566,6 +595,7 @@ exports.StreamStory = function (opts) {
                         ignored: data.ignoredColMat,
                         times: timeV,
                         batchV: batchEndV,
+                        derivativeFtrIds: derivativeFtrIds,
                         ftrInfo: {
                             observation: genFtrInfo(obsFtrConf, getObsFtrSpace()),
                             control: genFtrInfo(contrFtrConf, getContrFtrSpace()),

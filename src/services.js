@@ -1754,6 +1754,7 @@ function initDataUploadApi() {
             var isRealTime = req.body.isRealTime;
             var hierarchy = req.body.hierarchyType;
             var clustConfig = req.body.clust;
+            var derivAttrs = req.body.derivAttrs;
 
             var fileBuff = fileBuffH[sessionId];
             var datasetName = session.datasetName;
@@ -1851,7 +1852,8 @@ function initDataUploadApi() {
                         ignoredAttrs: ignoredAttrs,
                         fileBuff: fileBuff,
                         clustConfig: clustConfig,
-                        baseDir: baseDir
+                        baseDir: baseDir,
+                        derivAttrs: derivAttrs
                     }
 
                     // finish the request

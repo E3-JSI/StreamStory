@@ -63,7 +63,7 @@ function formatDateTime(date) {
 }
 
 function handleAjaxError(alertField, callback) {
-    return function (xhr) {
+    return function (xhr, status, err) {
         if (xhr.readyState == 0) {
             console.log('Ajax error with request not initialized!');
         } else {
@@ -75,7 +75,7 @@ function handleAjaxError(alertField, callback) {
         }
 
         if (callback != null)
-            callback();
+            callback(err);
     }
 }
 

@@ -4,10 +4,11 @@
     "devel": true,
     "freeze": true,
     "curly": false,
-    "singleGroups": true,
+    "singleGroups": false,
     "eqeqeq": false,
     "eqnull": true,
     "funcscope": false,
+    "loopfunc": true,
     "asi": true,
     "-W041": true,
     "-W002": true
