@@ -1,3 +1,5 @@
+/* globals predefProgress */
+
 var configureController = null;
 
 function getModelIdFromTr(tr) {
@@ -286,7 +288,7 @@ function unshare() {
                 if (myXhr.upload) { // Check if upload property exists
                     myXhr.upload.addEventListener('progress', function (event) {
                         if (event.lengthComputable) {
-                            var prog = event.loaded / event.total;
+                            var prog = 100*event.loaded / event.total;
                             onProgress(prog);
                         }
                     }, false); // For handling the progress of the upload
@@ -376,7 +378,6 @@ function unshare() {
 
         var addViewHandler = function (event, handler) {
             view.on(event, function () {
-                console.log('\'' + event + '\' fired with data: ' + JSON.stringify(arguments));
                 handler.apply(self, arguments);
             })
         }
@@ -652,7 +653,6 @@ function unshare() {
 
     ConfigureFormController.prototype._setKMeansK = function (value, refreshView) {
         if (refreshView == null) refreshView = true;
-        console.log('setting kmeans k ...');
 
         this.clustOpts.k = value;
         if (refreshView) {
@@ -771,7 +771,7 @@ function unshare() {
         var self = this;
 
         if (!self._checkValuesPresent()) {
-            console.log('Dataset configuration not complete!');
+            console.warn('Dataset configuration not complete!');
             return
         }
 
@@ -1249,7 +1249,6 @@ function unshare() {
 
     ConfigureFormView.prototype.showSelectControlAttrs = function (selectedAttrs, selected) {
         var self = this;
-        console.log('showing control attrs ...');
 
         if (selected == null) selected = {};
 
@@ -1291,7 +1290,6 @@ function unshare() {
 
     ConfigureFormView.prototype.showSelectIgnoredAttrs = function (selectedAttrs, selected) {
         var self = this;
-        console.log('showing ignored attrs ...');
 
         if (selected == null) selected = {};
 
@@ -1434,26 +1432,21 @@ function unshare() {
             timeout: 1000*60*60*24,	// 1 day
             success: function () {
                 $('#progress-build-model').css('background-color', ''); // TODO move this somewhere
-                self._pingProgress(onProgress, done);
+                self.pingProgress(onProgress, done);
             },
             error: handleAjaxError(null, done)
         });
     }
 
-    DashboardModel.prototype._pingProgress = function (onProgress, done) {
+    DashboardModel.prototype.pingProgress = function (onProgress, done) {
         var self = this;
-
-        console.log('Pinging for model progress ...');
 
         $.ajax('api/pingProgress', {
             method: 'GET',
             contentType: 'application/json',
             success: function (data, status, xhr) {
-                console.log('Got ping result!');
-
                 if (xhr.status == 204) {	// no content
-                    console.log('Received no content, re-pinging ...');
-                    self._pingProgress(onProgress, done);
+                    self.pingProgress(onProgress, done);
                     return;
                 }
 
@@ -1463,8 +1456,7 @@ function unshare() {
                     done(data.error);
                 } else {
                     if (!data.isFinished) {
-                        console.log('Received data, but hasn\'t yet finished, re-pinging ...');
-                        self._pingProgress(onProgress, done);
+                        self.pingProgress(onProgress, done);
                     } else {	// finished
                         done(undefined, data);
                     }
@@ -1491,14 +1483,14 @@ function unshare() {
             $('#btn-add-online,#btn-add-offline').removeAttr('disabled', 'disabled');
 
             if (e != null) {
-                console.log('Received result with error! Highlighting ...');
+                console.error('Received result with error! Highlighting ...');
+                console.error(e);
                 $('#progress-build-model').css('background-color', 'red');
                 return;
             }
-            // self.show(false);
-            console.log('Finished building the model!');
 
             var mid = data.mid;
+            var isRealTime = data.isRealTime;   // TODO move this somewhere!!
 
             // fetch the new model
             $.ajax('api/modelDetails', {
@@ -1506,7 +1498,6 @@ function unshare() {
                 method: 'GET',
                 data: { modelId: mid },
                 success: function (data) {
-                    var isRealTime = data.isRealTime;
                     var table = isRealTime ? $('#table-models-active') : $('#table-models-offline');
 
                     var tr = $('<tr />');
@@ -1551,9 +1542,7 @@ function unshare() {
 
                     table.find('tbody').append(tr);
 
-                    console.log('Setting closing timeout ...');
                     setTimeout(function () {
-                        console.log('Closing ...');
                         $('#div-model-progress').addClass('hidden');
                         $('#progress-build-model').css('width', '0%');
                     }, 5000);
@@ -1588,6 +1577,29 @@ function unshare() {
             view: configView,
             done: onConfig,
         })
+
+        $('#btn-add-online').click(function () {
+            configureController.setIsRealTime(true);
+            configureController.show(true);
+        });
+
+        $('#btn-add-offline').click(function () {
+            configureController.setIsRealTime(false);
+            configureController.show(true);
+        });
+
+        if (predefProgress != null && !predefProgress.isFinished) {
+            $('#div-model-progress').removeClass('hidden');
+            $('#progress-build-model').css('width', predefProgress.progress + '%');
+            $('#progress-build-model').html(predefProgress.message);
+            dashboardModel.pingProgress(onModelProgress, function (e, data) {
+                if (data != null) {
+                    data.isRealTime = predefProgress.isRealTime;
+                }
+                onModelDone(e, data);
+            });
+            $('#btn-add-online,#btn-add-offline').attr('disabled', 'disabled');
+        }
     })
 })();
 
@@ -1644,16 +1656,6 @@ function unshare() {
     //========================================================
     // BUTTONS ON THE DASHBOARD
     //========================================================
-
-    $('#btn-add-online').click(function () {
-        configureController.setIsRealTime(true);
-        configureController.show(true);
-    });
-
-    $('#btn-add-offline').click(function () {
-        configureController.setIsRealTime(false);
-        configureController.show(true);
-    });
 
     $('.btn-view').click(onViewModel);
 

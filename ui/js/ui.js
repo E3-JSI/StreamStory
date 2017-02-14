@@ -1541,6 +1541,8 @@
         function equipSlider(opts) {
             var HIDE_DURATION = 500;
             var HIDDEN_OPACITY = 0.05;
+            var UPDATE_INTERVAL = 1000;
+            var UPDATE_PERC_THRESHOLD = 0.15;
 
             var slider = opts.slider;
             var value = opts.value;
@@ -1549,12 +1551,15 @@
             var step = opts.step;
             var orientation = opts.orientation;
 
-            var onSlide = opts.onSlide;
+            // var onSlide = opts.onSlide;
             var onChange = opts.onChange;
+
+            var range = max - min;
+            // var prevVal = value;
 
             // defaults
             if (orientation == null) orientation = 'vertical';
-            if (onSlide == null) onSlide = function () {};
+            // if (onSlide == null) onSlide = function () {};
 
             var isOver = false;
             var isFading = false;
@@ -1599,6 +1604,73 @@
                 })
             }
 
+            var changeController = (function () {
+                var timeoutId = null;
+                var prev = value;
+
+                var lastUpdateTime = 0;
+                var lastVal = null;
+
+                var clearUpdateTimeout = function () {
+                    if (timeoutId != null) {
+                        clearTimeout(timeoutId);
+                        timeoutId = null;
+                    }
+                }
+
+                var setUpdateTimeout = function (timeout) {
+                    if (timeoutId != null) throw new Error('Cannot set timeout twice!');
+
+                    timeoutId = setTimeout(function () {
+                        clearUpdateTimeout();
+
+                        var now = Date.now();
+                        var elapsed = now - lastUpdateTime;
+
+                        if (elapsed >= UPDATE_INTERVAL) {
+                            that.onChange(lastVal);
+                        } else {
+                            setUpdateTimeout(UPDATE_INTERVAL - elapsed);
+                        }
+
+                    }, timeout);
+                }
+
+                var refreshUpdateTimeout = function (val) {
+                    lastUpdateTime = Date.now();
+                    lastVal = val;
+                    if (timeoutId == null) {
+                        setUpdateTimeout(UPDATE_INTERVAL);
+                    }
+                }
+
+                var that = {
+                    onStart: function () {
+                    },
+                    onChange: function (val) {
+                        clearUpdateTimeout();
+                        if (val != prev) {
+                            prev = val;
+                            onChange(val);
+                        }
+                    },
+                    onSlide: function (val) {
+                        if (Math.abs(val - prev) > UPDATE_PERC_THRESHOLD*range) {
+                            that.onChange(val);
+                        } else {
+                            refreshUpdateTimeout(val);
+                        }
+                    },
+                    onStop: function () {
+                        clearUpdateTimeout();
+                        lastUpdateTime = 0;
+                        lastVal = null;
+                    }
+                }
+
+                return that;
+            })();
+
             slider.slider({
                 value: value,
                 min: min,
@@ -1606,16 +1678,23 @@
                 step: step,
                 animate:"slow",
                 orientation: orientation,
-                change: onChange,
-                slide: onSlide,
+                // change: onChange,
+                slide: function (event, ui) {
+                    changeController.onSlide(ui.value);
+                },
+                change: function (event, ui) {
+                    changeController.onChange(ui.value);
+                },
                 start: function () {
                     isSliding = true;
+                    changeController.onStart();
                 },
                 stop: function () {
                     isSliding = false;
                     if (!isOver) {
                         hide();
                     }
+                    changeController.onStop();
                 }
             });
 
@@ -1624,54 +1703,28 @@
         }
 
         (function () {
-            var prevVal = 1;
-
             equipSlider({
                 slider: $("#threshold_slider"),
-                value: prevVal,
+                value: 1,
                 min: 0.5,
-                max: 1.01,
-                step: 0.01,
+                max: 1.001,
+                step: 0.001,
                 orientation: 'horizontal',
-                onSlide: function (event, ui) {
-                    var val = ui.value;
-
-                    if (Math.abs(val - prevVal) > 0.15) {
-                        prevVal = val;
-                        viz.setTransitionThreshold(val);
-                    }
-                },
-                onChange: function (event, ui) {
-                    var val = ui.value;
-                    if (val != prevVal) {
-                        prevVal = val;
-                        viz.setTransitionThreshold(val);
-                    }
+                onChange: function (val) {
+                    viz.setTransitionThreshold(val);
                 }
             })
         })();
 
         (function () {
-            var prevVal = 100;
             equipSlider({
                 slider: $("#slider_item_div"),
                 min: 0,
                 max: 100,
+                value: 100,
                 step: 1,
-                onSlide: function (event, ui) {
-                    var val = ui.value;
-
-                    if (Math.abs(val - prevVal) > 10) {
-                        prevVal = val;
-                        viz.setScale(val);
-                    }
-                },
-                onChange: function (event, ui) {
-                    var val = ui.value;
-                    if (val != prevVal) {
-                        prevVal = val;
-                        viz.setScale(ui.value);
-                    }
+                onChange: function (val) {
+                    viz.setScale(val);
                 }
             })
         })();
