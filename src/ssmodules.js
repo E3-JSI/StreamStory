@@ -65,6 +65,13 @@ ModelManager.prototype.getLatestMessages = function (model, limit, callback) {
     });
 }
 
+ModelManager.prototype.countMessages = function (model, callback) {
+    var self = this;
+    if (model == null) return callback(new Error('Model missing!'));
+    var modelId = model.getId();
+    self._db.countModelMessages(modelId, callback);
+}
+
 /**
  * Returns the count of all the active models in the system.
  *

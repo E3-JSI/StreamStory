@@ -2465,6 +2465,24 @@ function initMessageRestApi() {
             utils.handleServerError(e, req, res);
         }
     });
+
+    app.get(API_PATH + '/modelMessagesCount', function (req, res) {
+        try {
+            var model = getModel(req.sessionID, req.session);
+            modelManager.countMessages(model, function (e, count) {
+                if (e != null) {
+                    utils.handleServerError(e, req, res);
+                    return;
+                }
+
+                res.send({ count: count });
+                res.end();
+            })
+        } catch (e) {
+            log.error(e, 'Failed to query configuration!');
+            utils.handleServerError(e, req, res);
+        }
+    });
 }
 
 function initBroker() {

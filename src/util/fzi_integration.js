@@ -634,7 +634,7 @@ exports.initWs = function (app) {
             if (operation == ACTIVITY_OPERATION) {
                 if (log.debug())
                     log.debug('FZI requested activity operation ...');
-                
+
                 (function () {
                     if (log.debug())
                         log.debug('Requested activities ...');

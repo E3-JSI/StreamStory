@@ -666,6 +666,19 @@ module.exports = function () {
             })
         },
 
+        countModelMessages: function (mid, callback) {
+            connection({
+                callback: callback,
+                nextOp: query({
+                    sql: 'SELECT COUNT(1) AS cnt FROM message WHERE mid = ?',
+                    params: [mid],
+                    nextOp: function (conn, onsuccess, onerror, results) {
+                        onsuccess(results[0].cnt);
+                    }
+                })
+            })
+        },
+
         //===============================================================
         // CONFIGURATION QUERIES
         //===============================================================

@@ -23,7 +23,6 @@
     })
 
     function MessageModel() {
-
     }
 
     MessageModel.prototype.fetchLatest = function (limit, callback) {
@@ -37,6 +36,17 @@
         });
     }
 
+    MessageModel.prototype.fetchTotal = function (callback) {
+        $.ajax('api/modelMessagesCount', {
+            dataType: 'json',
+            data: {},
+            success: function (result) {
+                callback(undefined, result.count);
+            },
+            error: StreamStory.Utils.handleAjaxError(null, callback),
+        });
+    }
+
     function MessageController(opts) {
         var self = this;
 
@@ -45,6 +55,7 @@
         self._model = opts.model;
         self._view = opts.view;
 
+        self._totalMessages = 0;
         self._messages = [];
 
         self._model.fetchLatest(self._MAX_MESSAGES, function (e, messages) {
@@ -55,8 +66,9 @@
             }
 
             for (var i = 0; i < messages.length; i++) {
-                var message = messages[i];  // TODO the handler
-                self.addMessage(message);
+                var message = messages[i];
+                self.handleRawMessage(message);
+                // self.addMessage(message);
             }
 
             self._model.fetchTotal(function (e, total) {
@@ -88,6 +100,149 @@
         self._view.drawList(self._messages);
         self._view.drawTotal(self._total);
         self._view.drawLatest(latest);
+    }
+
+    MessageController.prototype._getMsgContent = function (header, contentVals) {   // TODO move this method somewhere
+            var drawStr = '<h5>' + header + '</h5>';
+            drawStr += '<p>';
+
+            var contentKeys = [];
+            for (var key in contentVals) {
+                contentKeys.push(key);
+            }
+
+            for (var i = 0; i < contentKeys.length; i++) {
+                var contentKey = contentKeys[i];
+                var contentVal = contentVals[contentKey];
+
+                if (isNumber(contentVal))
+                    contentVal = toUiPrecision(parseFloat(contentVal));
+
+                if (contentVal != null && typeof contentVal == 'object') {
+                    var keys = [];
+                    for (key in contentVal) {
+                        keys.push(key);
+                    }
+
+                    for (var j = 0; j < keys.length; j++) {
+                        var val = contentVal[keys[j]];
+                        if (!isNaN(val))
+                            val = toUiPrecision(parseFloat(val))
+                        drawStr += keys[j] + ': ' + val;
+                        if (j < keys.length - 1)
+                            drawStr += ', ';
+                    }
+                } else {
+                    if (contentKey == 'time' || contentKey == 'start' || contentKey == 'end') {
+                        contentVal = formatDateTime(new Date(parseInt(contentVal)));
+                    }
+                    drawStr += contentKey + ': ' + contentVal;
+                }
+
+                if (i < contentKeys.length - 1) {
+                    drawStr += '<br />';
+                }
+            }
+
+            drawStr += '</p>';
+
+            return drawStr;
+        }
+
+    MessageController.prototype.handleRawMessage = function (msg) {
+        var self = this;
+        if (msg.type == 'anomaly') {
+            self.addMessage(msg.content);
+        }
+        else if (msg.type == 'outlier') {
+            self.addMessage('Outlier: ' + JSON.stringify(msg.content));
+        }
+        else if (msg.type == 'prediction') {
+            self.addMessage(self._getMsgContent('Prediction', msg.content));
+        }
+        else if (msg.type == 'activity') {
+            self.addMessage(self._getMsgContent('Activity', msg.content));
+        }
+        else if (msg.type == 'coeff') {
+            self.addMessage(self._getMsgContent('Coefficient', msg.content));
+        }
+        else if (msg.type == 'statePrediction') {
+            var content = msg.content;
+            var eventId = content.eventId;
+            var prob = content.probability;
+
+            var uiMsg = (function () {
+                if (prob == 1) {
+                    return {
+                        time: content.time,
+                        event: eventId
+                    }
+                } else {
+                    return {
+                        time: content.time,
+                        event: 100*prob.toFixed(2) + '% chance of arriving into ' + eventId
+                    }
+                }
+            })();
+            var drawContent = self._getMsgContent('Prediction', uiMsg);
+            self.addMessage(drawContent);
+
+            // var drawMsgStr;
+            // if (prob == 1) {
+            //     drawMsgStr = eventId;
+            // } else {
+            //     drawMsgStr = 100*prob.toFixed(2) + '% chance of arriving into ' + eventId;
+            // }
+
+            // self.addMessage(drawContent, function () {
+            //     // draw a histogram of the PDF
+            //     var timeV = content.pdf.timeV;
+            //     var probV = content.pdf.probV;
+
+            //     var data = [];
+            //     for (var i = 0; i < timeV.length; i++) {
+            //         data.push([timeV[i], probV[i]]);
+            //     }
+
+            //     // var min = timeV[0];
+            //     // var max = timeV[timeV.length-1];
+
+            //     $('#popover-pdf-hist').slideDown();
+
+            //     // TODO highcharts not included anymore
+            //     // new Highcharts.Chart({
+            //     //     chart: {
+            //     //         renderTo: document.getElementById('hist-pdf'),
+            //     //         type: 'line'
+            //     //     },
+            //     //     title: {
+            //     // floating: true,
+            //     // text: ''
+            //     // },
+            //     // legend: {
+            //     // enabled: false
+            //     // },
+            //     //     yAxis: {
+            //     //     	title: {
+            //     //     		enabled: false
+            //     //     	},
+            //     //     	min: 0,
+            //     //     	max: 1
+            //     //     },
+            //     //     plotOptions: {
+            //     //         column: {
+            //     //             groupPadding: 0,
+            //     //             pointPadding: 0,
+            //     //             borderWidth: 0
+            //     //         }
+            //     //     },
+            //     //     series: [{
+            //     //     	name: 'PDF',
+            //     //         data: data
+            //     //     }]
+            //     // });
+            // })
+        }
     }
 
     MessageController.prototype._wrapMessage = function (message, onClick) {
@@ -184,52 +339,6 @@
 
     (function () {
         function initWebSockets() {
-            function getMsgContent(header, contentVals) {
-                var drawStr = '<h5>' + header + '</h5>';
-                drawStr += '<p>';
-
-                var contentKeys = [];
-                for (var key in contentVals) {
-                    contentKeys.push(key);
-                }
-
-                for (var i = 0; i < contentKeys.length; i++) {
-                    var contentKey = contentKeys[i];
-                    var contentVal = contentVals[contentKey];
-
-                    if (isNumber(contentVal))
-                        contentVal = toUiPrecision(parseFloat(contentVal));
-
-                    if (contentVal != null && typeof contentVal == 'object') {
-                        var keys = [];
-                        for (key in contentVal) {
-                            keys.push(key);
-                        }
-
-                        for (var j = 0; j < keys.length; j++) {
-                            var val = contentVal[keys[j]];
-                            if (!isNaN(val))
-                                val = toUiPrecision(parseFloat(val))
-                            drawStr += keys[j] + ': ' + val;
-                            if (j < keys.length - 1)
-                                drawStr += ', ';
-                        }
-                    } else {
-                        if (contentKey == 'time' || contentKey == 'start' || contentKey == 'end') {
-                            contentVal = formatDateTime(new Date(parseInt(contentVal)));
-                        }
-                        drawStr += contentKey + ': ' + contentVal;
-                    }
-
-                    if (i < contentKeys.length - 1) {
-                        drawStr += '<br />';
-                    }
-                }
-
-                drawStr += '</p>';
-
-                return drawStr;
-            }
 
             function getWsUrl() {
                 var result;
@@ -269,27 +378,8 @@
                     var msg = JSON.parse(msgStr.data);
 
                     var content;
-                    if (msg.type == 'stateChanged')
+                    if (msg.type == 'stateChanged') {
                         viz.setCurrentStates(msg.content);
-                    else if (msg.type == 'anomaly') {
-                        messageController.addMessage(msg.content);
-                        // drawMsg(msg.content);
-                    }
-                    else if (msg.type == 'outlier') {
-                        messageController.addMessage('Outlier: ' + JSON.stringify(msg.content));
-                        // drawMsg('Outlier: ' + JSON.stringify(msg.content));
-                    }
-                    else if (msg.type == 'prediction') {
-                        messageController.addMessage(getMsgContent('Prediction', msg.content));
-                        // drawMsg(getMsgContent('Prediction', msg.content));
-                    }
-                    else if (msg.type == 'activity') {
-                        messageController.addMessage(getMsgContent('Activity', msg.content));
-                        // drawMsg(getMsgContent('Activity', msg.content));
-                    }
-                    else if (msg.type == 'coeff') {
-                        messageController.addMessage(getMsgContent('Coefficient', msg.content));
-                        // drawMsg(getMsgContent('Coefficient', msg.content));
                     }
                     else if (msg.type == 'values') {
                         content = msg.content;
@@ -330,66 +420,8 @@
                             $('#div-values-wrapper').children().last().find('.thumbnail').addClass('values-current')
                         }
                     }
-                    else if (msg.type == 'statePrediction') {
-                        content = msg.content;
-                        var eventId = content.eventId;
-                        var prob = content.probability;
-
-                        var drawMsgStr;
-                        if (prob == 1) {
-                            drawMsgStr = eventId;
-                        } else {
-                            drawMsgStr = 100*prob.toFixed(2) + '% chance of arriving into ' + eventId;
-                        }
-
-                        messageController.addMessage(drawMsgStr, function () {
-                            // draw a histogram of the PDF
-                            var timeV = content.pdf.timeV;
-                            var probV = content.pdf.probV;
-
-                            var data = [];
-                            for (var i = 0; i < timeV.length; i++) {
-                                data.push([timeV[i], probV[i]]);
-                            }
-
-                            // var min = timeV[0];
-                            // var max = timeV[timeV.length-1];
-
-                            $('#popover-pdf-hist').slideDown();
-
-                            // TODO highcharts not included anymore
-                            // new Highcharts.Chart({
-                            //     chart: {
-                            //         renderTo: document.getElementById('hist-pdf'),
-                            //         type: 'line'
-                            //     },
-                            //     title: {
-                            // floating: true,
-                            // text: ''
-                            // },
-                            // legend: {
-                            // enabled: false
-                            // },
-                            //     yAxis: {
-                            //     	title: {
-                            //     		enabled: false
-                            //     	},
-                            //     	min: 0,
-                            //     	max: 1
-                            //     },
-                            //     plotOptions: {
-                            //         column: {
-                            //             groupPadding: 0,
-                            //             pointPadding: 0,
-                            //             borderWidth: 0
-                            //         }
-                            //     },
-                            //     series: [{
-                            //     	name: 'PDF',
-                            //         data: data
-                            //     }]
-                            // });
-                        })
+                    else {
+                        messageController.handleRawMessage(msg);
                     }
                 };
             }
