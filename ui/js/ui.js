@@ -2,8 +2,6 @@
  d3, cytoscape, zoomVis */
 
 (function () {
-    var STATE_COLORS = ['blue', 'red', 'green', 'yellow', 'magenta', 'cyan', 'brown', 'Wheat', 'DeepPink', 'CadetBlue'];
-
     var TAB_ID = null;
     // var MODE_SELECT_ACTIVITY_STATE = false;
     var UI; // constructor to create ui
@@ -2312,6 +2310,19 @@
     //=======================================================
 
     (function () {
+        var ACTIVITY_STEP_COLORS = [
+            'blue',
+            'red',
+            'green',
+            'yellow',
+            'magenta',
+            'cyan',
+            'brown',
+            'Wheat',
+            'DeepPink',
+            'CadetBlue'
+        ];
+
         var currStep = {};
         var currStepN = 0;
         var currStepSize = 0;
@@ -2319,7 +2330,7 @@
         var alertField = $('#alert-wrapper-activity');
 
         function getStepColor() {
-            return STATE_COLORS[currStepN % STATE_COLORS.length];
+            return ACTIVITY_STEP_COLORS[currStepN % ACTIVITY_STEP_COLORS.length];
         }
 
         function onRemoveBtnClick() {
