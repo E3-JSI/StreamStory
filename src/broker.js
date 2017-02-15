@@ -126,27 +126,30 @@ function initConsumer(callback) {
 
                 // check if we got any messages that are not JSON
                 if (topic == topics.TOPIC_REPLAY_START) {
-                    log.info('Received replay start message: %s', msg.value);
-                    if (config.RESTART_ON_REPLAY) {
-                        log.info('Received %d reset events ...', ++nResetEvents);
+                    (function () {
+                        log.info('Received replay start message: %s', msg.value);
+                        if (config.RESTART_ON_REPLAY) {
+                            ++nResetEvents;
+                            log.info('Received %d reset events ...', nResetEvents);
 
-                        if (resetTimeoutId == null) {
-                            log.info('Will restart after a small delay ...');
+                            if (resetTimeoutId == null) {
+                                log.info('Will restart after a small delay ...');
 
-                            resetTimeoutId = setTimeout(function () {
-                                log.info('Restarting, received %d restart events ...', nResetEvents);
-                                process.exit(0);
-                            }, 5000);
+                                resetTimeoutId = setTimeout(function () {
+                                    log.info('Restarting, received %d restart events ...', nResetEvents);
+                                    process.exit(0);
+                                }, 10000);
+                            } else {
+                                log.info('Received %d restart events ...', nResetEvents);
+                            }
                         } else {
-                            log.info('Reset already triggered!');
+                            log.info('Will not restart, not configured to do so!');
                         }
-                        return;
-                    } else {
-                        log.info('Will not restart, not configured to do so!');
-                        return;
-                    }
+                    })();
+                    return;
                 }
 
+                // parse the message
                 var payload = JSON.parse(msg.value);
 
                 if (msgCallback != null) {

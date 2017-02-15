@@ -22,6 +22,10 @@
         })
     })
 
+    //==============================================
+    // MESSAGE DATA SOURCE
+    //==============================================
+
     function MessageModel() {
     }
 
@@ -47,9 +51,154 @@
         });
     }
 
+    //==============================================
+    // MESSAGE
+    //==============================================
+
+    function Message(type, content, onClick) {
+        var self = this;
+        self.getType = function () {
+            return type;
+        }
+        self.getContent = function () {
+            return content;
+        }
+        self.getOnClick = function () {
+            return onClick;
+        }
+        self.getTitle = function () {
+            return self._typeToTitleH[type];
+        }
+    }
+
+    Message.prototype._typeToTitleH = {
+        anomaly: 'Anomaly',
+        outlier: 'Outlier',
+        prediction: 'Prediction',
+        activity: 'Activity',
+        coeff: 'Coefficient',
+        statePrediction: 'Prediction'
+    }
+
+    //==============================================
+    // MESSAGE VIEW
+    //==============================================
+
+    function MessageView() {
+    }
+
+    MessageView.prototype.clear = function () {
+        $('#span-num-msgs').html('');
+        $('#list-msg').html('');
+        for (var i = 0; i < 2; i++) {
+            var wrapper = $('#div-msg-' + i + '-wrapper');
+            wrapper.html('');
+        }
+    }
+
+    MessageView.prototype.drawTotal = function (total) {
+        $('#span-num-msgs').html(total + '');
+    }
+
+    MessageView.prototype.drawList = function (messages) {
+        var self = this;
+        for (var i = messages.length-1; i >= 0; i--) {
+            self._appendMsg(messages[i]);
+        }
+    }
+
+    MessageView.prototype.drawLatest = function (messages) {
+        var self = this;
+        for (var i = 0; i < messages.length; i++) {
+            var content = self._getMsgStr(messages[i]);
+
+            var id = 'div-msg-' + i;
+            $('#' + id).alert('close');
+
+            var wrapper = $('#div-msg-' + i + '-wrapper');
+            var alertDiv = $('<div />').appendTo(wrapper);
+
+            alertDiv.addClass('alert');
+            alertDiv.addClass('alert-info');
+            alertDiv.addClass('alert-dismissible');
+            alertDiv.attr('role', 'alert');
+            alertDiv.attr('id', id);
+            alertDiv.html(content);
+        }
+    }
+
+    MessageView.prototype._appendMsg = function (msg) {
+        var self = this;
+
+        var content = self._getMsgStr(msg);
+        var onClick = msg.getOnClick();
+
+        $('#list-msg').append('<li class="list-group-item li-msg">' + content + '</li>');
+        if (onClick != null) {
+            $('#list-msg li').last().addClass('clickable');
+            $('#list-msg li').last().click(onClick);
+        }
+    }
+
+    MessageView.prototype._getMsgStr = function (message) {
+        var header = message.getTitle();
+        var contentVals = message.getContent();
+
+        var drawStr = '<h5>' + header + '</h5>';
+        drawStr += '<p>';
+
+        var contentKeys = [];
+        for (var key in contentVals) {
+            contentKeys.push(key);
+        }
+
+        for (var i = 0; i < contentKeys.length; i++) {
+            var contentKey = contentKeys[i];
+            var contentVal = contentVals[contentKey];
+
+            if (isNumber(contentVal))
+                contentVal = toUiPrecision(parseFloat(contentVal));
+
+            if (contentVal != null && typeof contentVal == 'object') {
+                var keys = [];
+                for (key in contentVal) {
+                    keys.push(key);
+                }
+
+                for (var j = 0; j < keys.length; j++) {
+                    var val = contentVal[keys[j]];
+                    if (!isNaN(val))
+                        val = toUiPrecision(parseFloat(val))
+                    drawStr += keys[j] + ': ' + val;
+                    if (j < keys.length - 1)
+                        drawStr += ', ';
+                }
+            } else {
+                if (contentKey == 'time' || contentKey == 'start' || contentKey == 'end') {
+                    contentVal = formatDateTime(new Date(parseInt(contentVal)));
+                }
+                drawStr += contentKey + ': ' + contentVal;
+            }
+
+            if (i < contentKeys.length - 1) {
+                drawStr += '<br />';
+            }
+        }
+
+        drawStr += '</p>';
+
+        return drawStr;
+    }
+
+
+    //==============================================
+    // MESSAGE CONTROLLER
+    //==============================================
+
     function MessageController(opts) {
         var self = this;
 
+        self._LATEST_MSG_COUNT = 2;
         self._MAX_MESSAGES = 10;
 
         self._model = opts.model;
@@ -65,243 +214,84 @@
                 return;
             }
 
-            for (var i = 0; i < messages.length; i++) {
-                var message = messages[i];
-                self.handleRawMessage(message);
-                // self.addMessage(message);
-            }
-
             self._model.fetchTotal(function (e, total) {
                 if (e != null) {
                     console.error('Failed to fetch message count!');
                     console.error(e);
                     return;
                 }
+
+                for (var i = messages.length-1; i >= 0; i--) {
+                    var message = messages[i];
+                    self.handleRawMessage(message);
+                }
+
                 self._totalMessages = total;
                 self._view.drawTotal(total);
             })
         })
     }
 
-    MessageController.prototype.addMessage = function (message, callback) {
+    MessageController.prototype._addMessage = function (message) {
         var self = this;
-        self._messages.push(self._wrapMessage(message, callback));
-        self._total++;
+        self._messages.push(message);
+        self._totalMessages++;
         while (self._messages.length > self._MAX_MESSAGES) {
             self._messages.shift();
         }
 
         var latest = [];
-        for (var i = 0; i < Math.min(self._messages.length, 2); i++) {
-            latest.push(self._messages.length-1-i);
+        for (var i = 0; i < Math.min(self._messages.length, self._LATEST_MSG_COUNT); i++) {
+            latest.push(self._messages[self._messages.length-1-i]);
         }
 
         self._view.clear();
         self._view.drawList(self._messages);
-        self._view.drawTotal(self._total);
+        self._view.drawTotal(self._totalMessages);
         self._view.drawLatest(latest);
     }
 
-    MessageController.prototype._getMsgContent = function (header, contentVals) {   // TODO move this method somewhere
-            var drawStr = '<h5>' + header + '</h5>';
-            drawStr += '<p>';
-
-            var contentKeys = [];
-            for (var key in contentVals) {
-                contentKeys.push(key);
-            }
-
-            for (var i = 0; i < contentKeys.length; i++) {
-                var contentKey = contentKeys[i];
-                var contentVal = contentVals[contentKey];
-
-                if (isNumber(contentVal))
-                    contentVal = toUiPrecision(parseFloat(contentVal));
-
-                if (contentVal != null && typeof contentVal == 'object') {
-                    var keys = [];
-                    for (key in contentVal) {
-                        keys.push(key);
-                    }
-
-                    for (var j = 0; j < keys.length; j++) {
-                        var val = contentVal[keys[j]];
-                        if (!isNaN(val))
-                            val = toUiPrecision(parseFloat(val))
-                        drawStr += keys[j] + ': ' + val;
-                        if (j < keys.length - 1)
-                            drawStr += ', ';
-                    }
-                } else {
-                    if (contentKey == 'time' || contentKey == 'start' || contentKey == 'end') {
-                        contentVal = formatDateTime(new Date(parseInt(contentVal)));
-                    }
-                    drawStr += contentKey + ': ' + contentVal;
-                }
-
-                if (i < contentKeys.length - 1) {
-                    drawStr += '<br />';
-                }
-            }
-
-            drawStr += '</p>';
-
-            return drawStr;
-        }
-
     MessageController.prototype.handleRawMessage = function (msg) {
         var self = this;
+
+        var onMsgClick = null;
+        var content = null;
         if (msg.type == 'anomaly') {
-            self.addMessage(msg.content);
+            content = msg.content;
         }
         else if (msg.type == 'outlier') {
-            self.addMessage('Outlier: ' + JSON.stringify(msg.content));
+            content = msg.content;
         }
         else if (msg.type == 'prediction') {
-            self.addMessage(self._getMsgContent('Prediction', msg.content));
+            content = msg.content;
         }
         else if (msg.type == 'activity') {
-            self.addMessage(self._getMsgContent('Activity', msg.content));
+            content = msg.content;
         }
         else if (msg.type == 'coeff') {
-            self.addMessage(self._getMsgContent('Coefficient', msg.content));
+            content = msg.content;
         }
         else if (msg.type == 'statePrediction') {
-            var content = msg.content;
-            var eventId = content.eventId;
-            var prob = content.probability;
+            var eventId = msg.content.eventId;
+            var prob = msg.content.probability;
 
-            var uiMsg = (function () {
+            content = (function () {
                 if (prob == 1) {
                     return {
-                        time: content.time,
+                        time: msg.content.time,
                         event: eventId
                     }
                 } else {
                     return {
-                        time: content.time,
+                        time: msg.content.time,
                         event: 100*prob.toFixed(2) + '% chance of arriving into ' + eventId
                     }
                 }
             })();
-            var drawContent = self._getMsgContent('Prediction', uiMsg);
-            self.addMessage(drawContent);
-
-            // var drawMsgStr;
-            // if (prob == 1) {
-            //     drawMsgStr = eventId;
-            // } else {
-            //     drawMsgStr = 100*prob.toFixed(2) + '% chance of arriving into ' + eventId;
-            // }
-
-            // self.addMessage(drawContent, function () {
-            //     // draw a histogram of the PDF
-            //     var timeV = content.pdf.timeV;
-            //     var probV = content.pdf.probV;
-
-            //     var data = [];
-            //     for (var i = 0; i < timeV.length; i++) {
-            //         data.push([timeV[i], probV[i]]);
-            //     }
-
-            //     // var min = timeV[0];
-            //     // var max = timeV[timeV.length-1];
-
-            //     $('#popover-pdf-hist').slideDown();
-
-            //     // TODO highcharts not included anymore
-            //     // new Highcharts.Chart({
-            //     //     chart: {
-            //     //         renderTo: document.getElementById('hist-pdf'),
-            //     //         type: 'line'
-            //     //     },
-            //     //     title: {
-            //     // floating: true,
-            //     // text: ''
-            //     // },
-            //     // legend: {
-            //     // enabled: false
-            //     // },
-            //     //     yAxis: {
-            //     //     	title: {
-            //     //     		enabled: false
-            //     //     	},
-            //     //     	min: 0,
-            //     //     	max: 1
-            //     //     },
-            //     //     plotOptions: {
-            //     //         column: {
-            //     //             groupPadding: 0,
-            //     //             pointPadding: 0,
-            //     //             borderWidth: 0
-            //     //         }
-            //     //     },
-            //     //     series: [{
-            //     //     	name: 'PDF',
-            //     //         data: data
-            //     //     }]
-            //     // });
-            // })
         }
+
+        self._addMessage(new Message(msg.type, content, onMsgClick));
     }
-
-    MessageController.prototype._wrapMessage = function (message, onClick) {
-        return {
-            content: message,
-            onClick: onClick
-        }
-    }
-
-    function MessageView() {
-
-    }
-
-    MessageView.prototype.clear = function () {
-        $('#span-num-msgs').html('');
-        $('#list-msg').html('');
-        // TODO clear the two highlighted messages!!!
-        for (var i = 0; i < 2; i++) {
-            var wrapper = $('#div-msg-' + i + '-wrapper');
-            wrapper.html('');
-        }
-    }
-
-    MessageView.prototype.drawTotal = function (total) {
-        $('#span-num-msgs').html(total + '');
-    }
-
-    MessageView.prototype.drawList = function (messages) {
-        var self = this;
-        for (var i = 0; i < messages.length; i++) {
-            self._appendMsg(messages[i].content, messages[i].onClick);
-        }
-    }
-
-    MessageView.prototype.drawLatest = function (messages) {
-        for (var i = 0; i < messages.length; i++) {
-            var id = 'div-msg-' + i;
-            $('#' + id).alert('close');
-
-            var wrapper = $('#div-msg-' + i + '-wrapper');
-            var alertDiv = $('<div />').appendTo(wrapper);
-
-            alertDiv.addClass('alert');
-            alertDiv.addClass('alert-info');
-            alertDiv.addClass('alert-dismissible');
-            alertDiv.attr('role', 'alert');
-            alertDiv.attr('id', id);
-            alertDiv.html(messages[i]);
-        }
-    }
-
-    MessageView.prototype._appendMsg = function (msg, onClick) {
-        $('#list-msg').append('<li class="list-group-item li-msg">' + msg + '</li>');
-        if (onClick != null) {
-            $('#list-msg li').last().addClass('clickable');
-            $('#list-msg li').last().click(onClick);
-        }
-    }
-
 
     //=======================================================
     // SHARED
