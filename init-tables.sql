@@ -64,3 +64,12 @@ CREATE TABLE pipelines (
     config TEXT NOT NULL,
     PRIMARY KEY (pid)
 );
+
+-- 2017-02-15 - persist messages
+CREATE TABLE message (
+    msgid BIGINT PRIMARY KEY AUTO_INCREMENT,
+    mid INT NOT NULL,
+    ts TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    content TEXT NOT NULL,
+    FOREIGN KEY (mid) REFERENCES model(mid)
+);

@@ -13,6 +13,141 @@
     var act;
     var firstBottomVizTab = null;
 
+    var messageController;
+
+    $(document).ready(function () {
+        messageController = new MessageController({
+            model: new MessageModel(),
+            view: new MessageView()
+        })
+    })
+
+    function MessageModel() {
+
+    }
+
+    MessageModel.prototype.fetchLatest = function (limit, callback) {
+        $.ajax('api/modelMessages', {
+            dataType: 'json',
+            data: { limit: limit },
+            success: function (messages) {
+                callback(undefined, messages);
+            },
+            error: StreamStory.Utils.handleAjaxError(null, callback),
+        });
+    }
+
+    function MessageController(opts) {
+        var self = this;
+
+        self._MAX_MESSAGES = 10;
+
+        self._model = opts.model;
+        self._view = opts.view;
+
+        self._messages = [];
+
+        self._model.fetchLatest(self._MAX_MESSAGES, function (e, messages) {
+            if (e != null) {
+                console.error('Failed to fetch messages!');
+                console.error(e);
+                return;
+            }
+
+            for (var i = 0; i < messages.length; i++) {
+                var message = messages[i];  // TODO the handler
+                self.addMessage(message);
+            }
+
+            self._model.fetchTotal(function (e, total) {
+                if (e != null) {
+                    console.error('Failed to fetch message count!');
+                    console.error(e);
+                    return;
+                }
+                self._totalMessages = total;
+                self._view.drawTotal(total);
+            })
+        })
+    }
+
+    MessageController.prototype.addMessage = function (message, callback) {
+        var self = this;
+        self._messages.push(self._wrapMessage(message, callback));
+        self._total++;
+        while (self._messages.length > self._MAX_MESSAGES) {
+            self._messages.shift();
+        }
+
+        var latest = [];
+        for (var i = 0; i < Math.min(self._messages.length, 2); i++) {
+            latest.push(self._messages.length-1-i);
+        }
+
+        self._view.clear();
+        self._view.drawList(self._messages);
+        self._view.drawTotal(self._total);
+        self._view.drawLatest(latest);
+    }
+
+    MessageController.prototype._wrapMessage = function (message, onClick) {
+        return {
+            content: message,
+            onClick: onClick
+        }
+    }
+
+    function MessageView() {
+
+    }
+
+    MessageView.prototype.clear = function () {
+        $('#span-num-msgs').html('');
+        $('#list-msg').html('');
+        // TODO clear the two highlighted messages!!!
+        for (var i = 0; i < 2; i++) {
+            var wrapper = $('#div-msg-' + i + '-wrapper');
+            wrapper.html('');
+        }
+    }
+
+    MessageView.prototype.drawTotal = function (total) {
+        $('#span-num-msgs').html(total + '');
+    }
+
+    MessageView.prototype.drawList = function (messages) {
+        var self = this;
+        for (var i = 0; i < messages.length; i++) {
+            self._appendMsg(messages[i].content, messages[i].onClick);
+        }
+    }
+
+    MessageView.prototype.drawLatest = function (messages) {
+        for (var i = 0; i < messages.length; i++) {
+            var id = 'div-msg-' + i;
+            $('#' + id).alert('close');
+
+            var wrapper = $('#div-msg-' + i + '-wrapper');
+            var alertDiv = $('<div />').appendTo(wrapper);
+
+            alertDiv.addClass('alert');
+            alertDiv.addClass('alert-info');
+            alertDiv.addClass('alert-dismissible');
+            alertDiv.attr('role', 'alert');
+            alertDiv.attr('id', id);
+            alertDiv.html(messages[i]);
+        }
+    }
+
+    MessageView.prototype._appendMsg = function (msg, onClick) {
+        $('#list-msg').append('<li class="list-group-item li-msg">' + msg + '</li>');
+        if (onClick != null) {
+            $('#list-msg li').last().addClass('clickable');
+            $('#list-msg li').last().click(onClick);
+        }
+    }
+
+
     //=======================================================
     // SHARED
     //=======================================================
@@ -49,38 +184,6 @@
 
     (function () {
         function initWebSockets() {
-            var nNotifications = 0;
-            var msgQ = [];
-
-            function drawMsg(msg, handler) {
-                $('#list-msg').append('<li class="list-group-item li-msg">' + msg + '</li>');
-                if (handler != null) {
-                    $('#list-msg li').last().addClass('clickable');
-                    $('#list-msg li').last().click(handler);
-                }
-
-                msgQ.push(msg);
-                while (msgQ.length > 2)
-                    msgQ.shift();
-
-                $('#span-num-msgs').html(++nNotifications + '');
-
-                for (var i = 0; i < msgQ.length; i++) {
-                    var id = 'div-msg-' + i;
-                    $('#' + id).alert('close');
-
-                    var wrapper = $('#div-msg-' + i + '-wrapper');
-                    var alertDiv = $('<div />').appendTo(wrapper);
-
-                    alertDiv.addClass('alert');
-                    alertDiv.addClass('alert-info');
-                    alertDiv.addClass('alert-dismissible');
-                    alertDiv.attr('role', 'alert');
-                    alertDiv.attr('id', id);
-                    alertDiv.html(msgQ[i]);
-                }
-            }
-
             function getMsgContent(header, contentVals) {
                 var drawStr = '<h5>' + header + '</h5>';
                 drawStr += '<p>';
@@ -169,19 +272,24 @@
                     if (msg.type == 'stateChanged')
                         viz.setCurrentStates(msg.content);
                     else if (msg.type == 'anomaly') {
-                        drawMsg(msg.content);
+                        messageController.addMessage(msg.content);
+                        // drawMsg(msg.content);
                     }
                     else if (msg.type == 'outlier') {
-                        drawMsg('Outlier: ' + JSON.stringify(msg.content));
+                        messageController.addMessage('Outlier: ' + JSON.stringify(msg.content));
+                        // drawMsg('Outlier: ' + JSON.stringify(msg.content));
                     }
                     else if (msg.type == 'prediction') {
-                        drawMsg(getMsgContent('Prediction', msg.content));
+                        messageController.addMessage(getMsgContent('Prediction', msg.content));
+                        // drawMsg(getMsgContent('Prediction', msg.content));
                     }
                     else if (msg.type == 'activity') {
-                        drawMsg(getMsgContent('Activity', msg.content));
+                        messageController.addMessage(getMsgContent('Activity', msg.content));
+                        // drawMsg(getMsgContent('Activity', msg.content));
                     }
                     else if (msg.type == 'coeff') {
-                        drawMsg(getMsgContent('Coefficient', msg.content));
+                        messageController.addMessage(getMsgContent('Coefficient', msg.content));
+                        // drawMsg(getMsgContent('Coefficient', msg.content));
                     }
                     else if (msg.type == 'values') {
                         content = msg.content;
@@ -234,7 +342,7 @@
                             drawMsgStr = 100*prob.toFixed(2) + '% chance of arriving into ' + eventId;
                         }
 
-                        drawMsg(drawMsgStr, function () {
+                        messageController.addMessage(drawMsgStr, function () {
                             // draw a histogram of the PDF
                             var timeV = content.pdf.timeV;
                             var probV = content.pdf.probV;
@@ -281,7 +389,7 @@
                             //         data: data
                             //     }]
                             // });
-                        });
+                        })
                     }
                 };
             }

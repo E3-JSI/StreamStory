@@ -25,7 +25,7 @@ exports.StreamStory = function (opts) {
     var obsFtrConf = null;	// TODO these are not saved and loaded
     var contrFtrConf = null;
     var ignFtrConf = null;
-    var derivativeFtrIds = null; 
+    var derivativeFtrIds = null;
 
     if (opts.base != null && opts.config != null) {
         mc = new streamstory._StreamStory(opts.config);
@@ -46,7 +46,7 @@ exports.StreamStory = function (opts) {
 
                 var ftrNames = getAllFtrNames();
                 var derivFieldV = opts.derivFieldV;
-                
+
                 var derivFtrH = {};
                 for (var i = 0; i < derivFieldV.length; i++) {
                     derivFtrH[derivFieldV[i].name] = true;
@@ -630,6 +630,7 @@ exports.StreamStory = function (opts) {
         project: function (rec) {
             var result = {};
 
+            // TODO also include the timestamp
             for (var ftrSpaceN = 0; ftrSpaceN < ftrSpaces.length; ftrSpaceN++) {
                 var names = getFtrNames(ftrSpaces[ftrSpaceN]);
 

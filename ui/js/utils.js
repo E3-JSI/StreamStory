@@ -22,6 +22,8 @@ StreamStory.Utils.asyncExecutor = function (onAllFinished) {
     }
 }
 
+StreamStory.Utils.handleAjaxError = handleAjaxError;
+
 function isNumber(val) {
     return !isNaN(val);
 }

@@ -1,8 +1,10 @@
-var express = require('express');
-var bodyParser = require("body-parser");
+var async = require('async');
 var path = require('path');
 var fs = require('fs');
 var mkdirp = require('mkdirp');
+
+var express = require('express');
+var bodyParser = require("body-parser");
 var multer = require('multer');
 var session = require('express-session');
 var cookieParser = require('cookie-parser');
@@ -18,6 +20,8 @@ var externalAuth = require('./util/external_auth.js');
 
 var ModelStore = require('./util/modelstore.js');
 var WebSocketWrapper = require('./util/servicesutil.js');
+
+var ssmodules = require('./ssmodules.js');
 
 var perf = require('./util/perf_tools.js');
 
@@ -53,9 +57,11 @@ var titles = {
 };
 
 var base;
+
 var db;
 var pipeline;
 var modelStore;
+var modelManager;
 
 var counts = {};
 var storeLastTm = {};
@@ -276,12 +282,22 @@ function initStreamStoryHandlers(model, enable) {
             if (log.info())
                 log.info('Outlier detected!');
 
-            modelStore.sendMsg(model.getId(), JSON.stringify({
-                type: 'outlier',
-                content: ftrV
-            }));
+            // send to broker
             var brokerMsg = transform.genExpPrediction(100.1, 'minute', new Date().getTime);
             broker.send(broker.PREDICTION_PRODUCER_TOPIC, JSON.stringify(brokerMsg));
+
+            // send to UI
+            var msg = {
+                type: 'outlier',
+                content: ftrV
+            }
+            modelManager.sendMessage(model, msg, function (e) {
+                if (e != null) {
+                    log.error(e, 'Failed to send message to model: ' + model.getId());
+                    return;
+                }
+            })
+            // modelStore.sendMsg(model.getId(), JSON.stringify(msg));
         });
 
         log.debug('Registering prediction callback ...');
@@ -347,18 +363,30 @@ function initStreamStoryHandlers(model, enable) {
                         metadata
                     );
 
-                    var mid = model.getId();
-                    modelStore.sendMsg(model.getId(), JSON.stringify(uiMsg));
+                    async.parallel([
+                        function sendUiMsg(xcb) {
+                            // var mid = model.getId();
+                            // modelStore.sendMsg(model.getId(), JSON.stringify(uiMsg));
+                            modelManager.sendMessage(model, uiMsg, xcb);
+                        },
+                        function sendBrokerMsg(xcb) {
+                            var mid = model.getId();
+                            var brokerMsgStr = JSON.stringify(brokerMsg);
+                            broker.send(broker.PREDICTION_PRODUCER_TOPIC, brokerMsgStr);
 
-                    var brokerMsgStr = JSON.stringify(brokerMsg);
-                    broker.send(broker.PREDICTION_PRODUCER_TOPIC, brokerMsgStr);
-
-                    var topics = fzi.getTopics(fzi.PREDICTION_OPERATION, mid);
-                    for (i = 0; i < topics.length; i++) {
-                        var topic = topics[i].output;
-                        log.info('Sending a prediction message to topic \'%s\'', topic);
-                        broker.send(topic, brokerMsgStr);
-                    }
+                            var topics = fzi.getTopics(fzi.PREDICTION_OPERATION, mid);
+                            for (i = 0; i < topics.length; i++) {
+                                var topic = topics[i].output;
+                                log.info('Sending a prediction message to topic \'%s\'', topic);
+                                broker.send(topic, brokerMsgStr);
+                            }
+                            xcb();
+                        }
+                    ], function (e) {
+                        if (e != null) {
+                            log.error('Failed to send target state prediction!');
+                        }
+                    })
                 });
             } catch (e) {
                 log.error(e, 'Failed to send target state prediction!');
@@ -373,36 +401,50 @@ function initStreamStoryHandlers(model, enable) {
             var start = startTm.getTime();
             var end = endTm.getTime();
 
-            var uiMsg = {
-                type: 'activity',
-                content: {
-                    start: start,
-                    end: end,
-                    name: activityName
+            async.parallel([
+                function sendUiMsg(xcb) {
+                    var uiMsg = {
+                        type: 'activity',
+                        content: {
+                            start: start,
+                            end: end,
+                            name: activityName
+                        }
+                    };
+
+                    // modelStore.sendMsg(model.getId(), JSON.stringify(uiMsg));
+                    modelManager.sendMessage(model, uiMsg, xcb);
+                },
+                function sendBrokerMsg(xcb) {
+                    if (config.USE_BROKER) {
+                        var brokerMsgStr = JSON.stringify({
+                            activityId: activityName,
+                            startTime: start,
+                            endTime: end,
+                            description: '(empty)'  // TODO description
+                        });
+
+                        var topics = fzi.getTopics(fzi.ACTIVITY_OPERATION, model.getId());
+                        for (var i = 0; i < topics.length; i++) {
+                            var topic = topics[i].output;
+                            log.debug('Sending activity to topic: %s', topic);
+                            broker.send(topic, brokerMsgStr);
+                        }
+                    }
+                    xcb();
+                },
+                function saveToFine(xcb) {
+                    if (config.SAVE_ACTIVITIES) {
+                        utils.appendLine('activities-' + model.getId() + '.csv',  startTm.getTime() + ',' + endTm.getTime() + ',"' + activityName.replace(/\"/g, '\\"') + '"');
+                    }
+                    xcb();
                 }
-            };
-
-            modelStore.sendMsg(model.getId(), JSON.stringify(uiMsg));
-
-            if (config.USE_BROKER) {
-                var brokerMsgStr = JSON.stringify({
-                    activityId: activityName,
-                    startTime: start,
-                    endTime: end,
-                    description: '(empty)'  // TODO description
-                });
-
-                var topics = fzi.getTopics(fzi.ACTIVITY_OPERATION, model.getId());
-                for (var i = 0; i < topics.length; i++) {
-                    var topic = topics[i].output;
-                    log.debug('Sending activity to topic: %s', topic);
-                    broker.send(topic, brokerMsgStr);
+            ], function (e) {
+                if (e != null) {
+                    log.error(e, 'Failed to send activity message!');
+                    return;
                 }
-            }
-
-            if (config.SAVE_ACTIVITIES) {
-                utils.appendLine('activities-' + model.getId() + '.csv',  startTm.getTime() + ',' + endTm.getTime() + ',"' + activityName.replace(/\"/g, '\\"') + '"');
-            }
+            })
         });
     } else {
         log.debug('Removing StreamStory handlers for model %s ...', model.getId());
@@ -2401,6 +2443,30 @@ function initConfigRestApi() {
     });
 }
 
+function initMessageRestApi() {
+    app.get(API_PATH + '/modelMessages', function (req, res) {
+        try {
+            var limit = req.query.limit;
+            var model = getModel(req.sessionID, req.session);
+
+            if (limit != null) limit = parseInt(limit);
+
+            modelManager.getLatestMessages(model, limit, function (e, messages) {
+                if (e != null) {
+                    utils.handleServerError(e, req, res);
+                    return;
+                }
+
+                res.send(messages);
+                res.end();
+            })
+        } catch (e) {
+            log.error(e, 'Failed to query configuration!');
+            utils.handleServerError(e, req, res);
+        }
+    });
+}
+
 function initBroker() {
     broker.init();
 
@@ -2877,16 +2943,28 @@ function prepMainUi() {
                 opts.timeHorizon = model.getModel().getParam('timeHorizon');
                 opts.pdfBins = model.getModel().getParam('pdfBins');
 
-                db.countActiveModels(function (e1, result) {
-                    if (e1 != null) {
-                        log.error(e1, 'Failed to count the number of active models!');
+                async.parallel([
+                    function (xcb) {
+                        modelManager.countTotalActive(xcb);
+                    },
+                    function (xcb) {
+                        modelManager.getLatestMessages(model, 10, xcb);
+                    }
+                ], function (e, results) {
+                    if (e != null) {
+                        log.error(e, 'Failed to pred page for an online model!');
                         utils.handleServerError(e, req, res);
                         return;
                     }
 
-                    opts.activeModelCount = result.count;
+                    var activeCount = results[0];
+                    var messages = results[1];
+
+                    opts.activeModelCount = activeCount;
+                    opts.messages = messages;
+
                     res.render('ui', opts);
-                });
+                })
             } else {
                 res.render('ui', opts);
             }
@@ -3003,6 +3081,7 @@ function initServer(sessionStore, parseCookie) {
     initServerApi();
     initStreamStoryRestApi();
     initConfigRestApi();
+    initMessageRestApi();
     initDataUploadApi();
 
     //==============================================
@@ -3112,6 +3191,11 @@ exports.init = function (opts) {
                 log.debug('Model %s removed from the model store! Deactivating handlers ...', model.getId());
         }
     });
+
+    modelManager = new ssmodules.ModelManager({
+        db: db,
+        modelStore: modelStore
+    })
 
     loadSaveModels();
     loadActiveModels();
