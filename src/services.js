@@ -1252,10 +1252,47 @@ function initStreamStoryRestApi() {
                 var result = model.getHistoricalStates(offset, range, maxStates);
 
                 if (log.debug())
-                    log.debug('Finished! Returning history ...');
+                    log.debug('Writing to output stream ...');
 
-                res.send(result);
+                // I have to write the objects to the stream manually, otherwise I can get
+                // an out of memory error
+                var key;
+                res.write('{');
+                for (key in result) {
+                    if (key != 'window' && result.hasOwnProperty(key)) {
+                        res.write('"' + key + '":');
+                        res.write(typeof result[key] == 'string' ? ('"' + result[key] + '"') : (result[key] + ''));
+                        res.write(',');
+                    }
+                }
+                res.write('"window": [')
+                for (var i = 0; i < result.window.length; i++) {
+                    res.write('{');
+                    var scaleObj = result.window[i];
+                    for (key in scaleObj) {
+                        if (key != 'states' && scaleObj.hasOwnProperty(key)) {
+                            res.write('"' + key + '":');
+                            res.write(typeof scaleObj[key] == 'string' ? ('"' + scaleObj[key] + '"') : (scaleObj[key] + ''));
+                            res.write(',');
+                        }
+                    }
+                    res.write('"states":[');
+                    var states = scaleObj.states;
+                    for (var stateN = 0; stateN < states.length; stateN++) {
+                        res.write(JSON.stringify(states[stateN]));
+                        if (stateN < states.length-1) {
+                            res.write(',');
+                        }
+                    }
+                    res.write(']');
+                    res.write('}');
+                    if (i < result.window.length-1) {
+                        res.write(',');
+                    }
+                }
+                res.write(']}');
                 res.end();
+                console.log('Done!');
             } catch (e) {
                 utils.handleServerError(e, req, res);
             }
