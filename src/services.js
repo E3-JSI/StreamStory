@@ -3108,9 +3108,17 @@ function initServer(sessionStore, parseCookie) {
         saveUninitialized: true
     });
 
+    var sessionExcludePaths = (function () {
+        var paths = [ DATA_PATH ];
+        if (config.USE_BROKER) {
+            paths.push(fzi.STRAM_PIPES_PATHS);
+        }
+        return paths
+    })();
+
     app.set('view engine', 'ejs');
     app.use(parseCookie);
-    app.use(excludeDirs([DATA_PATH], sess));
+    app.use(excludeDirs(sessionExcludePaths, sess));
     // automatically parse body on the API path
     app.use(LOGIN_PATH + '/', bodyParser.urlencoded({ extended: false, limit: '50Mb' }));
     app.use(LOGIN_PATH + '/', bodyParser.json({limit: '50Mb'}));
