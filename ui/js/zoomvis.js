@@ -141,96 +141,96 @@ var zoomVis = function (opts) {
             });
 
             // rule explanation
-            (function () {
-                ruleExplainDiv.attr('id', 'div-explain-' + data.id);
-                ruleExplainDiv.addClass('tooltip-div-explain');
-                if ($('#div-explain-' + data.id).html() != null) {
-                    ruleExplainDiv.html($('#div-explain-' + data.id).html());
-                }
+            // (function () {
+            //     ruleExplainDiv.attr('id', 'div-explain-' + data.id);
+            //     ruleExplainDiv.addClass('tooltip-div-explain');
+            //     if ($('#div-explain-' + data.id).html() != null) {
+            //         ruleExplainDiv.html($('#div-explain-' + data.id).html());
+            //     }
 
-                asyncExecute(function (done) {
-                    $.ajax('api/explanation', {
-                        dataType: 'json',
-                        method: 'GET',
-                        data: { stateId: getServerNodeId(data.id) },
-                        success: function (union) {
-                            var score = function (interserct) {
-                                return interserct.covered*interserct.purity;
-                            }
+            //     asyncExecute(function (done) {
+            //         $.ajax('api/explanation', {
+            //             dataType: 'json',
+            //             method: 'GET',
+            //             data: { stateId: getServerNodeId(data.id) },
+            //             success: function (union) {
+            //                 var score = function (interserct) {
+            //                     return interserct.covered*interserct.purity;
+            //                 }
 
-                            union.sort(function (inter1, inter2) {
-                                return score(inter2) - score(inter1);
-                            });
+            //                 union.sort(function (inter1, inter2) {
+            //                     return score(inter2) - score(inter1);
+            //                 });
 
-                            var bestScore = score(union[0]);
-                            var lastN = 0;
-                            while (lastN < union.length-1 && score(union[lastN+1]) > bestScore / 10) {
-                                lastN++;
-                            }
+            //                 var bestScore = score(union[0]);
+            //                 var lastN = 0;
+            //                 while (lastN < union.length-1 && score(union[lastN+1]) > bestScore / 10) {
+            //                     lastN++;
+            //                 }
 
-                            if (union.length > 1) {
-                                union.splice(lastN+1);
-                            }
+            //                 if (union.length > 1) {
+            //                     union.splice(lastN+1);
+            //                 }
 
-                            // construct the rules
-                            var unionStr = '';
-                            for (var i = 0; i < union.length; i++) {
-                                var intersect = union[i];
-                                var intersectStr = '';
-                                var terms = intersect.terms;
+            //                 // construct the rules
+            //                 var unionStr = '';
+            //                 for (var i = 0; i < union.length; i++) {
+            //                     var intersect = union[i];
+            //                     var intersectStr = '';
+            //                     var terms = intersect.terms;
 
-                                // sort the terms
-                                terms.sort(function (t1, t2) {
-                                    if (t2.feature < t1.feature)
-                                        return -1;
-                                    else if (t2.feature > t1.feature)
-                                        return 1;
-                                    else return 0;
-                                });
+            //                     // sort the terms
+            //                     terms.sort(function (t1, t2) {
+            //                         if (t2.feature < t1.feature)
+            //                             return -1;
+            //                         else if (t2.feature > t1.feature)
+            //                             return 1;
+            //                         else return 0;
+            //                     });
 
-                                for (var j = 0; j < terms.length; j++) {
-                                    var term = terms[j];
+            //                     for (var j = 0; j < terms.length; j++) {
+            //                         var term = terms[j];
 
-                                    intersectStr += '&#09;';
+            //                         intersectStr += '&#09;';
 
-                                    if (term.le != null || term.gt != null) {
-                                        if (term.le != null && term.gt != null) {
-                                            intersectStr += term.feature + ' &isin; (' + toUiPrecision(term.gt) + ', ' + toUiPrecision(term.le) + ']';
-                                        } else if (term.le != null) {
-                                            intersectStr += term.feature + ' \u2264 ' + toUiPrecision(term.le);
-                                        } else {
-                                            intersectStr += term.feature + ' > ' + toUiPrecision(term.gt);
-                                        }
-                                    }
-                                    else if (term.eq != null) {
-                                        intersectStr += term.feature + ' = ' + term.eq;
-                                    }
-                                    else if (term.neq != null) {
-                                        intersectStr += term.feature + ' \u2260 ' + term.neq;
-                                    }
-                                    else {
-                                        throw new Error('Feature explanation le, gt, eq and neq are all NULL!');
-                                    }
+            //                         if (term.le != null || term.gt != null) {
+            //                             if (term.le != null && term.gt != null) {
+            //                                 intersectStr += term.feature + ' &isin; (' + toUiPrecision(term.gt) + ', ' + toUiPrecision(term.le) + ']';
+            //                             } else if (term.le != null) {
+            //                                 intersectStr += term.feature + ' \u2264 ' + toUiPrecision(term.le);
+            //                             } else {
+            //                                 intersectStr += term.feature + ' > ' + toUiPrecision(term.gt);
+            //                             }
+            //                         }
+            //                         else if (term.eq != null) {
+            //                             intersectStr += term.feature + ' = ' + term.eq;
+            //                         }
+            //                         else if (term.neq != null) {
+            //                             intersectStr += term.feature + ' \u2260 ' + term.neq;
+            //                         }
+            //                         else {
+            //                             throw new Error('Feature explanation le, gt, eq and neq are all NULL!');
+            //                         }
 
-                                    if (j < terms.length-1)
-                                        intersectStr += '<br />';
-                                }
+            //                         if (j < terms.length-1)
+            //                             intersectStr += '<br />';
+            //                     }
 
-                                unionStr += '<br />' + intersectStr + '<br />';
+            //                     unionStr += '<br />' + intersectStr + '<br />';
 
-                                if (i < union.length-1) {
-                                    unionStr += '<br />';
-                                }
-                            }
+            //                     if (i < union.length-1) {
+            //                         unionStr += '<br />';
+            //                     }
+            //                 }
 
-                            ruleExplainDiv.html('It can be characterized by the following rules:<br />' + unionStr);
+            //                 ruleExplainDiv.html('It can be characterized by the following rules:<br />' + unionStr);
 
-                            done();
-                        },
-                        error: handleAjaxError(null, done)
-                    });
-                })
-            })();
+            //                 done();
+            //             },
+            //             error: handleAjaxError(null, done)
+            //         });
+            //     })
+            // })();
 
             // event id
             (function () {
