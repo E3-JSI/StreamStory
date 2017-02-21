@@ -140,7 +140,7 @@ var zoomVis = function (opts) {
                 // api.reposition(undefined, false);
             });
 
-            rule explanation
+            // rule explanation
             (function () {
                 ruleExplainDiv.attr('id', 'div-explain-' + data.id);
                 ruleExplainDiv.addClass('tooltip-div-explain');
