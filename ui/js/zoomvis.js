@@ -154,7 +154,7 @@ var zoomVis = function (opts) {
                         method: 'GET',
                         data: { stateId: getServerNodeId(data.id) },
                         success: function (union) {
-                            if (union.length > 2) { return; }
+                            if (union.length > 2) { return done(); }
 
                             var score = function (interserct) {
                                 return interserct.covered*interserct.purity;
