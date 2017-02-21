@@ -435,7 +435,7 @@ var zoomVis = function (opts) {
     var xOffset = 0.1;
     var yOffset = 0.1;
 
-    var transitionThreshold = 1;
+    var transitionThreshold = 0.9;
 
     var boundingBox = {
         x: { min: Number.MAX_VALUE, max: Number.MIN_VALUE },
@@ -1962,6 +1962,10 @@ var zoomVis = function (opts) {
         setTransitionThreshold: function (threshold) {
             transitionThreshold = Math.max(0.5, Math.min(1, threshold));
             redrawAll(true);
+        },
+
+        getTransitionThreshold: function () {
+            return transitionThreshold;
         },
 
         setProbDist: function (dist) {

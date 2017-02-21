@@ -1829,20 +1829,17 @@
         }
 
         (function () {
-            var initialVal = 0.9;
-            var onchange = function (val) {
-                viz.setTransitionThreshold(val);
-            }
             equipSlider({
                 slider: $("#threshold_slider"),
-                value: initialVal,
+                value: 1,
                 min: 0.5,
                 max: 1.001,
                 step: 0.001,
                 orientation: 'horizontal',
-                onChange: onchange
+                onChange: function (val) {
+                    viz.setTransitionThreshold(val);
+                }
             })
-            onchange(initialVal);
         })();
 
         (function () {
@@ -2304,6 +2301,10 @@
 
         viz.onInitialized(function () {
             timelineController.init();
+            (function () {
+                var transitionThreshold = viz.getTransitionThreshold();
+                $("#threshold_slider").slider('value', transitionThreshold);
+            })();
         });
     })();
 
