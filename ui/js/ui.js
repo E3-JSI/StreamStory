@@ -1829,17 +1829,20 @@
         }
 
         (function () {
+            var initialVal = 0.9;
+            var onchange = function (val) {
+                viz.setTransitionThreshold(val);
+            }
             equipSlider({
                 slider: $("#threshold_slider"),
-                value: 0.9,
+                value: initialVal,
                 min: 0.5,
                 max: 1.001,
                 step: 0.001,
                 orientation: 'horizontal',
-                onChange: function (val) {
-                    viz.setTransitionThreshold(val);
-                }
+                onChange: onchange
             })
+            onchange(initialVal);
         })();
 
         (function () {
