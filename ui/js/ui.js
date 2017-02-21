@@ -1831,7 +1831,7 @@
         (function () {
             equipSlider({
                 slider: $("#threshold_slider"),
-                value: 1,
+                value: 0.9,
                 min: 0.5,
                 max: 1.001,
                 step: 0.001,
