@@ -1411,11 +1411,12 @@
                 }
                 else if (dt < 1000*60*60*24*30*12) {    // one year
                     tickTime = d3.time.month;
-                    format = d3.time.format('%b %y');
+                    format = d3.time.format('%b %Y');
                 }
-                else if (dt < 1000*60*60*24*365*2) {    // two years
+                else if (dt < 1000*60*60*24*365*4) {    // four years
                     tickTime = d3.time.month;
-                    format = d3.time.format('%x');
+                    // (month short) year
+                    format = d3.time.format('%b %Y');
                 }
                 else {  // more than two years
                     tickTime = d3.time.year;
