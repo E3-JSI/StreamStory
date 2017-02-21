@@ -271,16 +271,16 @@ function initStreamStoryHandlers(model, enable) {
 
         log.debug('Registering anomaly callback ...');
         model.onAnomaly(function (desc) {
-            if (log.info())
-                log.info('Anomaly detected: %s TODO: currently ignoring!', desc);
+            if (log.warn())
+                log.warn('Anomaly detected: %s TODO: currently ignoring!', desc);
 
             // TODO not notifying anyone!
         });
 
         log.debug('Registering outlier callback ...');
         model.onOutlier(function (ftrV) {
-            if (log.info())
-                log.info('Outlier detected!');
+            if (log.debug())
+                log.debug('Outlier detected!');
 
             // send to broker
             var brokerMsg = transform.genExpPrediction(100.1, 'minute', new Date().getTime);
@@ -302,8 +302,8 @@ function initStreamStoryHandlers(model, enable) {
 
         log.debug('Registering prediction callback ...');
         model.onPrediction(function (date, currState, targetState, prob, probV, timeV) {
-            if (log.info())
-                log.info('Sending prediction, with PDF length: %d', probV.length);
+            if (log.debug())
+                log.debug('Sending prediction, with PDF length: %d', probV.length);
 
             try {
                 var _model = model.getModel();
@@ -377,7 +377,7 @@ function initStreamStoryHandlers(model, enable) {
                             var topics = fzi.getTopics(fzi.PREDICTION_OPERATION, mid);
                             for (i = 0; i < topics.length; i++) {
                                 var topic = topics[i].output;
-                                log.info('Sending a prediction message to topic \'%s\'', topic);
+                                log.debug('Sending a prediction message to topic \'%s\'', topic);
                                 broker.send(topic, brokerMsgStr);
                             }
                             xcb();
@@ -395,8 +395,8 @@ function initStreamStoryHandlers(model, enable) {
 
         log.debug('Registering activity callback ...');
         model.getModel().onActivity(function (startTm, endTm, activityName) {
-            if (log.info())
-                log.info('Detected activity %s at time %s to %s!', activityName, startTm.toString(), endTm.toString());
+            if (log.debug())
+                log.debug('Detected activity %s at time %s to %s!', activityName, startTm.toString(), endTm.toString());
 
             var start = startTm.getTime();
             var end = endTm.getTime();
@@ -533,7 +533,7 @@ function initPipelineHandlers() {
             }
 
             // friction coefficient
-            log.info('Creating coefficient callback ...');
+            log.debug('Creating coefficient callback ...');
             pipeline.onCoefficient(function (opts) {
                 var pdf = null;
 
@@ -578,13 +578,13 @@ function initPipelineHandlers() {
                                 throw new Error('Invalid event ID for coefficient: ' + optsClone.eventId);
                         }
 
-                        if (log.info())
-                            log.info('Will send prediction message to FZI topics:\n%s', brokerMsgStr);
+                        if (log.debug())
+                            log.debug('Will send prediction message to FZI topics:\n%s', brokerMsgStr);
 
                         var topics = fzi.getTopics(operation);
                         for (var i = 0; i < topics.length; i++) {
                             var topic = topics[i].output;
-                            log.info('Sending a friction message to topic \'%s\'', topic);
+                            log.debug('Sending a friction message to topic \'%s\'', topic);
                             broker.send(topic, brokerMsgStr);
                         }
                     })();
@@ -905,7 +905,7 @@ function initStreamStoryRestApi() {
     log.info('Initializing StreamStory REST services ...');
 
     {
-        log.info('Registering save service ...');
+        log.debug('Registering save service ...');
         app.post(API_PATH + '/save', function (req, res) {
             var session = req.session;
             var sessionId = req.sessionID;
@@ -942,7 +942,7 @@ function initStreamStoryRestApi() {
     }
 
     {
-        log.info('Registering set parameter service ...');
+        log.debug('Registering set parameter service ...');
 
         app.post(API_PATH + '/param', function (req, res) {
             try {
@@ -993,7 +993,7 @@ function initStreamStoryRestApi() {
     }
 
     {
-        log.info('Registering multilevel service at drilling/multilevel ...');
+        log.debug('Registering multilevel service at drilling/multilevel ...');
 
         // get the StreamStory model
         app.get(API_PATH + '/model', function (req, res) {
@@ -1061,7 +1061,7 @@ function initStreamStoryRestApi() {
     }
 
     {
-        log.info('Registering transition model service ...');
+        log.debug('Registering transition model service ...');
 
         // multilevel analysis
         app.get(API_PATH + '/transitionModel', function (req, res) {
@@ -1082,7 +1082,7 @@ function initStreamStoryRestApi() {
     }
 
     {
-        log.info('Registering future and states services ...');
+        log.debug('Registering future and states services ...');
 
         // multilevel analysis
         app.get(API_PATH + '/currentState', function (req, res) {
@@ -1090,13 +1090,13 @@ function initStreamStoryRestApi() {
                 var level = parseFloat(req.query.level);
                 var model = getModel(req.sessionID, req.session);
 
-                if (log.info())
-                    log.info('Fetching current state for level ' + level);
+                if (log.debug())
+                    log.debug('Fetching current state for level ' + level);
 
                 var result = model.currState(level);
 
-                if (log.info())
-                    log.info("Current state: %s", JSON.stringify(result));
+                if (log.debug())
+                    log.debug("Current state: %s", JSON.stringify(result));
 
                 res.send(result);
                 res.end();
@@ -1225,7 +1225,7 @@ function initStreamStoryRestApi() {
 
         app.get(API_PATH + '/stateHistory', function (req, res) {
             try {
-                log.info('Querying state history ...');
+                log.debug('Querying state history ...');
 
                 var offset = req.query.offset != null ? parseFloat(req.query.offset) : undefined;
                 var range = req.query.range != null ? parseFloat(req.query.range) : undefined;
@@ -1292,7 +1292,6 @@ function initStreamStoryRestApi() {
                 }
                 res.write(']}');
                 res.end();
-                console.log('Done!');
             } catch (e) {
                 utils.handleServerError(e, req, res);
             }
@@ -1645,8 +1644,8 @@ function initStreamStoryRestApi() {
                         return;
                     }
 
-                    if (log.info())
-                        log.info('Setting undesired state: %d, isUndesired: ' + isUndesired, stateId);
+                    if (log.debug())
+                        log.debug('Setting undesired state: %d, isUndesired: ' + isUndesired, stateId);
 
                     if (model.getModel().isTarget(stateId) != isUndesired)
                         model.getModel().setTarget(stateId, isUndesired);
@@ -1709,8 +1708,8 @@ function initStreamStoryRestApi() {
 
                 if (model == null) throw new Error('Model is null, has the session expired?');
 
-                if (log.info())
-                    log.info('Reseting control ...');
+                if (log.debug())
+                    log.debug('Reseting control ...');
 
                 model.resetControlVal({ ftrId: ftrId, stateId: stateId});
                 res.send(model.getVizState());
@@ -1940,7 +1939,7 @@ function initDataUploadApi() {
                     res.end();
 
                     // build the model
-                    modelStore.buildModel(opts, function (e, mid, model) {
+                    modelStore.buildModel(opts, function (e, mid, model) {  // TODO check if the user is currently viewing a model before saving the new one to session???
                         if (e != null) {
                             log.error('Exception while building model!');
                             return;
@@ -2057,10 +2056,10 @@ function initDataUploadApi() {
 
             if (username == null) throw new Error('Username is not defined when building a model!');
 
-            log.info('Building the model ...');
+            log.debug('Building the model ...');
 
             // create new base with the default store
-            log.info('Creating users directory ...');
+            log.debug('Creating users directory ...');
             var userDirNm = utils.getUserDir(username);
 
             fs.exists(userDirNm, function (exists) {
@@ -2091,8 +2090,8 @@ function initDataUploadApi() {
 
         var modelId = req.body.modelId;
 
-        if (log.info())
-            log.info('User %s selected model %s ...', username, modelId);
+        if (log.debug())
+            log.debug('User %s selected model %s ...', username, modelId);
 
         db.fetchModel(modelId, function (e, modelConfig) {
             if (e != null) {
@@ -2158,7 +2157,7 @@ function initServerApi() {
     log.info('Initializing general server REST API ...');
 
     {
-        log.info('Registering exit service ...');
+        log.debug('Registering exit service ...');
         app.get(API_PATH + '/exit', function (req, res) {
             try {
                 log.info(API_PATH + '/exit called. Exiting qminer and closing server ...');
@@ -2210,7 +2209,7 @@ function initServerApi() {
     }
 
     (function () {
-        log.info('Registering push data service ...');
+        log.debug('Registering push data service ...');
 
         var batchN = 0;
 
@@ -2245,7 +2244,7 @@ function initServerApi() {
     })();
 
     {
-        log.info('Registering count active models service ...');    // TODO remove after doing it with EJS
+        log.debug('Registering count active models service ...');    // TODO remove after doing it with EJS
         app.get(API_PATH + '/countActiveModels', function (req, res) {
             log.debug('Fetching the number of active models from the DB ...');
 
@@ -2263,11 +2262,11 @@ function initServerApi() {
     }
 
     (function () {
-        log.info('Registering activate model service ...');
+        log.debug('Registering activate model service ...');
 
         function activateModelById(req, res, modelId, activate, isFromUi) {
-            if (log.info())
-                log.info('Activating model %s: ' + activate, modelId);
+            if (log.debug())
+                log.debug('Activating model %s: ' + activate, modelId);
 
             var session = req.session;
 
@@ -2327,7 +2326,7 @@ function initServerApi() {
             try {
                 var modelId = req.body.modelId;
 
-                log.info('Removing model %d', modelId);
+                log.debug('Removing model %d', modelId);
 
                 db.deleteModel(modelId, function (e) {
                     if (e != null) {
@@ -2376,7 +2375,7 @@ function initServerApi() {
     })();
 
     (function () {
-        log.info('Registering model mode service ...');
+        log.debug('Registering model mode service ...');
         app.get(API_PATH + '/modelMode', function (req, res) {
             log.debug('Fetching model mode from the db DB ...');
 
@@ -2403,8 +2402,8 @@ function initServerApi() {
             var mid = req.body.modelId;
             var share = req.body.share;
 
-            if (log.info())
-                log.info('Sharing model %s: ', mid);
+            if (log.debug())
+                log.debug('Sharing model %s: ', mid);
 
             db.makeModelPublic(mid, share, function (e) {
                 if (e != null) {
@@ -2433,7 +2432,7 @@ function initConfigRestApi() {
             if (log.debug())
                 log.debug('Fetching property %s', JSON.stringify(properties));
 
-            log.info('Fetching intensities from DB ...');
+            log.debug('Fetching intensities from DB ...');
             db.getMultipleConfig({properties: properties}, function (e, result) {
                 if (e != null) {
                     log.error(e, 'Failed to fetch properties from DB!');
@@ -2672,8 +2671,8 @@ function initBroker() {
                     if (minTime != null) {
                         var timeRatio = deltaTm / minTime;
 
-                        if (log.info())
-                            log.info('Calculated timeToMolding ratio: %d', timeRatio);
+                        if (log.debug())
+                            log.debug('Calculated timeToMolding ratio: %d', timeRatio);
 
                         if (timeRatio < 1.2) {
                             predMsg = {
@@ -2689,14 +2688,14 @@ function initBroker() {
                             };
 
                             if (log.debug())
-                                log.info('Sending prediction %s', JSON.stringify(predMsg));
+                                log.debug('Sending prediction %s', JSON.stringify(predMsg));
 
                             sendPrediction(predMsg, timestamp);
                         }
                     }
                 } else {
-                    if (log.info())
-                        log.info('Got unknown event, sending prediction ...');
+                    if (log.debug())
+                        log.debug('Got unknown event, sending prediction ...');
                     // send prediction directly
 
                     predMsg = {
@@ -2731,11 +2730,11 @@ function loadSaveModels() {
             return;
         }
 
-        if (log.info())
-            log.info('There is a total of %d models ...', models.length);
+        if (log.debug())
+            log.debug('There is a total of %d models ...', models.length);
 
         for (var i = 0; i < models.length; i++) {
-            log.info('Resaving model %s', JSON.stringify(models[i]));
+            log.debug('Resaving model %s', JSON.stringify(models[i]));
             modelStore.loadSaveModel(models[i]);
         }
     });
@@ -2750,8 +2749,8 @@ function loadActiveModels() {
             return;
         }
 
-        if (log.info())
-            log.info('There are %d active models on startup ...', models.length);
+        if (log.debug())
+            log.debug('There are %d active models on startup ...', models.length);
 
         var loadCb = function (e, model) {
             if (e != null) {
@@ -2769,8 +2768,8 @@ function loadActiveModels() {
             var modelConfig = models[i];
 
             try {
-                if (log.info())
-                    log.info('Initializing model %s ...', JSON.stringify(modelConfig));
+                if (log.debug())
+                    log.debug('Initializing model %s ...', JSON.stringify(modelConfig));
 
                 modelStore.loadOnlineModel(modelConfig.model_file, loadCb);
             } catch (e1) {
@@ -3108,6 +3107,7 @@ function initServer(sessionStore, parseCookie) {
         saveUninitialized: true
     });
 
+    // the paths which will be excluded from the session
     var sessionExcludePaths = (function () {
         var paths = [ DATA_PATH ];
         if (config.USE_BROKER) {
@@ -3133,7 +3133,7 @@ function initServer(sessionStore, parseCookie) {
         var model = getModel(req.sessionID, req.session);
         // check if we need to redirect to the index page
         if (model == null) {
-            log.info('Session data missing, redirecting to index ...');
+            log.debug('Session data missing, redirecting to index ...');
             res.redirect('dashboard.html');
         } else {
             next();

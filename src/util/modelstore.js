@@ -600,8 +600,8 @@ module.exports = exports = function (opts) {
                         modelParams.transitions.timeUnit = timeUnit;
                         modelParams.hierarchy = { isTransitionBased: hierarchyType == 'mchainPartitioning' };
 
-                        if (log.info())
-                            log.info('Creating a new model with params: %s', JSON.stringify(modelParams));
+                        if (log.debug())
+                            log.debug('Creating a new model with params: %s', JSON.stringify(modelParams));
 
                         // create the model
                         var model = StreamStory({

@@ -874,8 +874,6 @@
                 if (pos.y == null) pos.y = 0;
             }
 
-            console.log(JSON.stringify(nodePositions));
-
             $.ajax('api/save', {
                 dataType: 'json',
                 data: { positions: JSON.stringify(nodePositions) },
@@ -1626,8 +1624,6 @@
                                 change: function (event, ui) {
                                     if (!handleSliderChange) return true;
 
-                                    console.log('handling slider change ...');
-
                                     var min = ui.values[0];
                                     var max = ui.values[1];
                                     var range = max - min;
@@ -1775,11 +1771,14 @@
                 var that = {
                     onStart: function () {
                     },
-                    onChange: function (val) {
+                    onChange: function (val, fireEvent) {
+                        if (fireEvent == null) { fireEvent = true; }
                         clearUpdateTimeout();
                         if (val != prev) {
                             prev = val;
-                            onChange(val);
+                            if (fireEvent) {
+                                onChange(val);
+                            }
                         }
                     },
                     onSlide: function (val) {
@@ -1806,12 +1805,12 @@
                 step: step,
                 animate:"slow",
                 orientation: orientation,
-                // change: onChange,
                 slide: function (event, ui) {
                     changeController.onSlide(ui.value);
                 },
                 change: function (event, ui) {
-                    changeController.onChange(ui.value);
+                    var fireEvent = event.originalEvent != null;
+                    changeController.onChange(ui.value, fireEvent);
                 },
                 start: function () {
                     isSliding = true;
@@ -2258,6 +2257,7 @@
         (function () {
             viz.onHeightChanged(function (scale) {
                 $('#span-zoom-val').html(scale.toFixed());
+                // update the slider without firing an event (avoids rounding bugs)
                 $("#slider_item_div").slider('value', scale);
                 if ($('#chk-show-fut').is(':checked')) {
                     $('#chk-show-fut').attr('checked', false);

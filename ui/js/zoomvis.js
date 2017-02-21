@@ -2070,7 +2070,12 @@ var zoomVis = function (opts) {
         },
 
         setSelectedState: function (stateId) {
-            setSelectedState(cy.nodes('#' + stateId));
+            var state = cy.nodes('#' + stateId);
+            if (state.length > 0) {
+                setSelectedState(cy.nodes('#' + stateId));
+            } else {
+                console.warn('state with ID: ' + stateId + ' not found!');
+            }
         },
 
         setNodeColor: setNodeColor,
@@ -2179,11 +2184,13 @@ var zoomVis = function (opts) {
         },
 
         setScale: function (scale) {
-            setScale(uiToInternalScale(scale));
+            var internalScale = uiToInternalScale(scale);
+            setScale(internalScale);
         },
 
         setLevel: function (levelN) {
-            setScale(levelHeights[levelN]);
+            var scale = levelHeights[levelN];
+            setScale(scale);
         },
 
         getLevel: function () {

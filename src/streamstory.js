@@ -68,17 +68,19 @@ exports.StreamStory = function (opts) {
         }
     }
     else if (opts.fname != null) {
-        log.info('Loading StreamStory from:%s ', opts.fname);
+        if (log.info())
+            log.info('Loading StreamStory from:%s ', opts.fname);
         var fin = new qm.fs.FIn(opts.fname);
 
         mc = new streamstory._StreamStory(fin);
-        log.info('Loading feature spaces ...');
+        if (log.debug())
+            log.debug('Loading feature spaces ...');
         for (var i = 0; i < N_FTR_SPACES; i++) {
             ftrSpaces.push(new qm.FeatureSpace(base, fin));
         }
         log.debug('Initializing feature names ...');
         initFtrNames();
-        log.info('Loaded!');
+        log.debug('Loaded!');
     }
     else {
         throw new Error('Missing parameters (base and config) or fname!');
@@ -478,7 +480,7 @@ exports.StreamStory = function (opts) {
         } else {
             var recSet = opts.recSet;
 
-            log.info('Updating feature spaces ...');
+            log.debug('Updating feature spaces ...');
             var results = [];
             for (i = 0; i < ftrSpaces.length; i++) {
                 var ftrSpace = ftrSpaces[i];
@@ -559,7 +561,7 @@ exports.StreamStory = function (opts) {
                     throw e;
                 }
 
-                log.info('Creating model ...');
+                log.debug('Creating model ...');
                 mc.fit({
                     observations: data.obsColMat,
                     controls: data.contrColMat,
@@ -573,7 +575,7 @@ exports.StreamStory = function (opts) {
                         ignored: genFtrInfo(ignFtrConf, getIgnoredFtrSpace())
                     }
                 });
-                log.info('Done!');
+                log.debug('Done!');
             });
         },
 
@@ -588,7 +590,7 @@ exports.StreamStory = function (opts) {
                 }
 
                 try {
-                    log.info('Creating model asynchronously ...');
+                    log.debug('Creating model asynchronously ...');
                     mc.fitAsync({
                         observations: data.obsColMat,
                         controls: data.contrColMat,
