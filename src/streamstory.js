@@ -629,6 +629,12 @@ exports.StreamStory = function (opts) {
             );
         },
 
+        /**
+         * Projects the record onto the fetures used by the model.
+         *
+         * @param {qm.Record} rec - the record
+         * @returns {object} the projection as a assiciative array of <ftr_name, ftr_val> pairs
+         */
         project: function (rec) {
             var result = {};
 

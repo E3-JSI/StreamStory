@@ -22,6 +22,34 @@ StreamStory.Utils.asyncExecutor = function (onAllFinished) {
     }
 }
 
+/**
+ * A task executor which always executes only the last task in the queue (if
+ * tasks are piling up, the middle ones are forgotten).
+ */
+StreamStory.Utils.executeLastExecutor = function () {
+    var currTask = null;
+    var pendingTask = null;
+
+    var executeCurrTask = function () {
+        if (currTask == null) return;
+        currTask(function () {
+            // finished the current task, now execute whichever task is pending
+            currTask = pendingTask;
+            pendingTask = null;
+            executeCurrTask();
+        })
+    }
+
+    return function execute(task) {
+        if (currTask == null) {
+            currTask = task;
+            executeCurrTask();
+        } else {
+            pendingTask = task;
+        }
+    }
+}
+
 StreamStory.Utils.handleAjaxError = handleAjaxError;
 
 function isNumber(val) {

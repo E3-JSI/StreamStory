@@ -387,7 +387,7 @@
                             if (!isDrawing) {
                                 isDrawing = true;
                                 var first = thumbs.first();
-                                first.width(first.width()-1);	// hack to avoid a blink
+                                first.width(first.width()-1);   // hack to avoid a blink
                                 thumbs.first().hide({
                                     duration: 100,
                                     easing: 'linear',
@@ -449,7 +449,7 @@
                             error: handleAjaxError()
                         });
                     }
-                } else {	// transition
+                } else {    // transition
                     $.ajax('api/transitionHistogram', {
                         dataType: 'json',
                         data: { sourceId: opts.sourceId, targetId: opts.targetId, feature: opts.ftrId },
@@ -530,7 +530,7 @@
 
                             valField.html(valStr.substring(0, valStr.length-7));
                         }
-                        if (opts.valueColor != null)	// TODO what to do with this???
+                        if (opts.valueColor != null)    // TODO what to do with this???
                             thumbnail.find('.attr-val').css('color', opts.valueColor);
                     }
                     else {
@@ -745,7 +745,7 @@
         }
 
         function fetchStateProbDist(time) {
-            if (time == 0) time = 1e-4;	// FIXME, handle 0 on the server
+            if (time == 0) time = 1e-4; // FIXME, handle 0 on the server
 
             var stateId = viz.getSelectedState();
             var level = viz.getCurrentHeight();
@@ -1331,6 +1331,7 @@
 
             var slider = $('#div-bp-slider');
             // var sliderHandle = $('#div-bp-slider-handle');
+            var historyExecutor = StreamStory.Utils.executeLastExecutor();
 
             var chart = null;
             var chartData = null;
@@ -1394,17 +1395,17 @@
 
                 if (dt < 1000*60*60*5) {
                     // the total time is less than five hour
-		    // hour:minute
+                    // hour:minute
                     tickTime = d3.time.minute;
                     format = d3.time.format('%H:%M');
                 }
-		else if (dt < 1000*60*60*24*3) {	// three days
-		    // hour day month
-		    tickTime = d3.time.hour;
-		    format = d3.time.format('%Hh %d %b');
-		}
-                else if (dt < 1000*60*60*24*7) {	// one week
-		    // day month
+                else if (dt < 1000*60*60*24*3) {    // three days
+                    // hour day month
+                    tickTime = d3.time.hour;
+                    format = d3.time.format('%Hh %d %b');
+                }
+                else if (dt < 1000*60*60*24*7) {    // one week
+                    // day month
                     tickTime = d3.time.hour;
                     format = d3.time.format('%d %b');
                 }
@@ -1437,147 +1438,151 @@
             }
 
             function fetchTimeline(offset, zoom, callback) {
-                $.ajax('api/stateHistory', {
-                    dataType: 'json',
-                    data: {
-                        offset: offset,
-                        range: rangeFromZoom(zoom),
-                        n: 100
-                    },
-                    success: function (data) {
-                        var scales = data.window;
-                        // var historyStart = data.historyStart;
-                        // var historyEnd = data.historyEnd;
+                historyExecutor(function (done) {
+                    $.ajax('api/stateHistory', {
+                        dataType: 'json',
+                        data: {
+                            offset: offset,
+                            range: rangeFromZoom(zoom),
+                            n: 100
+                        },
+                        success: function (data) {
+                            var scales = data.window;
+                            // var historyStart = data.historyStart;
+                            // var historyEnd = data.historyEnd;
 
-                        wrapper.html('');
+                            wrapper.html('');
 
-                        // preprocess the data
-                        chartData = [];
+                            // preprocess the data
+                            chartData = [];
 
-                        var maxEls = 0;
+                            var maxEls = 0;
 
-                        var zoomLevels = viz.getZoomLevels();
+                            var zoomLevels = viz.getZoomLevels();
 
-                        for (var scaleN = scales.length-1; scaleN >= 0; scaleN--) {
-                            // var scale = scales[scaleN].scale;
-                            var zoom = zoomLevels[scaleN];
-                            var states = scales[scaleN].states;
-                            var timeV = [];
-                            var category = 'scale-' + scaleN;
+                            for (var scaleN = scales.length-1; scaleN >= 0; scaleN--) {
+                                // var scale = scales[scaleN].scale;
+                                var zoom = zoomLevels[scaleN];
+                                var states = scales[scaleN].states;
+                                var timeV = [];
+                                var category = 'scale-' + scaleN;
 
-                            for (var blockN = 0; blockN < states.length; blockN++) {
-                                var block = states[blockN];
+                                for (var blockN = 0; blockN < states.length; blockN++) {
+                                    var block = states[blockN];
 
-                                var start = block.start;
-                                var end = block.start + block.duration;
+                                    var start = block.start;
+                                    var end = block.start + block.duration;
 
-                                var stateH = block.states;
+                                    var stateH = block.states;
 
-                                var hue = 0;
-                                var majorityStateId = -1;
-                                var majorityStatePerc = 0;
-                                for (var stateId in stateH) {
-                                    var statePerc = stateH[stateId];
-                                    var stateColor = viz.getDefaultNodeColor(stateId);
+                                    var hue = 0;
+                                    var majorityStateId = -1;
+                                    var majorityStatePerc = 0;
+                                    for (var stateId in stateH) {
+                                        var statePerc = stateH[stateId];
+                                        var stateColor = viz.getDefaultNodeColor(stateId);
 
-                                    if (statePerc > majorityStatePerc) {
-                                        majorityStatePerc = statePerc;
-                                        majorityStateId = stateId;
+                                        if (statePerc > majorityStatePerc) {
+                                            majorityStatePerc = statePerc;
+                                            majorityStateId = stateId;
+                                        }
+
+                                        hue += statePerc*stateColor.hue;
                                     }
+                                    var color = viz.getDefaultNodeColor(majorityStateId);
+                                    color.hue = hue;
 
-                                    hue += statePerc*stateColor.hue;
+                                    timeV.push({
+                                        starting_time: start,
+                                        ending_time: end,
+                                        color: getHslStr(color),
+                                        'class': 'state-' + majorityStateId
+                                    });
                                 }
-                                var color = viz.getDefaultNodeColor(majorityStateId);
-                                color.hue = hue;
 
-                                timeV.push({
-                                    starting_time: start,
-                                    ending_time: end,
-                                    color: getHslStr(color),
-                                    'class': 'state-' + majorityStateId
+                                chartData.push({
+                                    'class': category,
+                                    label: zoom.toFixed() + '%',
+                                    times: timeV
                                 });
+
+                                if (timeV.length > maxEls) {
+                                    maxEls = timeV.length;
+                                }
                             }
 
-                            chartData.push({
-                                'class': category,
-                                label: zoom.toFixed() + '%',
-                                times: timeV
-                            });
+                            // draw the elements
+                            (function () {
+                                chart = d3.timeline();
 
-                            if (timeV.length > maxEls) {
-                                maxEls = timeV.length;
-                            }
-                        }
+                                wrapperW = wrapper.width();
+                                wrapperH = wrapper.height();
 
-                        // draw the elements
-                        (function () {
-                            chart = d3.timeline();
+                                var nTicks = 8;
 
-                            wrapperW = wrapper.width();
-                            wrapperH = wrapper.height();
+                                var nTimelines = chartData.length;
+                                var margin = chart.itemMargin();
+                                var itemHeight = Math.floor((wrapperH - (nTimelines-1)*margin - 70) / nTimelines);
 
-                            var nTicks = 8;
+                                var dt = (function () {
+                                    var finestStates = scales[0].states;
 
-                            var nTimelines = chartData.length;
-                            var margin = chart.itemMargin();
-                            var itemHeight = Math.floor((wrapperH - (nTimelines-1)*margin - 70) / nTimelines);
+                                    var firstState = finestStates[0];
+                                    var lastState = finestStates[finestStates.length-1];
 
-                            var dt = (function () {
-                                var finestStates = scales[0].states;
+                                    return lastState.start + lastState.duration - firstState.start;
+                                })();
 
-                                var firstState = finestStates[0];
-                                var lastState = finestStates[finestStates.length-1];
+                                var config = getTimeConfig(dt);
 
-                                return lastState.start + lastState.duration - firstState.start;
+                                // var tickTime = config.tickTime;
+                                // var format = config.format;
+
+                                chart.tickFormat({
+                                    format: config.format,
+                                    numTicks: nTicks,
+                                    tickSize: 6,
+                                });
+
+                                chart.width(wrapperW);
+                                // chart.width(Math.max(maxEls*minElementWidth, wrapperW));
+                                chart.itemHeight(itemHeight);
+                                chart.margin({
+                                    left: 50,
+                                    right: 0,
+                                    top: -itemHeight + 15,  // fixes the large margin when there are not a lot of timelines
+                                    bottom: 0
+                                });
+                                chart.stack();
+
+                                redraw();
+
+                                chartW = chart.width();
+                                defaultChartW = chartW;
+                                minChartW = wrapperW;
                             })();
 
-                            var config = getTimeConfig(dt);
+                            chart.click(function (d, i, datum) {
+                                var stateClass = d['class'];
+                                var scaleClass = datum['class'];
 
-                            // var tickTime = config.tickTime;
-                            // var format = config.format;
+                                var stateSpl = stateClass.split('-');
+                                var scaleSpl = scaleClass.split('-');
 
-                            chart.tickFormat({
-                                format: config.format,
-                                numTicks: nTicks,
-                                tickSize: 6,
+                                var stateId = stateSpl[stateSpl.length-1];
+                                var scaleN = scaleSpl[scaleSpl.length-1];
+
+                                viz.setLevel(scaleN);
+                                viz.setSelectedState(stateId);
                             });
 
-                            chart.width(wrapperW);
-                            // chart.width(Math.max(maxEls*minElementWidth, wrapperW));
-                            chart.itemHeight(itemHeight);
-                            chart.margin({
-                                left: 50,
-                                right: 0,
-                                top: -itemHeight + 15,  // fixes the large margin when there are not a lot of timelines
-                                bottom: 0
-                            });
-                            chart.stack();
-
-                            redraw();
-
-                            chartW = chart.width();
-                            defaultChartW = chartW;
-                            minChartW = wrapperW;
-                        })();
-
-                        chart.click(function (d, i, datum) {
-                            var stateClass = d['class'];
-                            var scaleClass = datum['class'];
-
-                            var stateSpl = stateClass.split('-');
-                            var scaleSpl = scaleClass.split('-');
-
-                            var stateId = stateSpl[stateSpl.length-1];
-                            var scaleN = scaleSpl[scaleSpl.length-1];
-
-                            viz.setLevel(scaleN);
-                            viz.setSelectedState(stateId);
-                        });
-
-                        if (callback != null) callback();
-                    },
-                    error: handleAjaxError()
-                });
+                            // finish
+                            if (callback != null) callback();
+                            done();
+                        },
+                        error: handleAjaxError(null, done)
+                    });
+                })
             }
 
             var that = {
@@ -1599,18 +1604,18 @@
 
                     fetchTimeline(currOffset, currZoom, function () {
                         addPressHandler($('#btn-timeline-zoomin'), function () {
-			    var newOffset = currOffset + (1 - 1 / ZOOM_FACTOR) / (2*currZoom);
-			    var newZoom = currZoom*ZOOM_FACTOR;
+                var newOffset = currOffset + (1 - 1 / ZOOM_FACTOR) / (2*currZoom);
+                var newZoom = currZoom*ZOOM_FACTOR;
                             updateSlider(newOffset, newZoom);
                         });
 
                         addPressHandler($('#btn-timeline-zoomout'), function () {
-			    var newOffset = currOffset + (1 - ZOOM_FACTOR) / (2*currZoom);
-			    var newZoom = Math.min(MAX_ZOOM, currZoom / ZOOM_FACTOR);
-			    var newRange = rangeFromZoom(newZoom);
+                var newOffset = currOffset + (1 - ZOOM_FACTOR) / (2*currZoom);
+                var newZoom = Math.min(MAX_ZOOM, currZoom / ZOOM_FACTOR);
+                var newRange = rangeFromZoom(newZoom);
 
-			    if (newOffset < 0) { newOffset = 0; }
-			    if (newOffset + newRange > 1) { newOffset = 1 - newRange; }
+                if (newOffset < 0) { newOffset = 0; }
+                if (newOffset + newRange > 1) { newOffset = 1 - newRange; }
 
                             updateSlider(newOffset, newZoom);
                         });
@@ -2054,7 +2059,7 @@
                         $('#div-button-save-state').removeClass('hidden');
                     });
 
-                    $('#chk-target').off('change');	// remove the previous handlers
+                    $('#chk-target').off('change'); // remove the previous handlers
                     $('#chk-target').prop('checked', data.isTarget != null && data.isTarget);
                     if (data.isTarget != null && data.isTarget) {
                         $('#div-event-id').removeClass('hidden');
@@ -2211,7 +2216,7 @@
                         }
 
                         var shouldClearName = stateName == '' || stateName == stateId;
-                        if (shouldClearName) {	// clear the state name
+                        if (shouldClearName) {  // clear the state name
                             delete data.name;
                         }
                         if (description == null || description == '') {
