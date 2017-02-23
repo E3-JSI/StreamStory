@@ -1611,18 +1611,18 @@
 
                     fetchTimeline(currOffset, currZoom, function () {
                         addPressHandler($('#btn-timeline-zoomin'), function () {
-                var newOffset = currOffset + (1 - 1 / ZOOM_FACTOR) / (2*currZoom);
-                var newZoom = currZoom*ZOOM_FACTOR;
+                            var newOffset = currOffset + (1 - 1 / ZOOM_FACTOR) / (2*currZoom);
+                            var newZoom = currZoom*ZOOM_FACTOR;
                             updateSlider(newOffset, newZoom);
                         });
 
                         addPressHandler($('#btn-timeline-zoomout'), function () {
-                var newOffset = currOffset + (1 - ZOOM_FACTOR) / (2*currZoom);
-                var newZoom = Math.min(MAX_ZOOM, currZoom / ZOOM_FACTOR);
-                var newRange = rangeFromZoom(newZoom);
+                            var newOffset = currOffset + (1 - ZOOM_FACTOR) / (2*currZoom);
+                            var newZoom = Math.min(MAX_ZOOM, currZoom / ZOOM_FACTOR);
+                            var newRange = rangeFromZoom(newZoom);
 
-                if (newOffset < 0) { newOffset = 0; }
-                if (newOffset + newRange > 1) { newOffset = 1 - newRange; }
+                            if (newOffset < 0) { newOffset = 0; }
+                            if (newOffset + newRange > 1) { newOffset = 1 - newRange; }
 
                             updateSlider(newOffset, newZoom);
                         });
