@@ -467,7 +467,12 @@ function sendPrediction(msg, timestamp, eventProps) {
 
     var brokerMsg = transform.genExpPrediction(perHour, 'hour', timestamp, eventProps);
 
-    var modelMsgStr = JSON.stringify(msg);
+    var modelMsgStr = (function () {
+        var msgCpy = utils.clone(msg);
+        msgCpy.time = msg.time.getTime();
+        return JSON.stringify(msgCpy);
+    })();
+    // var modelMsgStr = JSON.stringify(msg);
     var brokerMsgStr = JSON.stringify(brokerMsg);
 
     if (log.debug()) {
