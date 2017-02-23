@@ -469,7 +469,7 @@ function sendPrediction(msg, timestamp, eventProps) {
 
     var modelMsgStr = (function () {
         var msgCpy = utils.clone(msg);
-        msgCpy.time = msg.time.getTime();
+        msgCpy.time = timestamp instanceof Date ? timestamp.getTime() : timestamp;
         return JSON.stringify(msgCpy);
     })();
     // var modelMsgStr = JSON.stringify(msg);
@@ -650,7 +650,7 @@ function initPipelineHandlers() {
                             zScore: opts.zScore
                         }
 
-                        sendPrediction(msg, opts.time, proasenseEventProps);
+                        sendPrediction(msg, opts.time.getTime(), proasenseEventProps);
                     }
                 }
             });
