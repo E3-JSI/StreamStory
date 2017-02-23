@@ -375,7 +375,7 @@
                         var timestamp = content.timestamp;
                         delete content.timestamp;
                         if (timestamp != null) {
-                            $('#span-curr-time').html(formatDate(new Date(timestamp)));
+                            $('#span-curr-time').html(formatDateTime(new Date(timestamp)));
                         }
 
                         var thumbs = $('#div-values-wrapper').children();
