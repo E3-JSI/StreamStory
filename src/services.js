@@ -617,8 +617,9 @@ function initPipelineHandlers() {
                     }
 
                     (function () {
+                        var timestamp = opts.time.getTime();
                         var optsCpy = utils.clone(opts);
-                        optsCpy.time = optsCpy.time.getTime();
+                        optsCpy.time = timestamp;
                         modelStore.distributeMsg(JSON.stringify({
                             type: 'coeff',
                             content: optsCpy
