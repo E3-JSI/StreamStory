@@ -1394,12 +1394,19 @@
 
                 if (dt < 1000*60*60*5) {
                     // the total time is less than five hour
+		    // hour:minute
                     tickTime = d3.time.minute;
                     format = d3.time.format('%H:%M');
                 }
+		else if (dt < 1000*60*60*24*3) {	// three days
+		    // hour day month
+		    tickTime = d3.time.hour;
+		    format = d3.time.format('%H %d %b');
+		}
                 else if (dt < 1000*60*60*24*7) {	// one week
+		    // day month
                     tickTime = d3.time.hour;
-                    format = d3.time.format('%Hh %d %b');
+                    format = d3.time.format('%d %b');
                 }
                 else if (dt < 1000*60*60*24*30) {   // one month
                     tickTime = d3.time.day;
