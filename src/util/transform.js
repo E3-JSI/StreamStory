@@ -860,7 +860,7 @@ module.exports.genExpPrediction = function (lambda, timeUnit, date, misc) {
     }
     // construct the message
     var msg = {
-        timestamp: date.getTime(),
+        timestamp: date instanceof Date ? date.getTime() : date,
         eventName: 'prediction',
         params: [lambda],
         eventProperties: eventProperties,
