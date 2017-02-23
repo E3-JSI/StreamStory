@@ -113,6 +113,9 @@ function addPressHandler(btn, callback) {
     var timeoutId = 0;
     var intervalId = 0;
 
+    // remove previous handlers
+    btn.off('click mousedown mouseup mouseleave');
+
     btn.click(function (event) {
         if (event.which != 1) return;
 
