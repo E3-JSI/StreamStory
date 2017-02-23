@@ -283,7 +283,7 @@ function initStreamStoryHandlers(model, enable) {
                 log.debug('Outlier detected!');
 
             // send to broker
-            var brokerMsg = transform.genExpPrediction(100.1, 'minute', new Date().getTime);
+            var brokerMsg = transform.genExpPrediction(100.1, 'minute', new Date().getTime());
             broker.send(broker.PREDICTION_PRODUCER_TOPIC, JSON.stringify(brokerMsg));
 
             // send to UI
@@ -470,6 +470,7 @@ function sendPrediction(msg, timestamp, eventProps) {
     var modelMsgStr = (function () {
         var msgCpy = utils.clone(msg);
         msgCpy.time = timestamp instanceof Date ? timestamp.getTime() : timestamp;
+        msgCpy.content.time = msg.content.time instanceof Date ? msg.content.time.getTime() : msg.content.time;
         return JSON.stringify(msgCpy);
     })();
     // var modelMsgStr = JSON.stringify(msg);
