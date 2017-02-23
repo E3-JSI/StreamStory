@@ -616,10 +616,14 @@ function initPipelineHandlers() {
                         };
                     }
 
-                    modelStore.distributeMsg(JSON.stringify({
-                        type: 'coeff',
-                        content: opts
-                    }));
+                    (function () {
+                        var optsCpy = utils.clone(opts);
+                        optsCpy.time = optsCpy.time.getTime();
+                        modelStore.distributeMsg(JSON.stringify({
+                            type: 'coeff',
+                            content: optsCpy
+                        }));
+                    })();
 
                     if (pdf != null) {
                         if (log.debug())
