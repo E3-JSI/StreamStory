@@ -1324,7 +1324,7 @@
         timelineController = (function () {
             var ZOOM_FACTOR = 1.1;
             var OFFSET_STEP = 0.1;
-            var MAX_ZOOM = 100;
+            var MAX_ZOOM = 150;
 
             var wrapperId = '#div-time-state-hist';
             var wrapper = $(wrapperId);
@@ -1401,7 +1401,7 @@
 		else if (dt < 1000*60*60*24*3) {	// three days
 		    // hour day month
 		    tickTime = d3.time.hour;
-		    format = d3.time.format('%H %d %b');
+		    format = d3.time.format('%Hh %d %b');
 		}
                 else if (dt < 1000*60*60*24*7) {	// one week
 		    // day month
