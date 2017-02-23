@@ -636,9 +636,7 @@ exports.StreamStory = function (opts) {
          * @returns {object} the projection as a assiciative array of <ftr_name, ftr_val> pairs
          */
         project: function (rec) {
-            var result = {};
-
-            result = {
+            var result = {
                 timestamp: rec.time.getTime()
             }
 
