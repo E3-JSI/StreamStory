@@ -537,6 +537,8 @@ function initPipelineHandlers() {
             pipeline.onCoefficient(function (opts) {
                 var pdf = null;
 
+                log.info('coefficient callback called with options:\n' + JSON.stringify(opts));
+
                 // send the coefficient to the broker, so that other components can do
                 // calculations based no it
                 (function () {
