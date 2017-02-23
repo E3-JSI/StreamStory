@@ -371,6 +371,13 @@
                     else if (msg.type == 'values') {
                         content = msg.content;
 
+                        // show the current timestamp
+                        var timestamp = content.timestamp;
+                        delete content.timestamp;
+                        if (timestamp != null) {
+                            $('#span-curr-time').html(formatDate(new Date(timestamp)));
+                        }
+
                         var thumbs = $('#div-values-wrapper').children();
 
                         var maxThumbs = 6;

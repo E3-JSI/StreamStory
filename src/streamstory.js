@@ -638,7 +638,10 @@ exports.StreamStory = function (opts) {
         project: function (rec) {
             var result = {};
 
-            // TODO also include the timestamp
+            result = {
+                timestamp: rec.time.getTime()
+            }
+
             for (var ftrSpaceN = 0; ftrSpaceN < ftrSpaces.length; ftrSpaceN++) {
                 var names = getFtrNames(ftrSpaces[ftrSpaceN]);
 

@@ -116,17 +116,26 @@
                         <div id="parent_container" class="panel panel-default main-vis">
                             <div class="panel-heading clearfix">
                                 <span class="glyphicon glyphicon-info-sign info-panel-left" rel="tooltip" title="Visualization Panel" content="This panel shows the dataset in a qualitative manner using a hierarchy of states and transitions.<br /><br />To browse through the hierarchy use either the mouse wheel or the vertical scroll bar on the left.<br /><br />Click on a state to view more details."></span>
-                                <h4 class="panel-title pull-left" style="margin-top: 2px;">Visualization - <%= modelConfig.name %> <span id="span-zoom" class="component-title-additional">&nbsp;(Zoom: <span id="span-zoom-val">0</span>%)</span></h4>
+                                <h4 class="panel-title pull-left" style="margin-top: 2px;">
+                                    Visualization - <%= modelConfig.name %>
+                                    <span id="span-zoom" class="component-title-additional">&nbsp;(Zoom: <span id="span-zoom-val">0</span>%)</span>
+                                    <span class="component-title-additional">
+                                        <% if (model.isOnline()) { %>
+                                        <span id="span-no-active"><%= activeModelCount %></span> online models,
+                                        <% } %>
+                                        <span>time unit:&nbsp;<span id="span-tu"><%= model.getModel().getTimeUnit() %></span>&nbsp;&nbsp;&nbsp;</span>
+                                    </span>
+                                </h4>
                                 <!-- toggler for the visualization options -->
                                 <button id="vis-toggler" class="btn btn-default btn-xs pull-right" aria-label="Left Align">
                                     <span class="glyphicon glyphicon-align-justify" aria-hidden="true"></span> Options
                                 </button>
-                                <span class="pull-right component-title-additional">
-                                    <% if (model.isOnline()) { %>
-                                    <span id="span-no-active"><%= activeModelCount %></span> online models,
-                                    <% } %>
-                                    time unit:&nbsp;<span id="span-tu"><%= model.getModel().getTimeUnit() %></span>&nbsp;&nbsp;&nbsp;
-                                </span>
+                                <span id="span-curr-time" class="pull-right component-title-additional"></span>
+                                <!--     <% if (model.isOnline()) { %> -->
+                                <!--     <span id="span-no-active"><%= activeModelCount %></span> online models, -->
+                                <!--     <% } %> -->
+                                <!--     time unit:&nbsp;<span id="span-tu"><%= model.getModel().getTimeUnit() %></span>&nbsp;&nbsp;&nbsp; -->
+                                <!-- </span> -->
                                 <button id="btn-viz-back" class="btn btn-link btn-xs pull-right hidden" aria-label="Left Align">
                                     <span class="glyphicon glyphicon glyphicon-menu-left" aria-hidden="true"></span> Back
                                 </button>
