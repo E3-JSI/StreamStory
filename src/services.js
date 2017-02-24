@@ -283,8 +283,8 @@ function initStreamStoryHandlers(model, enable) {
                 log.debug('Outlier detected!');
 
             // send to broker
-            var brokerMsg = transform.genExpPrediction(100.1, 'minute', new Date().getTime());
-            broker.send(broker.PREDICTION_PRODUCER_TOPIC, JSON.stringify(brokerMsg));
+            // var brokerMsg = transform.genExpPrediction(100.1, 'minute', new Date().getTime());
+            // broker.send(broker.PREDICTION_PRODUCER_TOPIC, JSON.stringify(brokerMsg));
 
             // send to UI
             var msg = {
@@ -479,6 +479,10 @@ function initStreamStoryHandlers(model, enable) {
     }
 }
 
+/**
+ * Sends a prediction event to the user interface and to other components
+ * listening on the broker.
+ */
 function sendPrediction(msg, timestamp, eventProps) {
     var perMonth = msg.content.pdf.lambda;
     var perHour = perMonth / (30*24);
@@ -499,7 +503,7 @@ function sendPrediction(msg, timestamp, eventProps) {
         log.debug('Sending exponential prediciton to all the models: %s', modelMsgStr)
     }
 
-    broker.send(broker.PREDICTION_PRODUCER_TOPIC, brokerMsgStr);
+    // broker.send(broker.PREDICTION_PRODUCER_TOPIC, brokerMsgStr);
     modelStore.distributeMsg(modelMsgStr);
 }
 
@@ -616,6 +620,7 @@ function initPipelineHandlers() {
                     })();
                 })()
 
+                // check if the coefficient is out of the ordinary
                 var zscore = opts.zScore;
                 if (zscore >= 2) {
                     if (zscore >= 5) {
@@ -640,6 +645,7 @@ function initPipelineHandlers() {
                         };
                     }
 
+                    // send a coefficient event to the UI
                     (function () {
                         var timestamp = opts.time.getTime();
                         var optsCpy = utils.clone(opts);
@@ -650,10 +656,12 @@ function initPipelineHandlers() {
                         }));
                     })();
 
+                    // send the prediction event
                     if (pdf != null) {
                         if (log.debug())
                             log.debug('Sending prediction message based on the friction coefficient ...')
 
+                        // the prediction message
                         var msg = {
                             type: 'prediction',
                             content: {
