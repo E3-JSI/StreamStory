@@ -372,7 +372,9 @@ function initStreamStoryHandlers(model, enable) {
                         function sendBrokerMsg(xcb) {
                             var mid = model.getId();
                             var brokerMsgStr = JSON.stringify(brokerMsg);
-                            broker.send(broker.PREDICTION_PRODUCER_TOPIC, brokerMsgStr);
+
+                            // do not send this prediciton to PANDDA, but only to FZI
+                            // broker.send(broker.PREDICTION_PRODUCER_TOPIC, brokerMsgStr);
 
                             var topics = fzi.getTopics(fzi.PREDICTION_OPERATION, mid);
                             for (i = 0; i < topics.length; i++) {
