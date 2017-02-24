@@ -503,7 +503,7 @@ function sendPrediction(msg, timestamp, eventProps) {
         log.debug('Sending exponential prediciton to all the models: %s', modelMsgStr)
     }
 
-    broker.send(broker.PREDICTION_PRODUCER_TOPIC, brokerMsgStr);
+    // broker.send(broker.PREDICTION_PRODUCER_TOPIC, brokerMsgStr);
     modelStore.distributeMsg(modelMsgStr);
 }
 
