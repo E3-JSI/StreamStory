@@ -287,8 +287,6 @@
             })();
         }
 
-        console.log('will draw message:\n' + JSON.stringify(content, null, ' '));
-
         self._addMessage(new Message(msg.type, content, onMsgClick));
     }
 
