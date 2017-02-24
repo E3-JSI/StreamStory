@@ -365,24 +365,32 @@ function initStreamStoryHandlers(model, enable) {
 
                     async.parallel([
                         function sendUiMsg(xcb) {
-                            // var mid = model.getId();
-                            // modelStore.sendMsg(model.getId(), JSON.stringify(uiMsg));
-                            modelManager.sendMessage(model, uiMsg, xcb);
+                            try {
+                                // var mid = model.getId();
+                                // modelStore.sendMsg(model.getId(), JSON.stringify(uiMsg));
+                                modelManager.sendMessage(model, uiMsg, xcb);
+                            } catch (e) {
+                                xcb(e);
+                            }
                         },
                         function sendBrokerMsg(xcb) {
-                            var mid = model.getId();
-                            var brokerMsgStr = JSON.stringify(brokerMsg);
+                            try {
+                                var mid = model.getId();
+                                var brokerMsgStr = JSON.stringify(brokerMsg);
 
-                            // do not send this prediciton to PANDDA, but only to FZI
-                            // broker.send(broker.PREDICTION_PRODUCER_TOPIC, brokerMsgStr);
+                                // do not send this prediciton to PANDDA, but only to FZI
+                                // broker.send(broker.PREDICTION_PRODUCER_TOPIC, brokerMsgStr);
 
-                            var topics = fzi.getTopics(fzi.PREDICTION_OPERATION, mid);
-                            for (i = 0; i < topics.length; i++) {
-                                var topic = topics[i].output;
-                                log.debug('Sending a prediction message to topic \'%s\'', topic);
-                                broker.send(topic, brokerMsgStr);
+                                var topics = fzi.getTopics(fzi.PREDICTION_OPERATION, mid);
+                                for (i = 0; i < topics.length; i++) {
+                                    var topic = topics[i].output;
+                                    log.debug('Sending a prediction message to topic \'%s\'', topic);
+                                    broker.send(topic, brokerMsgStr);
+                                }
+                                xcb();
+                            } catch (e) {
+                                xcb(e);
                             }
-                            xcb();
                         }
                     ], function (e) {
                         if (e != null) {
