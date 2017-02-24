@@ -22,6 +22,8 @@ module.exports = exports = function (opts) {
     var onRemoveBc = opts.onRemove;
     var db = opts.db;
 
+    var nUpdates = 0;
+
     function getModel(modelId) {
         if (!(modelId in store)) {
             log.warn('Tried to get a model that is not in the model store!');
@@ -271,6 +273,11 @@ module.exports = exports = function (opts) {
                     content: outVal
                 }));
             }
+            nUpdates++;
+        },
+
+        getNumberOfUpdates: function () {
+            return nUpdates;
         },
 
         getActiveModels: function () {

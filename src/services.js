@@ -306,6 +306,14 @@ function initStreamStoryHandlers(model, enable) {
                 log.debug('Sending prediction, with PDF length: %d', probV.length);
 
             try {
+                // get the number of updates from the model store
+                // if we are just initializing (number of updates <= 2) then
+                // do not send any predictions
+                if (modelStore.getNumberOfUpdates() <= 2) {
+                    log.info('Blocking prediction, still initializing!');
+                    return;
+                }
+
                 var _model = model.getModel();
 
                 var currStateNm = _model.getStateName(currState);
