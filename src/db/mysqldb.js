@@ -396,7 +396,6 @@ module.exports = function () {
                     sql: 'SELECT config FROM model WHERE mid = ?',
                     params: [mid],
                     nextOp: function (conn, onsuccess, onerror, results) {
-                        console.log('Found results: ' + JSON.stringify(results));
                         if (results.length == 0)
                             onerror(new Error('Model with ID "' + mid + '" does not exist!'));
                         else
