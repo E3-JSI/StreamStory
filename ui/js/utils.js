@@ -50,7 +50,61 @@ StreamStory.Utils.executeLastExecutor = function () {
     }
 }
 
+/**
+ * Handles GET requests to the server.
+ *
+ * @param {string} url - the path on the server
+ * @param {Object} params - parameters
+ * @param {function} callback - standard callback
+ */
+StreamStory.Utils.get = function (url, params, callback) {
+    if (params == null) { params = {}; }
+
+    $.ajax(url, {
+        data: params,
+        method: 'GET',
+        dataType: 'json',
+        contentType: 'application/json',
+        success: function (data) {
+            callback(undefined, data);
+        },
+        error: StreamStory.Utils.handleAjaxError(null, callback)
+    });
+}
+
+StreamStory.Utils.post = function (url, data, callback) {
+    if (data == null) { data = {}; }
+
+    $.ajax(url, {
+        dataType: 'json',
+        contentType: 'application/json',
+        type: 'POST',
+        data: data,
+        success: function (data) {
+            callback(undefined, data);
+        },
+        error: StreamStory.Utils.handleAjaxError(null, callback)
+    });
+}
+
 StreamStory.Utils.handleAjaxError = handleAjaxError;
+
+//=============================================
+// BROWSER
+//=============================================
+
+StreamStory.Browser = {};
+
+StreamStory.Browser.getUrlPath = function () {
+    return window.location.href;
+}
+StreamStory.Browser.redirect = function (url) {
+    window.location.assign(url);
+}
+
+StreamStory.Browser.replaceUrlPath = function (url) {
+    window.history.replaceState({}, document.title, url);
+}
 
 function isNumber(val) {
     return !isNaN(val);

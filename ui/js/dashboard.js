@@ -271,6 +271,110 @@ function unshare() {
 
 (function () {
     //=======================================================
+    // HELPER CLASSES
+    //=======================================================
+
+    function PresetFormSettings(settings) {
+        var self = this;
+        self._settings = settings;
+    }
+
+    PresetFormSettings.prototype.getSelectedAttributes = function () {
+        var attrs = this._settings.attrs;
+        var result = [];
+        for (var i = 0; i < attrs.length; i++) {
+            result.push(attrs[i].name);
+        }
+        return result;
+    }
+
+    PresetFormSettings.prototype.getAttributeTypes = function () {
+        var attrs = this._settings.attrs;
+        var typeH = {};
+        for (var i = 0; i < attrs.length; i++) {
+            typeH[attrs[i].name] = attrs[i].type;
+        }
+        return typeH;
+    }
+
+    PresetFormSettings.prototype.getControlAttrs = function () {
+        var attrs = this._settings.controlAttrs;
+        var result = [];
+        for (var i = 0; i < attrs.length; i++) {
+            result.push(attrs[i].name);
+        }
+        return result;
+    }
+
+    PresetFormSettings.prototype.getIgnoredAttrs = function () {
+        var attrs = this._settings.ignoredAttrs;
+        var result = [];
+        for (var i = 0; i < attrs.length; i++) {
+            result.push(attrs[i].name);
+        }
+        return result;
+    }
+
+    PresetFormSettings.prototype.getDiffAttrs = function () {
+        var attrs = this._settings.derivAttrs;
+        return attrs.map(function (val) {
+            return val.name;
+        })
+    }
+
+    PresetFormSettings.prototype.getTimeAttr = function () {
+        return this._settings.time;
+    }
+
+    PresetFormSettings.prototype.getTimeUnit = function () {
+        return this._settings.timeUnit;
+    }
+
+    PresetFormSettings.prototype.getIncludeTimeFtrV = function () {
+        return this._settings.clust.includeTimeFeatures;
+    }
+
+    PresetFormSettings.prototype.getClusteringAlgorithm = function () {
+        return this._settings.clust.type;
+    }
+
+    PresetFormSettings.prototype.getKMeansK = function () {
+        if (this.getClusteringAlgorithm() != 'kmeans') throw new Error('Invalid clustering algorithm!');
+        return this._settings.clust.k;
+    }
+
+    PresetFormSettings.prototype.getDpMeansMinStates = function () {
+        if (this.getClusteringAlgorithm() != 'dpmeans') throw new Error('Invalid clustering algorithm!');
+        return this._settings.clust.minStates;
+    }
+
+    PresetFormSettings.prototype.getDpMeansMaxStates = function () {
+        if (this.getClusteringAlgorithm() != 'dpmeans') throw new Error('Invalid clustering algorithm!');
+        return this._settings.clust.maxStates;
+    }
+
+    PresetFormSettings.prototype.getDpMeansLambda = function () {
+        if (this.getClusteringAlgorithm() != 'dpmeans') throw new Error('Invalid clustering algorithm!');
+        return this._settings.clust.lambda;
+    }
+
+    PresetFormSettings.prototype.getHierarchyType = function () {
+        return this._settings.hierarchyType;
+    }
+
+    PresetFormSettings.prototype.getModelName = function () {
+        return this._settings.name;
+    }
+
+    PresetFormSettings.prototype.getModelDescription = function () {
+        return this._settings.description;
+    }
+
+    PresetFormSettings.prototype.isRealTime = function () {
+        return this._settings.isRealTime;
+    }
+
+    //=======================================================
     // MODEL
     //=======================================================
 
@@ -302,6 +406,10 @@ function unshare() {
                 done(err);
             }
         })
+    }
+
+    ConfigureFormModel.prototype.getModelSettings = function (mid, callback) {
+        StreamStory.Utils.get('/api/modelConfig', { mid: mid }, callback);
     }
 
     //=======================================================
@@ -338,6 +446,8 @@ function unshare() {
             done: opts.done
         }
 
+        self._presetSettings = null;
+
         self.model = opts.model;
         self.view = opts.view;
 
@@ -367,10 +477,24 @@ function unshare() {
         self.modelName = null;
         self.modelDescription = null;
 
-        self.registerHandlers();
+        self._registerHandlers();
     }
 
-    ConfigureFormController.prototype.registerHandlers = function () {
+    ConfigureFormController.prototype.preloadModelSettings = function (modelId, callback) {
+        var self = this;
+        // first fetch the settings
+        self.model.getModelSettings(modelId, function (e, settings) {
+            if (e != null) return callback(e);
+            try {
+                self._storePresetSettings(settings);
+                callback();
+            } catch (e) {
+                callback(e);
+            }
+        })
+    }
+
+    ConfigureFormController.prototype._registerHandlers = function () {
         var self = this;
 
         var model = self.model;
@@ -392,7 +516,7 @@ function unshare() {
                 view.setUploadProgress(prog);
             }
 
-            var done = function (e, data) {
+            model.uploadData(data, onProgress, function (e, data) {
                 if (e != null) {
                     self._setAvailableAttrs(null, null);
                     return self._showError(e);
@@ -410,13 +534,11 @@ function unshare() {
                 })();
 
                 self._setAvailableAttrs(fields, guessedTypes);
-            }
-
-            model.uploadData(data, onProgress, done);
+            });
         })
 
         addViewHandler('attributesSelected', function (attrs) {
-            self._setSelectedAttrs(attrs);
+            self._setSelectedAttrs(attrs, false);
         })
 
         addViewHandler('timeUnitChanged', function (opts) {
@@ -428,7 +550,7 @@ function unshare() {
         })
 
         addViewHandler('timeAttrSelected', function (timeAttr) {
-            self._setTimeAttr(timeAttr);
+            self._setTimeAttr(timeAttr, false);
         })
 
         addViewHandler('attributeTypeChanged', function (opts) {
@@ -496,6 +618,8 @@ function unshare() {
         addViewHandler('doneClicked', self._finish)
     }
 
+
+
     ConfigureFormController.prototype._handleClustAlgChange = function (value, refreshView) {
         if (refreshView == null) refreshView = true;
 
@@ -528,17 +652,150 @@ function unshare() {
     ConfigureFormController.prototype._setAvailableAttrs = function (attrs, guessedTypes) {
         var self = this;
 
-        // store the data
-        self.availableAttributes = attrs;
-        self.guessedTypes = guessedTypes;
+        try {
+            if (self._isPresetSettings()) {
+                var selected = self._presetSettings.getSelectedAttributes();
+                // assert that the correct file was selected
+                // check that all the attributes that are selected are in the files
+                // schema
+                var allAttrH = {};
+                for (var attrN = 0; attrN < attrs.length; attrN++) {
+                    allAttrH[attrs[attrN].name] = true;
+                }
+                for (var selectedN = 0; selectedN < selected.length; selectedN++) {
+                    if (!(selected[selectedN] in allAttrH)) {
+                        throw new Error('Invalid file selected!');
+                    }
+                }
+            }
 
-        if (attrs != null) {
-            self.view.showAvailableAttrs(attrs);
-            self._setPhase(self._PHASE_SELECT_ATTRIBUTES);
+            // store the data
+            self.availableAttributes = attrs;
+            self.guessedTypes = guessedTypes;
+
+            if (attrs != null) {
+                self.view.showAvailableAttrs(attrs);
+                self._setPhase(self._PHASE_SELECT_ATTRIBUTES);
+            }
+
+            if (self._isPresetSettings()) {
+                var settings = self._presetSettings;
+                // selected attributes
+                self._setSelectedAttrs(settings.getSelectedAttributes());
+                // time related stuff
+                self._setTimeAttr(settings.getTimeAttr());
+                self._setTimeUnit(settings.getTimeUnit());
+                self._setIncludeTimeFtrV(settings.getIncludeTimeFtrV());
+                // set types
+                (function () {
+                    var typeH = settings.getAttributeTypes();
+                    var timeAttr = settings.getTimeAttr();
+
+                    var available = attrs.map(function (attr) {
+                        return attr.name;
+                    }).filter(function (val) {
+                        return /*!(val in controlH || val in ignoredH) &&*/ val != timeAttr;
+                    })
+
+                    self.attrTypeH = typeH;
+                    self.view.showSelectAttrTypes(available, typeH);
+                })();
+                // set derivative settings
+                (function () {
+                    var timeAttr = settings.getTimeAttr();
+                    var includeAttrs = settings.getDiffAttrs();
+                    var configurableAttrs = settings.getSelectedAttributes().filter(function (attr) {
+                        return attr != timeAttr;
+                    })
+                    var selectedH = {};
+                    for (var i = 0; i < includeAttrs.length; i++) {
+                        var attr = includeAttrs[i];
+                        selectedH[attr] = true;
+                        self.attrDiffH[attr] = true;
+                    }
+                    self.view.showConfigureDerivatives(configurableAttrs, selectedH);
+                })();
+                // set clustering
+                (function () {
+                    var alg = settings.getClusteringAlgorithm();
+                    self._setClustering(alg);
+                    switch (alg) {
+                        case 'kmeans': {
+                            self._setKMeansK(settings.getKMeansK());
+                            break;
+                        }
+                        case 'dpmeans': {
+                            self._setDpMeansMinStates(settings.getDpMeansMinStates());
+                            self._setDpMeansMaxStates(settings.getDpMeansMaxStates());
+                            self._setDpMeansLambda(settings.getDpMeansLambda());
+                            break;
+                        }
+                        default: {
+                            throw new Error('Unknown clustering algorithm: ' + alg);
+                        }
+                    }
+                    self.view.showKMeans(alg == 'kmeans');
+                    self.view.showDpMeans(alg == 'dpmeans');
+                })();
+                self._setHierarchyType(settings.getHierarchyType());
+
+                // set control and ignored attributes
+                (function () {
+                    var timeAttr = settings.getTimeAttr();
+
+                    var control = settings.getControlAttrs();
+                    var ignored = settings.getIgnoredAttrs();
+
+                    var controlH = {};
+                    var ignoredH = {};
+
+                    for (var i = 0; i < control.length; i++) {
+                        controlH[control[i]] = true;
+                    }
+                    for (var j = 0; j < ignored.length; j++) {
+                        ignoredH[ignored[j]] = true;
+                    }
+
+                    var available = attrs.map(function (attr) {
+                        return attr.name;
+                    }).filter(function (val) {
+                        return /*!(val in controlH || val in ignoredH) &&*/ val != timeAttr;
+                    })
+
+                    var availableControl = available.filter(function (val) {
+                        return !(val in ignoredH);
+                    })
+                    var availableIgnored = available.filter(function (val) {
+                        return !(val in controlH);
+                    })
+
+                    self.controlAttrH = controlH;
+                    self.ignoredAttrH = ignoredH;
+                        
+                    self.view.showSelectControlAttrs(availableControl, self.controlAttrH);
+                    self.view.showSelectIgnoredAttrs(availableIgnored, self.ignoredAttrH);
+                })();
+
+                self._setModelName(settings.getModelName());
+                self._setModelDescription(settings.getModelDescription());
+
+                self.setIsRealTime(settings.isRealTime());
+
+                self._presetSettings = null;
+                // remove the parameters from the URL
+                var url = StreamStory.Browser.getUrlPath();
+                StreamStory.Browser.replaceUrlPath(url.substring(0, url.indexOf('?')));
+            }
+        } catch (e) {
+            console.error('Exception while setting available attributes!');
+            console.error(e);
+            self._showError(e);
         }
+
     }
 
-    ConfigureFormController.prototype._setSelectedAttrs = function (attrs) {
+    ConfigureFormController.prototype._setSelectedAttrs = function (attrs, refreshView) {
+        if (refreshView == null) { refreshView = true; }
         var self = this;
 
         if (attrs == null || attrs.length == 0) {
@@ -546,7 +803,11 @@ function unshare() {
             return;
         }
 
+        // set the selected attributes
         self.selectedAttributes = attrs;
+        if (refreshView) {
+            self.view.showAvailableAttrs(self.availableAttributes, attrs);
+        }
         // show configure time attribute
         self.view.showSelectTimeAttr(attrs);
         // set the default time unit
@@ -558,10 +819,15 @@ function unshare() {
         self._setPhase(self._PHASE_CONFIGURE_TIME);
     }
 
-    ConfigureFormController.prototype._setTimeAttr = function (value) {
+    ConfigureFormController.prototype._setTimeAttr = function (value, refreshView) {
+        if (refreshView == null) { refreshView = true; }
         var self = this;
 
         self.timeAttr = value;
+        if (refreshView) {
+            self.view.showSelectedTimeAttr(value);
+        }
+
         self.controlAttrH = {};
         self.ignoredAttrH = {};
 
@@ -660,15 +926,6 @@ function unshare() {
         }
     }
 
-    ConfigureFormController.prototype._setDpMeansMinStates = function (value, refreshView) {
-        if (refreshView == null) refreshView = true;
-
-        this.clustOpts.minStates = value;
-        if (refreshView) {
-            this.view.setDpMeansMinStates(value);
-        }
-    }
-
     ConfigureFormController.prototype._setHierarchyType = function (value, refreshView) {
         if (refreshView == null) refreshView = true;
 
@@ -717,12 +974,25 @@ function unshare() {
         this.isRealTime = isRealTime;
     }
 
+    ConfigureFormController.prototype._show = function () {
+        var self = this;
+        self._resetVals();
+        self.view.show(true);
+    }
+
+    ConfigureFormController.prototype._hide = function () {
+        var self = this;
+        self._presetSettings = null;
+        self.view.show(false);
+    }
+
     ConfigureFormController.prototype.show = function (show) {
         var self = this;
         if (show) {
-            self._resetVals();
+            self._show();
+        } else {
+            self._hide();
         }
-        self.view.show(show);
     }
 
     ConfigureFormController.prototype._checkValuesPresent = function () {
@@ -765,6 +1035,15 @@ function unshare() {
 
     ConfigureFormController.prototype._checkEnableDone = function () {
         this.view.enableDone(this._checkValuesPresent());
+    }
+
+    ConfigureFormController.prototype._isPresetSettings = function () {
+        return this._presetSettings != null;
+    }
+
+    ConfigureFormController.prototype._storePresetSettings = function (settings) {
+        var self = this;
+        self._presetSettings = new PresetFormSettings(settings);
     }
 
     ConfigureFormController.prototype._finish = function () {
@@ -1113,7 +1392,7 @@ function unshare() {
 
     // RENDERING
 
-    ConfigureFormView.prototype.showAvailableAttrs = function (fields) {
+    ConfigureFormView.prototype.showAvailableAttrs = function (fields, selected) {
         var self = this;
 
         var select = $('#select-attrs');
@@ -1122,9 +1401,22 @@ function unshare() {
 
         if (fields == null || fields.length == 0) return;
 
+        var selectedSet = (function () {
+            var result = {};
+            if (selected == null) return result;
+            for (var i = 0; i < selected.length; i++) {
+                result[selected[i]] = true;
+            }
+            return result;
+        })();
+
         for (var i = 0; i < fields.length; i++) {
             var attr = fields[i].name;
-            select.append('<option value="' + attr.replace(/\"/g, '&quot;') + '">' + attr + '</option>');
+            var option = $('<option value="' + attr.replace(/\"/g, '&quot;') + '">' + attr + '</option>');
+            if (attr in selectedSet) {
+                option.attr('selected', 'selected');
+            }
+            select.append(option);
         }
         select.bootstrapDualListbox({
             showFilterInputs: true,
@@ -1166,6 +1458,17 @@ function unshare() {
         });
     }
 
+    ConfigureFormView.prototype.showSelectedTimeAttr = function (value) {
+        var timeRadios = $('#radio-time');
+        if (value == null) {
+            timeRadios.find('input').prop('checked', false);
+        } else {
+            var radio = timeRadios.find("input[value='" + value + "']");
+            if (radio.length == 0) throw new Error('Could not find the time radio button!');
+            radio.prop('checked', true);
+        }
+    }
+
     ConfigureFormView.prototype.showSelectAttrTypes = function (attributes, predefTypes) {
         var self = this;
 
@@ -1193,7 +1496,7 @@ function unshare() {
 
             if (type == 'numeric') {
                 inputNum.attr('checked', 'checked');
-            } else if (type == 'categorical') {
+            } else if (type == 'categorical' || type == 'nominal') {
                 inputNom.attr('checked', 'checked');
             }
 
@@ -1221,8 +1524,10 @@ function unshare() {
         });
     }
 
-    ConfigureFormView.prototype.showConfigureDerivatives = function (attributes) {
+    ConfigureFormView.prototype.showConfigureDerivatives = function (attributes, selected) {
         var self = this;
+
+        if (selected == null) { selected = {} }
 
         var container = $('#div-select-add-deriv');
         container.html('');
@@ -1230,9 +1535,15 @@ function unshare() {
             var attr = attributes[i];
 
             var div = $('<div class="checkbox">' + attr + '</div>');
-            var input = $('<span class="pull-right"><input type="checkbox" id="chk-add-deriv-' + i + '" /></span>');
+            var span = $('<span class="pull-right"></span>');
+            var input = $('<input type="checkbox" id="chk-add-deriv-' + i + '" />')
 
-            div.append(input);
+            if (attr in selected) {
+                input.prop('checked', true);
+            }
+
+            span.append(input);
+            div.append(span);
             container.append(div);
         }
 
@@ -1599,6 +1910,20 @@ function unshare() {
                 onModelDone(e, data);
             });
             $('#btn-add-online,#btn-add-offline').attr('disabled', 'disabled');
+        }
+
+        // parse the URL parameters and check if we need to reconfigure an existing model
+        // if so, immediatelly open the configuration window
+        var reconfMid = $(document).getUrlParam('reconf');
+        if (reconfMid != null) {
+            configureController.preloadModelSettings(reconfMid, function (e) {
+                if (e != null) {
+                    console.error(e);
+                    // TODO show error in the UI
+                    return;
+                }
+                configureController.show(true);
+            });
         }
     })
 })();

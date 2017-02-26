@@ -85,6 +85,25 @@ ModelManager.prototype.countTotalActive = function (callback) {
     });
 }
 
+/**
+ * Returns the configuration which was used to create the model through the standard
+ * callback.
+ *
+ * @param {number} modelId - the models identifier
+ * @param {function} callback - standard callback
+ */
+ModelManager.prototype.getModelConfiguration = function (modelId, callback) {
+    if (modelId == null) return callback(new Error('Model ID missing!'));
+
+    var self = this;
+
+    self._db.fetchModelConfiguration(modelId, function (e, config) {
+        if (e != null) return callback(e);
+        if (config == null) return callback(new Error('Could not find configuration!'));
+        callback(undefined, JSON.parse(config));
+    })
+}
+
 ModelManager.prototype._processOutputMessages = function (messages) {
     var result = [];
     for (var i = 0; i < messages.length; i++) {

@@ -433,7 +433,7 @@ module.exports = exports = function (opts) {
 
             buildingModelStore[username].progressCallback = null;
         },
-        buildModel: function (opts, callback) {
+        buildModel: function (opts, configMemento, callback) {
             if (callback == null) callback = function (e) { log.error(e, 'Exception while buillding model!'); }
             if (that.isBuildingModel(opts.username)) throw new Error('User ' + opts.username + ' is already building a model!');
 
@@ -658,7 +658,8 @@ module.exports = exports = function (opts) {
                                     dataset: datasetName,
                                     name: modelName,
                                     description: description,
-                                    is_active: 1
+                                    is_active: 1,
+                                    config: JSON.stringify(configMemento)
                                 }
 
                                 log.info('Storing a new online model ...');
@@ -684,7 +685,8 @@ module.exports = exports = function (opts) {
                                     model_file: fname,
                                     dataset: datasetName,
                                     name: modelName,
-                                    description: description
+                                    description: description,
+                                    config: JSON.stringify(configMemento)
                                 }
 
                                 log.info('Storing a new offline model ...');

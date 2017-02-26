@@ -389,6 +389,23 @@ module.exports = function () {
             });
         },
 
+        fetchModelConfiguration: function (mid, callback) {
+            connection({
+                callback: callback,
+                nextOp: query({
+                    sql: 'SELECT config FROM model WHERE mid = ?',
+                    params: [mid],
+                    nextOp: function (conn, onsuccess, onerror, results) {
+                        console.log('Found results: ' + JSON.stringify(results));
+                        if (results.length == 0)
+                            onerror(new Error('Model with ID "' + mid + '" does not exist!'));
+                        else
+                            onsuccess(results[0].config);
+                    }
+                })
+            });
+        },
+
         storeOnlineModel: function (opts, callback) {
             var is_active = opts.is_active;
 

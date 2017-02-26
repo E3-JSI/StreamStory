@@ -2493,39 +2493,56 @@
         $('#div-curr-activity-step').find('.thumbnail').css('background-color', getStepColor());
     })();
 
-$(document).ready(function () {
-    firstBottomVizTab = $('#tabs-viz-bottom').find('a')[0];
+    $(document).ready(function () {
+        $('#btn-reconfigure').click(function () {
+            // close the options window
+            $('#content-options').slideToggle();
+            // prompt if the user is sure and then reconfigure the model
+            promptConfirm('Reconfigure Model', 'Are you sure you wish to reconfigure the model?', function () {
+                StreamStory.Utils.get('/api/modelId', null, function (e, data) {
+                    if (e != null) {
+                        alert('An error ocurred while initializing reconfiguration!');
+                        return;
+                    }
+                    StreamStory.Browser.redirect('dashboard.html?reconf=' + data.modelId);
+                })
+            });
+        })
+    })
 
-    $('#div-msg-0, #div-msg-1').alert();
+    $(document).ready(function () {
+        firstBottomVizTab = $('#tabs-viz-bottom').find('a')[0];
 
-    $('.nav-pills a').click(function () {
-        TAB_ID = $(this).attr('id');
+        $('#div-msg-0, #div-msg-1').alert();
 
-        if (TAB_ID == 'a-default') {
-            $('#tabs-viz-bottom').find('a')[0].click();
+        $('.nav-pills a').click(function () {
+            TAB_ID = $(this).attr('id');
 
-            if (viz.isInit()) {
-                viz.resetMode();
-                timelineController.init();
+            if (TAB_ID == 'a-default') {
+                $('#tabs-viz-bottom').find('a')[0].click();
+
+                if (viz.isInit()) {
+                    viz.resetMode();
+                    timelineController.init();
+                }
+                // TODO fetch the histograms
+                // TODO reload the decision tree
             }
-            // TODO fetch the histograms
-            // TODO reload the decision tree
-        }
-        else if (TAB_ID == 'a-activities') {
-            viz.setMode(viz.MODE_ACTIVITY);
-        }
+            else if (TAB_ID == 'a-activities') {
+                viz.setMode(viz.MODE_ACTIVITY);
+            }
+        });
+
+        $('#tabs-viz-bottom a').click(function () {
+            var tabId = $(this).attr('id');
+
+            if (tabId == 'a-timehist') {
+                $('#btns-timescale button')[0].click();
+            }
+        });
+
+        $('.nav-pills a')[0].click()
+
+        firstBottomVizTab.click();
     });
-
-    $('#tabs-viz-bottom a').click(function () {
-        var tabId = $(this).attr('id');
-
-        if (tabId == 'a-timehist') {
-            $('#btns-timescale button')[0].click();
-        }
-    });
-
-    $('.nav-pills a')[0].click()
-
-    firstBottomVizTab.click();
-});
 })()

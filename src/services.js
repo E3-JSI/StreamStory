@@ -11,6 +11,7 @@ var cookieParser = require('cookie-parser');
 
 var SessionStore = require('./util/sessionstore.js');
 var utils = require('./utils.js');
+// var consts = require('./util/consts.js');    // TODO add back
 var broker = require('./broker.js');
 var config = require('../config.js');
 var fields = require('../fields.js');
@@ -45,7 +46,7 @@ var app = express();
 
 var fileBuffH = {}; // if I store the file buffer directly into the session, the request takes forever to complete
 
-var titles = {
+var titles = {  // TODO use consts
     '': 'Index',
     'index.html': 'Index',
     'login.html': 'Login',
@@ -1029,6 +1030,20 @@ function initStreamStoryRestApi() {
                 utils.handleServerError(e, req, res);
             }
         });
+
+        app.get(API_PATH + '/modelId', function (req, res) {
+            try {
+                var model = getModel(req.sessionID, req.session);
+
+                if (model == null || model.getId() == null) throw new Error('No model present!');
+
+                res.send({ modelId: model.getId() });
+                res.end();
+            } catch (e) {
+                log.error(e, 'Failed to query MHWirth multilevel visualization!');
+                utils.handleServerError(e, req, res);
+            }
+        });
     }
 
     {
@@ -1861,17 +1876,19 @@ function initDataUploadApi() {
 
             var username = session.username;
 
-            var timeAttr = req.body.time;
-            var modelName = req.body.name;
-            var description = req.body.description;
-            var timeUnit = req.body.timeUnit;
-            var attrs = req.body.attrs;
-            var controlAttrs = req.body.controlAttrs;
-            var ignoredAttrs = req.body.ignoredAttrs;
-            var isRealTime = req.body.isRealTime;
-            var hierarchy = req.body.hierarchyType;
-            var clustConfig = req.body.clust;
-            var derivAttrs = req.body.derivAttrs;
+            var modelConfig = req.body;
+
+            var timeAttr = modelConfig.time;
+            var modelName = modelConfig.name;
+            var description = modelConfig.description;
+            var timeUnit = modelConfig.timeUnit;
+            var attrs = modelConfig.attrs;
+            var controlAttrs = modelConfig.controlAttrs;
+            var ignoredAttrs = modelConfig.ignoredAttrs;
+            var isRealTime = modelConfig.isRealTime;
+            var hierarchy = modelConfig.hierarchyType;
+            var clustConfig = modelConfig.clust;
+            var derivAttrs = modelConfig.derivAttrs;
 
             var fileBuff = fileBuffH[sessionId];
             var datasetName = session.datasetName;
@@ -1978,7 +1995,7 @@ function initDataUploadApi() {
                     res.end();
 
                     // build the model
-                    modelStore.buildModel(opts, function (e, mid, model) {  // TODO check if the user is currently viewing a model before saving the new one to session???
+                    modelStore.buildModel(opts, modelConfig, function (e, mid, model) {  // TODO check if the user is currently viewing a model before saving the new one to session???
                         if (e != null) {
                             log.error('Exception while building model!');
                             return;
@@ -2189,6 +2206,24 @@ function initDataUploadApi() {
                 utils.handleServerError(e1, req, res);
             }
         });
+    });
+
+    app.get(API_PATH + '/modelConfig', function (req, res) {
+        try {
+            var mid = req.query.mid;
+
+            modelManager.getModelConfiguration(mid, function (e, config) {
+                if (e != null) {
+                    utils.handleServerError(e, req, res);
+                    return;
+                }
+                res.send(config);
+                res.end();
+            })
+        } catch (e) {
+            log.error(e, 'Failed to query configuration!');
+            utils.handleServerError(e, req, res);
+        }
     });
 }
 
