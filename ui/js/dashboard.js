@@ -409,7 +409,7 @@ function unshare() {
     }
 
     ConfigureFormModel.prototype.getModelSettings = function (mid, callback) {
-        StreamStory.Utils.get('/api/modelConfig', { mid: mid }, callback);
+        StreamStory.Utils.get('api/modelConfig', { mid: mid }, callback);
     }
 
     //=======================================================

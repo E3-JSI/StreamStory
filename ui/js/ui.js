@@ -2499,7 +2499,7 @@
             $('#content-options').slideToggle();
             // prompt if the user is sure and then reconfigure the model
             promptConfirm('Reconfigure Model', 'Are you sure you wish to reconfigure the model?', function () {
-                StreamStory.Utils.get('/api/modelId', null, function (e, data) {
+                StreamStory.Utils.get('api/modelId', null, function (e, data) {
                     if (e != null) {
                         alert('An error ocurred while initializing reconfiguration!');
                         return;
