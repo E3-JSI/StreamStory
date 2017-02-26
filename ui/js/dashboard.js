@@ -833,6 +833,8 @@ function unshare() {
 
         if (value == null) return;
 
+        // use guessed types
+        self.attrTypeH = {};
         var configurableAttrs = self._getConfigurableAttrs();
         for (var i = 0; i < configurableAttrs.length; i++) {
             var attr = configurableAttrs[i];
