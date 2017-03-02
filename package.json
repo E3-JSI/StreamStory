@@ -29,6 +29,7 @@
     "kafka-node": "^0.4.0",
     "mathjs": "^3.5.3",
     "mkdirp": "^0.5.1",
+    "mocha": "^3.2.0",
     "multer": "^1.0.3",
     "mysql": "^2.9.0",
     "nodemailer": "^1.11.0",

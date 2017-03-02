@@ -12,7 +12,7 @@
     },
     "log": {
         "logger": {
-            "level": "info",
+            "level": "debug",
             "outputMode": "short",
             "stream": {
                 "type": "stdout",

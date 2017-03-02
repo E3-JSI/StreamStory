@@ -771,7 +771,7 @@ function unshare() {
 
                     self.controlAttrH = controlH;
                     self.ignoredAttrH = ignoredH;
-                        
+
                     self.view.showSelectControlAttrs(availableControl, self.controlAttrH);
                     self.view.showSelectIgnoredAttrs(availableIgnored, self.ignoredAttrH);
                 })();

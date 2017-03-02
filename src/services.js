@@ -1,199 +1,84 @@
-var async = require('async');
-var path = require('path');
-var fs = require('fs');
-var mkdirp = require('mkdirp');
+let async = require('async');
+let path = require('path');
+let fs = require('fs');
+let mkdirp = require('mkdirp');
 
-var express = require('express');
-var bodyParser = require("body-parser");
-var multer = require('multer');
-var session = require('express-session');
-var cookieParser = require('cookie-parser');
+let express = require('express');
+let bodyParser = require("body-parser");
+let multer = require('multer');
+let session = require('express-session');
+let cookieParser = require('cookie-parser');
 
-var SessionStore = require('./util/sessionstore.js');
-var utils = require('./utils.js');
-// var consts = require('./util/consts.js');    // TODO add back
-var broker = require('./broker.js');
-var config = require('../config.js');
-var fields = require('../fields.js');
-var transform = require('./util/transform.js');
-var fzi = require('./util/fzi_integration.js');
-var externalAuth = require('./util/external_auth.js');
+let SessionStore = require('./util/sessionstore.js');
+let utils = require('./utils.js');
+let consts = require('./util/consts.js');
+let broker = require('./broker.js');
+let config = require('../config.js');
+let fields = require('../fields.js');
+let transform = require('./util/transform.js');
+let fzi = require('./util/fzi_integration.js');
+let externalAuth = require('./util/external_auth.js');
 
-var ModelStore = require('./util/modelstore.js');
-var WebSocketWrapper = require('./util/servicesutil.js');
+let ModelStore = require('./util/modelstore.js');
+let WebSocketWrapper = require('./util/servicesutil.js');
 
-var ssmodules = require('./ssmodules.js');
+let ssmodules = require('./ssmodules.js');
 
-var perf = require('./util/perf_tools.js');
+let perf = require('./util/perf_tools.js');
 
-var throughput = perf.throughput();
-// var latency = perf.latency();
-// var toc = function () {};
+// CLASSES
+let HttpUtils = ssmodules.HttpUtils;
 
-var qmutil = qm.qm_util;
+let throughput = perf.throughput();
+// let latency = perf.latency();
+// let toc = function () {};
 
-var UI_PATH = '/';
-var LOGIN_PATH = '/login';
-var API_PATH = '/api';
-var DATA_PATH = '/data';
-var WS_PATH = '/ws';
+let qmutil = qm.qm_util;
 
-var LONG_REQUEST_TIMEOUT = 1000*60*60*24;   // 24 hours
+let UI_PATH = '/';
+let LOGIN_PATH = '/login';
+let API_PATH = '/api';
+let DATA_PATH = '/data';
+let WS_PATH = '/ws';
 
-var FZI_TOKEN_KEY = 'fzi-token';
+let LONG_REQUEST_TIMEOUT = 1000*60*60*24;   // 24 hours
 
-var app = express();
+let FZI_TOKEN_KEY = 'fzi-token';
 
-var fileBuffH = {}; // if I store the file buffer directly into the session, the request takes forever to complete
+let app = express();
 
-var titles = {  // TODO use consts
-    '': 'Index',
-    'index.html': 'Index',
-    'login.html': 'Login',
-    'register.html': 'Register',
-    'resetpassword.html': 'Reset Password',
-    'dashboard.html': 'Dashboard',
-    'ui.html': 'View Model',
-    'profile.html': 'Profile'
-};
+let fileBuffH = {}; // if I store the file buffer directly into the session, the request takes forever to complete
 
-var base;
+let titles = {};
+titles[consts.pages.INDEX] = 'Index';
+titles[consts.pages.LOGIN] = 'Login';
+titles[consts.pages.REGISTER] = 'Register';
+titles[consts.pages.RESET_PASSWORD] = 'Reset Password';
+titles[consts.pages.DASHBOARD] = 'Dashboard';
+titles[consts.pages.MODEL] = 'View Model';
+titles[consts.pages.PROFILE] = 'Profile';
 
-var db;
-var pipeline;
-var modelStore;
-var modelManager;
+let base;
 
-var counts = {};
-var storeLastTm = {};
-var totalCounts = 0;
+let db;
+let pipeline;
+let modelStore;
+let modelManager;
 
-var lastRawTime = -1;
-var intensConfig = {};
+let counts = {};
+let storeLastTm = {};
+let totalCounts = 0;
 
-function activateModel(model) {
-    try {
-        if (log.info()) {
-            log.info('Activating an online model, ID: %s ...', model.getId());
-        }
-
-        modelStore.add(model);
-        initStreamStoryHandlers(model, true);
-        model.setActive(true);
-    } catch (e) {
-        log.error(e, 'Failed to activate real-time model!');
-        throw e;
-    }
-}
-
-function deactivateModel(model) {
-    try {
-        log.info('Deactivating an online model ...');
-        modelStore.remove(model);
-        initStreamStoryHandlers(model, false);
-        model.setActive(false);
-    } catch (e) {
-        log.error(e, 'Failed to deactivate a model!');
-    }
-}
-
-function closeBase(session) {
-    if (session.base == null)
-        return;
-
-    if (log.debug())
-        log.debug('Closing base ...');
-
-    if (session.base != null) {
-        if (session.base == base) {
-            log.debug('Will not close base as it is the real-time base ...');
-        } else {
-            if (log.debug())
-                log.debug('Closing base for user %s ...', session.username);
-
-            if (!session.base.isClosed()) {
-                session.base.close();
-                log.debug('Base closed!');
-            } else {
-                log.debug('Base already closed, no need to close again!');
-            }
-        }
-    }
-}
-
-//=====================================================
-// SESSION
-//=====================================================
-
-function getModel(sessionId, session) {
-    return session.model;
-}
-
-function getModelFile(session) {
-    return session.modelFile;
-}
-
-function cleanUpSessionModel(sessionId, session) {
-    if (log.debug())
-        log.debug('Cleaning up session %s ...', sessionId);
-
-    closeBase(session);
-
-    delete session.base;
-    delete session.model;
-    delete session.modelId;
-    delete session.modelFile;
-}
-
-function cleanUpSession(sessionId, session) {
-    cleanUpSessionModel(sessionId, session);
-    delete session.username;
-}
-
-function loginUser(session, opts) {
-    if (opts.username == null) throw new Error('Usetname missing when logging in!');
-    if (opts.theme == null) throw new Error('Theme missing when logging in!');
-
-    session.username = opts.username;
-    session.theme = opts.theme;
-}
-
-function isLoggedIn(session) {
-    return session.username != null;
-}
-
-function saveToSession(sessionId, session, userBase, model, modelId, fname) {
-    if (session.base != null)
-        cleanUpSessionModel(sessionId, session);
-
-    if (log.debug())
-        log.debug('Saving new data to session %s ...', sessionId);
-
-    if (userBase.isClosed())
-        throw new Error('Tried to save a closed base to session!');
-
-    session.base = userBase;
-    session.model = model;
-    session.modelId = modelId;
-    session.modelFile = fname;
-
-    if (log.debug())
-        log.debug('Saved to session!');
-}
+let lastRawTime = -1;
+let intensConfig = {};
 
 //=====================================================
 // UTILITY METHODS
 //=====================================================
 
-function getRequestedPage(req) {
-    return req.path.split('/').pop();
-}
-
-function getRequestedPath(req) {
-    var spl = req.path.split('/');
-    spl.pop();
-    return spl.pop();
-}
+// function getRequestedPage(req) {
+//     return req.path.split('/').pop();
+// }
 
 function redirect(res, page) {
     if (log.debug())
@@ -240,246 +125,6 @@ function addRawMeasurement(val) {
     }
 }
 
-function initStreamStoryHandlers(model, enable) {
-    if (model == null) {
-        log.warn('StreamStory is NULL, cannot register callbacks ...');
-        return;
-    }
-
-    log.info('Registering StreamStory callbacks for model %s ...', model.getId());
-
-    if (enable) {
-        log.debug('Registering state changed callback ...');
-        model.onStateChanged(function (date, states) {
-            // toc();
-            // latency.print();
-
-            if (log.debug())
-                log.debug('State changed: %s', JSON.stringify(states));
-
-            modelStore.sendMsg(model.getId(), JSON.stringify({
-                type: 'stateChanged',
-                content: states
-            }));
-
-            if (config.SAVE_STATES) {
-                utils.appendLine('states.txt', JSON.stringify({
-                    time: date.getTime(),
-                    states: states
-                }));
-            }
-        });
-
-        log.debug('Registering anomaly callback ...');
-        model.onAnomaly(function (desc) {
-            if (log.warn())
-                log.warn('Anomaly detected: %s TODO: currently ignoring!', desc);
-
-            // TODO not notifying anyone!
-        });
-
-        log.debug('Registering outlier callback ...');
-        model.onOutlier(function (ftrV) {
-            if (log.debug())
-                log.debug('Outlier detected!');
-
-            // send to broker
-            // var brokerMsg = transform.genExpPrediction(100.1, 'minute', new Date().getTime());
-            // broker.send(broker.PREDICTION_PRODUCER_TOPIC, JSON.stringify(brokerMsg));
-
-            // send to UI
-            var msg = {
-                type: 'outlier',
-                content: ftrV
-            }
-            modelManager.sendMessage(model, msg, function (e) {
-                if (e != null) {
-                    log.error(e, 'Failed to send message to model: ' + model.getId());
-                    return;
-                }
-            })
-            // modelStore.sendMsg(model.getId(), JSON.stringify(msg));
-        });
-
-        log.debug('Registering prediction callback ...');
-        model.onPrediction(function (date, currState, targetState, prob, probV, timeV) {
-            if (log.debug())
-                log.debug('Sending prediction, with PDF length: %d', probV.length);
-
-            try {
-                // get the number of updates from the model store
-                // if we are just initializing (number of updates <= 2) then
-                // do not send any predictions
-                if (modelStore.getNumberOfUpdates() <= 2) {
-                    log.info('Blocking prediction, still initializing!');
-                    return;
-                }
-
-                var _model = model.getModel();
-
-                var currStateNm = _model.getStateName(currState);
-                var targetStateNm = _model.getStateName(targetState);
-
-                db.fetchStateProperty(model.getId(), targetState, 'eventId', function (e, eventId) {
-                    if (e != null) {
-                        log.error(e, 'Failed to fetch event ID from the database!');
-                        return;
-                    }
-
-                    if (currStateNm == null || currStateNm.length == 0) currStateNm = currState;
-                    if (targetStateNm == null || targetStateNm.length == 0) targetStateNm = targetState;
-
-                    var uiMsg = {
-                        type: 'statePrediction',
-                        content: {
-                            time: date.getTime(),
-                            currState: currStateNm,
-                            targetState: targetStateNm,
-                            eventId: eventId,
-                            probability: prob,
-                            pdf: {
-                                type: 'histogram',
-                                probV: probV,
-                                timeV: timeV
-                            }
-                        }
-                    };
-
-                    var currStateIds = _model.currState();
-                    var stateId = currStateIds[0].id;
-                    var level = currStateIds[0].height;
-
-                    var details = model.stateDetails(stateId, level);
-                    var metadata = {};
-
-                    var obs = details.features.observations;
-                    var contr = details.features.controls;
-                    for (var i = 0; i < obs.length; i++) {
-                        var ftr = obs[i];
-                        metadata[ftr.name] = ftr.value;
-                    }
-                    for (i = 0; i < contr.length; i++) {
-                        var contrFtr = contr[i];
-                        metadata[contrFtr.name] = contrFtr.value;
-                    }
-
-                    var brokerMsg = transform.genHistPrediction(
-                        date.getTime(),
-                        eventId,
-                        timeV,
-                        probV,
-                        model.getModel().getTimeUnit(),
-                        metadata
-                    );
-
-                    async.parallel([
-                        function sendUiMsg(xcb) {
-                            try {
-                                // var mid = model.getId();
-                                // modelStore.sendMsg(model.getId(), JSON.stringify(uiMsg));
-                                modelManager.sendMessage(model, uiMsg, xcb);
-                            } catch (e) {
-                                xcb(e);
-                            }
-                        },
-                        function sendBrokerMsg(xcb) {
-                            try {
-                                var mid = model.getId();
-                                var brokerMsgStr = JSON.stringify(brokerMsg);
-
-                                // do not send this prediciton to PANDDA, but only to FZI
-                                // broker.send(broker.PREDICTION_PRODUCER_TOPIC, brokerMsgStr);
-
-                                var topics = fzi.getTopics(fzi.PREDICTION_OPERATION, mid);
-                                for (i = 0; i < topics.length; i++) {
-                                    var topic = topics[i].output;
-                                    log.debug('Sending a prediction message to topic \'%s\'', topic);
-                                    broker.send(topic, brokerMsgStr);
-                                }
-                                xcb();
-                            } catch (e) {
-                                xcb(e);
-                            }
-                        }
-                    ], function (e) {
-                        if (e != null) {
-                            log.error('Failed to send target state prediction!');
-                        }
-                    })
-                });
-            } catch (e) {
-                log.error(e, 'Failed to send target state prediction!');
-            }
-        });
-
-        log.debug('Registering activity callback ...');
-        model.getModel().onActivity(function (startTm, endTm, activityName) {
-            if (log.debug())
-                log.debug('Detected activity %s at time %s to %s!', activityName, startTm.toString(), endTm.toString());
-
-            var start = startTm.getTime();
-            var end = endTm.getTime();
-
-            async.parallel([
-                function sendUiMsg(xcb) {
-                    var uiMsg = {
-                        type: 'activity',
-                        content: {
-                            start: start,
-                            end: end,
-                            name: activityName
-                        }
-                    };
-
-                    // modelStore.sendMsg(model.getId(), JSON.stringify(uiMsg));
-                    modelManager.sendMessage(model, uiMsg, xcb);
-                },
-                function sendBrokerMsg(xcb) {
-                    if (config.USE_BROKER) {
-                        var brokerMsgStr = JSON.stringify({
-                            activityId: activityName,
-                            startTime: start,
-                            endTime: end,
-                            description: '(empty)'  // TODO description
-                        });
-
-                        var topics = fzi.getTopics(fzi.ACTIVITY_OPERATION, model.getId());
-                        for (var i = 0; i < topics.length; i++) {
-                            var topic = topics[i].output;
-                            log.debug('Sending activity to topic: %s', topic);
-                            broker.send(topic, brokerMsgStr);
-                        }
-                    }
-                    xcb();
-                },
-                function saveToFine(xcb) {
-                    if (config.SAVE_ACTIVITIES) {
-                        utils.appendLine('activities-' + model.getId() + '.csv',  startTm.getTime() + ',' + endTm.getTime() + ',"' + activityName.replace(/\"/g, '\\"') + '"');
-                    }
-                    xcb();
-                }
-            ], function (e) {
-                if (e != null) {
-                    log.error(e, 'Failed to send activity message!');
-                    return;
-                }
-            })
-        });
-    } else {
-        log.debug('Removing StreamStory handlers for model %s ...', model.getId());
-        log.debug('Removing state changed callback ...');
-        model.onStateChanged(null);
-        log.debug('Removing anomaly callback ...');
-        model.onAnomaly(null);
-        log.debug('Removing outlier callback ...');
-        model.onOutlier(null);
-        log.debug('Removing prediction callback ...');
-        model.onPrediction(null);
-        log.debug('Removing activity callback ...');
-        model.getModel().onActivity(null);
-    }
-}
-
 /**
  * Sends a prediction event to the user interface and to other components
  * listening on the broker.
@@ -506,6 +151,227 @@ function sendPrediction(msg, timestamp, eventProps) {
 
     // broker.send(broker.PREDICTION_PRODUCER_TOPIC, brokerMsgStr);
     modelStore.distributeMsg(modelMsgStr);
+}
+
+function initModelManagerHandlers() {
+    modelManager.on('stateChanged', function (date, states) {
+        let model = this;
+        // toc();
+        // latency.print();
+
+        if (log.debug())
+            log.debug('State changed: %s', JSON.stringify(states));
+
+        modelStore.sendMsg(model.getId(), JSON.stringify({
+            type: 'stateChanged',
+            content: states
+        }));
+
+        if (config.SAVE_STATES) {
+            utils.appendLine('states.txt', JSON.stringify({
+                time: date.getTime(),
+                states: states
+            }));
+        }
+    })
+
+    modelManager.on('anomaly', function (desc) {
+        if (log.warn())
+            log.warn('Anomaly detected: %s TODO: currently ignoring!', desc);
+
+        // TODO not notifying anyone!
+    })
+
+    modelManager.on('outlier', function (ftrV) {
+        let model = this;
+
+        if (log.debug())
+            log.debug('Outlier detected!');
+
+        // send to broker
+        // var brokerMsg = transform.genExpPrediction(100.1, 'minute', new Date().getTime());
+        // broker.send(broker.PREDICTION_PRODUCER_TOPIC, JSON.stringify(brokerMsg));
+
+        // send to UI
+        let msg = {
+            type: 'outlier',
+            content: ftrV
+        }
+        modelManager.sendMessage(model, msg, function (e) {
+            if (e != null) {
+                log.error(e, 'Failed to send message to model: ' + model.getId());
+                return;
+            }
+        })
+        // modelStore.sendMsg(model.getId(), JSON.stringify(msg));
+    })
+
+    modelManager.on('prediction', function (date, currState, targetState, prob, probV, timeV) {
+        let model = this;
+
+        if (log.debug())
+            log.debug('Sending prediction, with PDF length: %d', probV.length);
+
+        try {
+            // get the number of updates from the model store
+            // if we are just initializing (number of updates <= 2) then
+            // do not send any predictions
+            if (modelStore.getNumberOfUpdates() <= 2) {
+                log.info('Blocking prediction, still initializing!');
+                return;
+            }
+
+            var _model = model.getModel();
+
+            var currStateNm = _model.getStateName(currState);
+            var targetStateNm = _model.getStateName(targetState);
+
+            db.fetchStateProperty(model.getId(), targetState, 'eventId', function (e, eventId) {
+                if (e != null) {
+                    log.error(e, 'Failed to fetch event ID from the database!');
+                    return;
+                }
+
+                if (currStateNm == null || currStateNm.length == 0) currStateNm = currState;
+                if (targetStateNm == null || targetStateNm.length == 0) targetStateNm = targetState;
+
+                var uiMsg = {
+                    type: 'statePrediction',
+                    content: {
+                        time: date.getTime(),
+                        currState: currStateNm,
+                        targetState: targetStateNm,
+                        eventId: eventId,
+                        probability: prob,
+                        pdf: {
+                            type: 'histogram',
+                            probV: probV,
+                            timeV: timeV
+                        }
+                    }
+                };
+
+                var currStateIds = _model.currState();
+                var stateId = currStateIds[0].id;
+                var level = currStateIds[0].height;
+
+                var details = model.stateDetails(stateId, level);
+                var metadata = {};
+
+                var obs = details.features.observations;
+                var contr = details.features.controls;
+                for (var i = 0; i < obs.length; i++) {
+                    var ftr = obs[i];
+                    metadata[ftr.name] = ftr.value;
+                }
+                for (i = 0; i < contr.length; i++) {
+                    var contrFtr = contr[i];
+                    metadata[contrFtr.name] = contrFtr.value;
+                }
+
+                var brokerMsg = transform.genHistPrediction(
+                    date.getTime(),
+                    eventId,
+                    timeV,
+                    probV,
+                    model.getModel().getTimeUnit(),
+                    metadata
+                );
+
+                async.parallel([
+                    function sendUiMsg(xcb) {
+                        try {
+                            // var mid = model.getId();
+                            // modelStore.sendMsg(model.getId(), JSON.stringify(uiMsg));
+                            modelManager.sendMessage(model, uiMsg, xcb);
+                        } catch (e) {
+                            xcb(e);
+                        }
+                    },
+                    function sendBrokerMsg(xcb) {
+                        try {
+                            var mid = model.getId();
+                            var brokerMsgStr = JSON.stringify(brokerMsg);
+
+                            // do not send this prediciton to PANDDA, but only to FZI
+                            // broker.send(broker.PREDICTION_PRODUCER_TOPIC, brokerMsgStr);
+
+                            var topics = fzi.getTopics(fzi.PREDICTION_OPERATION, mid);
+                            for (i = 0; i < topics.length; i++) {
+                                var topic = topics[i].output;
+                                log.debug('Sending a prediction message to topic \'%s\'', topic);
+                                broker.send(topic, brokerMsgStr);
+                            }
+                            xcb();
+                        } catch (e) {
+                            xcb(e);
+                        }
+                    }
+                ], function (e) {
+                    if (e != null) {
+                        log.error('Failed to send target state prediction!');
+                    }
+                })
+            });
+        } catch (e) {
+            log.error(e, 'Failed to send target state prediction!');
+        }
+    })
+
+    modelManager.on('activity', function (startTm, endTm, activityName) {
+        let model = this;
+
+        if (log.debug())
+            log.debug('Detected activity %s at time %s to %s!', activityName, startTm.toString(), endTm.toString());
+
+        var start = startTm.getTime();
+        var end = endTm.getTime();
+
+        async.parallel([
+            function sendUiMsg(xcb) {
+                var uiMsg = {
+                    type: 'activity',
+                    content: {
+                        start: start,
+                        end: end,
+                        name: activityName
+                    }
+                };
+
+                // modelStore.sendMsg(model.getId(), JSON.stringify(uiMsg));
+                modelManager.sendMessage(model, uiMsg, xcb);
+            },
+            function sendBrokerMsg(xcb) {
+                if (config.USE_BROKER) {
+                    var brokerMsgStr = JSON.stringify({
+                        activityId: activityName,
+                        startTime: start,
+                        endTime: end,
+                        description: '(empty)'  // TODO description
+                    });
+
+                    var topics = fzi.getTopics(fzi.ACTIVITY_OPERATION, model.getId());
+                    for (var i = 0; i < topics.length; i++) {
+                        var topic = topics[i].output;
+                        log.debug('Sending activity to topic: %s', topic);
+                        broker.send(topic, brokerMsgStr);
+                    }
+                }
+                xcb();
+            },
+            function saveToFile(xcb) {
+                if (config.SAVE_ACTIVITIES) {
+                    utils.appendLine('activities-' + model.getId() + '.csv',  startTm.getTime() + ',' + endTm.getTime() + ',"' + activityName.replace(/\"/g, '\\"') + '"');
+                }
+                xcb();
+            }
+        ], function (e) {
+            if (e != null) {
+                log.error(e, 'Failed to send activity message!');
+                return;
+            }
+        })
+    })
 }
 
 function initPipelineHandlers() {
@@ -731,7 +597,7 @@ function initLoginRestApi() {
                     redirect(res, '../login.html');
                     return;
                 } else {
-                    loginUser(session, {
+                    HttpUtils.loginUser(session, {
                         username: user.email,
                         theme: user.theme
                     });
@@ -804,7 +670,7 @@ function initLoginRestApi() {
                             return;
                         }
 
-                        loginUser(session, { username: username, theme: 'dark' });
+                        HttpUtils.loginUser(session, { username: username, theme: 'dark' });
                         redirect(res, '../dashboard.html');
                     });
                 }
@@ -928,7 +794,7 @@ function initLoginRestApi() {
 
     app.post(API_PATH + '/logout', function (req, res) {
         try {
-            cleanUpSession(req.sessionID, req.session);
+            HttpUtils.clearSession(req.sessionID, req.session, base);
 
             if (config.AUTHENTICATION_EXTERNAL) {
                 redirect(res, '../dashboard.html');
@@ -951,7 +817,7 @@ function initStreamStoryRestApi() {
             var sessionId = req.sessionID;
 
             try {
-                var model = getModel(sessionId, session);
+                var model = HttpUtils.extractModel(sessionId, session);
                 var positions = req.body.positions != null ? JSON.parse(req.body.positions) : null;
 
                 if (model == null) {
@@ -966,7 +832,7 @@ function initStreamStoryRestApi() {
                     model.getModel().setStateCoords(positions);
                 }
 
-                var modelFile = getModelFile(session);
+                var modelFile = HttpUtils.extractModelFile(session);
 
                 if (modelFile == null)
                     throw new Error('Model file missing when saving!');
@@ -992,7 +858,7 @@ function initStreamStoryRestApi() {
                 if (log.debug())
                     log.debug('Setting parameter %s to value %d ...', paramName, paramVal);
 
-                var model = getModel(req.sessionID, req.session);
+                var model = HttpUtils.extractModel(req.sessionID, req.session);
 
                 var paramObj = {};
                 paramObj[paramName] = paramVal;
@@ -1009,7 +875,7 @@ function initStreamStoryRestApi() {
         app.get(API_PATH + '/param', function (req, res) {
             try {
                 var param = req.query.paramName;
-                var model = getModel(req.sessionID, req.session);
+                var model = HttpUtils.extractModel(req.sessionID, req.session);
 
                 var val = model.getModel().getParam(param);
                 res.send({ parameter: param, value: val });
@@ -1022,7 +888,7 @@ function initStreamStoryRestApi() {
 
         app.get(API_PATH + '/timeUnit', function (req, res) {
             try {
-                var model = getModel(req.sessionID, req.session);
+                var model = HttpUtils.extractModel(req.sessionID, req.session);
                 res.send({ value: model.getModel().getTimeUnit() });
                 res.end();
             } catch (e) {
@@ -1033,7 +899,7 @@ function initStreamStoryRestApi() {
 
         app.get(API_PATH + '/modelId', function (req, res) {
             try {
-                var model = getModel(req.sessionID, req.session);
+                var model = HttpUtils.extractModel(req.sessionID, req.session);
 
                 if (model == null || model.getId() == null) throw new Error('No model present!');
 
@@ -1052,7 +918,7 @@ function initStreamStoryRestApi() {
         // get the StreamStory model
         app.get(API_PATH + '/model', function (req, res) {
             try {
-                var model = getModel(req.sessionID, req.session);
+                var model = HttpUtils.extractModel(req.sessionID, req.session);
 
                 log.debug('Querying MHWirth multilevel model ...');
                 res.send(model.getVizState());
@@ -1066,7 +932,7 @@ function initStreamStoryRestApi() {
         // submodel
         app.get(API_PATH + '/subModel', function (req, res) {
             try {
-                var model = getModel(req.sessionID, req.session);
+                var model = HttpUtils.extractModel(req.sessionID, req.session);
                 var stateId = parseInt(req.query.stateId);
 
                 if (log.debug())
@@ -1083,7 +949,7 @@ function initStreamStoryRestApi() {
         // path from state
         app.get(API_PATH + '/path', function (req, res) {
             try {
-                var model = getModel(req.sessionID, req.session);
+                var model = HttpUtils.extractModel(req.sessionID, req.session);
                 var stateId = parseInt(req.query.stateId);
                 var height = parseFloat(req.query.height);
                 var length = parseInt(req.query.length);
@@ -1103,7 +969,7 @@ function initStreamStoryRestApi() {
         // multilevel analysis
         app.get(API_PATH + '/features', function (req, res) {
             try {
-                var model = getModel(req.sessionID, req.session);
+                var model = HttpUtils.extractModel(req.sessionID, req.session);
                 log.debug('Fetching all the features ...');
                 res.send(model.getFtrDesc());
                 res.end();
@@ -1121,7 +987,7 @@ function initStreamStoryRestApi() {
         app.get(API_PATH + '/transitionModel', function (req, res) {
             try {
                 var level = parseFloat(req.query.level);
-                var model = getModel(req.sessionID, req.session);
+                var model = HttpUtils.extractModel(req.sessionID, req.session);
 
                 if (log.debug())
                     log.debug('Fetching transition model for level: %.3f', level);
@@ -1142,7 +1008,7 @@ function initStreamStoryRestApi() {
         app.get(API_PATH + '/currentState', function (req, res) {
             try {
                 var level = parseFloat(req.query.level);
-                var model = getModel(req.sessionID, req.session);
+                var model = HttpUtils.extractModel(req.sessionID, req.session);
 
                 if (log.debug())
                     log.debug('Fetching current state for level ' + level);
@@ -1166,7 +1032,7 @@ function initStreamStoryRestApi() {
                 var level = parseFloat(req.query.level);
                 var currState = parseInt(req.query.state);
 
-                var model = getModel(req.sessionID, req.session);
+                var model = HttpUtils.extractModel(req.sessionID, req.session);
 
                 if (req.query.time == null) {
                     log.debug('Fetching future states currState: %d, height: %d', currState, level);
@@ -1189,7 +1055,7 @@ function initStreamStoryRestApi() {
                 var level = parseFloat(req.query.level);
                 var currState = parseInt(req.query.state);
 
-                var model = getModel(req.sessionID, req.session);
+                var model = HttpUtils.extractModel(req.sessionID, req.session);
 
                 if (req.query.time == null) {
                     log.debug('Fetching past states currState: %d, height: %d', currState, level);
@@ -1213,7 +1079,7 @@ function initStreamStoryRestApi() {
                 var time = parseFloat(req.query.time);
                 var height = parseFloat(req.query.level);
 
-                var model = getModel(req.sessionID, req.session);
+                var model = HttpUtils.extractModel(req.sessionID, req.session);
 
                 if (log.debug())
                     log.debug('Fetching probability distribution of states at height %d from state %d at time %d ...', height, stateId, time);
@@ -1229,7 +1095,7 @@ function initStreamStoryRestApi() {
         app.get(API_PATH + '/history', function (req, res) {
             try {
                 var level = parseFloat(req.query.level);
-                var model = getModel(req.sessionID, req.session);
+                var model = HttpUtils.extractModel(req.sessionID, req.session);
 
                 if (log.debug())
                     log.debug('Fetching history for level %d', level);
@@ -1252,7 +1118,7 @@ function initStreamStoryRestApi() {
                 var stateId = parseInt(req.query.stateId);
                 var height = parseFloat(req.query.level);
 
-                var model = getModel(req.sessionID, req.session);
+                var model = HttpUtils.extractModel(req.sessionID, req.session);
 
                 if (log.debug())
                     log.debug('Fetching details for state: %d', stateId);
@@ -1301,7 +1167,7 @@ function initStreamStoryRestApi() {
                 if (log.debug())
                     log.debug('Using parameters offset: %d, relWindowLen: %d', offset, range);
 
-                var model = getModel(req.sessionID, req.session);
+                var model = HttpUtils.extractModel(req.sessionID, req.session);
 
                 var result = model.getHistoricalStates(offset, range, maxStates);
 
@@ -1417,7 +1283,7 @@ function initStreamStoryRestApi() {
             try {
                 var session = req.session;
 
-                var model = getModel(req.sessionID, req.session);
+                var model = HttpUtils.extractModel(req.sessionID, req.session);
                 var name = req.body.name;
                 var sequence = JSON.parse(req.body.sequence);
 
@@ -1444,7 +1310,7 @@ function initStreamStoryRestApi() {
                 // set the activity
                 model.getModel().setActivity(name, sequence);
                 // save the model
-                var fname = getModelFile(session);
+                var fname = HttpUtils.extractModelFile(session);
                 if (log.debug())
                     log.debug('Saving model to file: %s', fname);
                 model.save(fname);
@@ -1460,7 +1326,7 @@ function initStreamStoryRestApi() {
         app.post(API_PATH + '/removeActivity', function (req, res) {
             try {
                 var session = req.session;
-                var model = getModel(req.sessionID, session);
+                var model = HttpUtils.extractModel(req.sessionID, session);
                 var name = req.body.name;
 
                 if (log.debug())
@@ -1472,7 +1338,7 @@ function initStreamStoryRestApi() {
                 }
 
                 model.getModel().removeActivity(name);
-                var fname = getModelFile(session);
+                var fname = HttpUtils.extractModelFile(session);
                 if (log.debug())
                     log.debug('Saving model to file: %s', fname);
                 model.save(fname);
@@ -1489,7 +1355,7 @@ function initStreamStoryRestApi() {
             try {
                 var stateId = parseInt(req.query.stateId);
 
-                var model = getModel(req.sessionID, req.session);
+                var model = HttpUtils.extractModel(req.sessionID, req.session);
 
                 if (log.debug())
                     log.debug('Fetching target details for state: %d', stateId);
@@ -1521,7 +1387,7 @@ function initStreamStoryRestApi() {
             try {
                 var stateId = parseInt(req.query.stateId);
 
-                var model = getModel(req.sessionID, req.session);
+                var model = HttpUtils.extractModel(req.sessionID, req.session);
 
                 if (log.debug())
                     log.debug('Fetching explanation for state: %d', stateId);
@@ -1536,7 +1402,7 @@ function initStreamStoryRestApi() {
 
         app.get(API_PATH + '/stateNarration', function (req, res) {
             try {
-                var model = getModel(req.sessionID, req.session);
+                var model = HttpUtils.extractModel(req.sessionID, req.session);
                 var stateId = parseInt(req.query.stateId);
 
                 if (log.trace())
@@ -1556,7 +1422,7 @@ function initStreamStoryRestApi() {
                 var stateId = parseInt(req.query.stateId);
                 var ftrIdx = parseInt(req.query.feature);
 
-                var model = getModel(req.sessionID, req.session);
+                var model = HttpUtils.extractModel(req.sessionID, req.session);
 
                 if (log.trace())
                     log.trace('Fetching histogram for state %d, feature %d ...', stateId, ftrIdx);
@@ -1575,7 +1441,7 @@ function initStreamStoryRestApi() {
                 var targetId = parseInt(req.query.targetId);
                 var ftrId = parseInt(req.query.feature);
 
-                var model = getModel(req.sessionID, req.session);
+                var model = HttpUtils.extractModel(req.sessionID, req.session);
 
                 if (log.trace())
                     log.trace('Fetching transition histogram for transition %d -> %d, feature %d ...', sourceId, targetId, ftrId);
@@ -1590,7 +1456,7 @@ function initStreamStoryRestApi() {
 
         app.get(API_PATH + '/timeHistogram', function (req, res) {
             try {
-                var model = getModel(req.sessionID, req.session);
+                var model = HttpUtils.extractModel(req.sessionID, req.session);
                 var stateId = parseInt(req.query.stateId);
 
                 if (log.trace())
@@ -1606,7 +1472,7 @@ function initStreamStoryRestApi() {
 
         app.get(API_PATH + '/timeExplain', function (req, res) {
             try {
-                var model = getModel(req.sessionID, req.session);
+                var model = HttpUtils.extractModel(req.sessionID, req.session);
                 var stateId = parseInt(req.query.stateId);
 
                 if (log.trace())
@@ -1627,7 +1493,7 @@ function initStreamStoryRestApi() {
                 var height = parseFloat(req.query.height);
                 var ftrIdx = parseInt(req.query.ftr);
 
-                var model = getModel(req.sessionID, req.session);
+                var model = HttpUtils.extractModel(req.sessionID, req.session);
 
                 if (log.debug())
                     log.debug('Fetching distribution for feature "%d" for height %d ...', ftrIdx, height);
@@ -1646,7 +1512,7 @@ function initStreamStoryRestApi() {
             try {
                 var session = req.session;
 
-                var model = getModel(req.sessionID, session);
+                var model = HttpUtils.extractModel(req.sessionID, session);
                 var mid = session.modelId;
 
                 stateId = parseInt(req.body.id);
@@ -1669,7 +1535,7 @@ function initStreamStoryRestApi() {
                 var fname;
                 var props;
                 if (!model.isOnline()) {
-                    fname = getModelFile(session);
+                    fname = HttpUtils.extractModelFile(session);
                     if (log.debug())
                         log.debug('Saving model to file: %s', fname);
                     model.save(fname);
@@ -1703,12 +1569,12 @@ function initStreamStoryRestApi() {
 
                     if (model.getModel().isTarget(stateId) != isUndesired)
                         model.getModel().setTarget(stateId, isUndesired);
-                    fname = getModelFile(session);
+                    fname = HttpUtils.extractModelFile(session);
 
                     if (log.debug())
                         log.debug('Saving model to file: %s', fname);
 
-                    fname = getModelFile(session);
+                    fname = HttpUtils.extractModelFile(session);
                     model.save(fname);
 
                     props = {
@@ -1739,7 +1605,7 @@ function initStreamStoryRestApi() {
                 val = parseFloat(req.body.val);
                 var stateId = req.body.stateId != null ? parseInt(req.body.stateId) : null;
 
-                var model = getModel(req.sessionID, req.session);
+                var model = HttpUtils.extractModel(req.sessionID, req.session);
 
                 if (log.debug())
                     log.debug('Changing control %d to value %d ...', ftrId, val);
@@ -1758,7 +1624,7 @@ function initStreamStoryRestApi() {
                 var ftrId = req.body.ftrIdx != null ? parseInt(req.body.ftrIdx) : null;
                 var stateId = req.body.stateId != null ? parseInt(req.body.stateId) : null;
 
-                var model = getModel(req.sessionID, req.session);
+                var model = HttpUtils.extractModel(req.sessionID, req.session);
 
                 if (model == null) throw new Error('Model is null, has the session expired?');
 
@@ -1776,7 +1642,7 @@ function initStreamStoryRestApi() {
 
         app.get(API_PATH + '/controlsSet', function (req, res) {
             try {
-                var model = getModel(req.sessionID, req.session);
+                var model = HttpUtils.extractModel(req.sessionID, req.session);
 
                 if (log.debug())
                     log.debug('Fetching the state of any control features ...');
@@ -2005,7 +1871,7 @@ function initDataUploadApi() {
                             if (log.debug())
                                 log.debug('Online model created!');
 
-                            activateModel(model);
+                            modelManager.activate(model);
                         }
                     });
                 } catch (e) {
@@ -2167,7 +2033,7 @@ function initDataUploadApi() {
                             log.debug('Adding an already active model to the session ...');
 
                         var model = modelStore.getModel(modelId);
-                        saveToSession(sessionId, session, base, model, modelId, fname);
+                        HttpUtils.saveModelToSession(sessionId, session, base, model, modelId, fname);
                         res.status(204);    // no content
                         res.end();
                     } else {
@@ -2181,7 +2047,7 @@ function initDataUploadApi() {
                                 return;
                             }
 
-                            saveToSession(sessionId, session, base, model, modelId, fname);
+                            HttpUtils.saveModelToSession(sessionId, session, base, model, modelId, fname);
                             res.status(204);    // no content
                             res.end();
                         });
@@ -2196,7 +2062,7 @@ function initDataUploadApi() {
                             return;
                         }
 
-                        saveToSession(sessionId, session, baseConfig.base, baseConfig.model, modelId, fname);
+                        HttpUtils.saveModelToSession(sessionId, session, baseConfig.base, baseConfig.model, modelId, fname);
                         res.status(204);    // no content
                         res.end();
                     });
@@ -2370,12 +2236,12 @@ function initServerApi() {
                                     log.debug('Activating model with id %s', model.getId());
 
                                 if (isFromUi) {
-                                    //                                  var currModel = getModel(sessionId, session);
-                                    //                                  deactivateModel(currModel);
+                                    //                                  var currModel = HttpUtils.extractModel(sessionId, session);
+                                    //                                  modelManager.deactivate(currModel);
                                     session.model = model;
                                 }
 
-                                activateModel(model);
+                                modelManager.activate(model);
 
                                 res.status(204);
                                 res.end();
@@ -2384,7 +2250,7 @@ function initServerApi() {
                     } else {
                         // deactivate, the model is currently active
                         var model = modelStore.getModel(modelId);
-                        deactivateModel(model);
+                        modelManager.deactivate(model);
 
                         res.status(204);
                         res.end();
@@ -2438,7 +2304,7 @@ function initServerApi() {
 
                 if (activate == null) throw new Error('Missing parameter activate!');
 
-                var model = getModel(req.sessionID, session);
+                var model = HttpUtils.extractModel(req.sessionID, session);
 
                 activateModelById(req, res, model.getId(), activate, true);
             } catch (e) {
@@ -2453,7 +2319,7 @@ function initServerApi() {
         app.get(API_PATH + '/modelMode', function (req, res) {
             log.debug('Fetching model mode from the db DB ...');
 
-            var model = getModel(req.sessionID, req.session);
+            var model = HttpUtils.extractModel(req.sessionID, req.session);
 
             db.fetchModel(model.getId(), function (e, modelConfig) {
                 if (e != null) {
@@ -2557,7 +2423,7 @@ function initMessageRestApi() {
     app.get(API_PATH + '/modelMessages', function (req, res) {
         try {
             var limit = req.query.limit;
-            var model = getModel(req.sessionID, req.session);
+            var model = HttpUtils.extractModel(req.sessionID, req.session);
 
             if (limit != null) limit = parseInt(limit);
 
@@ -2578,7 +2444,7 @@ function initMessageRestApi() {
 
     app.get(API_PATH + '/modelMessagesCount', function (req, res) {
         try {
-            var model = getModel(req.sessionID, req.session);
+            var model = HttpUtils.extractModel(req.sessionID, req.session);
             modelManager.countMessages(model, function (e, count) {
                 if (e != null) {
                     utils.handleServerError(e, req, res);
@@ -2807,8 +2673,9 @@ function loadSaveModels() {
         if (log.debug())
             log.debug('There is a total of %d models ...', models.length);
 
-        for (var i = 0; i < models.length; i++) {
-            log.debug('Resaving model %s', JSON.stringify(models[i]));
+        for (let i = 0; i < models.length; i++) {
+            let model = models[i];
+            log.debug('Resaving model %s', model.name);
             modelStore.loadSaveModel(models[i]);
         }
     });
@@ -2835,7 +2702,7 @@ function loadActiveModels() {
             if (log.debug())
                 log.debug('Activating model with id %s', model.getId());
 
-            activateModel(model);
+            modelManager.activate(model);
         }
 
         for (var i = 0; i < models.length; i++) {
@@ -2843,7 +2710,7 @@ function loadActiveModels() {
 
             try {
                 if (log.debug())
-                    log.debug('Initializing model %s ...', JSON.stringify(modelConfig));
+                    log.debug('Initializing model %s ...', modelConfig.name);
 
                 modelStore.loadOnlineModel(modelConfig.model_file, loadCb);
             } catch (e1) {
@@ -2881,17 +2748,17 @@ function excludeDirs(dirs, middleware) {
 
 function excludeFiles(files, middleware) {
     return function (req, res, next) {
-        var path = req.path;
+        let path = req.path;
 
         if (path == '/') path = '/index.html';
 
         if (log.trace())
             log.trace('Request to path %s', path);
 
-        var isExcluded = false;
+        let isExcluded = false;
 
-        for (var i = 0; i < files.length; i++) {
-            var fname = files[i];
+        for (let i = 0; i < files.length; i++) {
+            let fname = files[i];
             if (path.endsWith(fname)) {
                 isExcluded = true;
             }
@@ -2912,10 +2779,10 @@ function excludeFiles(files, middleware) {
 function getPageOpts(req, next) {
     void next;
 
-    var session = req.session;
-    var page = getRequestedPage(req);
+    let session = req.session;
+    let page = HttpUtils.getRequestedPage(req);
 
-    var opts = {
+    let opts = {
         utils: utils,
         username: null,
         theme: session.theme,
@@ -2931,7 +2798,7 @@ function getPageOpts(req, next) {
         useCase: config.USE_CASE_NAME
     };
 
-    if (isLoggedIn(session)) {
+    if (HttpUtils.isLoggedIn(session)) {
         opts.username = session.username;
     }
 
@@ -2964,7 +2831,7 @@ function prepPage(page) {
 
 function addUseCaseOpts(opts, callback) {
     if (config.USE_CASE == config.USE_CASE_MHWIRTH) {
-        var properties = [
+        let properties = [
             'calc_coeff',
             'deviation_extreme_lambda',
             'deviation_major_lambda',
@@ -2979,8 +2846,8 @@ function addUseCaseOpts(opts, callback) {
                 return;
             }
 
-            var props = {};
-            for (var i = 0; i < result.length; i++) {
+            let props = {};
+            for (let i = 0; i < result.length; i++) {
                 props[result[i].property] = result[i].value;
             }
 
@@ -3113,7 +2980,7 @@ function accessControl(req, res, next) {
             externalAuth.fetchCredentials(token, function (e, user) {
                 if (e != null) return utils.handleServerError(e, req, res);
 
-                loginUser(session, {
+                HttpUtils.loginUser(session, {
                     username: user.email,
                     theme: user.theme
                 });
@@ -3124,7 +2991,7 @@ function accessControl(req, res, next) {
             })
         }
 
-        if (isLoggedIn(session)) {
+        if (HttpUtils.isLoggedIn(session)) {
             if (session[FZI_TOKEN_KEY] != token) {
                 // fetch user credentials from the authentication system
                 fetchCredentials();
@@ -3137,12 +3004,12 @@ function accessControl(req, res, next) {
         }
     }
     else {
-        var page = getRequestedPage(req);
-        var dir = getRequestedPath(req);
+        var page = HttpUtils.getRequestedPage(req);
+        var dir = HttpUtils.getRequestedPath(req);
 
         // if the user is not logged in => redirect them to login
         // login is exempted from the access control
-        if (!isLoggedIn(session)) {
+        if (!HttpUtils.isLoggedIn(session)) {
             if (log.debug())
                 log.debug('Session data missing for page %s, dir %s ...', page, dir);
 
@@ -3163,7 +3030,7 @@ function accessControl(req, res, next) {
 function getHackedSessionStore() {
     var store =  new SessionStore();
     store.on('preDestroy', function (sessionId, session) {
-        cleanUpSessionModel(sessionId, session);
+        HttpUtils.clearModelFromSession(sessionId, session, base);
         if (sessionId in fileBuffH)
             delete fileBuffH[sessionId];
     });
@@ -3204,7 +3071,7 @@ function initServer(sessionStore, parseCookie) {
 
     // when a session expires, redirect to index
     app.use('/ui.html', function (req, res, next) {
-        var model = getModel(req.sessionID, req.session);
+        var model = HttpUtils.extractModel(req.sessionID, req.session);
         // check if we need to redirect to the index page
         if (model == null) {
             log.debug('Session data missing, redirecting to index ...');
@@ -3297,7 +3164,7 @@ exports.init = function (opts) {
         webSocketPath: WS_PATH,
         onConnected: function (socketId, sessionId, session) {
             try {
-                var model = getModel(sessionId, session);
+                var model = HttpUtils.extractModel(sessionId, session);
 
                 if (model.getId() == null)
                     log.warn('Model ID not set when opening a new web socket connection!');
@@ -3331,11 +3198,13 @@ exports.init = function (opts) {
 
     modelManager = new ssmodules.ModelManager({
         db: db,
-        modelStore: modelStore
+        modelStore: modelStore,
+        base: base
     })
 
     loadSaveModels();
     loadActiveModels();
+    initModelManagerHandlers();
     initPipelineHandlers();
     initBroker();
 
