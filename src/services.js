@@ -18,6 +18,7 @@ let fields = require('../fields.js');
 let transform = require('./util/transform.js');
 let fzi = require('./util/fzi_integration.js');
 let externalAuth = require('./util/external_auth.js');
+let routers = require('./util/routers.js');
 
 let ModelStore = require('./util/modelstore.js');
 let WebSocketWrapper = require('./util/servicesutil.js');
@@ -35,9 +36,12 @@ let throughput = perf.throughput();
 
 let qmutil = qm.qm_util;
 
+let LOGIN_API = 'login';
+let GENERAL_API = 'api';
+
 let UI_PATH = '/';
-let LOGIN_PATH = '/login';
-let API_PATH = '/api';
+let LOGIN_PATH = '/' + LOGIN_API;
+let API_PATH = '/' + GENERAL_API;
 let DATA_PATH = '/data';
 let WS_PATH = '/ws';
 
@@ -552,229 +556,143 @@ function initPipelineHandlers() {
     })();
 }
 
-function initLoginRestApi() {
+function initLoginRestApi(router) {
     log.info('Initializing Login REST services ...');
 
-    app.post(LOGIN_PATH + '/login', function (req, res) {
-        try {
-            var session = req.session;
+    router.register('login', 'post', function (req, res) {
+        var session = req.session;
 
-            var username = req.body.email;
-            var password = req.body.password;
+        var username = req.body.email;
+        var password = req.body.password;
 
-            if (log.debug())
-                log.debug('Loggin in user: %s', username);
+        if (log.debug())
+            log.debug('Loggin in user: %s', username);
 
-            if (username == null || username == '') {
-                session.warning = 'Email missing!';
+        if (username == null || username == '') {
+            session.warning = 'Email missing!';
+            redirect(res, '../login.html');
+            return;
+        }
+
+        if (password == null || password == '') {
+            session.warning = 'Password missing!';
+            redirect(res, '../login.html');
+            return;
+        }
+
+        db.fetchUserByEmail(username, function (e, user) {
+            if (e != null) {
+                log.error(e, 'Exception while checking if user exists!');
+                utils.handleServerError(e, req, res);
+                return;
+            }
+
+            if (user == null) {
+                session.warning = 'Invalid email or password!';
                 redirect(res, '../login.html');
                 return;
             }
 
-            if (password == null || password == '') {
-                session.warning = 'Password missing!';
-                redirect(res, '../login.html');
-                return;
-            }
-
-            db.fetchUserByEmail(username, function (e, user) {
-                if (e != null) {
-                    log.error(e, 'Exception while checking if user exists!');
-                    utils.handleServerError(e, req, res);
-                    return;
-                }
-
-                if (user == null) {
-                    session.warning = 'Invalid email or password!';
-                    redirect(res, '../login.html');
-                    return;
-                }
-
-                var hash = utils.hashPassword(password);
-
-                if (hash != user.passwd) {
-                    session.warning = 'Invalid email or password!';
-                    redirect(res, '../login.html');
-                    return;
-                } else {
-                    HttpUtils.loginUser(session, {
-                        username: user.email,
-                        theme: user.theme
-                    });
-                    redirect(res, '../dashboard.html');
-                }
-            });
-        } catch (e) {
-            utils.handleServerError(e, req, res);
-        }
-    });
-
-    app.post(LOGIN_PATH + '/register', function (req, res) {
-        try {
-            var session = req.session;
-
-            var username = req.body.email;
-            var password = req.body.password;
-            var password1 = req.body.password1;
-
-            if (log.debug())
-                log.debug('Registering user: %s', username);
-
-            if (username == null || username == '') {
-                session.warning = 'Email missing!';
-                redirect(res, '../register.html');
-                return;
-            }
-
-            if (password == null || password == '') {
-                session.warning = 'Password missing!';
-                redirect(res, '../register.html');
-                return;
-            }
-
-            if (password.length < 4) {
-                session.warning = 'The password must be at least 6 characters long!';
-                redirect(res, '../register.html');
-                return;
-            }
-
-            if (password1 == null || password1 == '') {
-                session.warning = 'Please repeat password!';
-                redirect(res, '../register.html');
-                return;
-            }
-
-            if (password != password1) {
-                session.warning = 'Passwords don\'t match!';
-                redirect(res, '../register.html');
-                return;
-            }
-
-            db.userExists(username, function (e, exists) {
-                if (e != null) {
-                    log.error(e, 'Exception while checking if user exists!');
-                    utils.handleServerError(e, req, res);
-                    return;
-                }
-
-                if (exists) {
-                    session.warning = 'Email "' + username + '" already taken!';
-                    redirect(res, '../register.html');
-                    return;
-                } else {
-                    var hash = utils.hashPassword(password);
-                    db.createUser(username, hash, function (e1) {
-                        if (e1 != null) {
-                            log.error(e1, 'Exception while creating a new user!');
-                            utils.handleServerError(e1, req, res);
-                            return;
-                        }
-
-                        HttpUtils.loginUser(session, { username: username, theme: 'dark' });
-                        redirect(res, '../dashboard.html');
-                    });
-                }
-            });
-        } catch (e) {
-            utils.handleServerError(e, req, res);
-        }
-    });
-
-    app.post(LOGIN_PATH + '/resetPassword', function (req, res) {
-        try {
-            var session = req.session;
-            var email = req.body.email;
-
-            var password = utils.genPassword();
             var hash = utils.hashPassword(password);
 
-            db.userExists(email, function (e, exists) {
-                if (e != null) {
-                    utils.handleServerError(e, req, res);
-                    return;
-                }
-
-                if (!exists) {
-                    session.error = 'Invalid email address!';
-                    redirect(res, '../resetpassword.html');
-                } else {
-                    db.updatePassword(email, hash, function (e1) {
-                        if (e1 != null) {
-                            log.error(e, 'Failed to update password!');
-                            utils.handleServerError(e1, req, res);
-                            return;
-                        }
-
-                        var opts = {
-                            password: password,
-                            email: email
-                        }
-
-                        utils.sendEmail(opts, function (e2) {
-                            if (e2 != null) {
-                                log.error(e2, 'Failed to send email!');
-                                utils.handleServerError(e2, req, res);
-                                return;
-                            }
-
-                            session.message = 'Your new password has been sent to ' + email + '!';
-                            redirect(res, '../resetpassword.html');
-                        })
-                    });
-                }
-            })
-        } catch (e) {
-            log.error(e, 'Exception while resetting password!');
-            utils.handleServerError(e, req, res);
-        }
+            if (hash != user.passwd) {
+                session.warning = 'Invalid email or password!';
+                redirect(res, '../login.html');
+                return;
+            } else {
+                HttpUtils.loginUser(session, {
+                    username: user.email,
+                    theme: user.theme
+                });
+                redirect(res, '../dashboard.html');
+            }
+        });
     });
 
-    app.post(API_PATH + '/changePassword', function (req, res) {
-        try {
-            var session = req.session;
+    router.register('register', 'post', function (req, res) {
+        var session = req.session;
 
-            var email = session.username;
+        var username = req.body.email;
+        var password = req.body.password;
+        var password1 = req.body.password1;
 
-            var old = req.body.old;
-            var password = req.body.newP;
-            var password1 = req.body.repeat;
+        if (log.debug())
+            log.debug('Registering user: %s', username);
 
-            if (password == null || password == '') {
-                utils.handleBadInput(res, 'Password missing!');
+        if (username == null || username == '') {
+            session.warning = 'Email missing!';
+            redirect(res, '../register.html');
+            return;
+        }
+
+        if (password == null || password == '') {
+            session.warning = 'Password missing!';
+            redirect(res, '../register.html');
+            return;
+        }
+
+        if (password.length < 4) {
+            session.warning = 'The password must be at least 6 characters long!';
+            redirect(res, '../register.html');
+            return;
+        }
+
+        if (password1 == null || password1 == '') {
+            session.warning = 'Please repeat password!';
+            redirect(res, '../register.html');
+            return;
+        }
+
+        if (password != password1) {
+            session.warning = 'Passwords don\'t match!';
+            redirect(res, '../register.html');
+            return;
+        }
+
+        db.userExists(username, function (e, exists) {
+            if (e != null) {
+                log.error(e, 'Exception while checking if user exists!');
+                utils.handleServerError(e, req, res);
                 return;
             }
 
-            if (password.length < 4) {
-                utils.handleBadInput(res, 'The password must be at least 6 characters long!');
+            if (exists) {
+                session.warning = 'Email "' + username + '" already taken!';
+                redirect(res, '../register.html');
                 return;
-            }
-
-            if (password1 == null || password1 == '') {
-                utils.handleBadInput(res, 'Please repeat password!');
-                return;
-            }
-
-            if (password != password1) {
-                utils.handleBadInput(res, 'Passwords don\'t match!');
-                return;
-            }
-
-            var hashOld = utils.hashPassword(old);
-
-            db.fetchUserPassword(email, function (e, storedHash) {
-                if (e != null) {
-                    log.error(e, 'Exception while fetching user password!');
-                    utils.handleServerError(e, req, res);
-                    return;
-                }
-
-                if (hashOld != storedHash) {
-                    utils.handleBadInput(res, 'Passwords don\'t match!');
-                    return;
-                }
-
+            } else {
                 var hash = utils.hashPassword(password);
+                db.createUser(username, hash, function (e1) {
+                    if (e1 != null) {
+                        log.error(e1, 'Exception while creating a new user!');
+                        utils.handleServerError(e1, req, res);
+                        return;
+                    }
 
+                    HttpUtils.loginUser(session, { username: username, theme: 'dark' });
+                    redirect(res, '../dashboard.html');
+                });
+            }
+        });
+    });
+
+    router.register('resetPassword', 'post', function (req, res) {
+        var session = req.session;
+        var email = req.body.email;
+
+        var password = utils.genPassword();
+        var hash = utils.hashPassword(password);
+
+        db.userExists(email, function (e, exists) {
+            if (e != null) {
+                utils.handleServerError(e, req, res);
+                return;
+            }
+
+            if (!exists) {
+                session.error = 'Invalid email address!';
+                redirect(res, '../resetpassword.html');
+            } else {
                 db.updatePassword(email, hash, function (e1) {
                     if (e1 != null) {
                         log.error(e, 'Failed to update password!');
@@ -782,490 +700,886 @@ function initLoginRestApi() {
                         return;
                     }
 
-                    res.status(204);    // no content
-                    res.end();
+                    var opts = {
+                        password: password,
+                        email: email
+                    }
+
+                    utils.sendEmail(opts, function (e2) {
+                        if (e2 != null) {
+                            log.error(e2, 'Failed to send email!');
+                            utils.handleServerError(e2, req, res);
+                            return;
+                        }
+
+                        session.message = 'Your new password has been sent to ' + email + '!';
+                        redirect(res, '../resetpassword.html');
+                    })
                 });
-            });
-        } catch (e) {
-            log.error(e, 'Exception while changing password!');
-            utils.handleServerError(e, req, res);
-        }
-    });
-
-    app.post(API_PATH + '/logout', function (req, res) {
-        try {
-            HttpUtils.clearSession(req.sessionID, req.session, base);
-
-            if (config.AUTHENTICATION_EXTERNAL) {
-                redirect(res, '../dashboard.html');
-            } else {
-                redirect(res, '../login.html');
             }
-        } catch (e) {
-            utils.handleServerError(e, req, res);
-        }
+        })
     });
 }
 
-function initStreamStoryRestApi() {
-    log.info('Initializing StreamStory REST services ...');
+function initServerApi(router) {
+    log.info('Initializing general server REST API ...');
 
-    {
-        log.debug('Registering save service ...');
-        app.post(API_PATH + '/save', function (req, res) {
-            var session = req.session;
-            var sessionId = req.sessionID;
+    router.register('changePassword', 'post', function (req, res) {
+        var session = req.session;
 
-            try {
-                var model = HttpUtils.extractModel(sessionId, session);
-                var positions = req.body.positions != null ? JSON.parse(req.body.positions) : null;
+        var email = session.username;
 
-                if (model == null) {
-                    res.status(401);    // unauthorized
-                    res.end();
+        var old = req.body.old;
+        var password = req.body.newP;
+        var password1 = req.body.repeat;
+
+        if (password == null || password == '') {
+            utils.handleBadInput(res, 'Password missing!');
+            return;
+        }
+
+        if (password.length < 4) {
+            utils.handleBadInput(res, 'The password must be at least 6 characters long!');
+            return;
+        }
+
+        if (password1 == null || password1 == '') {
+            utils.handleBadInput(res, 'Please repeat password!');
+            return;
+        }
+
+        if (password != password1) {
+            utils.handleBadInput(res, 'Passwords don\'t match!');
+            return;
+        }
+
+        var hashOld = utils.hashPassword(old);
+
+        db.fetchUserPassword(email, function (e, storedHash) {
+            if (e != null) {
+                log.error(e, 'Exception while fetching user password!');
+                utils.handleServerError(e, req, res);
+                return;
+            }
+
+            if (hashOld != storedHash) {
+                utils.handleBadInput(res, 'Passwords don\'t match!');
+                return;
+            }
+
+            var hash = utils.hashPassword(password);
+
+            db.updatePassword(email, hash, function (e1) {
+                if (e1 != null) {
+                    log.error(e, 'Failed to update password!');
+                    utils.handleServerError(e1, req, res);
                     return;
                 }
 
-                if (positions != null) {
-                    if (log.debug())
-                        log.debug('Saving node positions ...');
-                    model.getModel().setStateCoords(positions);
-                }
-
-                var modelFile = HttpUtils.extractModelFile(session);
-
-                if (modelFile == null)
-                    throw new Error('Model file missing when saving!');
-
-                model.save(modelFile);
-                res.status(204);
-                res.end();
-            } catch (e) {
-                log.error(e, 'Failed to save visualization model!');
-                utils.handleServerError(e, req, res);
-            }
-        });
-    }
-
-    {
-        log.debug('Registering set parameter service ...');
-
-        app.post(API_PATH + '/param', function (req, res) {
-            try {
-                var paramName = req.body.paramName;
-                var paramVal = parseFloat(req.body.paramVal);
-
-                if (log.debug())
-                    log.debug('Setting parameter %s to value %d ...', paramName, paramVal);
-
-                var model = HttpUtils.extractModel(req.sessionID, req.session);
-
-                var paramObj = {};
-                paramObj[paramName] = paramVal;
-
-                model.getModel().setParams(paramObj);
                 res.status(204);    // no content
                 res.end();
-            } catch (e) {
-                log.error(e, 'Failed to query MHWirth multilevel visualization!');
-                utils.handleServerError(e, req, res);
-            }
+            });
         });
+    });
 
-        app.get(API_PATH + '/param', function (req, res) {
-            try {
-                var param = req.query.paramName;
-                var model = HttpUtils.extractModel(req.sessionID, req.session);
+    router.register('logout', 'post', function (req, res) {
+        HttpUtils.clearSession(req.sessionID, req.session, base);
 
-                var val = model.getModel().getParam(param);
-                res.send({ parameter: param, value: val });
-                res.end();
-            } catch (e) {
-                log.error(e, 'Failed to query MHWirth multilevel visualization!');
+        if (config.AUTHENTICATION_EXTERNAL) {
+            redirect(res, '../dashboard.html');
+        } else {
+            redirect(res, '../login.html');
+        }
+    });
+
+    router.register('exit', 'get', function (req, res) {
+        log.info(API_PATH + '/exit called. Exiting qminer and closing server ...');
+        utils.exit(base);
+        res.status(204);
+        res.end();
+    });
+
+    router.register('theme', 'get', function (req, res) {
+        var session = req.session;
+        res.send({ theme: session.theme });
+        res.end();
+    })
+
+    router.register('theme', 'post', function (req, res) {
+        var session = req.session;
+        var username = session.username;
+
+        var theme = req.body.theme;
+
+        db.updateTheme(username, theme, function (e) {
+            if (e != null) {
+                log.error(e, 'Exception while setting theme!');
                 utils.handleServerError(e, req, res);
+                return;
             }
-        });
 
-        app.get(API_PATH + '/timeUnit', function (req, res) {
-            try {
-                var model = HttpUtils.extractModel(req.sessionID, req.session);
-                res.send({ value: model.getModel().getTimeUnit() });
-                res.end();
-            } catch (e) {
-                log.error(e, 'Failed to query MHWirth multilevel visualization!');
-                utils.handleServerError(e, req, res);
+            session.theme = theme;
+            res.status(204);
+            res.end();
+        });
+    });
+
+    (function () {
+        log.debug('Registering push data service ...');
+
+        var batchN = 0;
+
+        router.register('push', 'post', function (req, res) {
+            var batch = req.body;
+
+            if (batchN == 1) {
+                throughput.init();
             }
-        });
 
-        app.get(API_PATH + '/modelId', function (req, res) {
-            try {
-                var model = HttpUtils.extractModel(req.sessionID, req.session);
-
-                if (model == null || model.getId() == null) throw new Error('No model present!');
-
-                res.send({ modelId: model.getId() });
-                res.end();
-            } catch (e) {
-                log.error(e, 'Failed to query MHWirth multilevel visualization!');
-                utils.handleServerError(e, req, res);
+            for (var i = 0; i < batch.length; i++) {
+                addRawMeasurement(batch[i]);
             }
-        });
-    }
 
-    {
-        log.debug('Registering multilevel service at drilling/multilevel ...');
-
-        // get the StreamStory model
-        app.get(API_PATH + '/model', function (req, res) {
-            try {
-                var model = HttpUtils.extractModel(req.sessionID, req.session);
-
-                log.debug('Querying MHWirth multilevel model ...');
-                res.send(model.getVizState());
-                res.end();
-            } catch (e) {
-                log.error(e, 'Failed to query for the model!');
-                utils.handleServerError(e, req, res);
-            }
-        });
-
-        // submodel
-        app.get(API_PATH + '/subModel', function (req, res) {
-            try {
-                var model = HttpUtils.extractModel(req.sessionID, req.session);
-                var stateId = parseInt(req.query.stateId);
-
-                if (log.debug())
-                    log.debug('Fetching sub model for state: %d ...', stateId);
-
-                res.send(model.getSubModelJson(stateId));
-                res.end();
-            } catch (e) {
-                log.error(e, 'Failed to query for a sub-model!');
-                utils.handleServerError(e, req, res);
-            }
-        });
-
-        // path from state
-        app.get(API_PATH + '/path', function (req, res) {
-            try {
-                var model = HttpUtils.extractModel(req.sessionID, req.session);
-                var stateId = parseInt(req.query.stateId);
-                var height = parseFloat(req.query.height);
-                var length = parseInt(req.query.length);
-                var probThreshold = parseFloat(req.query.probThreshold);
-
-                if (log.debug())
-                    log.debug('Fetching state path for state: %d on height %d ...', stateId, height);
-
-                res.send(model.getStatePath(stateId, height, length, probThreshold));
-                res.end();
-            } catch (e) {
-                log.error(e, 'Failed to query for state path!');
-                utils.handleServerError(e, req, res);
-            }
-        });
-
-        // multilevel analysis
-        app.get(API_PATH + '/features', function (req, res) {
-            try {
-                var model = HttpUtils.extractModel(req.sessionID, req.session);
-                log.debug('Fetching all the features ...');
-                res.send(model.getFtrDesc());
-                res.end();
-            } catch (e) {
-                log.error(e, 'Failed to query MHWirth multilevel visualization!');
-                utils.handleServerError(e, req, res);
-            }
-        });
-    }
-
-    {
-        log.debug('Registering transition model service ...');
-
-        // multilevel analysis
-        app.get(API_PATH + '/transitionModel', function (req, res) {
-            try {
-                var level = parseFloat(req.query.level);
-                var model = HttpUtils.extractModel(req.sessionID, req.session);
-
-                if (log.debug())
-                    log.debug('Fetching transition model for level: %.3f', level);
-
-                res.send(model.getModel().getTransitionModel(level));
-                res.end();
-            } catch (e) {
-                log.error(e, 'Failed to query MHWirth multilevel visualization!');
-                utils.handleServerError(e, req, res);
-            }
-        });
-    }
-
-    {
-        log.debug('Registering future and states services ...');
-
-        // multilevel analysis
-        app.get(API_PATH + '/currentState', function (req, res) {
-            try {
-                var level = parseFloat(req.query.level);
-                var model = HttpUtils.extractModel(req.sessionID, req.session);
-
-                if (log.debug())
-                    log.debug('Fetching current state for level ' + level);
-
-                var result = model.currState(level);
-
-                if (log.debug())
-                    log.debug("Current state: %s", JSON.stringify(result));
-
-                res.send(result);
-                res.end();
-            } catch (e) {
-                log.error(e, 'Failed to query MHWirth multilevel visualization!');
-                utils.handleServerError(e, req, res);
-            }
-        });
-
-        // multilevel analysis
-        app.get(API_PATH + '/futureStates', function (req, res) {
-            try {
-                var level = parseFloat(req.query.level);
-                var currState = parseInt(req.query.state);
-
-                var model = HttpUtils.extractModel(req.sessionID, req.session);
-
-                if (req.query.time == null) {
-                    log.debug('Fetching future states currState: %d, height: %d', currState, level);
-                    res.send(model.futureStates(level, currState));
-                    res.end();
-                } else {
-                    var time = parseFloat(req.query.time);
-                    log.debug('Fetching future states, currState: %d, level: %d, time: %d', currState, level, time);
-                    res.send(model.futureStates(level, currState, time));
-                    res.end();
+            if (batchN >= 1) {
+                throughput.update(batch.length);
+                if (batchN % 100 == 0) {
+                    throughput.print();
                 }
-            } catch (e) {
-                log.error(e, 'Failed to query MHWirth multilevel visualization!');
-                utils.handleServerError(e, req, res);
             }
+
+            batchN++;
+
+            res.status(204);
+            res.end();
         });
+    })();
 
-        app.get(API_PATH + '/pastStates', function (req, res) {
-            try {
-                var level = parseFloat(req.query.level);
-                var currState = parseInt(req.query.state);
+    router.register('countActiveModels', 'get', function (req, res) {
+        log.debug('Fetching the number of active models from the DB ...');
 
-                var model = HttpUtils.extractModel(req.sessionID, req.session);
+        db.countActiveModels(function (e, result) {
+            if (e != null) {
+                log.error(e, 'Failed to count the number of active models!');
+                utils.handleServerError(e, req, res);
+                return;
+            }
 
-                if (req.query.time == null) {
-                    log.debug('Fetching past states currState: %d, height: %d', currState, level);
-                    res.send(model.pastStates(level, currState));
-                    res.end();
-                } else {
-                    var time = parseFloat(req.query.time);
-                    log.debug('Fetching past states, currState: %d, level: %d, time: %d', currState, level, time);
-                    res.send(model.pastStates(level, currState, time));
-                    res.end();
+            res.send(result);
+            res.end();
+        });
+    });
+
+    (function () {
+        log.debug('Registering activate model service ...');
+
+        function activateModelById(req, res, modelId, activate, isFromUi) {
+            if (log.debug())
+                log.debug('Activating model %s: ' + activate, modelId);
+
+            var session = req.session;
+
+            db.activateModel({modelId: modelId, activate: activate}, function (e1) {
+                if (e1 != null) {
+                    log.error(e1, 'Failed to activate model %s!', modelId);
+                    utils.handleServerError(e1, req, res);
+                    return;
                 }
-            } catch (e) {
-                log.error(e, 'Failed to query MHWirth multilevel visualization!');
-                utils.handleServerError(e, req, res);
-            }
-        });
 
-        app.get(API_PATH + '/timeDist', function (req, res) {
-            try {
-                var stateId = parseInt(req.query.stateId);
-                var time = parseFloat(req.query.time);
-                var height = parseFloat(req.query.level);
+                try {
+                    if (activate) {
+                        db.fetchModel(modelId, function (e2, modelConfig) {
+                            if (e2 != null) {
+                                log.error(e2, 'Failed to fetch a model from the DB!');
+                                utils.handleServerError(e2, req, res);
+                                return;
+                            }
 
-                var model = HttpUtils.extractModel(req.sessionID, req.session);
+                            modelStore.loadOnlineModel(modelConfig.model_file, function (e, model) {
+                                if (e != null) {
+                                    log.error(e, 'Exception while loading online model!');
+                                    return;
+                                }
 
-                if (log.debug())
-                    log.debug('Fetching probability distribution of states at height %d from state %d at time %d ...', height, stateId, time);
+                                if (log.debug())
+                                    log.debug('Activating model with id %s', model.getId());
 
-                res.send(model.getModel().probsAtTime(stateId, height, time));
+                                if (isFromUi) {
+                                    //                                  var currModel = HttpUtils.extractModel(sessionId, session);
+                                    //                                  modelManager.deactivate(currModel);
+                                    session.model = model;
+                                }
+
+                                modelManager.activate(model);
+
+                                res.status(204);
+                                res.end();
+                            });
+                        });
+                    } else {
+                        // deactivate, the model is currently active
+                        var model = modelStore.getModel(modelId);
+                        modelManager.deactivate(model);
+
+                        res.status(204);
+                        res.end();
+                    }
+                } catch (e2) {
+                    log.error(e2, 'Model activated in the DB, but failed to activate it in the app!');
+                    utils.handleServerError(e2, req, res);
+                }
+            });
+        }
+
+        router.register('removeModel', 'post', function (req, res) {
+            var modelId = req.body.modelId;
+
+            log.debug('Removing model %d', modelId);
+
+            db.deleteModel(modelId, function (e) {
+                if (e != null) {
+                    return utils.handleServerError(e, req, res);
+                }
+
+                res.status(204);
                 res.end();
-            } catch (e) {
-                log.error(e, 'Failed to query MHWirth multilevel visualization!');
-                utils.handleServerError(e, req, res);
-            }
+            });
         });
 
-        app.get(API_PATH + '/history', function (req, res) {
-            try {
-                var level = parseFloat(req.query.level);
-                var model = HttpUtils.extractModel(req.sessionID, req.session);
+        router.register('activateModel', 'post', function (req, res) {
+            var modelId = req.body.modelId;
+            var activate = req.body.activate;
 
-                if (log.debug())
-                    log.debug('Fetching history for level %d', level);
+            if (activate == null) throw new Error('Missing parameter activate!');
+            if (modelId == null) throw new Error('WTF?! Tried to activate a model that doesn\'t have an ID!');
 
-                res.send(model.getModel().histStates(level));
-                res.end();
-            } catch (e) {
-                log.error(e, 'Failed to query MHWirth multilevel visualization!');
-                utils.handleServerError(e, req, res);
-            }
+            activateModelById(req, res, modelId, activate, false);
         });
-    }
+
+        router.register('activateModelViz', 'post', function (req, res) {
+            var session = req.session;
+            var activate = req.body.activate == 'true';
+
+            if (activate == null) throw new Error('Missing parameter activate!');
+
+            var model = HttpUtils.extractModel(req.sessionID, session);
+
+            activateModelById(req, res, model.getId(), activate, true);
+        });
+    })();
+
+    router.register('modelMode', 'get', function (req, res) {
+        log.debug('Fetching model mode from the db DB ...');
+
+        var model = HttpUtils.extractModel(req.sessionID, req.session);
+
+        db.fetchModel(model.getId(), function (e, modelConfig) {
+            if (e != null) {
+                log.error(e, 'Failed to get model mode from the DB!');
+                utils.handleServerError(e, req, res);
+                return;
+            }
+
+            res.send({
+                isRealtime: modelConfig.is_realtime == 1,
+                isActive: modelConfig.is_active == 1
+            });
+            res.end();
+        });
+    });
+
+    router.register('shareModel', 'post', function (req, res) {
+        var mid = req.body.modelId;
+        var share = req.body.share;
+
+        if (log.debug())
+            log.debug('Sharing model %s: ', mid);
+
+        db.makeModelPublic(mid, share, function (e) {
+            if (e != null) {
+                log.error(e, 'Failed to activate model %s!', mid);
+                utils.handleServerError(e, req, res);
+                return;
+            }
+
+            res.status(204);
+            res.end();
+        });
+    });
+}
+
+function initStreamStoryRestApi(router) {
+    log.info('Initializing StreamStory REST services ...');
+
+    router.register('save', 'post', function (req, res) {
+        var session = req.session;
+        var sessionId = req.sessionID;
+
+        var model = HttpUtils.extractModel(sessionId, session);
+        var positions = req.body.positions != null ? JSON.parse(req.body.positions) : null;
+
+        if (model == null) {
+            res.status(401);    // unauthorized
+            res.end();
+            return;
+        }
+
+        if (positions != null) {
+            if (log.debug())
+                log.debug('Saving node positions ...');
+            model.getModel().setStateCoords(positions);
+        }
+
+        var modelFile = HttpUtils.extractModelFile(session);
+
+        if (modelFile == null)
+            throw new Error('Model file missing when saving!');
+
+        model.save(modelFile);
+        res.status(204);
+        res.end();
+    });
+
+
+    router.register('param', 'post', function (req, res) {
+        var paramName = req.body.paramName;
+        var paramVal = parseFloat(req.body.paramVal);
+
+        if (log.debug())
+            log.debug('Setting parameter %s to value %d ...', paramName, paramVal);
+
+        var model = HttpUtils.extractModel(req.sessionID, req.session);
+
+        var paramObj = {};
+        paramObj[paramName] = paramVal;
+
+        model.getModel().setParams(paramObj);
+        res.status(204);    // no content
+        res.end();
+    });
+
+    router.register('param', 'get', function (req, res) {
+        var param = req.query.paramName;
+        var model = HttpUtils.extractModel(req.sessionID, req.session);
+
+        var val = model.getModel().getParam(param);
+        res.send({ parameter: param, value: val });
+        res.end();
+    });
+
+    router.register('timeUnit', 'get', function (req, res) {
+        var model = HttpUtils.extractModel(req.sessionID, req.session);
+        res.send({ value: model.getModel().getTimeUnit() });
+        res.end();
+    });
+
+    router.register('modelId', 'get', function (req, res) {
+        var model = HttpUtils.extractModel(req.sessionID, req.session);
+
+        if (model == null || model.getId() == null) throw new Error('No model present!');
+
+        res.send({ modelId: model.getId() });
+        res.end();
+    });
+
+    // get the StreamStory model
+    router.register('model', 'get', function (req, res) {
+        var model = HttpUtils.extractModel(req.sessionID, req.session);
+
+        log.debug('Querying MHWirth multilevel model ...');
+        res.send(model.getVizState());
+        res.end();
+    });
+
+    // submodel
+    router.register('subModel', 'get', function (req, res) {
+        var model = HttpUtils.extractModel(req.sessionID, req.session);
+        var stateId = parseInt(req.query.stateId);
+
+        if (log.debug())
+            log.debug('Fetching sub model for state: %d ...', stateId);
+
+        res.send(model.getSubModelJson(stateId));
+        res.end();
+    });
+
+    // path from state
+    router.register('path', 'get', function (req, res) {
+        var model = HttpUtils.extractModel(req.sessionID, req.session);
+        var stateId = parseInt(req.query.stateId);
+        var height = parseFloat(req.query.height);
+        var length = parseInt(req.query.length);
+        var probThreshold = parseFloat(req.query.probThreshold);
+
+        if (log.debug())
+            log.debug('Fetching state path for state: %d on height %d ...', stateId, height);
+
+        res.send(model.getStatePath(stateId, height, length, probThreshold));
+        res.end();
+    });
+
+    // multilevel analysis
+    router.register('features', 'get', function (req, res) {
+        var model = HttpUtils.extractModel(req.sessionID, req.session);
+        log.debug('Fetching all the features ...');
+        res.send(model.getFtrDesc());
+        res.end();
+    });
+
+    // multilevel analysis
+    router.register('transitionModel', 'get', function (req, res) {
+        var level = parseFloat(req.query.level);
+        var model = HttpUtils.extractModel(req.sessionID, req.session);
+
+        if (log.debug())
+            log.debug('Fetching transition model for level: %.3f', level);
+
+        res.send(model.getModel().getTransitionModel(level));
+        res.end();
+    });
+
+    // multilevel analysis
+    router.register('currentState', 'get', function (req, res) {
+        var level = parseFloat(req.query.level);
+        var model = HttpUtils.extractModel(req.sessionID, req.session);
+
+        if (log.debug())
+            log.debug('Fetching current state for level ' + level);
+
+        var result = model.currState(level);
+
+        if (log.debug())
+            log.debug("Current state: %s", JSON.stringify(result));
+
+        res.send(result);
+        res.end();
+    });
+
+    router.register('futureStates', 'get', function (req, res) {
+        var level = parseFloat(req.query.level);
+        var currState = parseInt(req.query.state);
+
+        var model = HttpUtils.extractModel(req.sessionID, req.session);
+
+        if (req.query.time == null) {
+            log.debug('Fetching future states currState: %d, height: %d', currState, level);
+            res.send(model.futureStates(level, currState));
+            res.end();
+        } else {
+            var time = parseFloat(req.query.time);
+            log.debug('Fetching future states, currState: %d, level: %d, time: %d', currState, level, time);
+            res.send(model.futureStates(level, currState, time));
+            res.end();
+        }
+    });
+
+    router.register('pastStates', 'get', function (req, res) {
+        var level = parseFloat(req.query.level);
+        var currState = parseInt(req.query.state);
+
+        var model = HttpUtils.extractModel(req.sessionID, req.session);
+
+        if (req.query.time == null) {
+            log.debug('Fetching past states currState: %d, height: %d', currState, level);
+            res.send(model.pastStates(level, currState));
+            res.end();
+        } else {
+            var time = parseFloat(req.query.time);
+            log.debug('Fetching past states, currState: %d, level: %d, time: %d', currState, level, time);
+            res.send(model.pastStates(level, currState, time));
+            res.end();
+        }
+    });
+
+    router.register('timeDist', 'get', function (req, res) {
+        var stateId = parseInt(req.query.stateId);
+        var time = parseFloat(req.query.time);
+        var height = parseFloat(req.query.level);
+
+        var model = HttpUtils.extractModel(req.sessionID, req.session);
+
+        if (log.debug())
+            log.debug('Fetching probability distribution of states at height %d from state %d at time %d ...', height, stateId, time);
+
+        res.send(model.getModel().probsAtTime(stateId, height, time));
+        res.end();
+    });
+
+    router.register('history', 'get', function (req, res) {
+        var level = parseFloat(req.query.level);
+        var model = HttpUtils.extractModel(req.sessionID, req.session);
+
+        if (log.debug())
+            log.debug('Fetching history for level %d', level);
+
+        res.send(model.getModel().histStates(level));
+        res.end();
+    });
 
     (function () {
         log.info('Registering state details service ...');
 
         // state details
-        app.get(API_PATH + '/stateDetails', function (req, res) {
-            try {
-                var stateId = parseInt(req.query.stateId);
-                var height = parseFloat(req.query.level);
+        router.register('stateDetails', 'get', function (req, res) {
+            var stateId = parseInt(req.query.stateId);
+            var height = parseFloat(req.query.level);
 
-                var model = HttpUtils.extractModel(req.sessionID, req.session);
+            var model = HttpUtils.extractModel(req.sessionID, req.session);
 
-                if (log.debug())
-                    log.debug('Fetching details for state: %d', stateId);
+            if (log.debug())
+                log.debug('Fetching details for state: %d', stateId);
 
-                var details = model.stateDetails(stateId, height);
+            var details = model.stateDetails(stateId, height);
 
-                db.fetchStateProperties(model.getId(), stateId, ['eventId', 'description'], function (e, stateProps) {
-                    if (e != null) {
-                        utils.handleServerError(e, req, res);
-                        return;
-                    }
-
-                    details.undesiredEventId = stateProps.eventId;
-                    details.description = stateProps.description;
-
-                    res.send(details);
-                    res.end();
-                });
-            } catch (e) {
-                log.error(e, 'Failed to query state details!');
-                utils.handleServerError(e, req, res);
-            }
-        });
-
-        app.get(API_PATH + '/stateHistory', function (req, res) {
-            try {
-                log.debug('Querying state history ...');
-
-                var offset = req.query.offset != null ? parseFloat(req.query.offset) : undefined;
-                var range = req.query.range != null ? parseFloat(req.query.range) : undefined;
-                var maxStates = req.query.n != null ? parseInt(req.query.n) : undefined;
-
-                if (offset == null) {
-                    utils.handleBadInput(res, "Missing parameter offset!");
-                    return;
-                }
-                if (range == null) {
-                    utils.handleBadInput(res, "Missing parameter range!");
-                    return;
-                }
-                if (maxStates == null) {
-                    utils.handleBadInput(res, 'Missing parameter maxStates!');
+            db.fetchStateProperties(model.getId(), stateId, ['eventId', 'description'], function (e, stateProps) {
+                if (e != null) {
+                    utils.handleServerError(e, req, res);
                     return;
                 }
 
-                if (log.debug())
-                    log.debug('Using parameters offset: %d, relWindowLen: %d', offset, range);
+                details.undesiredEventId = stateProps.eventId;
+                details.description = stateProps.description;
 
-                var model = HttpUtils.extractModel(req.sessionID, req.session);
-
-                var result = model.getHistoricalStates(offset, range, maxStates);
-
-                if (log.debug())
-                    log.debug('Writing to output stream ...');
-
-                // I have to write the objects to the stream manually, otherwise I can get
-                // an out of memory error
-                var key;
-                res.write('{');
-                for (key in result) {
-                    if (key != 'window' && result.hasOwnProperty(key)) {
-                        res.write('"' + key + '":');
-                        res.write(typeof result[key] == 'string' ? ('"' + result[key] + '"') : (result[key] + ''));
-                        res.write(',');
-                    }
-                }
-                res.write('"window": [')
-                for (var i = 0; i < result.window.length; i++) {
-                    res.write('{');
-                    var scaleObj = result.window[i];
-                    for (key in scaleObj) {
-                        if (key != 'states' && scaleObj.hasOwnProperty(key)) {
-                            res.write('"' + key + '":');
-                            res.write(typeof scaleObj[key] == 'string' ? ('"' + scaleObj[key] + '"') : (scaleObj[key] + ''));
-                            res.write(',');
-                        }
-                    }
-                    res.write('"states":[');
-                    var states = scaleObj.states;
-                    for (var stateN = 0; stateN < states.length; stateN++) {
-                        res.write(JSON.stringify(states[stateN]));
-                        if (stateN < states.length-1) {
-                            res.write(',');
-                        }
-                    }
-                    res.write(']');
-                    res.write('}');
-                    if (i < result.window.length-1) {
-                        res.write(',');
-                    }
-                }
-                res.write(']}');
+                res.send(details);
                 res.end();
-            } catch (e) {
-                utils.handleServerError(e, req, res);
-            }
+            });
         });
 
-        app.get(API_PATH + '/modelDetails', function (req, res) {
-            try {
-                var session = req.session;
-                var username = session.username;
-                var modelId = parseInt(req.query.modelId);
+        router.register('stateHistory', 'get', function (req, res) {
+            log.debug('Querying state history ...');
 
-                if (log.debug())
-                    log.debug('Fetching model details for model: %d', modelId);
+            var offset = req.query.offset != null ? parseFloat(req.query.offset) : undefined;
+            var range = req.query.range != null ? parseFloat(req.query.range) : undefined;
+            var maxStates = req.query.n != null ? parseInt(req.query.n) : undefined;
 
-                db.fetchModel(modelId, function (e, modelConfig) {
+            if (offset == null) {
+                utils.handleBadInput(res, "Missing parameter offset!");
+                return;
+            }
+            if (range == null) {
+                utils.handleBadInput(res, "Missing parameter range!");
+                return;
+            }
+            if (maxStates == null) {
+                utils.handleBadInput(res, 'Missing parameter maxStates!');
+                return;
+            }
+
+            if (log.debug())
+                log.debug('Using parameters offset: %d, relWindowLen: %d', offset, range);
+
+            var model = HttpUtils.extractModel(req.sessionID, req.session);
+
+            var result = model.getHistoricalStates(offset, range, maxStates);
+
+            if (log.debug())
+                log.debug('Writing to output stream ...');
+
+            // I have to write the objects to the stream manually, otherwise I can get
+            // an out of memory error
+            var key;
+            res.write('{');
+            for (key in result) {
+                if (key != 'window' && result.hasOwnProperty(key)) {
+                    res.write('"' + key + '":');
+                    res.write(typeof result[key] == 'string' ? ('"' + result[key] + '"') : (result[key] + ''));
+                    res.write(',');
+                }
+            }
+            res.write('"window": [')
+            for (var i = 0; i < result.window.length; i++) {
+                res.write('{');
+                var scaleObj = result.window[i];
+                for (key in scaleObj) {
+                    if (key != 'states' && scaleObj.hasOwnProperty(key)) {
+                        res.write('"' + key + '":');
+                        res.write(typeof scaleObj[key] == 'string' ? ('"' + scaleObj[key] + '"') : (scaleObj[key] + ''));
+                        res.write(',');
+                    }
+                }
+                res.write('"states":[');
+                var states = scaleObj.states;
+                for (var stateN = 0; stateN < states.length; stateN++) {
+                    res.write(JSON.stringify(states[stateN]));
+                    if (stateN < states.length-1) {
+                        res.write(',');
+                    }
+                }
+                res.write(']');
+                res.write('}');
+                if (i < result.window.length-1) {
+                    res.write(',');
+                }
+            }
+            res.write(']}');
+            res.end();
+        });
+
+        router.register('modelDetails', 'get', function (req, res) {
+            var session = req.session;
+            var username = session.username;
+            var modelId = parseInt(req.query.modelId);
+
+            if (log.debug())
+                log.debug('Fetching model details for model: %d', modelId);
+
+            db.fetchModel(modelId, function (e, modelConfig) {
+                if (e != null) {
+                    log.error(e, 'Failed to fetch model details!');
+                    utils.handleServerError(e, req, res);
+                    return;
+                }
+
+                res.send({
+                    mid: modelConfig.mid,
+                    name: modelConfig.name,
+                    description: modelConfig.description,
+                    dataset: modelConfig.dataset,
+                    isOnline: modelConfig.is_realtime == 1,
+                    creator: modelConfig.username,
+                    creationDate: modelConfig.date_created,
+                    isPublic: modelConfig.is_public == 1,
+                    isActive: modelConfig.is_active == 1,
+                    isOwner: modelConfig.username == username
+                });
+                res.end();
+            });
+        });
+
+        router.register('modelDescription', 'post', function (req, res) {
+            var mid = req.body.modelId;
+            var desc = req.body.description;
+
+            if (log.debug())
+                log.debug('Setting description for model %s', mid);
+
+            if (desc == '') desc = null;
+
+            db.setModelDescription(mid, desc, function (e) {
+                if (e != null) {
+                    log.error(e, 'Failed to update model description!');
+                    utils.handleServerError(e, req, res);
+                    return;
+                }
+
+                res.status(204);    // no content
+                res.end();
+            });
+        });
+
+        router.register('modelDescription', 'post', function (req, res) {
+            var session = req.session;
+
+            var model = HttpUtils.extractModel(req.sessionID, req.session);
+            var name = req.body.name;
+            var sequence = JSON.parse(req.body.sequence);
+
+            if (log.debug())
+                log.debug('Setting activity %s for model %d with transitions %s', name, model.getId(), JSON.stringify(sequence));
+
+            // perform checks
+            if (name == null || name == '') {
+                utils.handleBadInput(res, 'Activity name missing!');
+                return;
+            }
+            if (sequence == null || sequence.length == 0) {
+                utils.handleBadInput(res, 'Missing the sequence of states!');
+                return;
+            }
+            for (var i = 0; i < sequence.length; i++) {
+                var stateIds = sequence[i];
+                if (stateIds == null || stateIds.length == 0) {
+                    utils.handleBadInput(res, 'Empty states in sequence!');
+                    return;
+                }
+            }
+
+            // set the activity
+            model.getModel().setActivity(name, sequence);
+            // save the model
+            var fname = HttpUtils.extractModelFile(session);
+            if (log.debug())
+                log.debug('Saving model to file: %s', fname);
+            model.save(fname);
+
+            res.status(204);    // no content
+            res.end();
+        });
+
+        router.register('removeActivity', 'post', function (req, res) {
+            var session = req.session;
+            var model = HttpUtils.extractModel(req.sessionID, session);
+            var name = req.body.name;
+
+            if (log.debug())
+                log.debug('Removing activity %s for model %d ...', name, model.getId());
+
+            if (name == null || name == '') {
+                utils.handleBadInput(res, 'Activity name missing!');
+                return;
+            }
+
+            model.getModel().removeActivity(name);
+            var fname = HttpUtils.extractModelFile(session);
+            if (log.debug())
+                log.debug('Saving model to file: %s', fname);
+            model.save(fname);
+
+            res.status(204);    // no content
+            res.end();
+        });
+
+        router.register('targetProperties', 'get', function (req, res) {
+            var stateId = parseInt(req.query.stateId);
+
+            var model = HttpUtils.extractModel(req.sessionID, req.session);
+
+            if (log.debug())
+                log.debug('Fetching target details for state: %d', stateId);
+
+            var isUndesired = model.getModel().isTarget(stateId);
+
+            if (isUndesired) {
+                db.fetchStateProperty(model.getId(), stateId, 'eventId', function (e, eventId) {
                     if (e != null) {
-                        log.error(e, 'Failed to fetch model details!');
                         utils.handleServerError(e, req, res);
                         return;
                     }
 
-                    res.send({
-                        mid: modelConfig.mid,
-                        name: modelConfig.name,
-                        description: modelConfig.description,
-                        dataset: modelConfig.dataset,
-                        isOnline: modelConfig.is_realtime == 1,
-                        creator: modelConfig.username,
-                        creationDate: modelConfig.date_created,
-                        isPublic: modelConfig.is_public == 1,
-                        isActive: modelConfig.is_active == 1,
-                        isOwner: modelConfig.username == username
-                    });
+                    res.send({ isUndesired: isUndesired, eventId: eventId });
                     res.end();
                 });
-            } catch (e) {
-                log.error(e, 'Failed to query state details!');
-                utils.handleServerError(e, req, res);
+            } else {
+                res.send({ isUndesired: isUndesired });
+                res.end();
             }
         });
 
-        app.post(API_PATH + '/modelDescription', function (req, res) {
-            try {
-                var mid = req.body.modelId;
-                var desc = req.body.description;
+        // state explanation
+        router.register('explanation', 'get', function (req, res) {
+            var stateId = parseInt(req.query.stateId);
 
+            var model = HttpUtils.extractModel(req.sessionID, req.session);
+
+            if (log.debug())
+                log.debug('Fetching explanation for state: %d', stateId);
+
+            res.send(model.explainState(stateId));
+            res.end();
+        });
+
+        router.register('stateNarration', 'get', function (req, res) {
+            var model = HttpUtils.extractModel(req.sessionID, req.session);
+            var stateId = parseInt(req.query.stateId);
+
+            if (log.trace())
+                log.trace('Fetching time explanation for state %d ...', stateId);
+
+            res.send(model.narrateState(stateId));
+            res.end();
+        });
+
+        // histograms
+        router.register('histogram', 'get', function (req, res) {
+            var stateId = parseInt(req.query.stateId);
+            var ftrIdx = parseInt(req.query.feature);
+
+            var model = HttpUtils.extractModel(req.sessionID, req.session);
+
+            if (log.trace())
+                log.trace('Fetching histogram for state %d, feature %d ...', stateId, ftrIdx);
+
+            res.send(model.histogram(ftrIdx, stateId));
+            res.end();
+        });
+
+        router.register('transitionHistogram', 'get', function (req, res) {
+            var sourceId = parseInt(req.query.sourceId);
+            var targetId = parseInt(req.query.targetId);
+            var ftrId = parseInt(req.query.feature);
+
+            var model = HttpUtils.extractModel(req.sessionID, req.session);
+
+            if (log.trace())
+                log.trace('Fetching transition histogram for transition %d -> %d, feature %d ...', sourceId, targetId, ftrId);
+
+            res.send(model.transitionHistogram(sourceId, targetId, ftrId));
+            res.end();
+        });
+
+        router.register('timeHistogram', 'get', function (req, res) {
+            var model = HttpUtils.extractModel(req.sessionID, req.session);
+            var stateId = parseInt(req.query.stateId);
+
+            if (log.trace())
+                log.trace('Fetching time histogram for state %d ...', stateId);
+
+            res.send(model.getModel().timeHistogram(stateId));
+            res.end();
+        });
+
+        router.register('timeExplain', 'get', function (req, res) {
+            var model = HttpUtils.extractModel(req.sessionID, req.session);
+            var stateId = parseInt(req.query.stateId);
+
+            if (log.trace())
+                log.trace('Fetching time explanation for state %d ...', stateId);
+
+            res.send(model.getModel().getStateTypTimes(stateId));
+            res.end();
+        });
+
+        router.register('targetFeature', 'get', function (req, res) {
+            var height = parseFloat(req.query.height);
+            var ftrIdx = parseInt(req.query.ftr);
+
+            var model = HttpUtils.extractModel(req.sessionID, req.session);
+
+            if (log.debug())
+                log.debug('Fetching distribution for feature "%d" for height %d ...', ftrIdx, height);
+
+            res.send(model.getFtrDist(height, ftrIdx));
+            res.end();
+        });
+
+        router.register('stateProperties', 'post', function (req, res) {
+            var stateId, stateNm;
+
+            var session = req.session;
+
+            var model = HttpUtils.extractModel(req.sessionID, session);
+            var mid = session.modelId;
+
+            stateId = parseInt(req.body.id);
+            stateNm = req.body.name;
+            var description = req.body.description;
+
+            if (stateNm != null) {
                 if (log.debug())
-                    log.debug('Setting description for model %s', mid);
+                    log.debug('Setting name of state %d to %s ...', stateId, stateNm);
 
-                if (desc == '') desc = null;
+                model.getModel().setStateName(stateId, stateNm);
+            }
+            else {
+                if (log.debug())
+                    log.debug('Clearing name of state %d ...', stateId);
 
-                db.setModelDescription(mid, desc, function (e) {
+                model.getModel().clearStateName(stateId);
+            }
+
+            var fname;
+            var props;
+            if (!model.isOnline()) {
+                fname = HttpUtils.extractModelFile(session);
+                if (log.debug())
+                    log.debug('Saving model to file: %s', fname);
+                model.save(fname);
+
+                props = {
+                    description: description
+                };
+
+                db.setStateProperties(mid, stateId, props, function (e) {
                     if (e != null) {
-                        log.error(e, 'Failed to update model description!');
                         utils.handleServerError(e, req, res);
                         return;
                     }
@@ -1273,391 +1587,90 @@ function initStreamStoryRestApi() {
                     res.status(204);    // no content
                     res.end();
                 });
-            } catch (e) {
-                log.error(e, 'Failed to set model details!');
-                utils.handleServerError(e, req, res);
             }
-        });
+            else {
+                var isUndesired = JSON.parse(req.body.isUndesired);
+                var eventId = req.body.eventId;
 
-        app.post(API_PATH + '/activity', function (req, res) {
-            try {
-                var session = req.session;
-
-                var model = HttpUtils.extractModel(req.sessionID, req.session);
-                var name = req.body.name;
-                var sequence = JSON.parse(req.body.sequence);
+                if (isUndesired && (eventId == null || eventId == '')) {
+                    log.warn('The state is marked undesired, but the eventId is missing!');
+                    utils.handleBadInput(res, 'Undesired event without an event id!');
+                    return;
+                }
 
                 if (log.debug())
-                    log.debug('Setting activity %s for model %d with transitions %s', name, model.getId(), JSON.stringify(sequence));
+                    log.debug('Setting undesired state: %d, isUndesired: ' + isUndesired, stateId);
 
-                // perform checks
-                if (name == null || name == '') {
-                    utils.handleBadInput(res, 'Activity name missing!');
-                    return;
+                if (model.getModel().isTarget(stateId) != isUndesired)
+                    model.getModel().setTarget(stateId, isUndesired);
+                fname = HttpUtils.extractModelFile(session);
+
+                if (log.debug())
+                    log.debug('Saving model to file: %s', fname);
+
+                fname = HttpUtils.extractModelFile(session);
+                model.save(fname);
+
+                props = {
+                    eventId: isUndesired ? eventId : undefined,
+                    description: description
                 }
-                if (sequence == null || sequence.length == 0) {
-                    utils.handleBadInput(res, 'Missing the sequence of states!');
-                    return;
-                }
-                for (var i = 0; i < sequence.length; i++) {
-                    var stateIds = sequence[i];
-                    if (stateIds == null || stateIds.length == 0) {
-                        utils.handleBadInput(res, 'Empty states in sequence!');
+                db.setStateProperties(mid, stateId, props, function (e) {
+                    if (e != null) {
+                        utils.handleServerError(e, req, res);
                         return;
                     }
-                }
 
-                // set the activity
-                model.getModel().setActivity(name, sequence);
-                // save the model
-                var fname = HttpUtils.extractModelFile(session);
-                if (log.debug())
-                    log.debug('Saving model to file: %s', fname);
-                model.save(fname);
-
-                res.status(204);    // no content
-                res.end();
-            } catch (e) {
-                log.error(e, 'Failed to set activity!');
-                utils.handleServerError(e, req, res);
-            }
-        });
-
-        app.post(API_PATH + '/removeActivity', function (req, res) {
-            try {
-                var session = req.session;
-                var model = HttpUtils.extractModel(req.sessionID, session);
-                var name = req.body.name;
-
-                if (log.debug())
-                    log.debug('Removing activity %s for model %d ...', name, model.getId());
-
-                if (name == null || name == '') {
-                    utils.handleBadInput(res, 'Activity name missing!');
-                    return;
-                }
-
-                model.getModel().removeActivity(name);
-                var fname = HttpUtils.extractModelFile(session);
-                if (log.debug())
-                    log.debug('Saving model to file: %s', fname);
-                model.save(fname);
-
-                res.status(204);    // no content
-                res.end();
-            } catch (e) {
-                log.error(e, 'Failed to set activity!');
-                utils.handleServerError(e, req, res);
-            }
-        });
-
-        app.get(API_PATH + '/targetProperties', function (req, res) {
-            try {
-                var stateId = parseInt(req.query.stateId);
-
-                var model = HttpUtils.extractModel(req.sessionID, req.session);
-
-                if (log.debug())
-                    log.debug('Fetching target details for state: %d', stateId);
-
-                var isUndesired = model.getModel().isTarget(stateId);
-
-                if (isUndesired) {
-                    db.fetchStateProperty(model.getId(), stateId, 'eventId', function (e, eventId) {
-                        if (e != null) {
-                            utils.handleServerError(e, req, res);
-                            return;
-                        }
-
-                        res.send({ isUndesired: isUndesired, eventId: eventId });
-                        res.end();
-                    });
-                } else {
-                    res.send({ isUndesired: isUndesired });
+                    res.status(204);    // no content
                     res.end();
-                }
-            } catch (e) {
-                log.error(e, 'Failed to query target details!');
-                utils.handleServerError(e, req, res);
+                });
             }
         });
 
-        // state explanation
-        app.get(API_PATH + '/explanation', function (req, res) {
-            try {
-                var stateId = parseInt(req.query.stateId);
+        router.register('setControl', 'post', function (req, res) {
+            let ftrId = parseInt(req.body.ftrIdx);
+            let val = parseFloat(req.body.val);
+            let stateId = req.body.stateId != null ? parseInt(req.body.stateId) : null;
 
-                var model = HttpUtils.extractModel(req.sessionID, req.session);
+            let model = HttpUtils.extractModel(req.sessionID, req.session);
 
-                if (log.debug())
-                    log.debug('Fetching explanation for state: %d', stateId);
+            if (log.debug())
+                log.debug('Changing control %d to value %d ...', ftrId, val);
 
-                res.send(model.explainState(stateId));
-                res.end();
-            } catch (e) {
-                log.error(e, 'Failed to query state details!');
-                utils.handleServerError(e, req, res);
-            }
+            model.setControlVal({ ftrId: ftrId, val: val, stateId: stateId});
+            res.send(model.getVizState());
+            res.end();
         });
 
-        app.get(API_PATH + '/stateNarration', function (req, res) {
-            try {
-                var model = HttpUtils.extractModel(req.sessionID, req.session);
-                var stateId = parseInt(req.query.stateId);
+        router.register('resetControl', 'post', function (req, res) {
+            var ftrId = req.body.ftrIdx != null ? parseInt(req.body.ftrIdx) : null;
+            var stateId = req.body.stateId != null ? parseInt(req.body.stateId) : null;
 
-                if (log.trace())
-                    log.trace('Fetching time explanation for state %d ...', stateId);
+            var model = HttpUtils.extractModel(req.sessionID, req.session);
 
-                res.send(model.narrateState(stateId));
-                res.end();
-            } catch (e) {
-                log.error(e, 'Failed to query time explanation!');
-                utils.handleServerError(e, req, res);
-            }
+            if (model == null) throw new Error('Model is null, has the session expired?');
+
+            if (log.debug())
+                log.debug('Reseting control ...');
+
+            model.resetControlVal({ ftrId: ftrId, stateId: stateId});
+            res.send(model.getVizState());
+            res.end();
         });
 
-        // histograms
-        app.get(API_PATH + '/histogram', function (req, res) {
-            try {
-                var stateId = parseInt(req.query.stateId);
-                var ftrIdx = parseInt(req.query.feature);
+        router.register('controlsSet', 'get', function (req, res) {
+            var model = HttpUtils.extractModel(req.sessionID, req.session);
 
-                var model = HttpUtils.extractModel(req.sessionID, req.session);
+            if (log.debug())
+                log.debug('Fetching the state of any control features ...');
 
-                if (log.trace())
-                    log.trace('Fetching histogram for state %d, feature %d ...', stateId, ftrIdx);
-
-                res.send(model.histogram(ftrIdx, stateId));
-                res.end();
-            } catch (e) {
-                log.error(e, 'Failed to query histogram!');
-                utils.handleServerError(e, req, res);
-            }
-        });
-
-        app.get(API_PATH + '/transitionHistogram', function (req, res) {
-            try {
-                var sourceId = parseInt(req.query.sourceId);
-                var targetId = parseInt(req.query.targetId);
-                var ftrId = parseInt(req.query.feature);
-
-                var model = HttpUtils.extractModel(req.sessionID, req.session);
-
-                if (log.trace())
-                    log.trace('Fetching transition histogram for transition %d -> %d, feature %d ...', sourceId, targetId, ftrId);
-
-                res.send(model.transitionHistogram(sourceId, targetId, ftrId));
-                res.end();
-            } catch (e) {
-                log.error(e, 'Failed to query histogram!');
-                utils.handleServerError(e, req, res);
-            }
-        });
-
-        app.get(API_PATH + '/timeHistogram', function (req, res) {
-            try {
-                var model = HttpUtils.extractModel(req.sessionID, req.session);
-                var stateId = parseInt(req.query.stateId);
-
-                if (log.trace())
-                    log.trace('Fetching time histogram for state %d ...', stateId);
-
-                res.send(model.getModel().timeHistogram(stateId));
-                res.end();
-            } catch (e) {
-                log.error(e, 'Failed to query histogram!');
-                utils.handleServerError(e, req, res);
-            }
-        });
-
-        app.get(API_PATH + '/timeExplain', function (req, res) {
-            try {
-                var model = HttpUtils.extractModel(req.sessionID, req.session);
-                var stateId = parseInt(req.query.stateId);
-
-                if (log.trace())
-                    log.trace('Fetching time explanation for state %d ...', stateId);
-
-                res.send(model.getModel().getStateTypTimes(stateId));
-                res.end();
-            } catch (e) {
-                log.error(e, 'Failed to query time explanation!');
-                utils.handleServerError(e, req, res);
-            }
-        });
-
-
-
-        app.get(API_PATH + '/targetFeature', function (req, res) {
-            try {
-                var height = parseFloat(req.query.height);
-                var ftrIdx = parseInt(req.query.ftr);
-
-                var model = HttpUtils.extractModel(req.sessionID, req.session);
-
-                if (log.debug())
-                    log.debug('Fetching distribution for feature "%d" for height %d ...', ftrIdx, height);
-
-                res.send(model.getFtrDist(height, ftrIdx));
-                res.end();
-            } catch (e) {
-                log.error(e, 'Failed to fetch the distribution of a feature!');
-                utils.handleServerError(e, req, res);
-            }
-        });
-
-        app.post(API_PATH + '/stateProperties', function (req, res) {
-            var stateId, stateNm;
-
-            try {
-                var session = req.session;
-
-                var model = HttpUtils.extractModel(req.sessionID, session);
-                var mid = session.modelId;
-
-                stateId = parseInt(req.body.id);
-                stateNm = req.body.name;
-                var description = req.body.description;
-
-                if (stateNm != null) {
-                    if (log.debug())
-                        log.debug('Setting name of state %d to %s ...', stateId, stateNm);
-
-                    model.getModel().setStateName(stateId, stateNm);
-                }
-                else {
-                    if (log.debug())
-                        log.debug('Clearing name of state %d ...', stateId);
-
-                    model.getModel().clearStateName(stateId);
-                }
-
-                var fname;
-                var props;
-                if (!model.isOnline()) {
-                    fname = HttpUtils.extractModelFile(session);
-                    if (log.debug())
-                        log.debug('Saving model to file: %s', fname);
-                    model.save(fname);
-
-                    props = {
-                        description: description
-                    };
-
-                    db.setStateProperties(mid, stateId, props, function (e) {
-                        if (e != null) {
-                            utils.handleServerError(e, req, res);
-                            return;
-                        }
-
-                        res.status(204);    // no content
-                        res.end();
-                    });
-                }
-                else {
-                    var isUndesired = JSON.parse(req.body.isUndesired);
-                    var eventId = req.body.eventId;
-
-                    if (isUndesired && (eventId == null || eventId == '')) {
-                        log.warn('The state is marked undesired, but the eventId is missing!');
-                        utils.handleBadInput(res, 'Undesired event without an event id!');
-                        return;
-                    }
-
-                    if (log.debug())
-                        log.debug('Setting undesired state: %d, isUndesired: ' + isUndesired, stateId);
-
-                    if (model.getModel().isTarget(stateId) != isUndesired)
-                        model.getModel().setTarget(stateId, isUndesired);
-                    fname = HttpUtils.extractModelFile(session);
-
-                    if (log.debug())
-                        log.debug('Saving model to file: %s', fname);
-
-                    fname = HttpUtils.extractModelFile(session);
-                    model.save(fname);
-
-                    props = {
-                        eventId: isUndesired ? eventId : undefined,
-                        description: description
-                    }
-                    db.setStateProperties(mid, stateId, props, function (e) {
-                        if (e != null) {
-                            utils.handleServerError(e, req, res);
-                            return;
-                        }
-
-                        res.status(204);    // no content
-                        res.end();
-                    });
-                }
-            } catch (e) {
-                log.error(e, 'Failed to set name of state %d to %s', stateId, stateNm);
-                utils.handleServerError(e, req, res);
-            }
-        });
-
-        app.post(API_PATH + '/setControl', function (req, res) {
-            var ftrId, val;
-
-            try {
-                ftrId = parseInt(req.body.ftrIdx);
-                val = parseFloat(req.body.val);
-                var stateId = req.body.stateId != null ? parseInt(req.body.stateId) : null;
-
-                var model = HttpUtils.extractModel(req.sessionID, req.session);
-
-                if (log.debug())
-                    log.debug('Changing control %d to value %d ...', ftrId, val);
-
-                model.setControlVal({ ftrId: ftrId, val: val, stateId: stateId});
-                res.send(model.getVizState());
-                res.end();
-            } catch (e) {
-                log.error(e, 'Failed to control %d by factor %d', ftrId, val);
-                utils.handleServerError(e, req, res);
-            }
-        });
-
-        app.post(API_PATH + '/resetControl', function (req, res) {
-            try {
-                var ftrId = req.body.ftrIdx != null ? parseInt(req.body.ftrIdx) : null;
-                var stateId = req.body.stateId != null ? parseInt(req.body.stateId) : null;
-
-                var model = HttpUtils.extractModel(req.sessionID, req.session);
-
-                if (model == null) throw new Error('Model is null, has the session expired?');
-
-                if (log.debug())
-                    log.debug('Reseting control ...');
-
-                model.resetControlVal({ ftrId: ftrId, stateId: stateId});
-                res.send(model.getVizState());
-                res.end();
-            } catch (e) {
-                log.error(e, 'Failed to reset control!');
-                utils.handleServerError(e, req, res);
-            }
-        });
-
-        app.get(API_PATH + '/controlsSet', function (req, res) {
-            try {
-                var model = HttpUtils.extractModel(req.sessionID, req.session);
-
-                if (log.debug())
-                    log.debug('Fetching the state of any control features ...');
-
-                res.send({ active: model.getModel().isAnyControlFtrSet() });
-                res.end();
-            } catch (e) {
-                log.error(e, 'Failed to query the state of control features!');
-                utils.handleServerError(e, req, res);
-            }
+            res.send({ active: model.getModel().isAnyControlFtrSet() });
+            res.end();
         });
     })();
 }
 
-function initDataUploadApi() {
+function initDataUploadApi(router) {
     log.info('Initializing data upload API ...');
 
     var upload = multer({
@@ -1924,88 +1937,78 @@ function initDataUploadApi() {
         }
     }
 
-    app.get(API_PATH + '/pingProgress', function (req, res) {
+    router.register('pingProgress', 'get', function (req, res) {
         if (log.trace())
             log.trace('Checking model progress ...');
 
-        try {
-            var session = req.session;
-            var username = session.username;
+        var session = req.session;
+        var username = session.username;
 
-            if (!modelStore.isBuildingModel(username)) throw new Error('The user is not building a model!');
+        if (!modelStore.isBuildingModel(username)) throw new Error('The user is not building a model!');
 
-            if (modelStore.hasProgress(username)) {
+        if (modelStore.hasProgress(username)) {
+            if (log.trace())
+                log.trace('Already have progress, returning result ...');
+
+            var progress = modelStore.popProgress(username);
+            handleGotProgress(req, res, progress.error, progress.isFinished, progress.progress, progress.message);
+        }
+        else {
+            var timeoutId = setTimeout(function () {
                 if (log.trace())
-                    log.trace('Already have progress, returning result ...');
+                    log.trace('Progress request expired, sending no content ...');
 
-                var progress = modelStore.popProgress(username);
-                handleGotProgress(req, res, progress.error, progress.isFinished, progress.progress, progress.message);
-            }
-            else {
-                var timeoutId = setTimeout(function () {
-                    if (log.trace())
-                        log.trace('Progress request expired, sending no content ...');
-
-                    if (modelStore.isBuildingModel(username) && modelStore.hasProgress(username))
-                        modelStore.clearProgressCallback(username);
-
-                    if (!res.finished) {
-                        res.status(204);    // no content
-                        res.end();
-                    }
-                }, 30000);
-
-                modelStore.setProgressCallback(username, function (e, isFinished, progress, message) {
-                    if (log.trace())
-                        log.trace('Progress callback called ...');
-
-                    clearTimeout(timeoutId);
+                if (modelStore.isBuildingModel(username) && modelStore.hasProgress(username))
                     modelStore.clearProgressCallback(username);
 
-                    handleGotProgress(req, res, e, isFinished, progress, message);
+                if (!res.finished) {
+                    res.status(204);    // no content
+                    res.end();
+                }
+            }, 30000);
+
+            modelStore.setProgressCallback(username, function (e, isFinished, progress, message) {
+                if (log.trace())
+                    log.trace('Progress callback called ...');
+
+                clearTimeout(timeoutId);
+                modelStore.clearProgressCallback(username);
+
+                handleGotProgress(req, res, e, isFinished, progress, message);
+            });
+        }
+    });
+
+    router.register('buildModel', 'post', function (req, res) {
+        var session = req.session;
+        var username = session.username;
+
+        if (username == null) throw new Error('Username is not defined when building a model!');
+
+        log.debug('Building the model ...');
+
+        // create new base with the default store
+        log.debug('Creating users directory ...');
+        var userDirNm = utils.getUserDir(username);
+
+        fs.exists(userDirNm, function (exists) {
+            if (exists) {
+                log.debug('Reusing directory %s ...', userDirNm);
+                createModel(req, res);
+            } else {
+                fs.mkdir(userDirNm, function (e) {
+                    if (e != null) {
+                        log.error(e, 'Failed to create directory!');
+                        utils.handleServerError(e, req, res);
+                        return;
+                    }
+                    createModel(req, res);
                 });
             }
-        } catch (e) {
-            log.error(e, 'Failed to check model progress!');
-            utils.handleServerError(e, req, res);
-        }
+        });
     });
 
-    app.post(API_PATH + '/buildModel', function (req, res) {
-        try {
-            var session = req.session;
-            var username = session.username;
-
-            if (username == null) throw new Error('Username is not defined when building a model!');
-
-            log.debug('Building the model ...');
-
-            // create new base with the default store
-            log.debug('Creating users directory ...');
-            var userDirNm = utils.getUserDir(username);
-
-            fs.exists(userDirNm, function (exists) {
-                if (exists) {
-                    log.debug('Reusing directory %s ...', userDirNm);
-                    createModel(req, res);
-                } else {
-                    fs.mkdir(userDirNm, function (e) {
-                        if (e != null) {
-                            log.error(e, 'Failed to create directory!');
-                            utils.handleServerError(e, req, res);
-                            return;
-                        }
-                        createModel(req, res);
-                    });
-                }
-            });
-        } catch (e) {
-            log.error(e, 'Exception while creating user directory!');
-            utils.handleServerError(e, req, res);
-        }
-    });
-
-    app.post(API_PATH + '/selectDataset', function (req, res) {
+    router.register('selectDataset', 'post', function (req, res) {
         var session = req.session;
         var sessionId = req.sessionID;
         var username = session.username;
@@ -2074,390 +2077,96 @@ function initDataUploadApi() {
         });
     });
 
-    app.get(API_PATH + '/modelConfig', function (req, res) {
-        try {
-            var mid = req.query.mid;
+    router.register('modelConfig', 'get', function (req, res) {
+        var mid = req.query.mid;
 
-            modelManager.getModelConfiguration(mid, function (e, config) {
-                if (e != null) {
-                    utils.handleServerError(e, req, res);
-                    return;
-                }
-                res.send(config);
-                res.end();
-            })
-        } catch (e) {
-            log.error(e, 'Failed to query configuration!');
-            utils.handleServerError(e, req, res);
-        }
+        modelManager.getModelConfiguration(mid, function (e, config) {
+            if (e != null) {
+                utils.handleServerError(e, req, res);
+                return;
+            }
+            res.send(config);
+            res.end();
+        })
     });
 }
 
-function initServerApi() {
-    log.info('Initializing general server REST API ...');
-
-    {
-        log.debug('Registering exit service ...');
-        app.get(API_PATH + '/exit', function (req, res) {
-            try {
-                log.info(API_PATH + '/exit called. Exiting qminer and closing server ...');
-                utils.exit(base);
-                res.status(204);
-                res.end();
-            } catch (e) {
-                log.error(e, 'Failed to exit!');
-                utils.handleServerError(e, req, res);
-            }
-        });
-    }
-
-    {
-        app.get(API_PATH + '/theme', function (req, res) {
-            try {
-                var session = req.session;
-                res.send({ theme: session.theme });
-                res.end();
-            } catch (e) {
-                log.error(e, 'Failed fetch theme!');
-                utils.handleServerError(e, req, res);
-            }
-        });
-
-        app.post(API_PATH + '/theme', function (req, res) {
-            try {
-                var session = req.session;
-                var username = session.username;
-
-                var theme = req.body.theme;
-
-                db.updateTheme(username, theme, function (e) {
-                    if (e != null) {
-                        log.error(e, 'Exception while setting theme!');
-                        utils.handleServerError(e, req, res);
-                        return;
-                    }
-
-                    session.theme = theme;
-                    res.status(204);
-                    res.end();
-                });
-            } catch (e) {
-                log.error(e, 'Failed to set theme!');
-                utils.handleServerError(e, req, res);
-            }
-        });
-    }
-
-    (function () {
-        log.debug('Registering push data service ...');
-
-        var batchN = 0;
-
-        app.post(DATA_PATH + '/push', function (req, res) {
-            var batch = req.body;
-
-            try {
-                if (batchN == 1) {
-                    throughput.init();
-                }
-
-                for (var i = 0; i < batch.length; i++) {
-                    addRawMeasurement(batch[i]);
-                }
-
-                if (batchN >= 1) {
-                    throughput.update(batch.length);
-                    if (batchN % 100 == 0) {
-                        throughput.print();
-                    }
-                }
-
-                batchN++;
-
-                res.status(204);
-                res.end();
-            } catch (e) {
-                log.error(e, 'Failed to process raw measurement!');
-                utils.handleServerError(e, req, res);
-            }
-        });
-    })();
-
-    {
-        log.debug('Registering count active models service ...');    // TODO remove after doing it with EJS
-        app.get(API_PATH + '/countActiveModels', function (req, res) {
-            log.debug('Fetching the number of active models from the DB ...');
-
-            db.countActiveModels(function (e, result) {
-                if (e != null) {
-                    log.error(e, 'Failed to count the number of active models!');
-                    utils.handleServerError(e, req, res);
-                    return;
-                }
-
-                res.send(result);
-                res.end();
-            });
-        });
-    }
-
-    (function () {
-        log.debug('Registering activate model service ...');
-
-        function activateModelById(req, res, modelId, activate, isFromUi) {
-            if (log.debug())
-                log.debug('Activating model %s: ' + activate, modelId);
-
-            var session = req.session;
-
-            db.activateModel({modelId: modelId, activate: activate}, function (e1) {
-                if (e1 != null) {
-                    log.error(e1, 'Failed to activate model %s!', modelId);
-                    utils.handleServerError(e1, req, res);
-                    return;
-                }
-
-                try {
-                    if (activate) {
-                        db.fetchModel(modelId, function (e2, modelConfig) {
-                            if (e2 != null) {
-                                log.error(e2, 'Failed to fetch a model from the DB!');
-                                utils.handleServerError(e2, req, res);
-                                return;
-                            }
-
-                            modelStore.loadOnlineModel(modelConfig.model_file, function (e, model) {
-                                if (e != null) {
-                                    log.error(e, 'Exception while loading online model!');
-                                    return;
-                                }
-
-                                if (log.debug())
-                                    log.debug('Activating model with id %s', model.getId());
-
-                                if (isFromUi) {
-                                    //                                  var currModel = HttpUtils.extractModel(sessionId, session);
-                                    //                                  modelManager.deactivate(currModel);
-                                    session.model = model;
-                                }
-
-                                modelManager.activate(model);
-
-                                res.status(204);
-                                res.end();
-                            });
-                        });
-                    } else {
-                        // deactivate, the model is currently active
-                        var model = modelStore.getModel(modelId);
-                        modelManager.deactivate(model);
-
-                        res.status(204);
-                        res.end();
-                    }
-                } catch (e2) {
-                    log.error(e2, 'Model activated in the DB, but failed to activate it in the app!');
-                    utils.handleServerError(e2, req, res);
-                }
-            });
-        }
-
-        app.post(API_PATH + '/removeModel', function (req, res) {
-            try {
-                var modelId = req.body.modelId;
-
-                log.debug('Removing model %d', modelId);
-
-                db.deleteModel(modelId, function (e) {
-                    if (e != null) {
-                        return utils.handleServerError(e, req, res);
-                    }
-
-                    res.status(204);
-                    res.end();
-                });
-            } catch (e) {
-                log.error(e, 'Failed to process raw measurement!');
-                utils.handleServerError(e, req, res);
-            }
-        });
-
-        app.post(API_PATH + '/activateModel', function (req, res) {
-            try {
-                var modelId = req.body.modelId;
-                var activate = req.body.activate;
-
-                if (activate == null) throw new Error('Missing parameter activate!');
-                if (modelId == null) throw new Error('WTF?! Tried to activate a model that doesn\'t have an ID!');
-
-                activateModelById(req, res, modelId, activate, false);
-            } catch (e) {
-                log.error(e, 'Failed to process raw measurement!');
-                utils.handleServerError(e, req, res);
-            }
-        });
-
-        app.post(API_PATH + '/activateModelViz', function (req, res) {
-            try {
-                var session = req.session;
-                var activate = req.body.activate == 'true';
-
-                if (activate == null) throw new Error('Missing parameter activate!');
-
-                var model = HttpUtils.extractModel(req.sessionID, session);
-
-                activateModelById(req, res, model.getId(), activate, true);
-            } catch (e) {
-                log.error(e, 'Failed to process raw measurement!');
-                utils.handleServerError(e, req, res);
-            }
-        });
-    })();
-
-    (function () {
-        log.debug('Registering model mode service ...');
-        app.get(API_PATH + '/modelMode', function (req, res) {
-            log.debug('Fetching model mode from the db DB ...');
-
-            var model = HttpUtils.extractModel(req.sessionID, req.session);
-
-            db.fetchModel(model.getId(), function (e, modelConfig) {
-                if (e != null) {
-                    log.error(e, 'Failed to get model mode from the DB!');
-                    utils.handleServerError(e, req, res);
-                    return;
-                }
-
-                res.send({
-                    isRealtime: modelConfig.is_realtime == 1,
-                    isActive: modelConfig.is_active == 1
-                });
-                res.end();
-            });
-        });
-    })();
-
-    app.post(API_PATH + '/shareModel', function (req, res) {
-        try {
-            var mid = req.body.modelId;
-            var share = req.body.share;
-
-            if (log.debug())
-                log.debug('Sharing model %s: ', mid);
-
-            db.makeModelPublic(mid, share, function (e) {
-                if (e != null) {
-                    log.error(e, 'Failed to activate model %s!', mid);
-                    utils.handleServerError(e, req, res);
-                    return;
-                }
-
-                res.status(204);
-                res.end();
-            });
-        } catch (e) {
-            log.error(e, 'Failed to process raw measurement!');
-            utils.handleServerError(e, req, res);
-        }
-    });
-}
-
-function initConfigRestApi() {
+function initConfigRestApi(router) {
     log.info('Initializing configuration REST API ...');
 
-    app.get(API_PATH + '/config', function (req, res) {
-        try {
-            var properties = req.query.properties;
+    router.register('config', 'get', function (req, res) {
+        var properties = req.query.properties;
 
-            if (log.debug())
-                log.debug('Fetching property %s', JSON.stringify(properties));
+        if (log.debug())
+            log.debug('Fetching property %s', JSON.stringify(properties));
 
-            log.debug('Fetching intensities from DB ...');
-            db.getMultipleConfig({properties: properties}, function (e, result) {
-                if (e != null) {
-                    log.error(e, 'Failed to fetch properties from DB!');
-                    utils.handleServerError(e, req, res);
-                    return;
-                }
+        log.debug('Fetching intensities from DB ...');
+        db.getMultipleConfig({properties: properties}, function (e, result) {
+            if (e != null) {
+                log.error(e, 'Failed to fetch properties from DB!');
+                utils.handleServerError(e, req, res);
+                return;
+            }
 
-                res.send(result);
-                res.end();
-            });
-        } catch (e) {
-            log.error(e, 'Failed to query configuration!');
-            utils.handleServerError(e, req, res);
-        }
+            res.send(result);
+            res.end();
+        });
     });
 
-    app.post(API_PATH + '/config', function (req, res) {
-        try {
-            var config = req.body;
+    router.register('config', 'post', function (req, res) {
+        var config = req.body;
 
-            if (log.debug())
-                log.debug('Setting configuration %s', JSON.stringify(config));
+        if (log.debug())
+            log.debug('Setting configuration %s', JSON.stringify(config));
 
-            db.setConfig(config, function (e) {
-                if (e != null) {
-                    log.error(e, 'Failed to update settings!');
-                    utils.handleServerError(e, req, res);
-                    return;
-                }
+        db.setConfig(config, function (e) {
+            if (e != null) {
+                log.error(e, 'Failed to update settings!');
+                utils.handleServerError(e, req, res);
+                return;
+            }
 
-                if ('calc_coeff' in config) {
-                    if (log.debug())
-                        log.debug('Found calc_coeff in the new configuration. Setting ...')
-                    pipeline.setCalcCoeff(config.calc_coeff == 'true');
-                }
+            if ('calc_coeff' in config) {
+                if (log.debug())
+                    log.debug('Found calc_coeff in the new configuration. Setting ...')
+                pipeline.setCalcCoeff(config.calc_coeff == 'true');
+            }
 
-                res.status(204);    // no content
-                res.end();
-            });
-        } catch (e) {
-            log.error(e, 'Failed to set configuration!');
-            utils.handleServerError(e, req, res);
-        }
+            res.status(204);    // no content
+            res.end();
+        });
     });
 }
 
-function initMessageRestApi() {
-    app.get(API_PATH + '/modelMessages', function (req, res) {
-        try {
-            var limit = req.query.limit;
-            var model = HttpUtils.extractModel(req.sessionID, req.session);
+function initMessageRestApi(router) {
+    router.register('modelMessages', 'get', function (req, res) {
+        var limit = req.query.limit;
+        var model = HttpUtils.extractModel(req.sessionID, req.session);
 
-            if (limit != null) limit = parseInt(limit);
+        if (limit != null) limit = parseInt(limit);
 
-            modelManager.getLatestMessages(model, limit, function (e, messages) {
-                if (e != null) {
-                    utils.handleServerError(e, req, res);
-                    return;
-                }
+        modelManager.getLatestMessages(model, limit, function (e, messages) {
+            if (e != null) {
+                utils.handleServerError(e, req, res);
+                return;
+            }
 
-                res.send(messages);
-                res.end();
-            })
-        } catch (e) {
-            log.error(e, 'Failed to query configuration!');
-            utils.handleServerError(e, req, res);
-        }
+            res.send(messages);
+            res.end();
+        })
     });
 
-    app.get(API_PATH + '/modelMessagesCount', function (req, res) {
-        try {
-            var model = HttpUtils.extractModel(req.sessionID, req.session);
-            modelManager.countMessages(model, function (e, count) {
-                if (e != null) {
-                    utils.handleServerError(e, req, res);
-                    return;
-                }
+    router.register('modelMessagesCount', 'get', function (req, res) {
+        var model = HttpUtils.extractModel(req.sessionID, req.session);
+        modelManager.countMessages(model, function (e, count) {
+            if (e != null) {
+                utils.handleServerError(e, req, res);
+                return;
+            }
 
-                res.send({ count: count });
-                res.end();
-            })
-        } catch (e) {
-            log.error(e, 'Failed to query configuration!');
-            utils.handleServerError(e, req, res);
-        }
+            res.send({ count: count });
+            res.end();
+        })
     });
 }
 
@@ -3081,12 +2790,40 @@ function initServer(sessionStore, parseCookie) {
         }
     });
 
-    initLoginRestApi();
-    initServerApi();
-    initStreamStoryRestApi();
-    initConfigRestApi();
-    initMessageRestApi();
-    initDataUploadApi();
+    // initialize the routing system
+    (function () {
+        let extractAction = function (req) {
+            return req.params.action;
+        }
+        let handleError = function (e, req, res) {
+            utils.handleServerError(e, req, res);
+        }
+
+        // routers for specific APIs
+        let loginRouter = new routers.HttpRequestRouter({
+            extractRoute: extractAction,
+            onError: handleError
+        })
+        let actionRouter = new routers.HttpRequestRouter({
+            extractRoute: extractAction,
+            onError: handleError
+        })
+
+        let routeLogin = function (req, res) { loginRouter.route(req, res); }
+        let routeApi = function (req, res) { actionRouter.route(req, res); }
+
+        app.get(LOGIN_PATH + '/:action', routeLogin);
+        app.post(LOGIN_PATH + '/:action', routeLogin);
+        app.get(API_PATH + '/:action', routeApi);
+        app.post(API_PATH + '/:action', routeApi);
+
+        initLoginRestApi(loginRouter);
+        initServerApi(actionRouter);
+        initStreamStoryRestApi(actionRouter);
+        initConfigRestApi(actionRouter);
+        initMessageRestApi(actionRouter);
+        initDataUploadApi(actionRouter);
+    })();
 
     //==============================================
     // INTEGRATION

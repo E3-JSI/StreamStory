@@ -2,12 +2,115 @@ let assert = require('assert');
 
 let HttpUtils = require('../src/ssmodules').HttpUtils;
 let utils = require('./utils/testutils');
+let routers = require('../src/util/routers');
 
 class MockRequest {
     constructor(opts) {
         this.path = opts.path;
     }
 }
+
+describe('http router', function () {
+    it('should route correctly', function () {
+        let helloCounter = 0;
+        let worldCounter = 0;
+        let errorCalled = false;
+
+        let router = new routers.HttpRequestRouter({
+            extractRoute: (req) => req.params.api,
+            onError: function () {
+                errorCalled = true;
+            }
+        })
+
+        router.register('hello', 'post', function (req, res) {
+            assert(req != null, 'Did not pass request to function!');
+            assert(res != null, 'Did not pass response to function!');
+            helloCounter++;
+        })
+
+        router.register('world', 'get', function (req, res) {
+            assert(req != null, 'Did not pass request to function!');
+            assert(res != null, 'Did not pass response to function!');
+            worldCounter++;
+        })
+
+        // fire events
+        let res = {};
+        let req1 = {
+            params: {
+                api: 'hello'
+            },
+            method: 'post'
+        }
+        let req2 = {
+            params: {
+                api: 'hello'
+            },
+            method: 'get'
+        }
+        let req3 = {
+            params: {
+                api: 'world'
+            },
+            method: 'post'
+        }
+        let req4 = {
+            params: {
+                api: 'world'
+            },
+            method: 'get'
+        }
+
+        // call the router
+        router.route(req1, res);
+        router.route(req2, res);
+        router.route(req3, res);
+        router.route(req4, res);
+
+        assert.equal(helloCounter, 1, 'Invalid number of calls to \'hello\'');
+        assert.equal(worldCounter, 1, 'Invalid number of calls to \'world\'');
+        assert(!errorCalled, 'An error ocurred while routing!');
+    })
+
+    it('should throw because no handler is registered', function () {
+        let router = new routers.HttpRequestRouter({
+            extractRoute: (req) => req.params.api,
+            onError: function () {
+            }
+        })
+
+        router.register('hello', 'post', function () {
+        })
+        // fire events
+        let res = {};
+        let req1 = {
+            params: {
+                api: 'I kill you'
+            },
+            method: 'post'
+        }
+
+        // call the router
+        assert.throws(function () {
+            router.route(req1, res);
+        })
+    })
+
+    it('should throw an exception because of missing argument', function () {
+        assert.throws(function () {
+            new routers.HttpRequestRouter({
+                extractRoute: (req) => req.params.api,
+            })
+        })
+        assert.throws(function () {
+            new routers.HttpRequestRouter({
+                onError: function () {
+                }
+            })
+        })
+    })
+})
 
 describe('http utilities', function () {
     it('should exptract correct htm page from full URL', function () {
