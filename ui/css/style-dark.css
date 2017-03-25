@@ -181,3 +181,16 @@
   top: 50%;
   left: 100%;
 }
+
+/*==================================================
+ * TIMELINE
+ *================================================*/
+
+#div-time-state-hist > svg > g > rect[highlighted="highlighted"] {
+    stroke: white;
+}
+
+#div-time-state-hist > svg > text[highlighted="highlighted"] {
+    fill: white;
+    font-weight: bold;
+}

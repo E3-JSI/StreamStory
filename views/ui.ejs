@@ -3,6 +3,9 @@
 <head>
     <% include partials/head %>
     <link rel="stylesheet" href="lib/jquer-ui.css">
+    <% if (!model.isOnline()) { %>
+    <link rel="stylesheet" href="css/ui-offline.css">
+    <% } %>
 
     <script type="text/javascript" src="lib/jquery-ui.min.js"></script>
     <script type="text/javascript" src="lib/bootstrap/js/bootstrap.min.js"></script>
@@ -25,6 +28,7 @@
         var TIME_HORIZON = <%= timeHorizon %>;
         var PDF_BINS = <%= pdfBins %>;
         var IS_MODEL_ACTIVE = <%= modelConfig.is_active == 1; %>;
+        var IS_REAL_TIME = false;
 
         <% } else { %>
 
@@ -32,6 +36,7 @@
         var TIME_HORIZON = 0;
         var PDF_BINS = 100;
         var IS_MODEL_ACTIVE = false;
+        var IS_REAL_TIME = false;
 
         <% } %>
 
@@ -84,7 +89,7 @@
         </div><!-- /.container-fluid -->
     </nav>
 
-    <div class="navbar-default sidebar" role="navigation">
+    <div id="ui-sidebar" class="navbar-default sidebar" role="navigation">
         <div class="sidebar-nav navbar-collapse">
             <ul class="nav nav-pills nav-stacked">
                 <li>

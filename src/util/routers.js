@@ -15,8 +15,7 @@ class HttpRequestRouter {
     route(req, res) {
         let self = this;
         let route = self._extractRoute(req, res);
-        let method = req.method;
-        let handlers = self._getHandlers(route, method);
+        let handlers = self._getHandlers(route, req.method);
         try {
             for (let handler of handlers) {
                 handler(req, res);

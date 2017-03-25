@@ -9,122 +9,122 @@
 }
 
 /*===============================================================
- 	PARALLEL COORDINATES
+    PARALLEL COORDINATES
 ===============================================================*/
 
-.parcoords > svg, .parcoords > canvas { 
-  	font: 14px sans-serif;
-  	position: absolute;
+.parcoords > svg, .parcoords > canvas {
+    font: 14px sans-serif;
+    position: absolute;
 }
 .parcoords > canvas {
-  	pointer-events: none;
+    pointer-events: none;
 }
 
 .parcoords text, .parcoords text.label {
-	fill: #3A3A3A;
+    fill: #3A3A3A;
 }
 
 .parcoords text.label {
-  	cursor: default;
+    cursor: default;
 }
 
 .parcoords rect.background {
-  	fill: transparent;
+    fill: transparent;
 }
 .parcoords rect.background:hover {
-  	fill: rgba(120,120,120,0.2);
+    fill: rgba(120,120,120,0.2);
 }
 .parcoords .resize rect {
-  	fill: rgba(0,0,0,0.1);
+    fill: rgba(0,0,0,0.1);
 }
 .parcoords rect.extent {
-  	fill: rgba(255,255,255,0.25);
-  	stroke: rgba(0,0,0,0.6);
+    fill: rgba(255,255,255,0.25);
+    stroke: rgba(0,0,0,0.6);
 }
 .parcoords .axis line, .parcoords .axis path {
- 	fill: none;
-  	stroke: #3A3A3A;
-  	shape-rendering: crispEdges;
+    fill: none;
+    stroke: #3A3A3A;
+    shape-rendering: crispEdges;
 }
 .parcoords canvas {
-  	opacity: 1;
-  	-moz-transition: opacity 0.3s;
-  	-webkit-transition: opacity 0.3s;
-  	-o-transition: opacity 0.3s;
+    opacity: 1;
+    -moz-transition: opacity 0.3s;
+    -webkit-transition: opacity 0.3s;
+    -o-transition: opacity 0.3s;
 }
 .parcoords canvas.faded {
-  	opacity: 0.25;
+    opacity: 0.25;
 }
 .parcoords {
-	-webkit-touch-callout: none;
-	-webkit-user-select: none;
-	-khtml-user-select: none;
-	-moz-user-select: none;
-	-ms-user-select: none;
-	user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 /*===============================================================
- 	CHARTS
+    CHARTS
 ===============================================================*/
 
 .container-chart {
-	height: 150px;
+    height: 150px;
 }
 
 .container-chart rect {
-	
+
 }
 
 .container-chart .bar-foreground {
-  	fill: #5bc0de;
-  	pointer-events: all;
+    fill: #5bc0de;
+    pointer-events: all;
 }
 
 .container-chart .bar-background {
-  	fill: #D5D5D5;
+    fill: #D5D5D5;
 }
 
 .container-chart .bar-overlap {
-  	fill: #83A3A9;
+    fill: #83A3A9;
 }
 
 .container-chart .bar-previous {
-  	fill: #ED561B;
+    fill: #ED561B;
 }
 
 .container-chart .bar-previous:hover {
-  	fill: #FF864B;
-  	cursor: pointer;
+    fill: #FF864B;
+    cursor: pointer;
 }
 
 .container-chart .bar-foreground:hover {
-  	fill: #8be0ff;
-  	cursor: pointer;
+    fill: #8be0ff;
+    cursor: pointer;
 }
 
 .container-chart .bar-foreground, .container-chart .bar-background, .container-chart .bar-previous {
-	/*opacity: 0.6;*/
+    /*opacity: 0.6;*/
 }
 
 .container-chart text {
-  	fill: #3A3A3A;
-  	font: 10px sans-serif;
-  	text-anchor: end;
+    fill: #3A3A3A;
+    font: 10px sans-serif;
+    text-anchor: end;
 }
 
 .axis line {
-	fill: none;
-	stroke: #000;
-	shape-rendering: crispEdges;
+    fill: none;
+    stroke: #000;
+    shape-rendering: crispEdges;
 }
 
 .x.axis path, .y.axis path {
-	display: none;
+    display: none;
 }
 
 /*===============================================================
- 	CHART TOOLTIP
+    CHART TOOLTIP
 ===============================================================*/
 
 .d3-tip {
@@ -180,4 +180,25 @@
   margin: -4px 0 0 -1px;
   top: 50%;
   left: 100%;
+}
+
+/*==================================================
+ * TIMELINE
+ *================================================*/
+
+#div-time-state-hist > svg > g > rect[highlighted="highlighted"] {
+    /* stroke: #337ab7; */
+    stroke: #303030;
+    /* stroke: #555; */
+    stroke-width: 2px;
+}
+
+/* text */
+#div-time-state-hist > svg > text {
+    fill: #337ab7;
+}
+
+#div-time-state-hist > svg > text[highlighted="highlighted"] {
+    fill: #555;
+    font-weight: bold;
 }

@@ -1,6 +1,6 @@
 /* exported isNumber, isInt, clone, getTimeUnit, formatDate, formatDateTime,
  handleAjaxError, addPressHandler, toUiPrecision, redirectToUI, reloadWindow,
- getHslStr, getFtrColor, getBrightness, hsl2rgb */
+ getHslStr, getFtrColor, hsl2rgb */
 
 var StreamStory = {};
 
@@ -106,6 +106,14 @@ StreamStory.Browser.replaceUrlPath = function (url) {
     window.history.replaceState({}, document.title, url);
 }
 
+//=============================================
+// FORMATTING
+//=============================================
+
+StreamStory.Format = {}
+
+StreamStory.Format.toUiPrecision = toUiPrecision;
+
 function isNumber(val) {
     return !isNaN(val);
 }
@@ -114,7 +122,6 @@ function isInt(val) {
     if (isNaN(val)) return false;
     return parseFloat(val) == parseInt(val);
 }
-
 function clone(obj) {
     return JSON.parse(JSON.stringify(obj));
 }
@@ -203,7 +210,7 @@ function countDecimals(value) {
 }
 
 function toUiPrecision(val) {
-    var N_DIGITS = 3;
+    var N_DIGITS = 4;
     var magnitude = Math.floor(Math.log10(Math.abs(val)));
     var decimals;
     if (magnitude >= N_DIGITS) { // > 1000
@@ -257,7 +264,7 @@ function reloadWindow() {
     window.location.reload();
 }
 
-function getFtrColor(val, minVal, maxVal, middleVal) {
+function getFtrColorRgb(val, minVal, maxVal, middleVal) {
     if (middleVal == null) middleVal = 0;
 
     var negColor = [0,0,255];	// purple
@@ -271,54 +278,215 @@ function getFtrColor(val, minVal, maxVal, middleVal) {
         color.push((baseColor[i]*colorWgt).toFixed());
     }
 
+    return {
+        r: color[0],
+        g: color[1],
+        b: color[2]
+    }
+    // return 'rgb(' + color.join(',') + ')';
+}
+
+function getFtrColor(val, minVal, maxVal, middleVal) {
+    if (middleVal == null) middleVal = 0;
+
+    var negColor = [0,0,255];	// purple
+    var posColor = [255,128,0];	// yellow
+
+    var baseColor = val > middleVal ? posColor : negColor;
+    var colorWgt = val > middleVal ? (val - middleVal) / (maxVal - middleVal) : (val - middleVal) / (minVal - middleVal);
+
+    var color = [];
+    for (var i = 0; i < baseColor.length; i++) {
+        color.push((baseColor[i]*colorWgt).toFixed());
+    }
     return 'rgb(' + color.join(',') + ')';
+    // var color = getFtrColorRgb(val, minVal, maxVal, middleVal);
+    // return 'rgb(' + color.r.toFixed() + ',' + color.g.toFixed() + ',' + color.b.toFixed() + ')';
 }
 
-function getBrightness(rgb) {
-    return 0.3*rgb.r + 0.59*rgb.g + 0.11*rgb.b;
+/**
+ * Converts an HSL color value to RGB. Conversion formula
+ * adapted from http://en.wikipedia.org/wiki/HSL_color_space.
+ * Assumes h, s, and l are contained in the set [0, 1] and
+ * returns r, g, and b in the set [0, 255].
+ *
+ * @param   {number}  h       The hue
+ * @param   {number}  s       The saturation
+ * @param   {number}  l       The lightness
+ * @return  {Array}           The RGB representation
+ */
+// function hsl2rgb(h, s, l) {
+//     // if (h > 1) throw new Error('hue is: ' + h);
+//     var c = (1 - Math.abs(2*l - 1))*s;
+//     var h1 = Math.round(h*360 / (120*Math.PI));	// = h * 360 / 60
+//     var x = c*(1 - Math.abs(h1 % 2 - 1));
+
+//     var red = 0;
+//     var green = 0;
+//     var blue = 0;
+
+//     if (h1 < 1) {
+//         red = c;
+//         green = x;
+//         blue = 0;
+//     } else if (h1 < 2) {
+//         red = x;
+//         green = c;
+//         blue = 0;
+//     } else if (h1 < 3) {
+//         red = 0;
+//         green = c;
+//         blue = x;
+//     } else if (h1 < 4) {
+//         red = 0;
+//         green = x;
+//         blue = c;
+//     } else if (h1 < 5) {
+//         red = x;
+//         green = 0;
+//         blue = c;
+//     } else if (h1 <= 6) {
+//         red = c;
+//         green = 0;
+//         blue = x;
+//     } else {
+//         alert('h1: ' + h1);
+//     }
+
+//     return {
+//         r: red,
+//         g: green,
+//         b: blue
+//     }
+// }
+// function hsl2rgb(h, s, l){
+//     var r;
+//     var g;
+//     var b;
+
+//     if (s == 0) {
+//         r = g = b = l; // achromatic
+//     } else {
+//         var hue2rgb = function hue2rgb(p, q, t){
+//             if(t < 0) t += 1;
+//             if(t > 1) t -= 1;
+//             if(t < 1/6) return p + (q - p) * 6 * t;
+//             if(t < 1/2) return q;
+//             if(t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+//             return p;
+//         }
+
+//         var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+//         var p = 2 * l - q;
+//         r = hue2rgb(p, q, h + 1/3);
+//         g = hue2rgb(p, q, h);
+//         b = hue2rgb(p, q, h - 1/3);
+//     }
+
+//     return {
+//         r: r*255,
+//         g: g*255,
+//         b: b*255
+//     }
+//     // return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+// }
+
+/**
+ * Converts an HSL color value to RGB.
+ * Based on algoritym from: based on algorithm from http://en.wikipedia.org/wiki/hsl_and_hsv#converting_to_rgb
+ * Assumes h is in range [0,2*PI) and s, l are contained in the set [0, 1] and
+ * returns r, g, and b in the set [0, 255].
+ *
+ * @param   {number}  h       The hue
+ * @param   {number}  s       The saturation
+ * @param   {number}  l       The lightness
+ * @return  {Array}           The RGB representation
+ */
+function hsl2rgb(hue, saturation, lightness) {
+    hue = 360*hue / (2*Math.PI);
+
+    if (hue == undefined) { return { r: 0, g: 0, b: 0 }; }
+  
+    var chroma = (1 - Math.abs((2 * lightness) - 1)) * saturation;
+    var huePrime = hue / 60;
+    var secondComponent = chroma * (1 - Math.abs((huePrime % 2) - 1));
+  
+    huePrime = Math.floor(huePrime);
+    var red;
+    var green;
+    var blue;
+  
+    if (huePrime === 0){
+        red = chroma;
+        green = secondComponent;
+        blue = 0;
+    } else if (huePrime === 1){
+       red = secondComponent;
+       green = chroma;
+       blue = 0;
+    } else if (huePrime === 2){
+       red = 0;
+       green = chroma;
+       blue = secondComponent;
+    } else if (huePrime === 3){
+       red = 0;
+       green = secondComponent;
+       blue = chroma;
+    } else if (huePrime === 4){
+       red = secondComponent;
+       green = 0;
+       blue = chroma;
+    } else if (huePrime === 5){
+       red = chroma;
+       green = 0;
+       blue = secondComponent;
+    }
+  
+    var lightnessAdjustment = lightness - (chroma / 2);
+    red += lightnessAdjustment;
+    green += lightnessAdjustment;
+    blue += lightnessAdjustment;
+
+    return {
+        r: Math.round(red*255),
+        g: Math.round(green*255),
+        b: Math.round(blue*255)
+    }
 }
 
-function hsl2rgb(h, s, l) {
-    var c = (1 - Math.abs(2*l - 1))*s;
-    var h1 = Math.round(h*360 / (120*Math.PI));	// = h * 360 / 60
-    var x = c*(1 - Math.abs(h1 % 2 - 1));
+/**
+ * Converts an RGB color value to HSL. Conversion formula
+ * adapted from http://en.wikipedia.org/wiki/HSL_color_space.
+ * Assumes r, g, and b are contained in the set [0, 255] and
+ * returns h in [0,2*PI), s, and l in the set [0, 1].
+ *
+ * @param   {number}  r       The red color value
+ * @param   {number}  g       The green color value
+ * @param   {number}  b       The blue color value
+ * @return  {Array}           The HSL representation
+ */
+function rgb2hsl(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    var max = Math.max(r, g, b), min = Math.min(r, g, b);
+    var h, s, l = (max + min) / 2;
 
-    var red = 0;
-    var green = 0;
-    var blue = 0;
-
-    if (h1 < 1) {
-        red = c;
-        green = x;
-        blue = 0;
-    } else if (h1 < 2) {
-        red = x;
-        green = c;
-        blue = 0;
-    } else if (h1 < 3) {
-        red = 0;
-        green = c;
-        blue = x;
-    } else if (h1 < 4) {
-        red = 0;
-        green = x;
-        blue = c;
-    } else if (h1 < 5) {
-        red = x;
-        green = 0;
-        blue = c;
-    } else if (h1 <= 6) {
-        red = c;
-        green = 0;
-        blue = x;
+    if (max == min) {
+        h = s = 0; // achromatic
     } else {
-        alert('h1: ' + h1);
+        var d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch(max) {
+            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+            case g: h = (b - r) / d + 2; break;
+            case b: h = (r - g) / d + 4; break;
+        }
+        h /= 6;
     }
 
     return {
-        r: red,
-        g: green,
-        b: blue
+        hue: h*2*Math.PI,
+        saturation: s,
+        light: l
     }
 }
 

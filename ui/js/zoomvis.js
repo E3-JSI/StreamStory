@@ -13,7 +13,7 @@ var zoomVis = function (opts) {
     var DEFAULT_NODE_COLOR;
     var CURRENT_NODE_COLOR;
     var FUTURE_NODE_BASE_COLOR;
-    var DEFAULT_BORDER_COLOR;
+    // var DEFAULT_BORDER_COLOR;
     var VIZ_NODE_COLOR;
     var VIZ_NODE_FTR_NEG_COLOR;
     var VIZ_NODE_FTR_POS_COLOR;
@@ -24,28 +24,48 @@ var zoomVis = function (opts) {
     var SMALL_EDGE_COLOR;
     var EDGE_TEXT_COLOR;
 
+    var NODE_WHITE_TEXT;
+    var NODE_BLACK_TEXT;
+    var NODE_DARK_BORDER;
+    var NODE_LIGHT_BORDER;
+
+    var SELECTED_EDGE_COLOR;
+
     if (THEME == 'light') {
         DEFAULT_NODE_COLOR = '#A9A9A9';
         CURRENT_NODE_COLOR = '#33CC00';
         FUTURE_NODE_BASE_COLOR = 216;
 
-        DEFAULT_BORDER_COLOR = '#5A5A5A';
+        NODE_BLACK_TEXT = '#404040';
+        NODE_WHITE_TEXT = '#DADADA';
+        NODE_DARK_BORDER = '#606060';
+        NODE_LIGHT_BORDER = '#A0A0A0';
 
         VIZ_NODE_COLOR = 360;
         VIZ_NODE_FTR_NEG_COLOR = 360;
         VIZ_NODE_FTR_POS_COLOR = 117;
 
-        EDGE_COLOR = 'darkgray';
+        EDGE_COLOR = '#A0A0A0';
         BOLD_EDGE_COLOR = '#A0A0A0';
-        MIDDLE_EDGE_COLOR = '#606060';
-        SMALL_EDGE_COLOR = '#707070';
-        EDGE_TEXT_COLOR = '#000000';
+        MIDDLE_EDGE_COLOR = '#C0C0C0';
+        SMALL_EDGE_COLOR = '#E0E0E0';
+
+        // DEFAULT_BORDER_COLOR = BOLD_EDGE_COLOR;
+
+        EDGE_TEXT_COLOR = NODE_BLACK_TEXT;
+
+        SELECTED_EDGE_COLOR = '#337ab7';
     } else {
         DEFAULT_NODE_COLOR = '#073642';
         CURRENT_NODE_COLOR = '#FFA500';
         FUTURE_NODE_BASE_COLOR = 216;	// green
 
-        DEFAULT_BORDER_COLOR = 'rgb(150, 150, 150)';
+        NODE_BLACK_TEXT = '#202020';
+        NODE_WHITE_TEXT = '#DADADA';
+        NODE_DARK_BORDER = '#606060';
+        NODE_LIGHT_BORDER = '#A0A0A0';
+
+        // DEFAULT_BORDER_COLOR = 'rgb(150, 150, 150)';
 
         VIZ_NODE_COLOR = 360;
         VIZ_NODE_FTR_NEG_COLOR = 360;
@@ -55,18 +75,26 @@ var zoomVis = function (opts) {
         BOLD_EDGE_COLOR = '#A0A0A0';
         MIDDLE_EDGE_COLOR = '#606060';
         SMALL_EDGE_COLOR = '#606060';
+
         EDGE_TEXT_COLOR = '#F0F0F0';
+
+        SELECTED_EDGE_COLOR = '#337ab7';
+        // SELECTED_EDGE_COLOR = '#5bc0de';
     }
 
     // var PREVIOUS_NODE_EDGE_COLOR = CURRENT_NODE_COLOR;
 
     var SELECTED_NODE_SHADOW_COLOR = 'white';
-    var SELECTED_NODE_SHADOW_SIZE = 100;
+    // var SELECTED_NODE_SHADOW_COLOR = 'none';
+    // var SELECTED_NODE_SHADOW_SIZE = 100;
+    var SELECTED_NODE_SHADOW_SIZE = 0;
     var SELECTED_NODE_SHADOW_OPACITY = 1;
 
     var FONT_SIZE = '12';
     var DEFAULT_BORDER_WIDTH = 5;
     var CURRENT_BORDER_WIDTH = 10;
+    var SELECTED_BORDER_WIDTH = CURRENT_BORDER_WIDTH;
+    var SELECTED_BORDER_COLOR = SELECTED_EDGE_COLOR;
 
     var BACKGROUND_Z_INDEX = 0;
     var MIDDLEGROUND_Z_INDEX = 10;
@@ -512,6 +540,7 @@ var zoomVis = function (opts) {
                                 saturation: 1,
                                 light: DEFAULT_LIGHT
                             };
+                            if (currAngle > 2*Math.PI) throw new Error('Choosen invalid hue for node: ' + currAngle);
                             currAngle += angle;
                         }
                     }
@@ -549,6 +578,8 @@ var zoomVis = function (opts) {
                             }
                             hue /= totalWgt;
 
+                            if (hue > 2*Math.PI) throw new Error('Invalid hue of middle node: ' + hue);
+
                             colorH[nodeId] = {
                                 hue: hue,
                                 saturation: 1 - levelN*(1 - MIN_SATURATION) / (levels.length - 1),
@@ -565,16 +596,38 @@ var zoomVis = function (opts) {
                 if (!(nodeId in colorH)) { return undefined; }
                 return clone(colorH[nodeId]);
             },
-            getComplementaryColorStr: function (nodeId)	 {
-                var color = that.getColor(nodeId);
-
+            isDark: function (rgb) {
+                var l = 0.2126 * Math.pow(rgb.r/255, 2.2)  +  0.7151 * Math.pow(rgb.g/255, 2.2)  +  0.0721 * Math.pow(rgb.b/255, 2.2)
+                var result = l <= 0.179;
+                return result;
+            },
+            getComplementaryColor: function (color) {
                 var h = color.hue;
                 var s = color.saturation;
                 var l = color.light;
 
                 var rgb = hsl2rgb(h, s, l);
-
-                return getBrightness(rgb) >= 0.5 ? '#000000' : '#F0F0F0';
+                return that.getComplementaryColorRgb(rgb);
+            },
+            getComplementaryColorRgb: function (rgb) {
+                return that.isDark(rgb) ? NODE_WHITE_TEXT : NODE_BLACK_TEXT;
+            },
+            getComplementaryColorById: function (nodeId)	 {
+                var color = that.getColor(nodeId);
+                return that.getComplementaryColor(color);
+            },
+            getDefaultBorderColor: function (rgb) {
+                return that.isDark(rgb) ? NODE_DARK_BORDER : NODE_LIGHT_BORDER;
+            },
+            getDefaultBorderColorById: function (nodeId) {
+                var color = that.getColor(nodeId);
+                var rgb = hsl2rgb(color.hue, color.saturation, color.light);
+                if (isNaN(rgb.r)) {
+                    hsl2rgb(color.hue, color.saturation, color.light);
+                    throw new Error('Got NaN color for node: ' + nodeId + ', color: ' + JSON.stringify(color) + '!');
+                }
+                console.log(JSON.stringify(colorH));
+                return that.getDefaultBorderColor(rgb);
             },
             toColorStr: function (color) {
                 return getHslStr(color)
@@ -992,7 +1045,7 @@ var zoomVis = function (opts) {
                     'text-halign': 'center',
                     'text-valign': 'center',
                     'text-wrap': 'wrap',
-                    'color': colorGenerator.getComplementaryColorStr(id),
+                    'color': colorGenerator.getComplementaryColorById(id),
                     'font-style': 'normal',
                     'font-size': 10000,	// hack, for automatic font size
                     'font-factor': fontFactor,
@@ -1004,7 +1057,7 @@ var zoomVis = function (opts) {
                     'width': nodeSize.width,
                     'height': nodeSize.height,
                     'border-width': DEFAULT_BORDER_WIDTH,
-                    'border-color': DEFAULT_BORDER_COLOR,
+                    'border-color': colorGenerator.getDefaultBorderColorById(id),//DEFAULT_BORDER_COLOR,
                     'label': node.label,
                     'z-index': BACKGROUND_Z_INDEX
                 }
@@ -1128,6 +1181,8 @@ var zoomVis = function (opts) {
 
             middle.css('line-style', 'solid');
             middle.css('content', 'data(prob)');
+            middle.css('line-color', MIDDLE_EDGE_COLOR);
+            middle.css('target-arrow-color', MIDDLE_EDGE_COLOR);
             bold.css('line-color', BOLD_EDGE_COLOR);
             bold.css('target-arrow-color', BOLD_EDGE_COLOR);
 
@@ -1148,6 +1203,17 @@ var zoomVis = function (opts) {
                     bold[i].data().style['target-arrow-color'] = BOLD_EDGE_COLOR;
                 }
             })();
+
+
+            // recolor the edges  around the selected node
+            if (modeConfig.selected != null) {
+                var selectedNode = cy.nodes('#' + modeConfig.selected);
+                selectedNode.edgesTo('').css({
+                    'line-color': SELECTED_EDGE_COLOR,
+                    'target-arrow-color': SELECTED_EDGE_COLOR,
+                    'line-style': 'solid'
+                });
+            }
         }
     }
 
@@ -1301,21 +1367,25 @@ var zoomVis = function (opts) {
 
                 node.css('shadow-color', SELECTED_NODE_SHADOW_COLOR);
                 node.css('shadow-blur', SELECTED_NODE_SHADOW_SIZE);
-                node.css('shadow-opacity', SELECTED_NODE_SHADOW_OPACITY)
+                node.css('shadow-opacity', SELECTED_NODE_SHADOW_OPACITY);
+                node.css('border-width', SELECTED_BORDER_WIDTH);
+                node.css('border-color', SELECTED_BORDER_COLOR);
             }
 
-            if (nodeId == modeConfig.current) {
-                node.css('border-width', CURRENT_BORDER_WIDTH);
-                node.css('border-color', CURRENT_NODE_COLOR);
-                //				node.css('backgroundColor', CURRENT_NODE_COLOR);
-            }
-            // if (nodeId in modeConfig.past) {
-            //     node.css('border-color', PREVIOUS_NODE_EDGE_COLOR);
-            // }
-            if (nodeId in modeConfig.future) {
-                prob = futureColorFromProb(modeConfig.future[nodeId]);
-                color = 'hsla(' + FUTURE_NODE_BASE_COLOR + ',' + (15 + Math.floor((100-15)*prob)) + '%, 55%, 1)';
-                node.css('border-color', color);
+            if (IS_REAL_TIME) {
+                if (nodeId == modeConfig.current) {
+                    node.css('border-width', CURRENT_BORDER_WIDTH);
+                    node.css('border-color', CURRENT_NODE_COLOR);
+                    //				node.css('backgroundColor', CURRENT_NODE_COLOR);
+                }
+                // if (nodeId in modeConfig.past) {
+                //     node.css('border-color', PREVIOUS_NODE_EDGE_COLOR);
+                // }
+                if (nodeId in modeConfig.future) {
+                    prob = futureColorFromProb(modeConfig.future[nodeId]);
+                    color = 'hsla(' + FUTURE_NODE_BASE_COLOR + ',' + (15 + Math.floor((100-15)*prob)) + '%, 55%, 1)';
+                    node.css('border-color', color);
+                }
             }
 
             if (mode == MODE_PROBS) {
@@ -1334,9 +1404,13 @@ var zoomVis = function (opts) {
                 var ftrRange = config.maxVal - config.minVal;
                 var middleVal = config.minVal + ftrRange/2;
 
-                color = getFtrColor(ftrVal, config.minVal, config.maxVal, middleVal);
+                color = getFtrColorRgb(ftrVal, config.minVal, config.maxVal, middleVal);
+                // color = getFtrColor(ftrVal, config.minVal, config.maxVal, middleVal);
+                var nodeColorStr = 'rgb(' + color.r + ',' + color.g + ',' + color.b + ')';
+                var textColorStr = colorGenerator.getComplementaryColor(rgb2hsl(parseInt(color.r), parseInt(color.g), parseInt(color.b)));
 
-                node.css('backgroundColor', color);
+                node.css('backgroundColor', nodeColorStr);
+                node.css('color', textColorStr);
             }
             else {
                 var nodeColor = colorGenerator.getColorStr(nodeId);
@@ -1362,9 +1436,12 @@ var zoomVis = function (opts) {
 
         var nodes = cy.nodes();
 
-        nodes.css('border-color', DEFAULT_BORDER_COLOR);
         nodes.css('backgroundColor', DEFAULT_NODE_COLOR);
-        nodes.css('border-color', DEFAULT_BORDER_COLOR);
+        for (var i = 0; i < nodes.length; i++) {
+            var id = nodes[i].id();
+            nodes[i].css('border-color', colorGenerator.getDefaultBorderColorById(id));
+        }
+        // nodes.css('border-color', DEFAULT_BORDER_COLOR);
         nodes.css('z-index', BACKGROUND_Z_INDEX);
 
         if (!inBatch)
@@ -1445,7 +1522,11 @@ var zoomVis = function (opts) {
                 nodes.css('shadow-color', 'white');
                 nodes.css('shadow-blur', 0);
                 nodes.css('shadow-opacity', 0);
-                //				cy.nodes().css('border-width', DEFAULT_BORDER_WIDTH);
+                nodes.css('border-width', DEFAULT_BORDER_WIDTH);
+                for (var nodeN = 0; nodeN < nodes.length; nodeN++) {
+                    var id = nodes[nodeN].id();
+                    nodes[nodeN].css('border-color', colorGenerator.getDefaultBorderColorById(id));
+                }
 
                 // emphasize edges
                 var edges = cy.edges();
@@ -1469,20 +1550,26 @@ var zoomVis = function (opts) {
                 nodes.css('shadow-color', 'white');
                 nodes.css('shadow-blur', 0);
                 nodes.css('shadow-opacity', 0);
+                nodes.css('border-width', DEFAULT_BORDER_WIDTH);
+                for (var nodeN = 0; nodeN < nodes.length; nodeN++) {
+                    var id = nodes[nodeN].id();
+                    nodes[nodeN].css('border-color', colorGenerator.getDefaultBorderColorById(id));
+                }
+                // nodes.css('border-color', DEFAULT_BORDER_COLOR);
                 //				nodes.css('border-width', DEFAULT_BORDER_WIDTH);
                 drawNode(stateId, true);
 
                 // emphasize edges
                 var edges = cy.edges();
                 var nedges = edges.length;
-                for (var i = 0; i < nedges; i++) {
-                    var edge = edges[i];
+                for (var edgeN = 0; edgeN < nedges; edgeN++) {
+                    var edge = edges[edgeN];
                     edge.css(edge.data().style);
                 }
 
                 node.edgesTo('').css({
-                    'line-color': 'green',
-                    'target-arrow-color': 'green',
+                    'line-color': SELECTED_EDGE_COLOR,
+                    'target-arrow-color': SELECTED_EDGE_COLOR,
                     'line-style': 'solid'
                 });
             });

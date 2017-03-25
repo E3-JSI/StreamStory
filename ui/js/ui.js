@@ -502,7 +502,7 @@
 
                     if (opts.type == 'numeric') {
                         if (opts.value != null)
-                            valField.html(opts.value.toPrecision(3));
+                            valField.html(StreamStory.Format.toUiPrecision(opts.value));
                         if (opts.valueColor != null)
                             thumbnail.find('.attr-val').css('color', opts.valueColor);
                     }
@@ -1331,7 +1331,7 @@
         timelineController = (function () {
             var ZOOM_FACTOR = 1.1;
             var OFFSET_STEP = 0.1;
-            var MAX_ZOOM = 150;
+            var MAX_ZOOM = 1000;
 
             var wrapperId = '#div-time-state-hist';
             var wrapper = $(wrapperId);
@@ -1542,9 +1542,6 @@
 
                                 var config = getTimeConfig(dt);
 
-                                // var tickTime = config.tickTime;
-                                // var format = config.format;
-
                                 chart.tickFormat({
                                     format: config.format,
                                     numTicks: nTicks,
@@ -1570,8 +1567,8 @@
                             })();
 
                             chart.click(function (d, i, datum) {
-                                var stateClass = d['class'];
-                                var scaleClass = datum['class'];
+                                var stateClass = d.class;
+                                var scaleClass = datum.class;
 
                                 var stateSpl = stateClass.split('-');
                                 var scaleSpl = scaleClass.split('-');
@@ -1642,7 +1639,7 @@
 
                         // init the timeline slider
                         (function initSlider() {
-                            var step = 0.001;
+                            var step = 0.00001;
                             slider.slider({
                                 range: true,
                                 min: 0,
