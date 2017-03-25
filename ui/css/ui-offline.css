@@ -1,0 +1,18 @@
+#ui-sidebar {
+    display: none;
+}
+
+#page-wrapper {
+    padding: 0 15px;
+    min-height: 568px;
+}
+
+@media(min-width:768px) {
+    #page-wrapper {
+        position: inherit;
+        margin: 0 0 0 0 !important;
+        width: 100% !important;
+        height: 100%;
+        padding: 0 30px;
+    }
+}
