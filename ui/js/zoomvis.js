@@ -552,6 +552,39 @@ var zoomVis = function (opts) {
                         colorLeafs(rootStates[stateN].id);
                     }
                 })();
+                // (function () {
+                //     var nLeafs = levels[0].states.length;
+
+                //     // var angle = 2*Math.PI / nLeafs;
+                //     var currAngle = 0;
+
+                //     function colorLeafs(parentId) {
+                //         if (parentId in childH) {
+                //             var children = childH[parentId];
+                //             for (var i = 0; i < children.length; i++) {
+                //                 colorLeafs(children[i]);
+                //             }
+                //         }
+                //         else {
+                //             var prob = nodeH[parentId].timeProportion;
+                //             var nodeAngle = prob*2*Math.PI;
+                //             colorH[parentId] = {
+                //                 hue: currAngle + nodeAngle / 2,
+                //                 saturation: 1,
+                //                 light: DEFAULT_LIGHT
+                //             };
+                //             if (currAngle > 2*Math.PI) throw new Error('Choosen invalid hue for node: ' + currAngle);
+                //             currAngle += nodeAngle;
+                //         }
+                //     }
+
+                //     var lastLevel = levels[levels.length-1];
+                //     var rootStates = lastLevel.states;
+
+                //     for (var stateN = 0; stateN < rootStates.length; stateN++) {
+                //         colorLeafs(rootStates[stateN].id);
+                //     }
+                // })();
 
                 // then color all the others
                 (function () {
@@ -1403,6 +1436,12 @@ var zoomVis = function (opts) {
 
                 var ftrRange = config.maxVal - config.minVal;
                 var middleVal = config.minVal + ftrRange/2;
+
+                // console.log('=======================================');
+                // console.log('value of feature: ' + ftrVal);
+                // console.log('min: ' + config.minVal + ', max: ' + config.maxVal + ', range: ' + ftrRange);
+                // console.log('middle val: ' + middleVal);
+                // console.log('=======================================');
 
                 color = getFtrColorRgb(ftrVal, config.minVal, config.maxVal, middleVal);
                 // color = getFtrColor(ftrVal, config.minVal, config.maxVal, middleVal);

@@ -503,8 +503,8 @@
                     if (opts.type == 'numeric') {
                         if (opts.value != null)
                             valField.html(StreamStory.Format.toUiPrecision(opts.value));
-                        if (opts.valueColor != null)
-                            thumbnail.find('.attr-val').css('color', opts.valueColor);
+                        // if (opts.valueColor != null)
+                        //     thumbnail.find('.attr-val').css('color', opts.valueColor);
                     }
                     else if (opts.type == 'categorical') {
                         if (opts.value != null) {
@@ -537,8 +537,8 @@
 
                             valField.html(valStr.substring(0, valStr.length-7));
                         }
-                        if (opts.valueColor != null)    // TODO what to do with this???
-                            thumbnail.find('.attr-val').css('color', opts.valueColor);
+                        // if (opts.valueColor != null)    // TODO what to do with this???
+                        //     thumbnail.find('.attr-val').css('color', opts.valueColor);
                     }
                     else {
                         throw new Error('Invalid feature type: ' + opts.type);
@@ -1678,7 +1678,7 @@
                 onStateChanged: function (stateId) {
                     wrapper.find('rect').removeAttr('highlighted');
 
-                    if (stateId == null) return;
+                    // if (stateId == null) return;
 
                     selectedStateId = stateId;
                     highlightSelectedState();
