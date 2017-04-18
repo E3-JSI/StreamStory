@@ -25,6 +25,7 @@ exports.StreamStory = function (opts) {
     var obsFtrConf = null;	// TODO these are not saved and loaded
     var contrFtrConf = null;
     var ignFtrConf = null;
+    var derivativeFtrIds = null;
 
     if (opts.base != null && opts.config != null) {
         mc = new streamstory._StreamStory(opts.config);
@@ -38,23 +39,48 @@ exports.StreamStory = function (opts) {
             obsFtrConf = opts.obsFieldV;
             contrFtrConf = opts.controlFieldV;
             ignFtrConf = opts.ignoredFieldV;
+
+            // construct feature IDs for the derivative features
+            derivativeFtrIds = (function () {
+                var result = [];
+
+                var ftrNames = getAllFtrNames();
+                var derivFieldV = opts.derivFieldV;
+
+                var derivFtrH = {};
+                for (var i = 0; i < derivFieldV.length; i++) {
+                    derivFtrH[derivFieldV[i].name] = true;
+                }
+
+                for (var ftrId = 0; ftrId < ftrNames.length; ftrId++) {
+                    var ftr = ftrNames[ftrId];
+                    if (ftr in derivFtrH) {
+                        result.push(ftrId);
+                    }
+                }
+
+                return result;
+            })();
+
         }
         else {
             throw new Error('Missing feature space configuration!');
         }
     }
     else if (opts.fname != null) {
-        log.info('Loading StreamStory from:%s ', opts.fname);
+        if (log.info())
+            log.info('Loading StreamStory from:%s ', opts.fname);
         var fin = new qm.fs.FIn(opts.fname);
 
         mc = new streamstory._StreamStory(fin);
-        log.info('Loading feature spaces ...');
+        if (log.debug())
+            log.debug('Loading feature spaces ...');
         for (var i = 0; i < N_FTR_SPACES; i++) {
             ftrSpaces.push(new qm.FeatureSpace(base, fin));
         }
         log.debug('Initializing feature names ...');
         initFtrNames();
-        log.info('Loaded!');
+        log.debug('Loaded!');
     }
     else {
         throw new Error('Missing parameters (base and config) or fname!');
@@ -161,6 +187,10 @@ exports.StreamStory = function (opts) {
 
     function getIgnoredFtrNames() {
         return getFtrNames(getIgnoredFtrSpace());
+    }
+
+    function getAllFtrNames() {
+        return getObsFtrNames().concat(getControlFtrNames()).concat(getIgnoredFtrNames());
     }
 
     function getFtrName(ftrId) {
@@ -450,7 +480,7 @@ exports.StreamStory = function (opts) {
         } else {
             var recSet = opts.recSet;
 
-            log.info('Updating feature spaces ...');
+            log.debug('Updating feature spaces ...');
             var results = [];
             for (i = 0; i < ftrSpaces.length; i++) {
                 var ftrSpace = ftrSpaces[i];
@@ -531,20 +561,21 @@ exports.StreamStory = function (opts) {
                     throw e;
                 }
 
-                log.info('Creating model ...');
+                log.debug('Creating model ...');
                 mc.fit({
                     observations: data.obsColMat,
                     controls: data.contrColMat,
                     ignored: data.ignoredColMat,
                     times: timeV,
                     batchV: batchEndV,
+                    derivativeFtrIds: derivativeFtrIds,
                     ftrInfo: {
                         observation: genFtrInfo(obsFtrConf, getObsFtrSpace()),
                         control: genFtrInfo(contrFtrConf, getContrFtrSpace()),
                         ignored: genFtrInfo(ignFtrConf, getIgnoredFtrSpace())
                     }
                 });
-                log.info('Done!');
+                log.debug('Done!');
             });
         },
 
@@ -559,13 +590,14 @@ exports.StreamStory = function (opts) {
                 }
 
                 try {
-                    log.info('Creating model asynchronously ...');
+                    log.debug('Creating model asynchronously ...');
                     mc.fitAsync({
                         observations: data.obsColMat,
                         controls: data.contrColMat,
                         ignored: data.ignoredColMat,
                         times: timeV,
                         batchV: batchEndV,
+                        derivativeFtrIds: derivativeFtrIds,
                         ftrInfo: {
                             observation: genFtrInfo(obsFtrConf, getObsFtrSpace()),
                             control: genFtrInfo(contrFtrConf, getContrFtrSpace()),
@@ -597,8 +629,16 @@ exports.StreamStory = function (opts) {
             );
         },
 
+        /**
+         * Projects the record onto the fetures used by the model.
+         *
+         * @param {qm.Record} rec - the record
+         * @returns {object} the projection as a assiciative array of <ftr_name, ftr_val> pairs
+         */
         project: function (rec) {
-            var result = {};
+            var result = {
+                timestamp: rec.time.getTime()
+            }
 
             for (var ftrSpaceN = 0; ftrSpaceN < ftrSpaces.length; ftrSpaceN++) {
                 var names = getFtrNames(ftrSpaces[ftrSpaceN]);

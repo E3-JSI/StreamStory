@@ -13,7 +13,7 @@ var zoomVis = function (opts) {
     var DEFAULT_NODE_COLOR;
     var CURRENT_NODE_COLOR;
     var FUTURE_NODE_BASE_COLOR;
-    var DEFAULT_BORDER_COLOR;
+    // var DEFAULT_BORDER_COLOR;
     var VIZ_NODE_COLOR;
     var VIZ_NODE_FTR_NEG_COLOR;
     var VIZ_NODE_FTR_POS_COLOR;
@@ -24,28 +24,48 @@ var zoomVis = function (opts) {
     var SMALL_EDGE_COLOR;
     var EDGE_TEXT_COLOR;
 
+    var NODE_WHITE_TEXT;
+    var NODE_BLACK_TEXT;
+    var NODE_DARK_BORDER;
+    var NODE_LIGHT_BORDER;
+
+    var SELECTED_EDGE_COLOR;
+
     if (THEME == 'light') {
         DEFAULT_NODE_COLOR = '#A9A9A9';
         CURRENT_NODE_COLOR = '#33CC00';
         FUTURE_NODE_BASE_COLOR = 216;
 
-        DEFAULT_BORDER_COLOR = '#5A5A5A';
+        NODE_BLACK_TEXT = '#404040';
+        NODE_WHITE_TEXT = '#DADADA';
+        NODE_DARK_BORDER = '#606060';
+        NODE_LIGHT_BORDER = '#A0A0A0';
 
         VIZ_NODE_COLOR = 360;
         VIZ_NODE_FTR_NEG_COLOR = 360;
         VIZ_NODE_FTR_POS_COLOR = 117;
 
-        EDGE_COLOR = 'darkgray';
+        EDGE_COLOR = '#A0A0A0';
         BOLD_EDGE_COLOR = '#A0A0A0';
-        MIDDLE_EDGE_COLOR = '#606060';
-        SMALL_EDGE_COLOR = '#707070';
-        EDGE_TEXT_COLOR = '#000000';
+        MIDDLE_EDGE_COLOR = '#C0C0C0';
+        SMALL_EDGE_COLOR = '#E0E0E0';
+
+        // DEFAULT_BORDER_COLOR = BOLD_EDGE_COLOR;
+
+        EDGE_TEXT_COLOR = NODE_BLACK_TEXT;
+
+        SELECTED_EDGE_COLOR = '#337ab7';
     } else {
         DEFAULT_NODE_COLOR = '#073642';
         CURRENT_NODE_COLOR = '#FFA500';
         FUTURE_NODE_BASE_COLOR = 216;	// green
 
-        DEFAULT_BORDER_COLOR = 'rgb(150, 150, 150)';
+        NODE_BLACK_TEXT = '#202020';
+        NODE_WHITE_TEXT = '#DADADA';
+        NODE_DARK_BORDER = '#606060';
+        NODE_LIGHT_BORDER = '#A0A0A0';
+
+        // DEFAULT_BORDER_COLOR = 'rgb(150, 150, 150)';
 
         VIZ_NODE_COLOR = 360;
         VIZ_NODE_FTR_NEG_COLOR = 360;
@@ -55,18 +75,26 @@ var zoomVis = function (opts) {
         BOLD_EDGE_COLOR = '#A0A0A0';
         MIDDLE_EDGE_COLOR = '#606060';
         SMALL_EDGE_COLOR = '#606060';
+
         EDGE_TEXT_COLOR = '#F0F0F0';
+
+        SELECTED_EDGE_COLOR = '#337ab7';
+        // SELECTED_EDGE_COLOR = '#5bc0de';
     }
 
-    var PREVIOUS_NODE_EDGE_COLOR = CURRENT_NODE_COLOR;
+    // var PREVIOUS_NODE_EDGE_COLOR = CURRENT_NODE_COLOR;
 
     var SELECTED_NODE_SHADOW_COLOR = 'white';
-    var SELECTED_NODE_SHADOW_SIZE = 100;
+    // var SELECTED_NODE_SHADOW_COLOR = 'none';
+    // var SELECTED_NODE_SHADOW_SIZE = 100;
+    var SELECTED_NODE_SHADOW_SIZE = 0;
     var SELECTED_NODE_SHADOW_OPACITY = 1;
 
     var FONT_SIZE = '12';
     var DEFAULT_BORDER_WIDTH = 5;
     var CURRENT_BORDER_WIDTH = 10;
+    var SELECTED_BORDER_WIDTH = CURRENT_BORDER_WIDTH;
+    var SELECTED_BORDER_COLOR = SELECTED_EDGE_COLOR;
 
     var BACKGROUND_Z_INDEX = 0;
     var MIDDLEGROUND_Z_INDEX = 10;
@@ -104,236 +132,270 @@ var zoomVis = function (opts) {
     var nodeQtipOpts = clone(DEFAULT_QTIP_OPTS);
     var edgeQtipOpts = clone(DEFAULT_QTIP_OPTS);
 
-    nodeQtipOpts.content = function (event, api) {
-        var data = this.data();
-        var name = data.style.content;//name;
-        var label = data.style.label;
+    (function () {
+        nodeQtipOpts.content = function (event, api) {
+            var data = this.data();
+            var name = data.style.content;//name;
+            var label = data.style.label;
 
-        var tooltip = $('<div />');
+            // async sections
+            var ruleExplainDiv = $('<div />');
+            var undesiredDiv = $('<div />');
+            var narrationDiv = $('<div />');
+            var timeIntervalDiv = $('<div />');
 
-        // name
-        if (name != null) {
-            var nameDiv = $('<h3 />');
-            nameDiv.html(name + ' (' + label + ')');
-            tooltip.append(nameDiv);
-        }
+            var asyncExecute = StreamStory.Utils.asyncExecutor(function () {
+                var tt = $('<div />');
 
-        // holding time
-        var timeDiv = $('<div />');
-        timeDiv.html('Typically lasts <strong>' + data.holdingTime.toPrecision(2) + ' ' + getTimeUnit() + 's</strong>');
-        tooltip.append(timeDiv);
+                // name
+                if (name != null) {
+                    var nameDiv = $('<h3 />');
+                    nameDiv.html(name + ' (' + label + ')');
+                    tt.append(nameDiv);
+                }
+                // time
+                var timeDiv = $('<div />');
+                timeDiv.html('Typically lasts <strong>' + data.holdingTime.toPrecision(2) + ' ' + getTimeUnit() + 's</strong>');
 
-        // undesired event properties
-        var undesiredDiv = $('<div />');
-        undesiredDiv.attr('id', 'div-tooltip-undesired-' + data.id);
-        undesiredDiv.addClass('tooltip-undesired');
-        if ($('#div-tooltip-undesired-' + data.id).html() != null) {
-            undesiredDiv.html($('#div-tooltip-undesired-' + data.id).html());
-        }
-        tooltip.append(undesiredDiv);
+                // async stuff
+                tt.append(undesiredDiv);
+                tt.append(narrationDiv);
+                tt.append(timeDiv);
+                tt.append(timeIntervalDiv);
+                tt.append(ruleExplainDiv);
 
-        var narrationDiv = $('<div />');
-        narrationDiv.attr('id', 'div-narration-' + data.id);
-        narrationDiv.addClass('tooltip-div-narration');
-        if ($('#div-narration-' + data.id).html() != null) {
-            narrationDiv.html($('#div-narration-' + data.id).html());
-        }
-        tooltip.append(narrationDiv);
+                api.set('content.text', tt.html());
+                // api.reposition(undefined, false);
+            });
 
-        var timeIntervalDiv = $('<div />');
-        timeIntervalDiv.attr('id', 'div-tminterval-' + data.id);
-        timeIntervalDiv.addClass('tooltip-div-tminterval');
-        if ($('#div-tminterval-' + data.id).html() != null) {
-            timeIntervalDiv.html($('#div-tminterval-' + data.id).html());
-        }
-        tooltip.append(timeIntervalDiv);
+            // rule explanation
+            (function () {
+                ruleExplainDiv.attr('id', 'div-explain-' + data.id);
+                ruleExplainDiv.addClass('tooltip-div-explain');
+                if ($('#div-explain-' + data.id).html() != null) {
+                    ruleExplainDiv.html($('#div-explain-' + data.id).html());
+                }
 
-        var ruleExplainDiv = $('<div />');
-        ruleExplainDiv.attr('id', 'div-explain-' + data.id);
-        ruleExplainDiv.addClass('tooltip-div-explain');
-        if ($('#div-explain-' + data.id).html() != null) {
-            ruleExplainDiv.html($('#div-explain-' + data.id).html());
-        }
-        tooltip.append(ruleExplainDiv);
+                asyncExecute(function (done) {
+                    $.ajax('api/explanation', {
+                        dataType: 'json',
+                        method: 'GET',
+                        data: { stateId: getServerNodeId(data.id) },
+                        success: function (union) {
+                            if (union.length > 2) { return done(); }
 
-        setTimeout(function () {
-            $.ajax('api/explanation', {
-                dataType: 'json',
-                method: 'GET',
-                data: { stateId: getServerNodeId(data.id) },
-                success: function (union) {
-                    var score = function (interserct) {
-                        return interserct.covered*interserct.purity;
-                    }
+                            var score = function (interserct) {
+                                return interserct.covered*interserct.purity;
+                            }
 
-                    union.sort(function (inter1, inter2) {
-                        return score(inter2) - score(inter1);
-                    });
+                            union.sort(function (inter1, inter2) {
+                                return score(inter2) - score(inter1);
+                            });
 
-                    var bestScore = score(union[0]);
-                    var lastN = 0;
-                    while (lastN < union.length-1 && score(union[lastN+1]) > bestScore / 10) {
-                        lastN++;
-                    }
+                            var bestScore = score(union[0]);
+                            var lastN = 0;
+                            while (lastN < union.length-1 && score(union[lastN+1]) > bestScore / 10) {
+                                lastN++;
+                            }
 
-                    if (union.length > 1) {
-                        union.splice(lastN+1);
-                    }
+                            if (union.length > 1) {
+                                union.splice(lastN+1);
+                            }
 
-                    // construct the rules
-                    var unionStr = '';
-                    for (var i = 0; i < union.length; i++) {
-                        var intersect = union[i];
-                        var intersectStr = '';
-                        var terms = intersect.terms;
+                            // construct the rules
+                            var unionStr = '';
+                            for (var i = 0; i < union.length; i++) {
+                                var intersect = union[i];
+                                var intersectStr = '';
+                                var terms = intersect.terms;
 
-                        // sort the terms
-                        terms.sort(function (t1, t2) {
-                            if (t2.feature < t1.feature)
-                                return -1;
-                            else if (t2.feature > t1.feature)
-                                return 1;
-                            else return 0;
-                        });
+                                // sort the terms
+                                terms.sort(function (t1, t2) {
+                                    if (t2.feature < t1.feature)
+                                        return -1;
+                                    else if (t2.feature > t1.feature)
+                                        return 1;
+                                    else return 0;
+                                });
 
-                        for (var j = 0; j < terms.length; j++) {
-                            var term = terms[j];
+                                for (var j = 0; j < terms.length; j++) {
+                                    var term = terms[j];
 
-                            intersectStr += '&#09;';
+                                    intersectStr += '&#09;';
 
-                            if (term.le != null || term.gt != null) {
-                                if (term.le != null && term.gt != null) {
-                                    intersectStr += term.feature + ' &isin; (' + toUiPrecision(term.gt) + ', ' + toUiPrecision(term.le) + ']';
-                                } else if (term.le != null) {
-                                    intersectStr += term.feature + ' \u2264 ' + toUiPrecision(term.le);
-                                } else {
-                                    intersectStr += term.feature + ' > ' + toUiPrecision(term.gt);
+                                    if (term.le != null || term.gt != null) {
+                                        if (term.le != null && term.gt != null) {
+                                            intersectStr += term.feature + ' &isin; (' + toUiPrecision(term.gt) + ', ' + toUiPrecision(term.le) + ']';
+                                        } else if (term.le != null) {
+                                            intersectStr += term.feature + ' \u2264 ' + toUiPrecision(term.le);
+                                        } else {
+                                            intersectStr += term.feature + ' > ' + toUiPrecision(term.gt);
+                                        }
+                                    }
+                                    else if (term.eq != null) {
+                                        intersectStr += term.feature + ' = ' + term.eq;
+                                    }
+                                    else if (term.neq != null) {
+                                        intersectStr += term.feature + ' \u2260 ' + term.neq;
+                                    }
+                                    else {
+                                        throw new Error('Feature explanation le, gt, eq and neq are all NULL!');
+                                    }
+
+                                    if (j < terms.length-1)
+                                        intersectStr += '<br />';
+                                }
+
+                                unionStr += '<br />' + intersectStr + '<br />';
+
+                                if (i < union.length-1) {
+                                    unionStr += '<br />';
                                 }
                             }
-                            else if (term.eq != null) {
-                                intersectStr += term.feature + ' = ' + term.eq;
+
+                            ruleExplainDiv.html('It can be characterized by the following rules:<br />' + unionStr);
+
+                            done();
+                        },
+                        error: handleAjaxError(null, done)
+                    });
+                })
+            })();
+
+            // event id
+            (function () {
+                undesiredDiv.attr('id', 'div-tooltip-undesired-' + data.id);
+                undesiredDiv.addClass('tooltip-undesired');
+                if ($('#div-tooltip-undesired-' + data.id).html() != null) {
+                    undesiredDiv.html($('#div-tooltip-undesired-' + data.id).html());
+                }
+
+                asyncExecute(function (done) {
+                    $.ajax('api/targetProperties', {
+                        dataType: 'json',
+                        method: 'GET',
+                        data: { stateId: getServerNodeId(data.id) },
+                        success: function (props) {
+                            if (props.isUndesired) {
+                                undesiredDiv.html('Event id: ' + props.eventId);
+                            } else {
+                                undesiredDiv.html('');
                             }
-                            else if (term.neq != null) {
-                                intersectStr += term.feature + ' \u2260 ' + term.neq;
+
+                            done();
+                        },
+                        error: handleAjaxError(null, done)
+                    });
+                })
+            })();
+
+            // state narration
+            (function () {
+                narrationDiv.attr('id', 'div-narration-' + data.id);
+                narrationDiv.addClass('tooltip-div-narration');
+                if ($('#div-narration-' + data.id).html() != null) {
+                    narrationDiv.html($('#div-narration-' + data.id).html());
+                }
+
+                asyncExecute(function (done) {
+                    $.ajax('api/stateNarration', {
+                        dataType: 'json',
+                        method: 'GET',
+                        data: { stateId: getServerNodeId(data.id) },
+                        success: function (narration) {
+                            if (narration.length == 0) return done();
+
+                            var p = $('<p />');
+                            var html = 'The state is characterized by ';
+
+                            var n = Math.min(3, narration.length);
+                            for (var i = 0; i < n; i++) {
+                                var item = narration[i];
+
+                                var ftr = item.ftrId;
+                                var type = item.type;
+                                switch (type) {
+                                    case 'numeric': {
+                                        var level = item.ftrDesc;
+                                        html += '<strong>' + level + ' ' + ftr + '</strong>';
+                                        break;
+                                    }
+                                    case 'categorical': {
+                                        html += '<strong>' + ftr + ' is ' + item.bin + '</strong>';
+                                        break;
+                                    }
+                                    default: {
+                                        throw new Error('Unknown feature type: ' + type);
+                                    }
+                                }
+
+                                if (i < n - 2) {
+                                    html += ', ';
+                                } else if (i == n - 2) {
+                                    html += ' and ';
+                                }
                             }
-                            else {
-                                throw new Error('Feature explanation le, gt, eq and neq are all NULL!');
+
+                            p.html(html);
+                            narrationDiv.html('').append(p);
+
+                            done();
+                        },
+                        error: handleAjaxError(null, done)
+                    });
+                })
+            })();
+
+            // time explanation
+            (function () {
+                timeIntervalDiv.attr('id', 'div-tminterval-' + data.id);
+                timeIntervalDiv.addClass('tooltip-div-tminterval');
+                if ($('#div-tminterval-' + data.id).html() != null) {
+                    timeIntervalDiv.html($('#div-tminterval-' + data.id).html());
+                }
+
+                asyncExecute(function (done) {
+                    $.ajax('api/timeExplain', {
+                        dataType: 'json',
+                        method: 'GET',
+                        data: { stateId: getServerNodeId(data.id) },
+                        success: function (timeExplain) {
+                            if (timeExplain == null || timeExplain.length == 0) return done();
+
+                            var p = $('<p />');
+                            // var html = 'The state occurs ';
+                            var html = '';
+
+                            for (var i = 0; i < timeExplain.length; i++) {
+                                var item = timeExplain[i];
+
+                                var start = item.start;
+                                var end = item.end;
+
+                                if (start != end) {
+                                    html += ' between <strong>' + start + '</strong> and <strong>' + end + '</strong>'
+                                } else {
+                                    html += ' in <strong>' + start + '</strong>';
+                                }
+
+                                if (i < timeExplain.length - 1) {
+                                    html += ', ';
+                                }
                             }
 
-                            if (j < terms.length-1)
-                                intersectStr += '<br />';
-                        }
+                            p.html(html);
+                            timeIntervalDiv.html('').append(p);
 
-                        unionStr += '<br />' + intersectStr + '<br />';
+                            done();
+                        },
+                        error: handleAjaxError(null, done)
+                    });
+                })
+            })();
 
-                        if (i < union.length-1) {
-                            unionStr += '<br />';
-                        }
-                    }
-
-                    $('#div-explain-' + data.id).html('It can be characterized by the following rules:<br />' + unionStr);
-                    api.reposition(undefined, false);
-                },
-                error: handleAjaxError()
-            });
-
-            $.ajax('api/targetProperties', {
-                dataType: 'json',
-                method: 'GET',
-                data: { stateId: getServerNodeId(data.id) },
-                success: function (props) {
-                    if (props.isUndesired) {
-                        $('#div-tooltip-undesired-' + data.id).html('Event id: ' + props.eventId);
-                    } else {
-                        $('#div-tooltip-undesired-' + data.id).html('');
-                    }
-
-                    api.reposition(undefined, false);
-                },
-                error: handleAjaxError()
-            });
-
-            $.ajax('api/timeExplain', {
-                dataType: 'json',
-                method: 'GET',
-                data: { stateId: getServerNodeId(data.id) },
-                success: function (timeExplain) {
-                    if (timeExplain == null || timeExplain.length == 0) return;
-
-                    var p = $('<p />');
-                    var html = 'The state occurs ';
-
-                    for (var i = 0; i < timeExplain.length; i++) {
-                        var item = timeExplain[i];
-
-                        var start = item.start;
-                        var end = item.end;
-
-                        if (start != end) {
-                            html += ' between <strong>' + start + '</strong> and <strong>' + end + '</strong>'
-                        } else {
-                            html += ' in <strong>' + start + '</strong>';
-                        }
-
-                        if (i < timeExplain.length - 1) {
-                            html += ', ';
-                        }
-                    }
-
-                    p.html(html);
-                    $('#div-tminterval-' + data.id).html('').append(p);
-                },
-                error: handleAjaxError()
-            });
-
-            $.ajax('api/stateNarration', {
-                dataType: 'json',
-                method: 'GET',
-                data: { stateId: getServerNodeId(data.id) },
-                success: function (narration) {
-                    if (narration.length == 0) return;
-
-                    var p = $('<p />');
-                    var html = 'The state is characterized by ';
-
-                    var n = Math.min(3, narration.length);
-                    for (var i = 0; i < n; i++) {
-                        var item = narration[i];
-
-                        var ftr = item.ftrId;
-                        var type = item.type;
-                        switch (type) {
-                            case 'numeric': {
-                                var level = item.ftrDesc;
-                                html += '<strong>' + level + ' ' + ftr + '</strong>';
-                                break;
-                            }
-                            case 'categorical': {
-                                html += '<strong>' + ftr + ' is ' + item.bin + '</strong>';
-                                break;
-                            }
-                            default: {
-                                throw new Error('Unknown feature type: ' + type);
-                            }
-                        }
-
-                        if (i < n - 2) {
-                            html += ', ';
-                        } else if (i == n - 2) {
-                            html += ' and ';
-                        }
-                    }
-
-                    p.html(html);
-                    $('#div-narration-' + data.id).html('').append(p);
-                },
-                error: handleAjaxError()
-            });
-        }, 10);
-
-
-        return tooltip.html();
-    };
+            return 'Loading ...';
+        };
+    })();
 
     nodeQtipOpts.show.event = 'hover';
     nodeQtipOpts.hide.event = 'hovercancel';
@@ -403,7 +465,7 @@ var zoomVis = function (opts) {
     var xOffset = 0.1;
     var yOffset = 0.1;
 
-    var transitionThreshold = 1;
+    var transitionThreshold = 0.9;
 
     var boundingBox = {
         x: { min: Number.MAX_VALUE, max: Number.MIN_VALUE },
@@ -478,6 +540,7 @@ var zoomVis = function (opts) {
                                 saturation: 1,
                                 light: DEFAULT_LIGHT
                             };
+                            if (currAngle > 2*Math.PI) throw new Error('Choosen invalid hue for node: ' + currAngle);
                             currAngle += angle;
                         }
                     }
@@ -489,6 +552,39 @@ var zoomVis = function (opts) {
                         colorLeafs(rootStates[stateN].id);
                     }
                 })();
+                // (function () {
+                //     var nLeafs = levels[0].states.length;
+
+                //     // var angle = 2*Math.PI / nLeafs;
+                //     var currAngle = 0;
+
+                //     function colorLeafs(parentId) {
+                //         if (parentId in childH) {
+                //             var children = childH[parentId];
+                //             for (var i = 0; i < children.length; i++) {
+                //                 colorLeafs(children[i]);
+                //             }
+                //         }
+                //         else {
+                //             var prob = nodeH[parentId].timeProportion;
+                //             var nodeAngle = prob*2*Math.PI;
+                //             colorH[parentId] = {
+                //                 hue: currAngle + nodeAngle / 2,
+                //                 saturation: 1,
+                //                 light: DEFAULT_LIGHT
+                //             };
+                //             if (currAngle > 2*Math.PI) throw new Error('Choosen invalid hue for node: ' + currAngle);
+                //             currAngle += nodeAngle;
+                //         }
+                //     }
+
+                //     var lastLevel = levels[levels.length-1];
+                //     var rootStates = lastLevel.states;
+
+                //     for (var stateN = 0; stateN < rootStates.length; stateN++) {
+                //         colorLeafs(rootStates[stateN].id);
+                //     }
+                // })();
 
                 // then color all the others
                 (function () {
@@ -515,6 +611,8 @@ var zoomVis = function (opts) {
                             }
                             hue /= totalWgt;
 
+                            if (hue > 2*Math.PI) throw new Error('Invalid hue of middle node: ' + hue);
+
                             colorH[nodeId] = {
                                 hue: hue,
                                 saturation: 1 - levelN*(1 - MIN_SATURATION) / (levels.length - 1),
@@ -531,16 +629,38 @@ var zoomVis = function (opts) {
                 if (!(nodeId in colorH)) { return undefined; }
                 return clone(colorH[nodeId]);
             },
-            getComplementaryColorStr: function (nodeId)	 {
-                var color = that.getColor(nodeId);
-
+            isDark: function (rgb) {
+                var l = 0.2126 * Math.pow(rgb.r/255, 2.2)  +  0.7151 * Math.pow(rgb.g/255, 2.2)  +  0.0721 * Math.pow(rgb.b/255, 2.2)
+                var result = l <= 0.179;
+                return result;
+            },
+            getComplementaryColor: function (color) {
                 var h = color.hue;
                 var s = color.saturation;
                 var l = color.light;
 
                 var rgb = hsl2rgb(h, s, l);
-
-                return getBrightness(rgb) >= 0.5 ? '#000000' : '#F0F0F0';
+                return that.getComplementaryColorRgb(rgb);
+            },
+            getComplementaryColorRgb: function (rgb) {
+                return that.isDark(rgb) ? NODE_WHITE_TEXT : NODE_BLACK_TEXT;
+            },
+            getComplementaryColorById: function (nodeId)	 {
+                var color = that.getColor(nodeId);
+                return that.getComplementaryColor(color);
+            },
+            getDefaultBorderColor: function (rgb) {
+                return that.isDark(rgb) ? NODE_DARK_BORDER : NODE_LIGHT_BORDER;
+            },
+            getDefaultBorderColorById: function (nodeId) {
+                var color = that.getColor(nodeId);
+                var rgb = hsl2rgb(color.hue, color.saturation, color.light);
+                if (isNaN(rgb.r)) {
+                    hsl2rgb(color.hue, color.saturation, color.light);
+                    throw new Error('Got NaN color for node: ' + nodeId + ', color: ' + JSON.stringify(color) + '!');
+                }
+                console.log(JSON.stringify(colorH));
+                return that.getDefaultBorderColor(rgb);
             },
             toColorStr: function (color) {
                 return getHslStr(color)
@@ -958,7 +1078,7 @@ var zoomVis = function (opts) {
                     'text-halign': 'center',
                     'text-valign': 'center',
                     'text-wrap': 'wrap',
-                    'color': colorGenerator.getComplementaryColorStr(id),
+                    'color': colorGenerator.getComplementaryColorById(id),
                     'font-style': 'normal',
                     'font-size': 10000,	// hack, for automatic font size
                     'font-factor': fontFactor,
@@ -970,7 +1090,7 @@ var zoomVis = function (opts) {
                     'width': nodeSize.width,
                     'height': nodeSize.height,
                     'border-width': DEFAULT_BORDER_WIDTH,
-                    'border-color': DEFAULT_BORDER_COLOR,
+                    'border-color': colorGenerator.getDefaultBorderColorById(id),//DEFAULT_BORDER_COLOR,
                     'label': node.label,
                     'z-index': BACKGROUND_Z_INDEX
                 }
@@ -1094,6 +1214,8 @@ var zoomVis = function (opts) {
 
             middle.css('line-style', 'solid');
             middle.css('content', 'data(prob)');
+            middle.css('line-color', MIDDLE_EDGE_COLOR);
+            middle.css('target-arrow-color', MIDDLE_EDGE_COLOR);
             bold.css('line-color', BOLD_EDGE_COLOR);
             bold.css('target-arrow-color', BOLD_EDGE_COLOR);
 
@@ -1114,6 +1236,17 @@ var zoomVis = function (opts) {
                     bold[i].data().style['target-arrow-color'] = BOLD_EDGE_COLOR;
                 }
             })();
+
+
+            // recolor the edges  around the selected node
+            if (modeConfig.selected != null) {
+                var selectedNode = cy.nodes('#' + modeConfig.selected);
+                selectedNode.edgesTo('').css({
+                    'line-color': SELECTED_EDGE_COLOR,
+                    'target-arrow-color': SELECTED_EDGE_COLOR,
+                    'line-style': 'solid'
+                });
+            }
         }
     }
 
@@ -1225,7 +1358,6 @@ var zoomVis = function (opts) {
     }
 
     function setNodeColor(nodeId, color) {
-        console.log(color);
         var graphNode;
         if (color != null) {
             cache.getNode(nodeId).css.backgroundColor = color;
@@ -1268,21 +1400,25 @@ var zoomVis = function (opts) {
 
                 node.css('shadow-color', SELECTED_NODE_SHADOW_COLOR);
                 node.css('shadow-blur', SELECTED_NODE_SHADOW_SIZE);
-                node.css('shadow-opacity', SELECTED_NODE_SHADOW_OPACITY)
+                node.css('shadow-opacity', SELECTED_NODE_SHADOW_OPACITY);
+                node.css('border-width', SELECTED_BORDER_WIDTH);
+                node.css('border-color', SELECTED_BORDER_COLOR);
             }
 
-            if (nodeId == modeConfig.current) {
-                node.css('border-width', CURRENT_BORDER_WIDTH);
-                node.css('border-color', CURRENT_NODE_COLOR);
-                //				node.css('backgroundColor', CURRENT_NODE_COLOR);
-            }
-            // if (nodeId in modeConfig.past) {
-            //     node.css('border-color', PREVIOUS_NODE_EDGE_COLOR);
-            // }
-            if (nodeId in modeConfig.future) {
-                prob = futureColorFromProb(modeConfig.future[nodeId]);
-                color = 'hsla(' + FUTURE_NODE_BASE_COLOR + ',' + (15 + Math.floor((100-15)*prob)) + '%, 55%, 1)';
-                node.css('border-color', color);
+            if (IS_REAL_TIME) {
+                if (nodeId == modeConfig.current) {
+                    node.css('border-width', CURRENT_BORDER_WIDTH);
+                    node.css('border-color', CURRENT_NODE_COLOR);
+                    //				node.css('backgroundColor', CURRENT_NODE_COLOR);
+                }
+                // if (nodeId in modeConfig.past) {
+                //     node.css('border-color', PREVIOUS_NODE_EDGE_COLOR);
+                // }
+                if (nodeId in modeConfig.future) {
+                    prob = futureColorFromProb(modeConfig.future[nodeId]);
+                    color = 'hsla(' + FUTURE_NODE_BASE_COLOR + ',' + (15 + Math.floor((100-15)*prob)) + '%, 55%, 1)';
+                    node.css('border-color', color);
+                }
             }
 
             if (mode == MODE_PROBS) {
@@ -1301,9 +1437,13 @@ var zoomVis = function (opts) {
                 var ftrRange = config.maxVal - config.minVal;
                 var middleVal = config.minVal + ftrRange/2;
 
-                color = getFtrColor(ftrVal, config.minVal, config.maxVal, middleVal);
+                color = getFtrColorRgb(ftrVal, config.minVal, config.maxVal, middleVal);
+                // color = getFtrColor(ftrVal, config.minVal, config.maxVal, middleVal);
+                var nodeColorStr = 'rgb(' + color.r + ',' + color.g + ',' + color.b + ')';
+                var textColorStr = colorGenerator.getComplementaryColor(rgb2hsl(parseInt(color.r), parseInt(color.g), parseInt(color.b)));
 
-                node.css('backgroundColor', color);
+                node.css('backgroundColor', nodeColorStr);
+                node.css('color', textColorStr);
             }
             else {
                 var nodeColor = colorGenerator.getColorStr(nodeId);
@@ -1329,9 +1469,12 @@ var zoomVis = function (opts) {
 
         var nodes = cy.nodes();
 
-        nodes.css('border-color', DEFAULT_BORDER_COLOR);
         nodes.css('backgroundColor', DEFAULT_NODE_COLOR);
-        nodes.css('border-color', DEFAULT_BORDER_COLOR);
+        for (var i = 0; i < nodes.length; i++) {
+            var id = nodes[i].id();
+            nodes[i].css('border-color', colorGenerator.getDefaultBorderColorById(id));
+        }
+        // nodes.css('border-color', DEFAULT_BORDER_COLOR);
         nodes.css('z-index', BACKGROUND_Z_INDEX);
 
         if (!inBatch)
@@ -1412,7 +1555,11 @@ var zoomVis = function (opts) {
                 nodes.css('shadow-color', 'white');
                 nodes.css('shadow-blur', 0);
                 nodes.css('shadow-opacity', 0);
-                //				cy.nodes().css('border-width', DEFAULT_BORDER_WIDTH);
+                nodes.css('border-width', DEFAULT_BORDER_WIDTH);
+                for (var nodeN = 0; nodeN < nodes.length; nodeN++) {
+                    var id = nodes[nodeN].id();
+                    nodes[nodeN].css('border-color', colorGenerator.getDefaultBorderColorById(id));
+                }
 
                 // emphasize edges
                 var edges = cy.edges();
@@ -1436,20 +1583,26 @@ var zoomVis = function (opts) {
                 nodes.css('shadow-color', 'white');
                 nodes.css('shadow-blur', 0);
                 nodes.css('shadow-opacity', 0);
+                nodes.css('border-width', DEFAULT_BORDER_WIDTH);
+                for (var nodeN = 0; nodeN < nodes.length; nodeN++) {
+                    var id = nodes[nodeN].id();
+                    nodes[nodeN].css('border-color', colorGenerator.getDefaultBorderColorById(id));
+                }
+                // nodes.css('border-color', DEFAULT_BORDER_COLOR);
                 //				nodes.css('border-width', DEFAULT_BORDER_WIDTH);
                 drawNode(stateId, true);
 
                 // emphasize edges
                 var edges = cy.edges();
                 var nedges = edges.length;
-                for (var i = 0; i < nedges; i++) {
-                    var edge = edges[i];
+                for (var edgeN = 0; edgeN < nedges; edgeN++) {
+                    var edge = edges[edgeN];
                     edge.css(edge.data().style);
                 }
 
                 node.edgesTo('').css({
-                    'line-color': 'green',
-                    'target-arrow-color': 'green',
+                    'line-color': SELECTED_EDGE_COLOR,
+                    'target-arrow-color': SELECTED_EDGE_COLOR,
                     'line-style': 'solid'
                 });
             });
@@ -1471,6 +1624,10 @@ var zoomVis = function (opts) {
             dataType: 'json',
             data: { state: currStateId, level: height },
             success: function (states) {
+                // check if the current state has changed in the meanwhile (usually
+                // due to a slow connection)
+                if (currStateId != modeConfig.current) return;
+
                 for (var i = 0; i < Math.min(3, states.length); i++) {
                     var stateId = states[i].id;
 
@@ -1929,6 +2086,10 @@ var zoomVis = function (opts) {
             redrawAll(true);
         },
 
+        getTransitionThreshold: function () {
+            return transitionThreshold;
+        },
+
         setProbDist: function (dist) {
             var config = {maxProb: 0, probs: {}};
 
@@ -2035,7 +2196,12 @@ var zoomVis = function (opts) {
         },
 
         setSelectedState: function (stateId) {
-            setSelectedState(cy.nodes('#' + stateId));
+            var state = cy.nodes('#' + stateId);
+            if (state.length > 0) {
+                setSelectedState(cy.nodes('#' + stateId));
+            } else {
+                console.warn('state with ID: ' + stateId + ' not found!');
+            }
         },
 
         setNodeColor: setNodeColor,
@@ -2144,11 +2310,13 @@ var zoomVis = function (opts) {
         },
 
         setScale: function (scale) {
-            setScale(uiToInternalScale(scale));
+            var internalScale = uiToInternalScale(scale);
+            setScale(internalScale);
         },
 
         setLevel: function (levelN) {
-            setScale(levelHeights[levelN]);
+            var scale = levelHeights[levelN];
+            setScale(scale);
         },
 
         getLevel: function () {

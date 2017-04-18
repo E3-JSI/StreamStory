@@ -1,0 +1,54 @@
+{
+    "qminer": {
+        "path": "../qminer/",
+        "mode": "createClean",
+        "xmode": "openReadOnly",
+        "createPipeline": true,
+        "initializeZeros": true
+    },
+    "server": {
+        "port": 8489,
+        "pingInterval": 10000
+    },
+    "log": {
+        "logger": {
+            "level": "debug",
+            "outputMode": "short",
+            "stream": {
+                "type": "stdout",
+                "file": "log.log"
+            }
+        },
+        "print": {
+            "rawData": 10000,
+            "streamStory": 100,
+            "stores": 100000,
+            "broker": 1000,
+            "coeff": 1000
+        }
+    },
+    "database": {
+        "host": "localhost",
+        "user": "StreamStory",
+        "password": "StreamStory",
+        "database": "StreamStoryCoeff"
+    },
+    "integration": {
+        "type": "http",
+        "brokerUrl": "192.168.84.45",
+        "zookeperPort": 2181,
+        "producerPort": 9092,
+        "xauthentication": {
+            "host": "192.168.84.46",
+            "timeout": 10000
+        }
+    },
+    "useCase": "mhwirth",
+    "seed": 1,
+    "saveStates": false,
+    "saveActivities": false,
+    "saveFriction": true,
+    "restartOnReplay": false,
+    "interpolation": "current",
+    "dataPath": "/mnt/raidM2T/project-data/StreamStory-coeff/"
+}

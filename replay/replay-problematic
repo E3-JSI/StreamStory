@@ -1,0 +1,39 @@
+#!/bin/bash
+
+USAGE="Usage: $(basename "$0") [-p PORT] [-H HOST] [-s SLEEP_INTERVAL]
+
+Options:
+    -H      the host to which to push the data, defaults to 'localhost'
+    -p      the port listening for data, defaults to 8080
+    -s      interval in milliseconds between two data pushes, defaults to 0
+"
+
+PORT=8080
+HOST=localhost
+SLEEP_INTERVAL=0
+
+while getopts 'hH:p:s:' OPT; do
+    case "$OPT" in
+        h)
+            echo "$USAGE"
+            exit
+            ;;
+        H)
+            HOST=$OPTARG
+            ;;
+        p)
+            PORT=$OPTARG
+            ;;
+        s)
+            SLEEP_INTERVAL=$OPTARG
+            ;;
+        *)
+            echo 'Invalid option: '$OPT
+            echo "$USAGE"
+            exit 1
+    esac
+done
+
+echo 'replaying to '$HOST':'$PORT' in intervals of '$SLEEP_INTERVAL
+java -jar replay-mhwirth.jar $HOST $PORT $SLEEP_INTERVAL '2015-4-23 3:00:00'
+# java -jar replay-mhwirth.jar localhost 8483 $SLEEP_INTERVAL '2015-4-23 3:00:00'

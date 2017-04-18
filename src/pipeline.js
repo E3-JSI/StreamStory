@@ -72,11 +72,13 @@ function initStreamAggregates() {
 
     // insert zeros now, so they won't get resampled
     (function () {
+        log.info('Initializing default values for stores ...');
+
         var startTm = 0;
         for (var i = 0; i < zeroFlds.length; i++) {
             var name = zeroFlds[i];
 
-            log.debug('Initializing default value for store %s ...', name);
+            log.trace('Initializing default value for store %s ...', name);
 
             var val = {
                 time_ms: startTm,
@@ -84,9 +86,9 @@ function initStreamAggregates() {
                 value: 0
             };
 
-            log.info('Initializing store %s ...', name);
-            if (log.debug())
-                log.debug('Inserting value %s ...', JSON.stringify(val));
+            log.trace('Initializing store %s ...', name);
+            if (log.trace())
+                log.trace('Inserting value %s ...', JSON.stringify(val));
 
             base.store(name).push(val);
         }
@@ -96,7 +98,8 @@ function initStreamAggregates() {
         log.info('Initializing Enricher stream aggregates ...');
         var aggregates = fields.getEnricherStreamAggregates();
         for (var aggrNm in aggregates) {
-            log.info('Initializing aggregate: %s', aggrNm);
+            if (log.trace())
+                log.trace('Initializing aggregate: %s', aggrNm);
 
             var aggrConf = aggregates[aggrNm];
 
@@ -116,8 +119,8 @@ function initStreamAggregates() {
         log.info('Initializing Online Analytics stream aggregates ...');
         var aggregateConfigs = fields.getStreamAggregates();
         for (var aggrNm in aggregateConfigs) {
-            if (log.info())
-                log.info('Initializing aggregate: %s', aggrNm);
+            if (log.trace())
+                log.trace('Initializing aggregate: %s', aggrNm);
 
             var aggrConf = aggregateConfigs[aggrNm];
 
@@ -183,17 +186,19 @@ function initGC() {
 
         var store = base.store(storeName);
 
-        if (log.debug())
-            log.debug('Initializing store %s ...', store.name);
+        if (log.trace())
+            log.trace('Initializing store %s ...', store.name);
 
         // garbagge collector for the stores that have a window
         if (storeJson.window != null) {
-            log.info('Adding GC trigger to store %s ...', storeName);
+            if (log.trace())
+                log.trace('Adding GC trigger to store %s ...', storeName);
 
             store.addTrigger(gcaggr(store));
         }
 
-        log.info('Adding print trigger to store %s ...', storeName);
+        if (log.trace())
+            log.trace('Adding print trigger to store %s ...', storeName);
 
         // print statistics on all the stores
         try {
@@ -310,17 +315,21 @@ function calcFriction() {
         if (log.info())
             log.info('Residual: use-case=%s, %d, z=%d, p=%d, time=%d', useCase, residual, zScore, pVal, time);
 
+        var info = {
+            eventId: useCase,
+            time: time,
+            zScore: zScore,
+            value: coeff*outputQ,
+            std: dist_std*Math.abs(outputQ)
+        }
+
         if (opts.coefficientCb != null) {
-            opts.coefficientCb({
-                eventId: useCase,
-                time: time,
-                zScore: zScore,
-                value: coeff*outputQ,
-                std: dist_std*Math.abs(outputQ)
-            });
+            opts.coefficientCb(info);
         } else {
             log.warn('Coefficient callback is not defined!');
         }
+
+        return info;
     }
 
     function checkOutlierSwivel(coeff, temp, time) {
@@ -328,9 +337,9 @@ function calcFriction() {
             log.debug('Checking swivel coefficient outlier ...');
 
         if (EXPONENTIAL_FIT) {
-            checkOutlier(coeff, temp, LINREG_ALPHA_SWIVEL_EXP, MEAN_SWIVEL_EXP, STD_SWIVEL_EXP, time, 'swivel', 'exp');
+            return checkOutlier(coeff, temp, LINREG_ALPHA_SWIVEL_EXP, MEAN_SWIVEL_EXP, STD_SWIVEL_EXP, time, 'swivel', 'exp');
         } else {
-            checkOutlier(coeff, temp, LINREG_ALPHA_SWIVEL, MEAN_SWIVEL, STD_SWIVEL, time, 'swivel', 'linear');
+            return checkOutlier(coeff, temp, LINREG_ALPHA_SWIVEL, MEAN_SWIVEL, STD_SWIVEL, time, 'swivel', 'linear');
         }
     }
 
@@ -339,9 +348,9 @@ function calcFriction() {
             log.debug('Checking gearbox coefficient outlier ...');
 
         if (EXPONENTIAL_FIT) {
-            checkOutlier(coeff, temp, LINREG_ALPHA_GEARBOX_EXP, MEAN_GEARBOX_EXP, STD_GEARBOX_EXP, time, 'gearbox', 'exp');
+            return checkOutlier(coeff, temp, LINREG_ALPHA_GEARBOX_EXP, MEAN_GEARBOX_EXP, STD_GEARBOX_EXP, time, 'gearbox', 'exp');
         } else {
-            checkOutlier(coeff, temp, LINREG_ALPHA_GEARBOX, MEAN_GEARBOX, STD_GEARBOX, time, 'gearbox', 'linear');
+            return checkOutlier(coeff, temp, LINREG_ALPHA_GEARBOX, MEAN_GEARBOX, STD_GEARBOX, time, 'gearbox', 'linear');
         }
     }
 
@@ -368,21 +377,23 @@ function calcFriction() {
             if (log.debug())
                 log.debug('Coeffs: (swivel: %d, gearbox: %d) at time %s', coeffSwivel, coeffGearbox, val.time.toISOString());
 
-            checkOutlierSwivel(coeffSwivel, avgTempSwivel, intervalEndTm);
-            checkOutlierGearbox(coeffGearbox, avgTempGearbox, intervalEndTm);
+            var swivelResult = checkOutlierSwivel(coeffSwivel, avgTempSwivel, intervalEndTm);
+            var gearboxResult = checkOutlierGearbox(coeffGearbox, avgTempGearbox, intervalEndTm);
 
             if (save && config.SAVE_FRICTION) {
-                utils.appendLine('friction-coeff.txt', JSON.stringify({
+                utils.outputLine('friction-coeff.txt', JSON.stringify({
                     start: intervalStartTm,
                     end: intervalEndTm,
-                    gearbox: {
-                        value: coeffGearbox * outputQ,
-                        meanTemperature: avgTempGearbox
-                    },
-                    swivel: {
-                        value: coeffSwivel * outputQ,
-                        meanTemperature: avgTempSwivel
-                    }
+                    gearbox: gearboxResult,
+                    swivel: swivelResult
+                    // gearbox: {
+                    //     value: coeffGearbox * outputQ,
+                    //     meanTemperature: avgTempGearbox
+                    // },
+                    // swivel: {
+                    //     value: coeffSwivel * outputQ,
+                    //     meanTemperature: avgTempSwivel
+                    // }
                 }));
             }
         } catch (e) {

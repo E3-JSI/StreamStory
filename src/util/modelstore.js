@@ -22,6 +22,8 @@ module.exports = exports = function (opts) {
     var onRemoveBc = opts.onRemove;
     var db = opts.db;
 
+    var nUpdates = 0;
+
     function getModel(modelId) {
         if (!(modelId in store)) {
             log.warn('Tried to get a model that is not in the model store!');
@@ -271,6 +273,11 @@ module.exports = exports = function (opts) {
                     content: outVal
                 }));
             }
+            nUpdates++;
+        },
+
+        getNumberOfUpdates: function () {
+            return nUpdates;
         },
 
         getActiveModels: function () {
@@ -426,7 +433,7 @@ module.exports = exports = function (opts) {
 
             buildingModelStore[username].progressCallback = null;
         },
-        buildModel: function (opts, callback) {
+        buildModel: function (opts, configMemento, callback) {
             if (callback == null) callback = function (e) { log.error(e, 'Exception while buillding model!'); }
             if (that.isBuildingModel(opts.username)) throw new Error('User ' + opts.username + ' is already building a model!');
 
@@ -452,6 +459,7 @@ module.exports = exports = function (opts) {
                 var fileBuff = opts.fileBuff;
                 var clustConfig = opts.clustConfig;
                 var baseDir = opts.baseDir;
+                var derivAttrs = opts.derivAttrs;
 
                 var headerTypes = [];
 
@@ -558,16 +566,12 @@ module.exports = exports = function (opts) {
                                     }
 
                                     val = parseFloat(lineArr[i]);
-
                                     if (isNaN(val)) { val = 0; }
-
                                     recJson[attr] = parseFloat(val);
                                 }
                                 else if (type == 'nominal') {
                                     val = lineArr[i];
-
                                     if (val == null || val == '') val = '(missing)';
-
                                     recJson[attr] = val.toString();
                                 }
                                 else {
@@ -603,8 +607,8 @@ module.exports = exports = function (opts) {
                         modelParams.transitions.timeUnit = timeUnit;
                         modelParams.hierarchy = { isTransitionBased: hierarchyType == 'mchainPartitioning' };
 
-                        if (log.info())
-                            log.info('Creating a new model with params: %s', JSON.stringify(modelParams));
+                        if (log.debug())
+                            log.debug('Creating a new model with params: %s', JSON.stringify(modelParams));
 
                         // create the model
                         var model = StreamStory({
@@ -612,7 +616,8 @@ module.exports = exports = function (opts) {
                             config: modelParams,
                             obsFieldV: obsFieldV,
                             controlFieldV: controlFieldV,
-                            ignoredFieldV: ignoredFieldV
+                            ignoredFieldV: ignoredFieldV,
+                            derivFieldV: derivAttrs
                         });
 
                         // fit the model
@@ -653,7 +658,8 @@ module.exports = exports = function (opts) {
                                     dataset: datasetName,
                                     name: modelName,
                                     description: description,
-                                    is_active: 1
+                                    is_active: 1,
+                                    config: JSON.stringify(configMemento)
                                 }
 
                                 log.info('Storing a new online model ...');
@@ -679,7 +685,8 @@ module.exports = exports = function (opts) {
                                     model_file: fname,
                                     dataset: datasetName,
                                     name: modelName,
-                                    description: description
+                                    description: description,
+                                    config: JSON.stringify(configMemento)
                                 }
 
                                 log.info('Storing a new offline model ...');

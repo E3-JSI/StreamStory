@@ -35,7 +35,7 @@
     },
     "integration": {
         "type": "http",
-        "brokerUrl": "192.168.84.45",
+        "brokerUrl": "koi15.fzi.de",
         "zookeperPort": 2181,
         "producerPort": 9092,
         "xauthentication": {

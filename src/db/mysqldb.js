@@ -5,7 +5,6 @@ var utils = require('../utils.js');
 module.exports = function () {
     log.info('Creating MySQL connection pool using configuration:\n%s', JSON.stringify(config.database, null, 4));
 
-
     var pool = mysql.createPool({
         database: config.database.database,
         host: config.database.host,
@@ -390,6 +389,22 @@ module.exports = function () {
             });
         },
 
+        fetchModelConfiguration: function (mid, callback) {
+            connection({
+                callback: callback,
+                nextOp: query({
+                    sql: 'SELECT config FROM model WHERE mid = ?',
+                    params: [mid],
+                    nextOp: function (conn, onsuccess, onerror, results) {
+                        if (results.length == 0)
+                            onerror(new Error('Model with ID "' + mid + '" does not exist!'));
+                        else
+                            onsuccess(results[0].config);
+                    }
+                })
+            });
+        },
+
         storeOnlineModel: function (opts, callback) {
             var is_active = opts.is_active;
 
@@ -614,6 +629,70 @@ module.exports = function () {
                     callback(undefined, props[prop]);
                 }
             });
+        },
+
+        //===============================================================
+        // MESSAGES
+        //===============================================================
+
+        storeMessage: function (mid, content, callback) {
+            var msg = {
+                mid: mid,
+                content: JSON.stringify(content)
+            }
+            connection({
+                callback: callback,
+                nextOp: query({
+                    sql: 'INSERT INTO message SET ?',
+                    params: [msg]
+                })
+            });
+        },
+
+        fetchLatestModelMessages: function (opts, callback) {
+            var mid = opts.mid;
+            var startTime = opts.startTime;
+            var limit = opts.limit;
+
+            var sql = 'SELECT * FROM message WHERE mid = ?';
+            var params = [mid];
+
+            if (startTime != null) {
+                sql += ' AND ts >= ?';
+                params.push(startTime);
+            }
+            sql += ' ORDER BY ts DESC';
+            if (limit != null) {
+                sql += ' LIMIT ?';
+                params.push(limit);
+            }
+
+            connection({
+                callback: callback,
+                nextOp: query({
+                    sql: sql,
+                    params: params,
+                    nextOp: function (conn, onsuccess, onerror, messages) {
+                        for (var i = 0; i < messages.length; i++) {
+                            messages[i].content = JSON.parse(messages[i].content);
+                        }
+                        onsuccess(messages);
+                    }
+                })
+            })
+        },
+
+        countModelMessages: function (mid, callback) {
+            connection({
+                callback: callback,
+                nextOp: query({
+                    sql: 'SELECT COUNT(1) AS cnt FROM message WHERE mid = ?',
+                    params: [mid],
+                    nextOp: function (conn, onsuccess, onerror, results) {
+                        onsuccess(results[0].cnt);
+                    }
+                })
+            })
         },
 
         //===============================================================

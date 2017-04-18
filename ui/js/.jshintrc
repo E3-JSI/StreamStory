@@ -4,6 +4,7 @@
     "jquery": true,
     "browser": true,
     "predef": [
+        "StreamStory",
         "isNumber",
         "isInt",
         "clone",
@@ -17,8 +18,10 @@
         "reloadWindow",
         "getHslStr",
         "getFtrColor",
-        "getBrightness",
+        "getFtrColorRgb",
+
         "hsl2rgb",
+        "rgb2hsl",
 
         "drawHistogram",
 
@@ -26,6 +29,7 @@
         "promptConfirm",
 
         "THEME",
+        "IS_REAL_TIME",
 
         "cytoscape"
     ]

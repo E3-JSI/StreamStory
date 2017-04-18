@@ -20,6 +20,22 @@ html, body {
  	LAYOUT
 ===============================================================*/
 
+#page-wrapper {
+    padding: 0 15px;
+    min-height: 568px;
+    /*background-color: #fff;*/
+}
+
+@media(min-width:768px) {
+    #page-wrapper {
+        position: inherit;
+        margin: 0 0 0 250px;
+        width: calc(100% - 250px);
+        height: calc(100% - 52px);
+        padding: 0 30px;
+    }
+}
+
 #vis-wrapper, #div-details {
 	height: calc(100% - 40px);
 }
@@ -129,6 +145,14 @@ html, body {
   	bottom: 20px;
   	left: 18%;
   	width: 80%;
+}
+
+#threshold_slider, #slider_item_div {
+    opacity: 0;
+}
+
+#threshold_slider, #threshold_slider span, #slider_item_div, #slider_item_div span {
+    cursor: pointer;
 }
 
 .tooltip-div-explain {
@@ -346,15 +370,6 @@ html, body {
 	cursor: pointer;
 }
 
-#div-time-state-hist > svg > g > rect[highlighted="highlighted"] {
-	stroke: white;
-}
-
-#div-time-state-hist > svg > text[highlighted="highlighted"] {
-	fill: white;
-	font-weight: bold;
-}
-
 #div-timeline-zoom {
 	position: absolute;
 	top: 50px;
@@ -395,22 +410,6 @@ html, body {
 /*===============================================================
  	ADMIN TEMPLATE
 ===============================================================*/
-
-#page-wrapper {
-    padding: 0 15px;
-    min-height: 568px;
-    /*background-color: #fff;*/
-}
-
-@media(min-width:768px) {
-    #page-wrapper {
-        position: inherit;
-        margin: 0 0 0 250px;
-        width: calc(100% - 250px);
-        height: calc(100% - 52px);
-        padding: 0 30px;
-    }
-}
 
 .navbar-top-links {
     margin-right: 0;

@@ -3,6 +3,9 @@
 <head>
     <% include partials/head %>
     <link rel="stylesheet" href="lib/jquer-ui.css">
+    <% if (!model.isOnline()) { %>
+    <link rel="stylesheet" href="css/ui-offline.css">
+    <% } %>
 
     <script type="text/javascript" src="lib/jquery-ui.min.js"></script>
     <script type="text/javascript" src="lib/bootstrap/js/bootstrap.min.js"></script>
@@ -25,6 +28,7 @@
         var TIME_HORIZON = <%= timeHorizon %>;
         var PDF_BINS = <%= pdfBins %>;
         var IS_MODEL_ACTIVE = <%= modelConfig.is_active == 1; %>;
+        var IS_REAL_TIME = false;
 
         <% } else { %>
 
@@ -32,6 +36,7 @@
         var TIME_HORIZON = 0;
         var PDF_BINS = 100;
         var IS_MODEL_ACTIVE = false;
+        var IS_REAL_TIME = false;
 
         <% } %>
 
@@ -84,7 +89,7 @@
         </div><!-- /.container-fluid -->
     </nav>
 
-    <div class="navbar-default sidebar" role="navigation">
+    <div id="ui-sidebar" class="navbar-default sidebar" role="navigation">
         <div class="sidebar-nav navbar-collapse">
             <ul class="nav nav-pills nav-stacked">
                 <li>
@@ -116,17 +121,21 @@
                         <div id="parent_container" class="panel panel-default main-vis">
                             <div class="panel-heading clearfix">
                                 <span class="glyphicon glyphicon-info-sign info-panel-left" rel="tooltip" title="Visualization Panel" content="This panel shows the dataset in a qualitative manner using a hierarchy of states and transitions.<br /><br />To browse through the hierarchy use either the mouse wheel or the vertical scroll bar on the left.<br /><br />Click on a state to view more details."></span>
-                                <h4 class="panel-title pull-left" style="margin-top: 2px;">Visualization - <%= modelConfig.name %> <span id="span-zoom" class="component-title-additional">&nbsp;(Zoom: <span id="span-zoom-val">0</span>%)</span></h4>
+                                <h4 class="panel-title pull-left" style="margin-top: 2px;">
+                                    Visualization - <%= modelConfig.name %>
+                                    <span id="span-zoom" class="component-title-additional">&nbsp;(Zoom: <span id="span-zoom-val">0</span>%)</span>
+                                    <span class="component-title-additional">
+                                        <% if (model.isOnline()) { %>
+                                        <span id="span-no-active"><%= activeModelCount %></span> online models,
+                                        <% } %>
+                                        <span>time unit:&nbsp;<span id="span-tu"><%= model.getModel().getTimeUnit() %></span>&nbsp;&nbsp;&nbsp;</span>
+                                    </span>
+                                </h4>
                                 <!-- toggler for the visualization options -->
                                 <button id="vis-toggler" class="btn btn-default btn-xs pull-right" aria-label="Left Align">
                                     <span class="glyphicon glyphicon-align-justify" aria-hidden="true"></span> Options
                                 </button>
-                                <span class="pull-right component-title-additional">
-                                    <% if (model.isOnline()) { %>
-                                    <span id="span-no-active"><%= activeModelCount %></span> online models,
-                                    <% } %>
-                                    time unit:&nbsp;<span id="span-tu"><%= model.getModel().getTimeUnit() %></span>&nbsp;&nbsp;&nbsp;
-                                </span>
+                                <span id="span-curr-time" class="pull-right component-title-additional" style="padding-right: 10px; padding-top: 2px;"></span>
                                 <button id="btn-viz-back" class="btn btn-link btn-xs pull-right hidden" aria-label="Left Align">
                                     <span class="glyphicon glyphicon glyphicon-menu-left" aria-hidden="true"></span> Back
                                 </button>
@@ -351,18 +360,20 @@
                                                 <span class="thumbnail" style="overflow-y: auto;"></span>
                                             </div>
                                         </div>
-                                        <div class="row">
+                                        <div class="row" style="clear: both;">
                                             <div class="col-md-4">
                                                 <div class="form-group">
                                                     <label for="txt-activity-name">Name</label>
                                                     <input id="txt-activity-name" type="text" class="form-control" />
                                                 </div>
-                                                <div id="alert-wrapper-activity" class="form-group"></div>
                                                 <div class="form-group">
                                                     <button id="btn-activity-add-step" type="button" class="btn btn-info">Add Step</button>
                                                     <button id="btn-activity-cancel" type="button" class="btn btn-default">Cancel</button>
                                                     <button id="btn-activity-save" type="button" class="btn btn-success">Save</button>
                                                 </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div id="alert-wrapper-activity" class="form-group" style="margin-top: 20px;"></div>
                                             </div>
                                         </div>
                                     </div>
@@ -511,7 +522,31 @@
                 </div>
                 <div class="modal-body">
                     <div id="div-config">
-                        <div class="hidden">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label for="range-pred-threshold">Prediciton threshold: <span id="span-pred-threshold"><%= predictionThreshold %></span></label>
+                                    <div id="range-pred-threshold"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label for="range-time-horizon">Time horizon: <span id="span-time-horizon"><%= timeHorizon %></span></label>
+                                    <div id="range-time-horizon"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label for="range-pdf-bins">PDF bins: <span id="span-pdf-bins"><%= pdfBins %></span></label>
+                                    <div id="range-pdf-bins"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group hidden">
                             <div>
                                 <div class="checkbox">
                                     <label>
@@ -523,24 +558,6 @@
                                         <input id="chk-wheel-scroll" type="checkbox"> Enable wheel scrolling
                                     </label>
                                 </div>
-                            </div>
-                        </div>
-                        <div id="div-config-params" class="row">
-                            <div class="col-md-12">
-                                <label for="range-pred-threshold">Prediciton threshold: <span id="span-pred-threshold"><%= predictionThreshold %></span></label>
-                                <div id="range-pred-threshold"></div>
-                            </div>
-                        </div>
-                        <div id="div-config-params" class="row">
-                            <div class="col-md-12">
-                                <label for="range-time-horizon">Time horizon: <span id="span-time-horizon"><%= timeHorizon %></span></label>
-                                <div id="range-time-horizon"></div>
-                            </div>
-                        </div>
-                        <div id="div-config-params" class="row">
-                            <div class="col-md-12">
-                                <label for="range-pdf-bins">PDF bins: <span id="span-pdf-bins"><%= pdfBins %></span></label>
-                                <div id="range-pdf-bins"></div>
                             </div>
                         </div>
                     </div>

@@ -2,8 +2,6 @@
  d3, cytoscape, zoomVis */
 
 (function () {
-    var STATE_COLORS = ['blue', 'red', 'green', 'yellow', 'magenta', 'cyan', 'brown', 'Wheat', 'DeepPink', 'CadetBlue'];
-
     var TAB_ID = null;
     // var MODE_SELECT_ACTIVITY_STATE = false;
     var UI; // constructor to create ui
@@ -12,6 +10,285 @@
     var timelineController;
     var act;
     var firstBottomVizTab = null;
+
+    var messageController;
+
+    $(document).ready(function () {
+        messageController = new MessageController({
+            model: new MessageModel(),
+            view: new MessageView()
+        })
+    })
+
+    //==============================================
+    // MESSAGE DATA SOURCE
+    //==============================================
+
+    function MessageModel() {
+    }
+
+    MessageModel.prototype.fetchLatest = function (limit, callback) {
+        $.ajax('api/modelMessages', {
+            dataType: 'json',
+            data: { limit: limit },
+            success: function (messages) {
+                callback(undefined, messages);
+            },
+            error: StreamStory.Utils.handleAjaxError(null, callback),
+        });
+    }
+
+    MessageModel.prototype.fetchTotal = function (callback) {
+        $.ajax('api/modelMessagesCount', {
+            dataType: 'json',
+            data: {},
+            success: function (result) {
+                callback(undefined, result.count);
+            },
+            error: StreamStory.Utils.handleAjaxError(null, callback),
+        });
+    }
+
+    //==============================================
+    // MESSAGE
+    //==============================================
+
+    function Message(type, content, onClick) {
+        var self = this;
+        self.getType = function () {
+            return type;
+        }
+        self.getContent = function () {
+            return content;
+        }
+        self.getOnClick = function () {
+            return onClick;
+        }
+        self.getTitle = function () {
+            return self._typeToTitleH[type];
+        }
+    }
+
+    Message.prototype._typeToTitleH = {
+        anomaly: 'Anomaly',
+        outlier: 'Outlier',
+        prediction: 'Prediction',
+        activity: 'Activity',
+        coeff: 'Coefficient',
+        statePrediction: 'Prediction'
+    }
+
+    //==============================================
+    // MESSAGE VIEW
+    //==============================================
+
+    function MessageView() {
+    }
+
+    MessageView.prototype.clear = function () {
+        $('#span-num-msgs').html('');
+        $('#list-msg').html('');
+        for (var i = 0; i < 2; i++) {
+            var wrapper = $('#div-msg-' + i + '-wrapper');
+            wrapper.html('');
+        }
+    }
+
+    MessageView.prototype.drawTotal = function (total) {
+        $('#span-num-msgs').html(total + '');
+    }
+
+    MessageView.prototype.drawList = function (messages) {
+        var self = this;
+        for (var i = messages.length-1; i >= 0; i--) {
+            self._appendMsg(messages[i]);
+        }
+    }
+
+    MessageView.prototype.drawLatest = function (messages) {
+        var self = this;
+        for (var i = 0; i < messages.length; i++) {
+            var content = self._getMsgStr(messages[i]);
+
+            var id = 'div-msg-' + i;
+            $('#' + id).alert('close');
+
+            var wrapper = $('#div-msg-' + i + '-wrapper');
+            var alertDiv = $('<div />').appendTo(wrapper);
+
+            alertDiv.addClass('alert');
+            alertDiv.addClass('alert-info');
+            alertDiv.addClass('alert-dismissible');
+            alertDiv.attr('role', 'alert');
+            alertDiv.attr('id', id);
+            alertDiv.html(content);
+        }
+    }
+
+    MessageView.prototype._appendMsg = function (msg) {
+        var self = this;
+
+        var content = self._getMsgStr(msg);
+        var onClick = msg.getOnClick();
+
+        $('#list-msg').append('<li class="list-group-item li-msg">' + content + '</li>');
+        if (onClick != null) {
+            $('#list-msg li').last().addClass('clickable');
+            $('#list-msg li').last().click(onClick);
+        }
+    }
+
+    MessageView.prototype._getMsgStr = function (message) {
+        var header = message.getTitle();
+        var contentVals = message.getContent();
+
+        var drawStr = '<h5>' + header + '</h5>';
+        drawStr += '<p>';
+
+        var contentKeys = [];
+        for (var key in contentVals) {
+            contentKeys.push(key);
+        }
+
+        for (var i = 0; i < contentKeys.length; i++) {
+            var contentKey = contentKeys[i];
+            var contentVal = contentVals[contentKey];
+
+            if (isNumber(contentVal))
+                contentVal = toUiPrecision(parseFloat(contentVal));
+
+            if (contentVal != null && typeof contentVal == 'object') {
+                var keys = [];
+                for (key in contentVal) {
+                    keys.push(key);
+                }
+
+                for (var j = 0; j < keys.length; j++) {
+                    var val = contentVal[keys[j]];
+                    if (!isNaN(val))
+                        val = toUiPrecision(parseFloat(val))
+                    drawStr += keys[j] + ': ' + val;
+                    if (j < keys.length - 1)
+                        drawStr += ', ';
+                }
+            } else {
+                if (contentKey == 'time' || contentKey == 'start' || contentKey == 'end') {
+                    contentVal = formatDateTime(new Date(parseInt(contentVal)));
+                }
+                drawStr += contentKey + ': ' + contentVal;
+            }
+
+            if (i < contentKeys.length - 1) {
+                drawStr += '<br />';
+            }
+        }
+
+        drawStr += '</p>';
+
+        return drawStr;
+    }
+
+    //==============================================
+    // MESSAGE CONTROLLER
+    //==============================================
+
+    function MessageController(opts) {
+        var self = this;
+
+        self._LATEST_MSG_COUNT = 2;
+        self._MAX_MESSAGES = 10;
+
+        self._model = opts.model;
+        self._view = opts.view;
+
+        self._totalMessages = 0;
+        self._messages = [];
+
+        self._model.fetchLatest(self._MAX_MESSAGES, function (e, messages) {
+            if (e != null) {
+                console.error('Failed to fetch messages!');
+                console.error(e);
+                return;
+            }
+
+            self._model.fetchTotal(function (e, total) {
+                if (e != null) {
+                    console.error('Failed to fetch message count!');
+                    console.error(e);
+                    return;
+                }
+
+                for (var i = messages.length-1; i >= 0; i--) {
+                    var message = messages[i];
+                    self.handleRawMessage(message);
+                }
+
+                self._totalMessages = total;
+                self._view.drawTotal(total);
+            })
+        })
+    }
+
+    MessageController.prototype._addMessage = function (message) {
+        var self = this;
+        self._messages.push(message);
+        self._totalMessages++;
+        while (self._messages.length > self._MAX_MESSAGES) {
+            self._messages.shift();
+        }
+
+        var latest = [];
+        for (var i = 0; i < Math.min(self._messages.length, self._LATEST_MSG_COUNT); i++) {
+            latest.push(self._messages[self._messages.length-1-i]);
+        }
+
+        self._view.clear();
+        self._view.drawList(self._messages);
+        self._view.drawTotal(self._totalMessages);
+        self._view.drawLatest(latest);
+    }
+
+    MessageController.prototype.handleRawMessage = function (msg) {
+        var self = this;
+
+        var onMsgClick = null;
+        var content = null;
+        if (msg.type == 'anomaly') {
+            content = msg.content;
+        }
+        else if (msg.type == 'outlier') {
+            content = msg.content;
+        }
+        else if (msg.type == 'prediction') {
+            content = msg.content;
+        }
+        else if (msg.type == 'activity') {
+            content = msg.content;
+        }
+        else if (msg.type == 'coeff') {
+            content = msg.content;
+        }
+        else if (msg.type == 'statePrediction') {
+            var eventId = msg.content.eventId;
+            var prob = msg.content.probability;
+
+            content = (function () {
+                if (prob == 1) {
+                    return {
+                        time: msg.content.time,
+                        event: eventId
+                    }
+                } else {
+                    return {
+                        time: msg.content.time,
+                        event: 100*prob.toFixed(2) + '% chance of arriving into ' + eventId
+                    }
+                }
+            })();
+        }
+
+        self._addMessage(new Message(msg.type, content, onMsgClick));
+    }
 
     //=======================================================
     // SHARED
@@ -49,84 +326,6 @@
 
     (function () {
         function initWebSockets() {
-            var nNotifications = 0;
-            var msgQ = [];
-
-            function drawMsg(msg, handler) {
-                $('#list-msg').append('<li class="list-group-item li-msg">' + msg + '</li>');
-                if (handler != null) {
-                    $('#list-msg li').last().addClass('clickable');
-                    $('#list-msg li').last().click(handler);
-                }
-
-                msgQ.push(msg);
-                while (msgQ.length > 2)
-                    msgQ.shift();
-
-                $('#span-num-msgs').html(++nNotifications + '');
-
-                for (var i = 0; i < msgQ.length; i++) {
-                    var id = 'div-msg-' + i;
-                    $('#' + id).alert('close');
-
-                    var wrapper = $('#div-msg-' + i + '-wrapper');
-                    var alertDiv = $('<div />').appendTo(wrapper);
-
-                    alertDiv.addClass('alert');
-                    alertDiv.addClass('alert-info');
-                    alertDiv.addClass('alert-dismissible');
-                    alertDiv.attr('role', 'alert');
-                    alertDiv.attr('id', id);
-                    alertDiv.html(msgQ[i]);
-                }
-            }
-
-            function getMsgContent(header, contentVals) {
-                var drawStr = '<h5>' + header + '</h5>';
-                drawStr += '<p>';
-
-                var contentKeys = [];
-                for (var key in contentVals) {
-                    contentKeys.push(key);
-                }
-
-                for (var i = 0; i < contentKeys.length; i++) {
-                    var contentKey = contentKeys[i];
-                    var contentVal = contentVals[contentKey];
-
-                    if (isNumber(contentVal))
-                        contentVal = toUiPrecision(parseFloat(contentVal));
-
-                    if (contentVal != null && typeof contentVal == 'object') {
-                        var keys = [];
-                        for (key in contentVal) {
-                            keys.push(key);
-                        }
-
-                        for (var j = 0; j < keys.length; j++) {
-                            var val = contentVal[keys[j]];
-                            if (!isNaN(val))
-                                val = toUiPrecision(parseFloat(val))
-                            drawStr += keys[j] + ': ' + val;
-                            if (j < keys.length - 1)
-                                drawStr += ', ';
-                        }
-                    } else {
-                        if (contentKey == 'time' || contentKey == 'start' || contentKey == 'end') {
-                            contentVal = formatDateTime(new Date(parseInt(contentVal)));
-                        }
-                        drawStr += contentKey + ': ' + contentVal;
-                    }
-
-                    if (i < contentKeys.length - 1) {
-                        drawStr += '<br />';
-                    }
-                }
-
-                drawStr += '</p>';
-
-                return drawStr;
-            }
 
             function getWsUrl() {
                 var result;
@@ -166,25 +365,18 @@
                     var msg = JSON.parse(msgStr.data);
 
                     var content;
-                    if (msg.type == 'stateChanged')
+                    if (msg.type == 'stateChanged') {
                         viz.setCurrentStates(msg.content);
-                    else if (msg.type == 'anomaly') {
-                        drawMsg(msg.content);
-                    }
-                    else if (msg.type == 'outlier') {
-                        drawMsg('Outlier: ' + JSON.stringify(msg.content));
-                    }
-                    else if (msg.type == 'prediction') {
-                        drawMsg(getMsgContent('Prediction', msg.content));
-                    }
-                    else if (msg.type == 'activity') {
-                        drawMsg(getMsgContent('Activity', msg.content));
-                    }
-                    else if (msg.type == 'coeff') {
-                        drawMsg(getMsgContent('Coefficient', msg.content));
                     }
                     else if (msg.type == 'values') {
                         content = msg.content;
+
+                        // show the current timestamp
+                        var timestamp = content.timestamp;
+                        delete content.timestamp;
+                        if (timestamp != null) {
+                            $('#span-curr-time').html(formatDateTime(new Date(timestamp)));
+                        }
 
                         var thumbs = $('#div-values-wrapper').children();
 
@@ -202,7 +394,7 @@
                             if (!isDrawing) {
                                 isDrawing = true;
                                 var first = thumbs.first();
-                                first.width(first.width()-1);	// hack to avoid a blink
+                                first.width(first.width()-1);   // hack to avoid a blink
                                 thumbs.first().hide({
                                     duration: 100,
                                     easing: 'linear',
@@ -222,66 +414,8 @@
                             $('#div-values-wrapper').children().last().find('.thumbnail').addClass('values-current')
                         }
                     }
-                    else if (msg.type == 'statePrediction') {
-                        content = msg.content;
-                        var eventId = content.eventId;
-                        var prob = content.probability;
-
-                        var drawMsgStr;
-                        if (prob == 1) {
-                            drawMsgStr = eventId;
-                        } else {
-                            drawMsgStr = 100*prob.toFixed(2) + '% chance of arriving into ' + eventId;
-                        }
-
-                        drawMsg(drawMsgStr, function () {
-                            // draw a histogram of the PDF
-                            var timeV = content.pdf.timeV;
-                            var probV = content.pdf.probV;
-
-                            var data = [];
-                            for (var i = 0; i < timeV.length; i++) {
-                                data.push([timeV[i], probV[i]]);
-                            }
-
-                            // var min = timeV[0];
-                            // var max = timeV[timeV.length-1];
-
-                            $('#popover-pdf-hist').slideDown();
-
-                            // TODO highcharts not included anymore
-                            // new Highcharts.Chart({
-                            //     chart: {
-                            //         renderTo: document.getElementById('hist-pdf'),
-                            //         type: 'line'
-                            //     },
-                            //     title: {
-                            // floating: true,
-                            // text: ''
-                            // },
-                            // legend: {
-                            // enabled: false
-                            // },
-                            //     yAxis: {
-                            //     	title: {
-                            //     		enabled: false
-                            //     	},
-                            //     	min: 0,
-                            //     	max: 1
-                            //     },
-                            //     plotOptions: {
-                            //         column: {
-                            //             groupPadding: 0,
-                            //             pointPadding: 0,
-                            //             borderWidth: 0
-                            //         }
-                            //     },
-                            //     series: [{
-                            //     	name: 'PDF',
-                            //         data: data
-                            //     }]
-                            // });
-                        });
+                    else {
+                        messageController.handleRawMessage(msg);
                     }
                 };
             }
@@ -322,7 +456,7 @@
                             error: handleAjaxError()
                         });
                     }
-                } else {	// transition
+                } else {    // transition
                     $.ajax('api/transitionHistogram', {
                         dataType: 'json',
                         data: { sourceId: opts.sourceId, targetId: opts.targetId, feature: opts.ftrId },
@@ -368,9 +502,9 @@
 
                     if (opts.type == 'numeric') {
                         if (opts.value != null)
-                            valField.html(opts.value.toPrecision(3));
-                        if (opts.valueColor != null)
-                            thumbnail.find('.attr-val').css('color', opts.valueColor);
+                            valField.html(StreamStory.Format.toUiPrecision(opts.value));
+                        // if (opts.valueColor != null)
+                        //     thumbnail.find('.attr-val').css('color', opts.valueColor);
                     }
                     else if (opts.type == 'categorical') {
                         if (opts.value != null) {
@@ -403,8 +537,8 @@
 
                             valField.html(valStr.substring(0, valStr.length-7));
                         }
-                        if (opts.valueColor != null)	// TODO what to do with this???
-                            thumbnail.find('.attr-val').css('color', opts.valueColor);
+                        // if (opts.valueColor != null)    // TODO what to do with this???
+                        //     thumbnail.find('.attr-val').css('color', opts.valueColor);
                     }
                     else {
                         throw new Error('Invalid feature type: ' + opts.type);
@@ -514,6 +648,31 @@
         //========================================================
 
         (function () {
+            var initSlider = function (config) {
+                var slider = config.slider;
+                var valSpan = config.valSpan;
+                var min = config.min;
+                var max = config.max;
+                var step = config.step;
+                var value = config.value;
+                // iniitalize the slider
+                slider.slider({
+                    value: value,
+                    min: min,
+                    max: max,
+                    step: step,
+                    animate: true,
+                    slide: function (event, ui) {
+                        var val = ui.value;
+                        valSpan.html(toUiPrecision(val));
+                    },
+                    change: function (event, ui) {
+                        var val = ui.value;
+                        valSpan.html(toUiPrecision(val));
+                    }
+                });
+            }
+
             $('#lnk-config').click(function (event) {
                 event.preventDefault();
                 $('#popup-config').modal({ show: true });
@@ -537,42 +696,33 @@
                 $('#popup-config').modal('hide');
             });
 
-            // setup the configuration sliders
-            $('#range-pred-threshold').slider({
-                value: PREDICTION_THRESHOLD,
+
+            initSlider({
+                slider: $('#range-pred-threshold'),
+                valSpan: $('#span-pred-threshold'),
                 min: 0,
-                max: 1,
+                max: 1 + 0.05,
                 step: 0.05,
-                animate: true,
-                change: function (event, ui) {
-                    var val = ui.value;
-                    $('#span-pred-threshold').html(val);
-                }
-            });
+                value: PREDICTION_THRESHOLD
+            })
 
-            $('#range-time-horizon').slider({
-                value: TIME_HORIZON,
+            initSlider({
+                slider: $('#range-time-horizon'),
+                valSpan: $('#span-time-horizon'),
                 min: 0,
-                max: 100,
+                max: 100 + 0.1,
                 step: 0.1,
-                animate: true,
-                change: function (event, ui) {
-                    var val = ui.value;
-                    $('#span-time-horizon').html(val + ' ' + getTimeUnit() + 's');
-                }
-            });
+                value: TIME_HORIZON
+            })
 
-            $('#range-pdf-bins').slider({
-                value: PDF_BINS,
+            initSlider({
+                slider: $('#range-pdf-bins'),
+                valSpan: $('#span-pdf-bins'),
                 min: 100,
                 max: 10000,
                 step: 10,
-                animate: true,
-                change: function (event, ui) {
-                    var val = ui.value;
-                    $('#span-pdf-bins').html(val);
-                }
-            });
+                value: PDF_BINS
+            })
 
             $(document).ready(function () {
                 $('#popup-config').modal({ show: false });
@@ -602,7 +752,7 @@
         }
 
         function fetchStateProbDist(time) {
-            if (time == 0) time = 1e-4;	// FIXME, handle 0 on the server
+            if (time == 0) time = 1e-4; // FIXME, handle 0 on the server
 
             var stateId = viz.getSelectedState();
             var level = viz.getCurrentHeight();
@@ -729,8 +879,6 @@
                 if (pos.x == null) pos.x = 0;
                 if (pos.y == null) pos.y = 0;
             }
-
-            console.log(JSON.stringify(nodePositions));
 
             $.ajax('api/save', {
                 dataType: 'json',
@@ -1183,13 +1331,14 @@
         timelineController = (function () {
             var ZOOM_FACTOR = 1.1;
             var OFFSET_STEP = 0.1;
-            var MAX_ZOOM = 100;
+            var MAX_ZOOM = 1000;
 
             var wrapperId = '#div-time-state-hist';
             var wrapper = $(wrapperId);
 
             var slider = $('#div-bp-slider');
             // var sliderHandle = $('#div-bp-slider-handle');
+            var historyExecutor = StreamStory.Utils.executeLastExecutor();
 
             var chart = null;
             var chartData = null;
@@ -1253,12 +1402,19 @@
 
                 if (dt < 1000*60*60*5) {
                     // the total time is less than five hour
+                    // hour:minute
                     tickTime = d3.time.minute;
                     format = d3.time.format('%H:%M');
                 }
-                else if (dt < 1000*60*60*24*7) {	// one week
+                else if (dt < 1000*60*60*24*3) {    // three days
+                    // hour day month
                     tickTime = d3.time.hour;
                     format = d3.time.format('%Hh %d %b');
+                }
+                else if (dt < 1000*60*60*24*7) {    // one week
+                    // day month
+                    tickTime = d3.time.hour;
+                    format = d3.time.format('%d %b');
                 }
                 else if (dt < 1000*60*60*24*30) {   // one month
                     tickTime = d3.time.day;
@@ -1270,11 +1426,12 @@
                 }
                 else if (dt < 1000*60*60*24*30*12) {    // one year
                     tickTime = d3.time.month;
-                    format = d3.time.format('%b %y');
+                    format = d3.time.format('%b %Y');
                 }
-                else if (dt < 1000*60*60*24*365*2) {    // two years
+                else if (dt < 1000*60*60*24*365*4) {    // four years
                     tickTime = d3.time.month;
-                    format = d3.time.format('%x');
+                    // (month short) year
+                    format = d3.time.format('%b %Y');
                 }
                 else {  // more than two years
                     tickTime = d3.time.year;
@@ -1288,147 +1445,148 @@
             }
 
             function fetchTimeline(offset, zoom, callback) {
-                $.ajax('api/stateHistory', {
-                    dataType: 'json',
-                    data: {
-                        offset: offset,
-                        range: rangeFromZoom(zoom),
-                        n: 100
-                    },
-                    success: function (data) {
-                        var scales = data.window;
-                        // var historyStart = data.historyStart;
-                        // var historyEnd = data.historyEnd;
+                historyExecutor(function (done) {
+                    $.ajax('api/stateHistory', {
+                        dataType: 'json',
+                        data: {
+                            offset: offset,
+                            range: rangeFromZoom(zoom),
+                            n: 100
+                        },
+                        success: function (data) {
+                            var scales = data.window;
+                            // var historyStart = data.historyStart;
+                            // var historyEnd = data.historyEnd;
 
-                        wrapper.html('');
+                            wrapper.html('');
 
-                        // preprocess the data
-                        chartData = [];
+                            // preprocess the data
+                            chartData = [];
 
-                        var maxEls = 0;
+                            var maxEls = 0;
 
-                        var zoomLevels = viz.getZoomLevels();
+                            var zoomLevels = viz.getZoomLevels();
 
-                        for (var scaleN = scales.length-1; scaleN >= 0; scaleN--) {
-                            // var scale = scales[scaleN].scale;
-                            var zoom = zoomLevels[scaleN];
-                            var states = scales[scaleN].states;
-                            var timeV = [];
-                            var category = 'scale-' + scaleN;
+                            for (var scaleN = scales.length-1; scaleN >= 0; scaleN--) {
+                                // var scale = scales[scaleN].scale;
+                                var zoom = zoomLevels[scaleN];
+                                var states = scales[scaleN].states;
+                                var timeV = [];
+                                var category = 'scale-' + scaleN;
 
-                            for (var blockN = 0; blockN < states.length; blockN++) {
-                                var block = states[blockN];
+                                for (var blockN = 0; blockN < states.length; blockN++) {
+                                    var block = states[blockN];
 
-                                var start = block.start;
-                                var end = block.start + block.duration;
+                                    var start = block.start;
+                                    var end = block.start + block.duration;
 
-                                var stateH = block.states;
+                                    var stateH = block.states;
 
-                                var hue = 0;
-                                var majorityStateId = -1;
-                                var majorityStatePerc = 0;
-                                for (var stateId in stateH) {
-                                    var statePerc = stateH[stateId];
-                                    var stateColor = viz.getDefaultNodeColor(stateId);
+                                    var hue = 0;
+                                    var majorityStateId = -1;
+                                    var majorityStatePerc = 0;
+                                    for (var stateId in stateH) {
+                                        var statePerc = stateH[stateId];
+                                        var stateColor = viz.getDefaultNodeColor(stateId);
 
-                                    if (statePerc > majorityStatePerc) {
-                                        majorityStatePerc = statePerc;
-                                        majorityStateId = stateId;
+                                        if (statePerc > majorityStatePerc) {
+                                            majorityStatePerc = statePerc;
+                                            majorityStateId = stateId;
+                                        }
+
+                                        hue += statePerc*stateColor.hue;
                                     }
+                                    var color = viz.getDefaultNodeColor(majorityStateId);
+                                    color.hue = hue;
 
-                                    hue += statePerc*stateColor.hue;
+                                    timeV.push({
+                                        starting_time: start,
+                                        ending_time: end,
+                                        color: getHslStr(color),
+                                        'class': 'state-' + majorityStateId
+                                    });
                                 }
-                                var color = viz.getDefaultNodeColor(majorityStateId);
-                                color.hue = hue;
 
-                                timeV.push({
-                                    starting_time: start,
-                                    ending_time: end,
-                                    color: getHslStr(color),
-                                    'class': 'state-' + majorityStateId
+                                chartData.push({
+                                    'class': category,
+                                    label: zoom.toFixed() + '%',
+                                    times: timeV
                                 });
+
+                                if (timeV.length > maxEls) {
+                                    maxEls = timeV.length;
+                                }
                             }
 
-                            chartData.push({
-                                'class': category,
-                                label: zoom.toFixed() + '%',
-                                times: timeV
-                            });
+                            // draw the elements
+                            (function () {
+                                chart = d3.timeline();
 
-                            if (timeV.length > maxEls) {
-                                maxEls = timeV.length;
-                            }
-                        }
+                                wrapperW = wrapper.width();
+                                wrapperH = wrapper.height();
 
-                        // draw the elements
-                        (function () {
-                            chart = d3.timeline();
+                                var nTicks = 8;
 
-                            wrapperW = wrapper.width();
-                            wrapperH = wrapper.height();
+                                var nTimelines = chartData.length;
+                                var margin = chart.itemMargin();
+                                var itemHeight = Math.floor((wrapperH - (nTimelines-1)*margin - 70) / nTimelines);
 
-                            var nTicks = 8;
+                                var dt = (function () {
+                                    var finestStates = scales[0].states;
 
-                            var nTimelines = chartData.length;
-                            var margin = chart.itemMargin();
-                            var itemHeight = Math.floor((wrapperH - (nTimelines-1)*margin - 70) / nTimelines);
+                                    var firstState = finestStates[0];
+                                    var lastState = finestStates[finestStates.length-1];
 
-                            var dt = (function () {
-                                var finestStates = scales[0].states;
+                                    return lastState.start + lastState.duration - firstState.start;
+                                })();
 
-                                var firstState = finestStates[0];
-                                var lastState = finestStates[finestStates.length-1];
+                                var config = getTimeConfig(dt);
 
-                                return lastState.start + lastState.duration - firstState.start;
+                                chart.tickFormat({
+                                    format: config.format,
+                                    numTicks: nTicks,
+                                    tickSize: 6,
+                                });
+
+                                chart.width(wrapperW);
+                                // chart.width(Math.max(maxEls*minElementWidth, wrapperW));
+                                chart.itemHeight(itemHeight);
+                                chart.margin({
+                                    left: 50,
+                                    right: 0,
+                                    top: -itemHeight + 15,  // fixes the large margin when there are not a lot of timelines
+                                    bottom: 0
+                                });
+                                chart.stack();
+
+                                redraw();
+
+                                chartW = chart.width();
+                                defaultChartW = chartW;
+                                minChartW = wrapperW;
                             })();
 
-                            var config = getTimeConfig(dt);
+                            chart.click(function (d, i, datum) {
+                                var stateClass = d.class;
+                                var scaleClass = datum.class;
 
-                            // var tickTime = config.tickTime;
-                            // var format = config.format;
+                                var stateSpl = stateClass.split('-');
+                                var scaleSpl = scaleClass.split('-');
 
-                            chart.tickFormat({
-                                format: config.format,
-                                numTicks: nTicks,
-                                tickSize: 6,
+                                var stateId = stateSpl[stateSpl.length-1];
+                                var scaleN = scaleSpl[scaleSpl.length-1];
+
+                                viz.setLevel(scaleN);
+                                viz.setSelectedState(stateId);
                             });
 
-                            chart.width(wrapperW);
-                            // chart.width(Math.max(maxEls*minElementWidth, wrapperW));
-                            chart.itemHeight(itemHeight);
-                            chart.margin({
-                                left: 50,
-                                right: 0,
-                                top: -itemHeight + 15,  // fixes the large margin when there are not a lot of timelines
-                                bottom: 0
-                            });
-                            chart.stack();
-
-                            redraw();
-
-                            chartW = chart.width();
-                            defaultChartW = chartW;
-                            minChartW = wrapperW;
-                        })();
-
-                        chart.click(function (d, i, datum) {
-                            var stateClass = d['class'];
-                            var scaleClass = datum['class'];
-
-                            var stateSpl = stateClass.split('-');
-                            var scaleSpl = scaleClass.split('-');
-
-                            var stateId = stateSpl[stateSpl.length-1];
-                            var scaleN = scaleSpl[scaleSpl.length-1];
-
-                            viz.setLevel(scaleN);
-                            viz.setSelectedState(stateId);
-                        });
-
-                        if (callback != null) callback();
-                    },
-                    error: handleAjaxError()
-                });
+                            // finish
+                            if (callback != null) callback();
+                            done();
+                        },
+                        error: handleAjaxError(null, done)
+                    });
+                })
             }
 
             var that = {
@@ -1450,11 +1608,20 @@
 
                     fetchTimeline(currOffset, currZoom, function () {
                         addPressHandler($('#btn-timeline-zoomin'), function () {
-                            updateSlider(currOffset, Math.min(MAX_ZOOM, currZoom * ZOOM_FACTOR));
+                            var newOffset = currOffset + (1 - 1 / ZOOM_FACTOR) / (2*currZoom);
+                            var newZoom = currZoom*ZOOM_FACTOR;
+                            updateSlider(newOffset, newZoom);
                         });
 
                         addPressHandler($('#btn-timeline-zoomout'), function () {
-                            updateSlider(currOffset, Math.max(1, currZoom / ZOOM_FACTOR));
+                            var newOffset = currOffset + (1 - ZOOM_FACTOR) / (2*currZoom);
+                            var newZoom = Math.min(MAX_ZOOM, currZoom / ZOOM_FACTOR);
+                            var newRange = rangeFromZoom(newZoom);
+
+                            if (newOffset < 0) { newOffset = 0; }
+                            if (newOffset + newRange > 1) { newOffset = 1 - newRange; }
+
+                            updateSlider(newOffset, newZoom);
                         });
 
                         addPressHandler($('#btn-timeline-scroll-left'), function () {
@@ -1472,7 +1639,7 @@
 
                         // init the timeline slider
                         (function initSlider() {
-                            var step = 0.001;
+                            var step = 0.00001;
                             slider.slider({
                                 range: true,
                                 min: 0,
@@ -1481,8 +1648,6 @@
                                 values: [0,1],
                                 change: function (event, ui) {
                                     if (!handleSliderChange) return true;
-
-                                    console.log('handling slider change ...');
 
                                     var min = ui.values[0];
                                     var max = ui.values[1];
@@ -1513,7 +1678,7 @@
                 onStateChanged: function (stateId) {
                     wrapper.find('rect').removeAttr('highlighted');
 
-                    if (stateId == null) return;
+                    // if (stateId == null) return;
 
                     selectedStateId = stateId;
                     highlightSelectedState();
@@ -1522,45 +1687,199 @@
             return that;
         })();
 
-        (function () {
-            var prevVal = 1;
+        function equipSlider(opts) {
+            var HIDE_DURATION = 500;
+            var HIDDEN_OPACITY = 0.05;
+            var UPDATE_INTERVAL = 1000;
+            var UPDATE_PERC_THRESHOLD = 0.15;
 
-            $("#threshold_slider").slider({
-                value: prevVal,
-                min: 0.5,
-                max: 1,
-                step: 0.01,
+            var slider = opts.slider;
+            var value = opts.value;
+            var min = opts.min;
+            var max = opts.max;
+            var step = opts.step;
+            var orientation = opts.orientation;
+
+            // var onSlide = opts.onSlide;
+            var onChange = opts.onChange;
+
+            var range = max - min;
+            // var prevVal = value;
+
+            // defaults
+            if (orientation == null) orientation = 'vertical';
+            // if (onSlide == null) onSlide = function () {};
+
+            var isOver = false;
+            var isFading = false;
+            var isSliding = false;
+            var isVisible = true;
+
+            var show = function () {
+                isOver = true;
+
+                if (isSliding || isFading || isVisible) return;
+
+                isFading = true;
+                slider.animate({ opacity: 1 }, {
+                    duration: 1,
+                    complete: function () {
+                        isFading = false;
+                        isVisible = true;
+                        if (!isOver) {
+                            hide();
+                        }
+                    }
+                })
+            }
+
+            var hide = function (duration) {
+                isOver = false;
+
+                if (isSliding || isFading || !isVisible) return;
+
+                if (duration == null) duration = HIDE_DURATION;
+
+                isFading = true;
+                slider.animate({ opacity: HIDDEN_OPACITY }, {
+                    duration: duration,
+                    complete: function () {
+                        isFading = false;
+                        isVisible = false;
+                        if (isOver) {
+                            show();
+                        }
+                    }
+                })
+            }
+
+            var changeController = (function () {
+                var timeoutId = null;
+                var prev = value;
+
+                var lastUpdateTime = 0;
+                var lastVal = null;
+
+                var clearUpdateTimeout = function () {
+                    if (timeoutId != null) {
+                        clearTimeout(timeoutId);
+                        timeoutId = null;
+                    }
+                }
+
+                var setUpdateTimeout = function (timeout) {
+                    if (timeoutId != null) throw new Error('Cannot set timeout twice!');
+
+                    timeoutId = setTimeout(function () {
+                        clearUpdateTimeout();
+
+                        var now = Date.now();
+                        var elapsed = now - lastUpdateTime;
+
+                        if (elapsed >= UPDATE_INTERVAL) {
+                            that.onChange(lastVal);
+                        } else {
+                            setUpdateTimeout(UPDATE_INTERVAL - elapsed);
+                        }
+
+                    }, timeout);
+                }
+
+                var refreshUpdateTimeout = function (val) {
+                    lastUpdateTime = Date.now();
+                    lastVal = val;
+                    if (timeoutId == null) {
+                        setUpdateTimeout(UPDATE_INTERVAL);
+                    }
+                }
+
+                var that = {
+                    onStart: function () {
+                    },
+                    onChange: function (val, fireEvent) {
+                        if (fireEvent == null) { fireEvent = true; }
+                        clearUpdateTimeout();
+                        if (val != prev) {
+                            prev = val;
+                            if (fireEvent) {
+                                onChange(val);
+                            }
+                        }
+                    },
+                    onSlide: function (val) {
+                        if (Math.abs(val - prev) > UPDATE_PERC_THRESHOLD*range) {
+                            that.onChange(val);
+                        } else {
+                            refreshUpdateTimeout(val);
+                        }
+                    },
+                    onStop: function () {
+                        clearUpdateTimeout();
+                        lastUpdateTime = 0;
+                        lastVal = null;
+                    }
+                }
+
+                return that;
+            })();
+
+            slider.slider({
+                value: value,
+                min: min,
+                max: max,
+                step: step,
                 animate:"slow",
-                orientation: "hotizontal",
-                change: function (event, ui) {
-                    var val = ui.value;
-                    if (val != prevVal) {
-                        prevVal = val;
-                        viz.setTransitionThreshold(val);
-                    }
-                },
+                orientation: orientation,
                 slide: function (event, ui) {
-                    var val = ui.value;
-
-                    if (Math.abs(val - prevVal) > 0.15) {
-                        prevVal = val;
-                        viz.setTransitionThreshold(val);
-                    }
+                    changeController.onSlide(ui.value);
                 },
+                change: function (event, ui) {
+                    var fireEvent = event.originalEvent != null;
+                    changeController.onChange(ui.value, fireEvent);
+                },
+                start: function () {
+                    isSliding = true;
+                    changeController.onStart();
+                },
+                stop: function () {
+                    isSliding = false;
+                    if (!isOver) {
+                        hide();
+                    }
+                    changeController.onStop();
+                }
             });
+
+            hide(1);
+            slider.hover(show, hide);
+        }
+
+        (function () {
+            equipSlider({
+                slider: $("#threshold_slider"),
+                value: 1,
+                min: 0.5,
+                max: 1.001,
+                step: 0.001,
+                orientation: 'horizontal',
+                onChange: function (val) {
+                    viz.setTransitionThreshold(val);
+                }
+            })
         })();
 
-        $("#slider_item_div").slider({
-            value: 100,//viz.getZoom(),
-            min: 0,//viz.getMinZoom(),
-            max: 100,//viz.getMaxZoom(),
-            step: 1,//0.01,
-            animate:"slow",
-            orientation: "vertical",
-            slide: function (event, ui) {
-                viz.setScale(ui.value);
-            }
-        });
+        (function () {
+            equipSlider({
+                slider: $("#slider_item_div"),
+                min: 0,
+                max: 100,
+                value: 100,
+                step: 1,
+                onChange: function (val) {
+                    viz.setScale(val);
+                }
+            })
+        })();
 
         $('#btns-timescale button').click(function () {
             $('#btns-timescale button').removeClass('active');
@@ -1744,7 +2063,7 @@
                         $('#div-button-save-state').removeClass('hidden');
                     });
 
-                    $('#chk-target').off('change');	// remove the previous handlers
+                    $('#chk-target').off('change'); // remove the previous handlers
                     $('#chk-target').prop('checked', data.isTarget != null && data.isTarget);
                     if (data.isTarget != null && data.isTarget) {
                         $('#div-event-id').removeClass('hidden');
@@ -1901,7 +2220,7 @@
                         }
 
                         var shouldClearName = stateName == '' || stateName == stateId;
-                        if (shouldClearName) {	// clear the state name
+                        if (shouldClearName) {  // clear the state name
                             delete data.name;
                         }
                         if (description == null || description == '') {
@@ -1963,6 +2282,7 @@
         (function () {
             viz.onHeightChanged(function (scale) {
                 $('#span-zoom-val').html(scale.toFixed());
+                // update the slider without firing an event (avoids rounding bugs)
                 $("#slider_item_div").slider('value', scale);
                 if ($('#chk-show-fut').is(':checked')) {
                     $('#chk-show-fut').attr('checked', false);
@@ -2007,6 +2327,10 @@
 
         viz.onInitialized(function () {
             timelineController.init();
+            (function () {
+                var transitionThreshold = viz.getTransitionThreshold();
+                $("#threshold_slider").slider('value', transitionThreshold);
+            })();
         });
     })();
 
@@ -2015,6 +2339,19 @@
     //=======================================================
 
     (function () {
+        var ACTIVITY_STEP_COLORS = [
+            'blue',
+            'red',
+            'green',
+            'yellow',
+            'magenta',
+            'cyan',
+            'brown',
+            'Wheat',
+            'DeepPink',
+            'CadetBlue'
+        ];
+
         var currStep = {};
         var currStepN = 0;
         var currStepSize = 0;
@@ -2022,7 +2359,7 @@
         var alertField = $('#alert-wrapper-activity');
 
         function getStepColor() {
-            return STATE_COLORS[currStepN % STATE_COLORS.length];
+            return ACTIVITY_STEP_COLORS[currStepN % ACTIVITY_STEP_COLORS.length];
         }
 
         function onRemoveBtnClick() {
@@ -2153,39 +2490,56 @@
         $('#div-curr-activity-step').find('.thumbnail').css('background-color', getStepColor());
     })();
 
-$(document).ready(function () {
-    firstBottomVizTab = $('#tabs-viz-bottom').find('a')[0];
+    $(document).ready(function () {
+        $('#btn-reconfigure').click(function () {
+            // close the options window
+            $('#content-options').slideToggle();
+            // prompt if the user is sure and then reconfigure the model
+            promptConfirm('Reconfigure Model', 'Are you sure you wish to reconfigure the model?', function () {
+                StreamStory.Utils.get('api/modelId', null, function (e, data) {
+                    if (e != null) {
+                        alert('An error ocurred while initializing reconfiguration!');
+                        return;
+                    }
+                    StreamStory.Browser.redirect('dashboard.html?reconf=' + data.modelId);
+                })
+            });
+        })
+    })
 
-    $('#div-msg-0, #div-msg-1').alert();
+    $(document).ready(function () {
+        firstBottomVizTab = $('#tabs-viz-bottom').find('a')[0];
 
-    $('.nav-pills a').click(function () {
-        TAB_ID = $(this).attr('id');
+        $('#div-msg-0, #div-msg-1').alert();
 
-        if (TAB_ID == 'a-default') {
-            $('#tabs-viz-bottom').find('a')[0].click();
+        $('.nav-pills a').click(function () {
+            TAB_ID = $(this).attr('id');
 
-            if (viz.isInit()) {
-                viz.resetMode();
-                timelineController.init();
+            if (TAB_ID == 'a-default') {
+                $('#tabs-viz-bottom').find('a')[0].click();
+
+                if (viz.isInit()) {
+                    viz.resetMode();
+                    timelineController.init();
+                }
+                // TODO fetch the histograms
+                // TODO reload the decision tree
             }
-            // TODO fetch the histograms
-            // TODO reload the decision tree
-        }
-        else if (TAB_ID == 'a-activities') {
-            viz.setMode(viz.MODE_ACTIVITY);
-        }
+            else if (TAB_ID == 'a-activities') {
+                viz.setMode(viz.MODE_ACTIVITY);
+            }
+        });
+
+        $('#tabs-viz-bottom a').click(function () {
+            var tabId = $(this).attr('id');
+
+            if (tabId == 'a-timehist') {
+                $('#btns-timescale button')[0].click();
+            }
+        });
+
+        $('.nav-pills a')[0].click()
+
+        firstBottomVizTab.click();
     });
-
-    $('#tabs-viz-bottom a').click(function () {
-        var tabId = $(this).attr('id');
-
-        if (tabId == 'a-timehist') {
-            $('#btns-timescale button')[0].click();
-        }
-    });
-
-    $('.nav-pills a')[0].click()
-
-    firstBottomVizTab.click();
-});
 })()

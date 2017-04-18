@@ -18,9 +18,13 @@ tags
 node_modules/
 node-modules.tar
 
+# node-gyp
+/build
+
 # output files
 /predictions-*
 /activities-*
 /activities
 /states.*
 /friction-coeff.txt
+/output

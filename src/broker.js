@@ -109,11 +109,14 @@ function initConsumer(callback) {
         });
     });
 
-    {
+    (function () {
         log.info('Adding broker message handler ...');
 
         var nReceivedRaw = 0;
         var nReceivedCep = 0;
+
+        var nResetEvents = 0;
+        var resetTimeoutId = null;
 
         // var nFromDominik = 0;
 
@@ -123,27 +126,37 @@ function initConsumer(callback) {
 
                 // check if we got any messages that are not JSON
                 if (topic == topics.TOPIC_REPLAY_START) {
-                    log.info('Received replay start message: %s', msg.value);
-                    if (config.RESTART_ON_REPLAY) {
-                        log.info('Will restart after a small delay ...');
+                    (function () {
+                        log.info('Received replay start message: %s', msg.value);
+                        if (config.RESTART_ON_REPLAY) {
+                            ++nResetEvents;
+                            log.info('Received %d reset events ...', nResetEvents);
 
-                        setTimeout(function () {
-                            log.info('Restarting ...');
-                            process.exit(0);
-                        }, 5000);
-                        return;
-                    } else {
-                        log.info('Will not restart, not configured to do so!');
-                        return;
-                    }
+                            if (resetTimeoutId == null) {
+                                log.info('Will restart after a small delay ...');
+
+                                resetTimeoutId = setTimeout(function () {
+                                    log.info('Restarting, received %d restart events ...', nResetEvents);
+                                    process.exit(0);
+                                }, 10000);
+                            } else {
+                                log.info('Received %d restart events ...', nResetEvents);
+                            }
+                        } else {
+                            log.info('Will not restart, not configured to do so!');
+                        }
+                    })();
+                    return;
                 }
 
+                // parse the message
                 var payload = JSON.parse(msg.value);
 
                 if (msgCallback != null) {
                     if (topic == topics.RAW_DATA_CONSUMER_TOPIC) {
-                        if (nReceivedRaw++ % config.BROKER_PRINT_INTERVAL == 0 && log.debug())
+                        if (nReceivedRaw++ % config.BROKER_PRINT_INTERVAL == 0 && log.debug()) {
                             log.debug('Received %d raw data messages ...', nReceivedRaw);
+                        }
 
                         msgCallback({type: 'raw', payload: payload});
                     } else if (topic == topics.CEP_DATA_CONSUMER_TOPIC) {
@@ -167,7 +180,7 @@ function initConsumer(callback) {
                 log.error(e, 'Exception while receiving message!');
             }
         });
-    }
+    })();
 
     log.info('Consumer initialized!');
 }
@@ -281,6 +294,7 @@ exports.initInputTopic = function (topic, callback) {
 }
 
 exports.initOutputTopic = function (topic, callback) {
+    if (!config.USE_BROKER) return;
     if (callback == null) throw new Error('Callback undefined!');
 
     log.info('Adding output topic: ' + topic);
@@ -302,6 +316,7 @@ exports.initOutputTopic = function (topic, callback) {
 }
 
 exports.removeInputTopic = function (topic, callback) {
+    if (!config.USE_BROKER) return;
     if (callback == null) throw new Error('Callback not defined!');
 
     log.info('Removing input topic: ' + topic);
@@ -327,6 +342,7 @@ exports.removeInputTopic = function (topic, callback) {
 }
 
 exports.removeOutputTopic = function (topic, callback) {
+    if (!config.USE_BROKER) return;
     if (callback == null) throw new Error('Callback not defined!');
 
     log.info('Removing output topic: ' + topic);
