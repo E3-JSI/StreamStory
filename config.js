@@ -86,22 +86,6 @@ if (config.resampleInterval == null) {
 
 
 //================================================================
-// LOGIN CONFIGURATION
-//================================================================
-if (config.integration.authentication != null) {
-    log.info('Using external authentication: %s', config.integration.authentication)
-
-    exports.AUTHENTICATION_EXTERNAL = true;
-    exports.AUTHENTICATION_HOST = config.integration.authentication.host;
-    exports.AUTHENTICATION_TIMEOUT = config.integration.authentication.timeout != null ?
-                                        config.integration.authentication.timeout :
-                                        10000;
-}
-else {
-    exports.AUTHENTICATION_EXTERNAL = false;
-}
-
-//================================================================
 // INITIALIZATION
 //================================================================
 exports.INITIALIZE_ZERO = config.qminer.initializeZeros;
@@ -202,7 +186,6 @@ exports.COEFF_PRINT_INTERVAL = config.log.print.coeff;
 // INTEGRATION
 //================================================================
 
-exports.USE_BROKER = config.integration.type == 'broker';
 exports.integration = config.integration;
 
 exports.RESTART_ON_REPLAY = config.restartOnReplay;
@@ -234,6 +217,4 @@ log.info('QMiner verbosity: %d', verbosity);
 log.info('StreamStory params: %s', JSON.stringify(exports.STREAM_STORY_PARAMS));
 log.info('Data path: %s', dataPath);
 log.info('Use-case: %s', config.useCase);
-if (exports.USE_BROKER)
-    log.info('Broker URL: %s', config.integration.brokerUrl);
 log.info('================================================');

@@ -12,12 +12,10 @@ let cookieParser = require('cookie-parser');
 let SessionStore = require('./util/sessionstore.js');
 let utils = require('./utils.js');
 let consts = require('./util/consts.js');
-let broker = require('./broker.js');
 let config = require('../config.js');
 let fields = require('../fields.js');
 let transform = require('./util/transform.js');
 let fzi = require('./util/fzi_integration.js');
-let externalAuth = require('./util/external_auth.js');
 let routers = require('./util/routers.js');
 
 let ModelStore = require('./util/modelstore.js');
@@ -46,8 +44,6 @@ let DATA_PATH = '/data';
 let WS_PATH = '/ws';
 
 let LONG_REQUEST_TIMEOUT = 1000*60*60*24;   // 24 hours
-
-let FZI_TOKEN_KEY = 'fzi-token';
 
 let app = express();
 
@@ -273,40 +269,12 @@ function initModelManagerHandlers() {
                     metadata[contrFtr.name] = contrFtr.value;
                 }
 
-                var brokerMsg = transform.genHistPrediction(
-                    date.getTime(),
-                    eventId,
-                    timeV,
-                    probV,
-                    model.getModel().getTimeUnit(),
-                    metadata
-                );
-
                 async.parallel([
                     function sendUiMsg(xcb) {
                         try {
                             // var mid = model.getId();
                             // modelStore.sendMsg(model.getId(), JSON.stringify(uiMsg));
                             modelManager.sendMessage(model, uiMsg, xcb);
-                        } catch (e) {
-                            xcb(e);
-                        }
-                    },
-                    function sendBrokerMsg(xcb) {
-                        try {
-                            var mid = model.getId();
-                            var brokerMsgStr = JSON.stringify(brokerMsg);
-
-                            // do not send this prediciton to PANDDA, but only to FZI
-                            // broker.send(broker.PREDICTION_PRODUCER_TOPIC, brokerMsgStr);
-
-                            var topics = fzi.getTopics(fzi.PREDICTION_OPERATION, mid);
-                            for (i = 0; i < topics.length; i++) {
-                                var topic = topics[i].output;
-                                log.debug('Sending a prediction message to topic \'%s\'', topic);
-                                broker.send(topic, brokerMsgStr);
-                            }
-                            xcb();
                         } catch (e) {
                             xcb(e);
                         }
@@ -344,24 +312,6 @@ function initModelManagerHandlers() {
 
                 // modelStore.sendMsg(model.getId(), JSON.stringify(uiMsg));
                 modelManager.sendMessage(model, uiMsg, xcb);
-            },
-            function sendBrokerMsg(xcb) {
-                if (config.USE_BROKER) {
-                    var brokerMsgStr = JSON.stringify({
-                        activityId: activityName,
-                        startTime: start,
-                        endTime: end,
-                        description: '(empty)'  // TODO description
-                    });
-
-                    var topics = fzi.getTopics(fzi.ACTIVITY_OPERATION, model.getId());
-                    for (var i = 0; i < topics.length; i++) {
-                        var topic = topics[i].output;
-                        log.debug('Sending activity to topic: %s', topic);
-                        broker.send(topic, brokerMsgStr);
-                    }
-                }
-                xcb();
             },
             function saveToFile(xcb) {
                 if (config.SAVE_ACTIVITIES) {
@@ -437,59 +387,6 @@ function initPipelineHandlers() {
                 var pdf = null;
 
                 log.info('coefficient callback called with options:\n' + JSON.stringify(opts));
-
-                // send the coefficient to the broker, so that other components can do
-                // calculations based no it
-                (function () {
-                    var optsClone = utils.clone(opts);
-                    optsClone.timestamp = opts.time.getTime();
-                    delete optsClone.time;
-                    var brokerMsgStr = JSON.stringify(optsClone);
-
-                    if (log.debug())
-                        log.debug('Sending coefficient to the broker: %s', brokerMsgStr);
-
-                    (function () {
-                        var topic;
-                        switch (optsClone.eventId) {
-                            case 'swivel':
-                                topic = broker.TOPIC_PUBLISH_COEFFICIENT_SWIVEL;
-                                break;
-                            case 'gearbox':
-                                topic = broker.TOPIC_PUBLISH_COEFFICIENT_GEARBOX;
-                                break;
-                            default:
-                                throw new Error('Invalid event ID for coefficient: ' + optsClone.eventId);
-                        }
-
-                        broker.send(topic, brokerMsgStr);
-                    })();
-
-                    // send coefficient to any topics listening from FZI integration
-                    (function () {
-                        var operation;
-                        switch (optsClone.eventId) {
-                            case 'swivel':
-                                operation = fzi.OPERATION_FRICTION_SWIVEL;
-                                break;
-                            case 'gearbox':
-                                operation = fzi.OPERATION_FRICTION_GEARBOX;
-                                break;
-                            default:
-                                throw new Error('Invalid event ID for coefficient: ' + optsClone.eventId);
-                        }
-
-                        if (log.debug())
-                            log.debug('Will send prediction message to FZI topics:\n%s', brokerMsgStr);
-
-                        var topics = fzi.getTopics(operation);
-                        for (var i = 0; i < topics.length; i++) {
-                            var topic = topics[i].output;
-                            log.debug('Sending a friction message to topic \'%s\'', topic);
-                            broker.send(topic, brokerMsgStr);
-                        }
-                    })();
-                })()
 
                 // check if the coefficient is out of the ordinary
                 var zscore = opts.zScore;
@@ -784,12 +681,7 @@ function initServerApi(router) {
 
     router.register('logout', 'post', function (req, res) {
         HttpUtils.clearSession(req.sessionID, req.session, base);
-
-        if (config.AUTHENTICATION_EXTERNAL) {
-            redirect(res, '../dashboard.html');
-        } else {
-            redirect(res, '../login.html');
-        }
+        redirect(res, '../login.html');
     });
 
     router.register('exit', 'get', function (req, res) {
@@ -2170,208 +2062,6 @@ function initMessageRestApi(router) {
     });
 }
 
-function initBroker() {
-    broker.init();
-
-    log.info('Initializing broker callbacks ...');
-
-    var imported = 0;
-    var printInterval = 100;
-
-    var lastCepTime = 0;
-
-    var enrichedFields = [  // FIXME remove this
-        {"name": "time", "type": "datetime"},
-        {"name": "hook_load", "type": "float"},
-        {"name": "hoist_press_A", "type": "float"},
-        {"name": "hoist_press_B", "type": "float"},
-        {"name": "ibop", "type": "float"},
-        // friction
-        {"name": "oil_temp_gearbox", "type": "float"},
-        {"name": "oil_temp_swivel", "type": "float"},
-        {"name": "pressure_gearbox", "type": "float"},
-        {"name": "rpm", "type": "float"},
-        {"name": "temp_ambient", "type": "float"},
-        {"name": "torque", "type": "float"},
-        {"name": "wob", "type": "float"},
-        // setpoint
-        {"name": "mru_pos", "type": "float"},
-        {"name": "mru_vel", "type": "float"},
-        {"name": "ram_pos_measured", "type": "float"},
-        {"name": "ram_pos_setpoint", "type": "float"},
-        {"name": "ram_vel_measured", "type": "float"},
-        {"name": "ram_vel_setpoint", "type": "float"},
-        // activity recognition
-        {"name": "slips_closed", "type": "float"},
-        {"name": "slips_closing", "type": "float"},
-        {"name": "slips_open", "type": "float"},
-        {"name": "slips_opening", "type": "float"},
-        // new use case
-        { "name" : "upper_clamp", "type": "float" },
-        { "name" : "lower_clamp", "type": "float" },
-        { "name" : "tr_rot_makeup", "type": "float" },
-        { "name" : "tr_rot_breakout", "type": "float" },
-        { "name" : "hrn_travel_pos", "type": "float" },
-        { "name" : "travel_forward", "type": "float" },
-        { "name" : "travel_backward", "type": "float" },
-        { "name" : "hrn_travel_valve", "type": "float" },
-        { "name" : "hrn_spinning_out", "type": "float" },
-        { "name" : "hrn_spinner_clamp_closed", "type": "float" },
-        { "name" : "hrn_elevation", "type": "float" },
-        { "name" : "hrn_elevation_up_down", "type": "float" },
-        { "name" : "hrn_elevate_up", "type": "float" },
-        { "name" : "hrn_elevate_down", "type": "float" },
-        { "name" : "brc_load", "type": "float" },
-        { "name" : "brc_fwd_travel_valve", "type": "float" },
-        { "name" : "brc_travel_pos_fleg", "type": "float" },
-        { "name" : "brc_travel_valve", "type": "float" },
-        { "name" : "brc_travel_pos", "type": "float" },
-        { "name" : "brc_grip_upper_valve", "type": "float" },
-        { "name" : "brc_grip_lower_valve", "type": "float" },
-        { "name" : "brc_lift_valve", "type": "float" },
-        { "name" : "brc_standlift_pos", "type": "float" }
-    ];
-
-    broker.onMessage(function (msg) {
-        try {
-            var val;
-            if (msg.type == 'raw') {
-                if (++imported % printInterval == 0 && log.trace())
-                    log.trace('Imported %d values ...', imported);
-                var payload = msg.payload;
-
-
-                if (log.trace())
-                    log.trace('Received raw measurement: %s', JSON.stringify(payload));
-
-                //              //========================================================
-                //              // TODO remove this
-                //              payload = transform.parseDominiksRawEvent(msg);
-                //              //========================================================
-
-                addRawMeasurement(payload);
-            }
-            else if (msg.type == 'enriched') {
-                val = msg.payload;
-
-                if (val.timestamp == null) {
-                    val.timestamp = val.time;
-                    delete val.time;
-                }
-
-                val.time = utils.dateToQmDate(new Date(val.timestamp));
-                delete val.timestamp;
-
-                for (var i = 0; i < enrichedFields.length; i++) {   // FIXME remove this
-                    if (!(enrichedFields[i].name in val))
-                        val[enrichedFields[i].name] = 0;
-                }
-
-                if (log.trace())
-                    log.trace('Got enriched event ...');
-
-                base.store(fields.OA_IN_STORE).push(val);
-            }
-            else if (msg.type == 'cep') {
-                if (log.trace())
-                    log.trace('Received CEP message: %s', JSON.stringify(msg));
-
-                var event = msg.payload;
-
-                //              //========================================================
-                //              // TODO remove this
-                //              event = transform.parseDominiksDerivedEvent(event);
-                //              //========================================================
-
-                val = transform.parseDerivedEvent(event);
-
-                var timestamp = event.timestamp;
-                var eventName = event.eventName;
-
-                var predMsg = null;
-                if (isNaN(timestamp)) {
-                    log.warn('CEP sent NaN time %s', JSON.stringify(val));
-                    return;
-                }
-                else if (timestamp <= lastCepTime) {
-                    log.warn('CEP sent invalid time %d <= %d: %s', timestamp, lastCepTime, JSON.stringify(val));
-                    return;
-                }
-
-                if (eventName == 'Generated') {
-                    if (log.trace())
-                        log.trace('Got enriched event ...');
-
-                    base.store(fields.OA_IN_STORE).push(val);
-                } else if (eventName == 'timeToMolding') {
-                    if (log.trace())
-                        log.trace('Processing %s event ...', eventName);
-
-                    var ll = val.lacqueringLineId;
-                    var mm = val.mouldingMachineId;
-                    // var shuttleId = val.shuttleId;
-                    var deltaTm = val.timeDifference;
-
-                    var minTime = transform.getMinShuttleTime(ll, mm);
-
-                    if (log.debug())
-                        log.debug('Got %s event, minTime: %s ...', eventName, minTime);
-
-                    if (minTime != null) {
-                        var timeRatio = deltaTm / minTime;
-
-                        if (log.debug())
-                            log.debug('Calculated timeToMolding ratio: %d', timeRatio);
-
-                        if (timeRatio < 1.2) {
-                            predMsg = {
-                                type: 'prediction',
-                                content: {
-                                    time: timestamp,
-                                    eventId: 'Moulding line empty: ' + mm,
-                                    pdf: {
-                                        type: 'exponential',
-                                        lambda: 1000
-                                    }
-                                }
-                            };
-
-                            if (log.debug())
-                                log.debug('Sending prediction %s', JSON.stringify(predMsg));
-
-                            sendPrediction(predMsg, timestamp);
-                        }
-                    }
-                } else {
-                    if (log.debug())
-                        log.debug('Got unknown event, sending prediction ...');
-                    // send prediction directly
-
-                    predMsg = {
-                        type: 'prediction',
-                        content: {
-                            time: timestamp,
-                            eventId: 'Some dummy prediction generated from a CEP event',
-                            pdf: {
-                                type: 'exponential',
-                                lambda: 1
-                            }
-                        }
-                    };
-
-                    sendPrediction(predMsg, timestamp);
-                }
-
-                lastCepTime = timestamp;
-            } else {
-                log.warn('Invalid message type: %s', msg.type);
-            }
-        } catch (e) {
-            log.error(e, 'Exception while processing broker message!');
-        }
-    });
-}
-
 function loadSaveModels() {
     db.fetchAllModels(function (e, models) {
         if (e != null) {
@@ -2526,9 +2216,6 @@ function getPageOpts(req, next) {
         delete session.message;
     }
 
-    // add the options necessary for external authentication
-    externalAuth.prepDashboard(opts);
-
     return opts;
 }
 
@@ -2678,61 +2365,26 @@ function prepMainUi() {
 
 function accessControl(req, res, next) {
     var session = req.session;
-    // if using external authentication, then do not use access
-    // control
-    if (config.AUTHENTICATION_EXTERNAL) {
-        var token = req.query.token;
 
-        if (token == null) return next();
+    var page = HttpUtils.getRequestedPage(req);
+    var dir = HttpUtils.getRequestedPath(req);
 
-        var fetchCredentials = function () {
-            externalAuth.fetchCredentials(token, function (e, user) {
-                if (e != null) return utils.handleServerError(e, req, res);
+    // if the user is not logged in => redirect them to login
+    // login is exempted from the access control
+    if (!HttpUtils.isLoggedIn(session)) {
+        if (log.debug())
+            log.debug('Session data missing for page %s, dir %s ...', page, dir);
 
-                HttpUtils.loginUser(session, {
-                    username: user.email,
-                    theme: user.theme
-                });
-
-                session[FZI_TOKEN_KEY] = token;
-
-                next();
-            })
-        }
-
-        if (HttpUtils.isLoggedIn(session)) {
-            if (session[FZI_TOKEN_KEY] != token) {
-                // fetch user credentials from the authentication system
-                fetchCredentials();
-            } else {
-                return next();
-            }
-        } else {
-            // fetch user credentials from the authentication system
-            fetchCredentials();
-        }
-    }
-    else {
-        var page = HttpUtils.getRequestedPage(req);
-        var dir = HttpUtils.getRequestedPath(req);
-
-        // if the user is not logged in => redirect them to login
-        // login is exempted from the access control
-        if (!HttpUtils.isLoggedIn(session)) {
+        var isAjax = req.xhr;
+        if (isAjax) {
             if (log.debug())
-                log.debug('Session data missing for page %s, dir %s ...', page, dir);
-
-            var isAjax = req.xhr;
-            if (isAjax) {
-                if (log.debug())
-                    log.debug('Session data missing for AJAX API call, blocking!');
-                utils.handleNoPermission(req, res);
-            } else {
-                redirect(res, 'login.html');
-            }
+                log.debug('Session data missing for AJAX API call, blocking!');
+            utils.handleNoPermission(req, res);
         } else {
-            next();
+            redirect(res, 'login.html');
         }
+    } else {
+        next();
     }
 }
 
@@ -2760,9 +2412,6 @@ function initServer(sessionStore, parseCookie) {
     // the paths which will be excluded from the session
     var sessionExcludePaths = (function () {
         var paths = [ DATA_PATH ];
-        if (config.USE_BROKER) {
-            paths.push(fzi.STRAM_PIPES_PATHS);
-        }
         return paths
     })();
 
@@ -2824,13 +2473,6 @@ function initServer(sessionStore, parseCookie) {
         initMessageRestApi(actionRouter);
         initDataUploadApi(actionRouter);
     })();
-
-    //==============================================
-    // INTEGRATION
-    if (config.USE_BROKER) {
-        fzi.initWs(app);
-    }
-    //==============================================
 
     var sessionExcludeDirs = [
         '/login',
@@ -2943,19 +2585,6 @@ exports.init = function (opts) {
     loadActiveModels();
     initModelManagerHandlers();
     initPipelineHandlers();
-    initBroker();
-
-    if (config.USE_BROKER) {
-        fzi.init({
-            broker: broker,
-            modelStore: modelStore,
-            db: db
-        });
-    }
 
     log.info('Done!');
-
-    if (config.AUTHENTICATION_EXTERNAL) {
-        externalAuth.setDb(db);
-    }
 };

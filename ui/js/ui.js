@@ -450,7 +450,8 @@
                                 drawHistogram({
                                     data: hist,
                                     container: container,
-                                    showY: opts.showY
+                                    showY: opts.showY,
+                                    formatX: StreamStory.Format.toUiPrecision
                                 });
                             },
                             error: handleAjaxError()
@@ -464,7 +465,8 @@
                             drawHistogram({
                                 data: hist,
                                 container: container,
-                                showY: opts.showY
+                                showY: opts.showY,
+                                formatX: StreamStory.Format.toUiPrecision
                             });
                         },
                         error: handleAjaxError()
@@ -1298,19 +1300,19 @@
         //     });
         // }
 
-        function showPath(stateId, height) {
-            // get the sub model
-            $.ajax('api/path', {
-                dataType: 'json',
-                method: 'GET',
-                data: { stateId: stateId, height: height, length: 4, probThreshold: 0.2 },
-                success: function (model) {
-                    viz.setSubModel(model);
-                    $('#btn-viz-back').removeClass('hidden');
-                },
-                error: handleAjaxError()
-            });
-        }
+        // function showPath(stateId, height) {
+        //     // get the sub model
+        //     $.ajax('api/path', {
+        //         dataType: 'json',
+        //         method: 'GET',
+        //         data: { stateId: stateId, height: height, length: 4, probThreshold: 0.2 },
+        //         success: function (model) {
+        //             viz.setSubModel(model);
+        //             $('#btn-viz-back').removeClass('hidden');
+        //         },
+        //         error: handleAjaxError()
+        //     });
+        // }
 
         function hideAdditionalVisPanels() {
             // hide the right panel
@@ -1400,7 +1402,15 @@
                 var tickTime = null;
                 var format = null;
 
-                if (dt < 1000*60*60*5) {
+                if (dt < 5*1000) {
+                    tickTime = d3.time.second;
+                    format = d3.time.format('%S.%Ls');
+                }
+                else if (dt < 1000*60) {
+                    tickTime = d3.time.second;
+                    format = d3.time.format('%Ss');
+                }
+                else if (dt < 1000*60*60*5) {
                     // the total time is less than five hour
                     // hour:minute
                     tickTime = d3.time.minute;

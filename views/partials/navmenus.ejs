@@ -14,7 +14,6 @@
 			            </a>
 			            <ul class="dropdown-menu dropdown-user">
 			                <li><a href="profile.html"><i class="glyphicon glyphicon-user"></i> Profile</a></li>
-                            <% if (!useExternalAuth) { %>
 			                <li class="divider"></li>
 			                <li>
 			                	<form id="form-logout" action="api/logout" method="POST"></form>
@@ -28,7 +27,6 @@
 			                		});
 			                	</script>
 			                </li>
-                            <% } %>
 			            </ul>
 			            <!-- /.dropdown-user -->
 			        </li>

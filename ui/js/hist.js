@@ -1,5 +1,14 @@
-var SERIES_COLORS = ['#5bc0de', '#ED561B', '#555555', '#DDDF00', '#24CBE5', '#64E572', 
-	             '#FF9655', '#FFF263', '#6AF9C4'];
+var SERIES_COLORS = [
+    '#5bc0de',
+    '#ED561B',
+    '#555555',
+    '#DDDF00',
+    '#24CBE5',
+    '#64E572',
+    '#FF9655',
+    '#FFF263',
+    '#6AF9C4'
+];
 
 var HistogramType = {
 	CATEGORICAL: 'categorical',
@@ -88,8 +97,8 @@ function drawHistogram(opts) {
 		var allTotalCount = 0;
 		var totalCount = opts.data.totalCount;
 		
-		for (var i = 0; i < allCountV.length; i++) {
-			allTotalCount += allCountV[i];
+		for (var countN = 0; countN < allCountV.length; countN++) {
+			allTotalCount += allCountV[countN];
 		}
 		
 		var ratio = totalCount / allTotalCount;

@@ -4,8 +4,6 @@
 var math = require('mathjs');
 
 var fields = require('../fields.js');
-var broker = require('./broker.js');
-var transform = require('./util/transform.js');
 var config = require('../config.js');
 var utils = require('./utils.js')
 
@@ -551,12 +549,8 @@ function initTriggers() {
                         throw new Error('enricherOutStore.addTrigger: Current time lower than previous time: ' + utils.dateToQmDate(new Date(currTime)) + ' < ' + utils.dateToQmDate(new Date(prevTime)));
 
                     if (resamplerInitialized) {
-                        if (false/*config.USE_BROKER*/) {	// TODO uncomment this !important
-                            broker.send(broker.ENRICHED_DATA_PRODUCER_TOPIC, JSON.stringify(transform.toDerivedEvent(currTime, outVal)));
-                        } else {
-                            outVal.time = utils.dateToQmDate(val.time);
-                            oaInStore.push(outVal);
-                        }
+                        outVal.time = utils.dateToQmDate(val.time);
+                        oaInStore.push(outVal);
                     }
 
                     prevTime = currTime;
