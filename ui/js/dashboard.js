@@ -2006,9 +2006,12 @@ function unshare() {
         var desc = $('#input-model-details-desc').val();
 
         $.ajax('api/modelDescription', {
-            dataType: 'json',
-            data: { modelId: mid, description: desc },
             method: 'POST',
+            // dataType: 'json',
+            // contentType: 'application/json',
+            data: { modelId: mid, description: desc },
+            // contentType:"application/json; charset=utf-8",
+            // dataType:"json",
             success: function () {
                 $('#div-model-details-btns').addClass('hidden');
                 showAlert($('#alert-holder'), $('#alert-wrapper-model-details'), 'alert-success', 'Details saved!', null, true);

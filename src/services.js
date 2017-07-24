@@ -1366,7 +1366,7 @@ function initStreamStoryRestApi(router) {
             });
         });
 
-        router.register('modelDescription', 'post', function (req, res) {
+        router.register('activity', 'post', function (req, res) {
             var session = req.session;
 
             var model = HttpUtils.extractModel(req.sessionID, req.session);
