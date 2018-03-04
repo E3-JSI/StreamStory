@@ -1085,7 +1085,15 @@ function initStreamStoryRestApi(router) {
     router.register('model', 'get', function (req, res) {
         var model = HttpUtils.extractModel(req.sessionID, req.session);
 
-        log.debug('Querying MHWirth multilevel model ...');
+        // //==========================================
+        // // TODO remove this
+        // log.debug('Querying MHWirth multilevel model ...');
+        // fs.readFile(path.join(__dirname, '../temp/hierarchy.json'), function (e, state) {
+        //     state = JSON.parse(state);
+        //     res.send(state);
+        //     res.end();
+        // })
+        //==========================================
         res.send(model.getVizState());
         res.end();
     });

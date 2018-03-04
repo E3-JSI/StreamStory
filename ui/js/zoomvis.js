@@ -465,7 +465,8 @@ var zoomVis = function (opts) {
     var xOffset = 0.1;
     var yOffset = 0.1;
 
-    var transitionThreshold = 0.7;
+    // var transitionThreshold = 0.7;
+    var transitionThreshold = 0.85;
 
     var boundingBox = {
         x: { min: Number.MAX_VALUE, max: Number.MIN_VALUE },
@@ -490,140 +491,323 @@ var zoomVis = function (opts) {
                 colorH = {};
 
                 var nLevels = levels.length;
+                var lastLevel = levels[nLevels-1];
+                var rootStates = lastLevel.states;
 
                 // generate the colors on the lowest scale
                 var childH = {};
                 var nodeH = {};
 
+                var toOutputHue = function (hue) {
+                    if (hue < 0) { hue += 2*Math.PI; }
+                    return hue % (2*Math.PI);
+                }
+
                 // construct the top-down hierarchy
-                (function () {
-                    for (var levelN = 0; levelN < nLevels; levelN++) {
-                        var level = levels[levelN];
-                        var states = level.states;
+                for (var levelN = 0; levelN < nLevels; levelN++) {
+                    var level = levels[levelN];
+                    var states = level.states;
 
-                        for (var stateN = 0; stateN < states.length; stateN++) {
-                            var state = states[stateN];
-                            var nodeId = state.id;
-                            var parentId = state.parentId;
+                    for (var stateN = 0; stateN < states.length; stateN++) {
+                        var state = states[stateN];
+                        var nodeId = state.id;
+                        var parentId = state.parentId;
 
-                            if (parentId != null && parentId != nodeId) {
-                                if (!(parentId in childH)) { childH[parentId] = []; }
+                        if (parentId != null && parentId != nodeId) {
+                            if (!(parentId in childH)) { childH[parentId] = []; }
 
-                                if (childH[parentId].indexOf(nodeId) < 0) {
-                                    childH[parentId].push(nodeId);
-                                }
+                            if (childH[parentId].indexOf(nodeId) < 0) {
+                                childH[parentId].push(nodeId);
                             }
-
-                            nodeH[nodeId] = state;
                         }
-                    }
-                })();
 
-                // color the states
-                // first color the leafs
+                        if (!(nodeId in nodeH)) {
+                            var stateCpy = clone(state);
+                            stateCpy.levelN = levelN;
+                            nodeH[nodeId] = stateCpy;
+                        }
+                        nodeH[nodeId].levelN = levelN;
+                    }
+                }
+
+                // for each node count the number of descendants
                 (function () {
                     var nLeafs = levels[0].states.length;
+                    var deltaSat = (1 - MIN_SATURATION) / (nLevels - 1);
 
-                    var angle = 2*Math.PI / nLeafs;
-                    var currAngle = 0;
+                    var startAngle = 1.4835298642;
+                    // var endAngle = startAngle + 2*Math.PI;
+                    var endAngle = 0.733038285838 + 2*Math.PI;
+                    var constStateW = false;
 
-                    function colorLeafs(parentId) {
+                    var paddingAngle = (endAngle - startAngle) / nLeafs;
+
+                    var padding = function (level) {
+                        var alpha = paddingAngle;
+                        var phi = alpha / 2;
+                        var offset = MIN_SATURATION + deltaSat*(nLevels-1-level);
+                        var result = 2*Math.acos(Math.min(1, offset + Math.cos(phi)*(1-offset)));
+                        return result;
+                    }
+
+                    var getSplitPadding = function (parentId) {
                         if (parentId in childH) {
                             var children = childH[parentId];
-                            for (var i = 0; i < children.length; i++) {
-                                colorLeafs(children[i]);
+
+                            var firstChild = nodeH[children[0]];
+                            var levelPadding = padding(firstChild.levelN);
+
+                            //=================================
+                            // TODO here for debugging
+                            for (var childN = 0; childN < children.length; ++childN) {
+                                var childId = children[childN];
+                                if (nodeH[childId].levelN != firstChild.levelN) throw new Error('Level assumption doesn\'t hold!');
+                            }
+                            //=================================
+                            return levelPadding;
+                        } else {
+                            return 0;
+                        }
+                    }
+
+                    var countDescendants = function (parentId) {
+                        var parent = nodeH[parentId];
+                        if (parentId in childH) {
+                            var children = childH[parentId];
+                            var totalDescendants = 0;
+                            for (var childN = 0; childN < children.length; ++childN) {
+                                var childId = children[childN];
+                                countDescendants(children[childN]);
+                                totalDescendants += nodeH[childId].subtreeSize;
+                            }
+                            parent.subtreeSize = totalDescendants;
+                        } else {
+                            parent.subtreeSize = 1;
+                        }
+                    }
+
+                    // calculate the total padding and the width of each of the leafs
+                    var rootPadding = padding(nLevels-1);
+                    var totalPadding = rootStates.length*rootPadding;
+
+                    var n = 0;
+                    var subtreePadding = function (parentId) {
+                        if (parentId in childH) {
+                            var children = childH[parentId];
+                            var levelPadding = getSplitPadding(parentId);
+
+                            var totalPadding = (children.length-1)*levelPadding;
+                            var childPadding = 0;
+                            for (var childN = 0; childN < children.length; ++childN) {
+                                var childId = children[childN];
+                                childPadding += subtreePadding(childId);
+                            }
+                            // console.log('parent `' + parentId + '`, level padding: ' + levelPadding + ', nchildren: ' + children.length + ', total padding n=' + (n++) + ': ' + totalPadding);
+                            return totalPadding + childPadding;
+                        } else {
+                            return 0;
+                        }
+                    }
+
+                    for (var stateN = 0; stateN < rootStates.length; ++stateN) {
+                        var stateId = rootStates[stateN].id;
+                        countDescendants(stateId);
+                        // nodeH[stateId].subtreeSize = nDesc;
+                        totalPadding += subtreePadding(stateId);
+                    }
+
+
+                    // console.log('start angle: ' + toRadians(startAngle).toFixed(2) + '*pi, end angle: ' + toRadians(endAngle).toFixed(2) + '*pi');
+
+                    // startAngle += rootPadding / 2;
+                    // endAngle -= rootPadding / 2;
+                    // var endAngle = 0.890117918517108 + 2*Math.PI;
+
+                    // console.log('[corrected]: start angle: ' + toRadians(startAngle).toFixed(2) + '*pi, end angle: ' + toRadians(endAngle).toFixed(2) + '*pi');
+
+
+                    var toRadians = function (angle) {
+                        return angle / Math.PI;
+                    }
+
+                    var getStateW = (function () {
+                        var range = endAngle - startAngle - totalPadding;
+                        // console.log('range: ' + toRadians(range) + '*pi, range+padding: ' + toRadians(range + totalPadding) + '*pi');
+                        var stateWConst = range / nLeafs;
+                        if (constStateW) {
+                            return function () { return stateWConst; }
+                        } else {
+                            return function (nodeId) {
+                                var node = nodeH[nodeId];
+                                var prob = node.timeProportion;
+                                return range*prob;
                             }
                         }
-                        else {
+                    })();
+
+                    // console.log('root padding: ' + toRadians(rootPadding));
+                    // console.log('========================================');
+
+                    var toRadians = function (angle) {
+                        return angle / Math.PI;
+                    }
+
+                    n = 0;
+                    function colorLeafs(parentId, startAngle) {
+                        if (parentId in childH) {
+                            // var parent = nodeH[parentId];
+                            var children = childH[parentId];
+                            var levelPadding = getSplitPadding(parentId);
+
+                            var totalPadding = (children.length-1)*levelPadding;
+
+                            var currAngle = startAngle;
+                            var totalRange = 0;
+                            for (var childN = 0; childN < children.length; ++childN) {
+                                var childId = children[childN];
+                                var childRange = colorLeafs(childId, currAngle);
+
+                                // if (childN < children.length-1) {
+                                //     console.log('padding start: ' + (currAngle + childRange) + ', padding end: ' + (currAngle + childRange + levelPadding));
+                                // }
+
+                                currAngle += childRange + levelPadding;
+                                totalRange += childRange;
+                            }
+                            // console.log('node ' + parentId + ' start ' + toRadians(startAngle).toFixed(2) + '*pi , end: ' + toRadians(startAngle + totalRange).toFixed(2) + '*pi');
+                            // console.log('parent `' + parentId + '`, level padding: ' + levelPadding + ', nchildren: ' + children.length + ' total padding n=' + (n++) + ': ' + totalPadding);
+                            return totalRange + totalPadding;
+                        } else {
+                            // this is the child
+                            var stateW = getStateW(parentId);
+                            var hue = startAngle + stateW/2;
+                            // console.log('setting hue ' + toRadians(hue).toFixed(2) + '*pi (' + hue + ') for child ' + (coloredChildN++));
                             colorH[parentId] = {
-                                hue: currAngle,
+                                hue: toOutputHue(hue),
                                 saturation: 1,
                                 light: DEFAULT_LIGHT
                             };
-                            if (currAngle > 2*Math.PI) throw new Error('Choosen invalid hue for node: ' + currAngle);
-                            currAngle += angle;
+                            // console.log('node ' + parentId + ' start ' + toRadians(startAngle).toFixed(2) + '*pi , end: ' + toRadians(startAngle + stateW).toFixed(2) + '*pi');
+                            return stateW;
                         }
                     }
 
-                    var lastLevel = levels[levels.length-1];
-                    var rootStates = lastLevel.states;
-
-                    for (var stateN = 0; stateN < rootStates.length; stateN++) {
-                        colorLeafs(rootStates[stateN].id);
+                    var currAngle = startAngle + rootPadding/2;
+                    // console.log('start angle: ' + currAngle + ', end angle: ' + (endAngle - rootPadding/2));
+                    var totalRange = 0;
+                    for (stateN = 0; stateN < rootStates.length; stateN++) {
+                        var subtreeRange = colorLeafs(rootStates[stateN].id, currAngle);
+                        // console.log('padding start: ' + (currAngle + subtreeRange) + ', padding end: ' + (currAngle + subtreeRange + rootPadding));
+                        // console.log('root node ' + stateN + ': start: ' + toRadians(currAngle) + '*pi to ' + toRadians(currAngle + subtreeRange) + '*pi');
+                        currAngle += rootPadding + subtreeRange;
+                        totalRange += subtreeRange;
                     }
+                    // console.log('total range: ' + toRadians(totalRange) + '*pi');
                 })();
-                // (function () {
-                //     var nLeafs = levels[0].states.length;
 
-                //     // var angle = 2*Math.PI / nLeafs;
-                //     var currAngle = 0;
+                var toRadians = function (angle) {
+                    return angle / Math.PI;
+                }
 
-                //     function colorLeafs(parentId) {
-                //         if (parentId in childH) {
-                //             var children = childH[parentId];
-                //             for (var i = 0; i < children.length; i++) {
-                //                 colorLeafs(children[i]);
-                //             }
-                //         }
-                //         else {
-                //             var prob = nodeH[parentId].timeProportion;
-                //             var nodeAngle = prob*2*Math.PI;
-                //             colorH[parentId] = {
-                //                 hue: currAngle + nodeAngle / 2,
-                //                 saturation: 1,
-                //                 light: DEFAULT_LIGHT
-                //             };
-                //             if (currAngle > 2*Math.PI) throw new Error('Choosen invalid hue for node: ' + currAngle);
-                //             currAngle += nodeAngle;
-                //         }
-                //     }
+                var dotProduct = function (v1, v2) {
+                    return v1.x*v2.x + v1.y*v2.y;
+                }
 
-                //     var lastLevel = levels[levels.length-1];
-                //     var rootStates = lastLevel.states;
-
-                //     for (var stateN = 0; stateN < rootStates.length; stateN++) {
-                //         colorLeafs(rootStates[stateN].id);
-                //     }
-                // })();
+                var vecNorm = function (vec) {
+                    return Math.sqrt(vec.x*vec.x + vec.y*vec.y);
+                }
 
                 // then color all the others
-                (function () {
-                    for (var levelN = 1; levelN < nLevels; levelN++) {
-                        var level = levels[levelN];
-                        var states = level.states;
+                for (var levelN = 1; levelN < nLevels; levelN++) {
+                    var level = levels[levelN];
+                    var states = level.states;
 
-                        for (var stateN = 0; stateN < states.length; stateN++) {
-                            var state = states[stateN];
-                            var nodeId = state.id;
+                    // console.log('=================================');
+                    for (var stateN = 0; stateN < states.length; stateN++) {
+                        var state = states[stateN];
+                        var nodeId = state.id;
 
-                            if (nodeId in colorH) continue;
+                        if (nodeId in colorH) continue;
 
-                            var children = childH[nodeId];
+                        var children = childH[nodeId];
 
-                            var hue = 0;
-                            var totalWgt = 0;
-                            for (var i = 0; i < children.length; i++) {
-                                var childId = children[i];
-                                var wgt = nodeH[childId].timeProportion;
-
-                                hue += colorH[childId].hue*wgt;
-                                totalWgt += wgt;
-                            }
-                            hue /= totalWgt;
-
-                            if (hue > 2*Math.PI) throw new Error('Invalid hue of middle node: ' + hue);
-
-                            colorH[nodeId] = {
-                                hue: hue,
-                                saturation: 1 - levelN*(1 - MIN_SATURATION) / (levels.length - 1),
-                                light: DEFAULT_LIGHT
-                            };
+                        var vec = {
+                            x: 0,
+                            y: 0
                         }
+
+                        var totalWgt = 0;
+                        for (var i = 0; i < children.length; ++i) {
+                            var childId = children[i];
+                            var wgt = nodeH[childId].timeProportion;
+
+                            var childHue = colorH[childId].hue;
+
+                            var childVec = {
+                                x: Math.cos(childHue),
+                                y: Math.sin(childHue)
+                            }
+
+                            vec.x += wgt*childVec.x;
+                            vec.y += wgt*childVec.y;
+                            totalWgt += wgt;
+                        }
+
+                        vec.x /= totalWgt;
+                        vec.y /= totalWgt;
+
+                        var hue = Math.atan2(vec.y, vec.x);
+
+                        // var hue = 0;
+                        // var totalWgt = 0;
+                        // for (var i = 0; i < children.length; i++) {
+                        //     var childId = children[i];
+                        //     var wgt = nodeH[childId].timeProportion;
+
+                        //     var childHue = colorH[childId].hue % (2*Math.PI);
+                        //     console.log('color: ' + toRadians(childHue) + '*pi, wgt: ' + wgt);
+                        //     if (childHue > Math.PI) { childHue -= 2*Math.PI; }
+
+                        //     if (Math.abs((childHue - hue) % Math.PI) < Math.abs((hue - childHue) % Math.PI)) {
+                        //         var angle = childHue - hue;
+                        //         var addAngle = wgt*angle / (wgt + totalWgt);
+                        //         hue += addAngle;
+                        //     } else {
+                        //         var angle = hue - childHue;
+                        //         var addAngle = wgt*angle / (wgt + totalWgt);
+                        //         hue += addAngle;
+                        //     }
+
+
+// //                             hue = (hue*totalWgt + childHue*wgt) / (totalWgt + wgt);
+
+// //                             // hue += wgt*childHue;
+
+// //                             // if (hue > Math.PI) { hue -= 2*Math.PI; }
+
+// //                             // if (hue > 2*Math.PI) { hue -= 2*Math.PI; }
+// //                             // hue = interpHue(hue, 1, childHue, wgt);
+// //                             // hue += (colorH[childId].hue % (2*Math.PI))*wgt;
+// //                             totalWgt += wgt;
+                        // }
+                        // // hue /= totalWgt;
+                        // hue = hue % (2*Math.PI);
+                        // console.log('result: ' + toRadians(hue) + '*pi');
+                        // console.log('=================================');
+
+                        // if (hue > 2*Math.PI) throw new Error('Invalid hue of middle node: ' + hue);
+
+                        colorH[nodeId] = {
+                            hue: toOutputHue(hue),
+                            saturation: 1 - levelN*(1 - MIN_SATURATION) / (levels.length - 1),
+                            light: DEFAULT_LIGHT
+                        };
                     }
-                })();
+                }
             },
             getColorStr: function (nodeId) {
-                return getHslStr(that.getColor(nodeId));
+                var color = that.getColor(nodeId);
+                return getHslStr(color);
             },
             getColor: function (nodeId) {
                 if (!(nodeId in colorH)) { return undefined; }
@@ -659,7 +843,7 @@ var zoomVis = function (opts) {
                     hsl2rgb(color.hue, color.saturation, color.light);
                     throw new Error('Got NaN color for node: ' + nodeId + ', color: ' + JSON.stringify(color) + '!');
                 }
-                console.log(JSON.stringify(colorH));
+                // console.log('colorH:\n' + JSON.stringify(colorH));
                 return that.getDefaultBorderColor(rgb);
             },
             toColorStr: function (color) {
@@ -1626,22 +1810,22 @@ var zoomVis = function (opts) {
     function fetchFutureStates(currStateId, height) {
         modeConfig.future = {};
 
-        $.ajax('api/futureStates', {
-            dataType: 'json',
-            data: { state: currStateId, level: height },
-            success: function (states) {
-                // check if the current state has changed in the meanwhile (usually
-                // due to a slow connection)
-                if (currStateId != modeConfig.current) return;
+        // $.ajax('api/futureStates', {
+        //     dataType: 'json',
+        //     data: { state: currStateId, level: height },
+        //     success: function (states) {
+        //         // check if the current state has changed in the meanwhile (usually
+        //         // due to a slow connection)
+        //         if (currStateId != modeConfig.current) return;
 
-                for (var i = 0; i < Math.min(3, states.length); i++) {
-                    var stateId = states[i].id;
+        //         for (var i = 0; i < Math.min(3, states.length); i++) {
+        //             var stateId = states[i].id;
 
-                    modeConfig.future[stateId] = states[i].prob;
-                    drawNode(stateId);
-                }
-            }
-        });
+        //             modeConfig.future[stateId] = states[i].prob;
+        //             drawNode(stateId);
+        //         }
+        //     }
+        // });
     }
 
     function fetchPastStates(currStateId, height) {
