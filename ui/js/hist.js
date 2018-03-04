@@ -271,19 +271,6 @@ function drawHistogram(opts) {
         })
         .attr('text-anchor', 'middle');
 
-    // chart.call(xAxis)
-    //     .selectAll('.tick')
-    //     .attr('visibility', 'visible');
-    // chart.call(yAxis)
-    //     .selectAll('.tick')
-    //     .attr('visibility', function (tickVal, tickN) {
-    //         var args = Array.prototype.slice.call(arguments);
-    //         console.log(JSON.stringify(args))
-    //         return tickN == 0 || tickN == yTicks ?
-    //             'hidden' : 'visible';
-    //     })
-
-
     // create tooltips
     var tip = d3.tip()
           .attr('class', 'd3-tip')
