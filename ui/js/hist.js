@@ -257,10 +257,7 @@ function drawHistogram(opts) {
         .call(yAxis)
         .selectAll('.tick')
         .attr('visibility', function (tickVal, tickN) {
-            var args = Array.prototype.slice.call(arguments);
-            console.log(JSON.stringify(args))
-            return tickN == 0 /*|| tickN == yTicks*/ ?
-                'hidden' : 'visible';
+            return tickN == 0 ? 'hidden' : 'visible';
         })
         .append('text')
         .attr('x', function () {

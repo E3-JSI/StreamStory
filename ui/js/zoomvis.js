@@ -1141,7 +1141,6 @@ var zoomVis = function (opts) {
             'haystack-radius': 0,
             'curve-style': 'bezier',
             'control-point-step-size': 100,
-            // 'text-valign': 'top',
             'control-point-weight': 0.5,
             'line-style': 'dotted',
             'line-color': SMALL_EDGE_COLOR,
@@ -1150,6 +1149,7 @@ var zoomVis = function (opts) {
             'z-index': 100,
             'content': ''
         };
+        // text-margin-y
 
         var data = {
             id: id,
@@ -1593,11 +1593,7 @@ var zoomVis = function (opts) {
                 if (nodeId == modeConfig.current) {
                     node.css('border-width', CURRENT_BORDER_WIDTH);
                     node.css('border-color', CURRENT_NODE_COLOR);
-                    //				node.css('backgroundColor', CURRENT_NODE_COLOR);
                 }
-                // if (nodeId in modeConfig.past) {
-                //     node.css('border-color', PREVIOUS_NODE_EDGE_COLOR);
-                // }
                 if (nodeId in modeConfig.future) {
                     prob = futureColorFromProb(modeConfig.future[nodeId]);
                     color = 'hsla(' + FUTURE_NODE_BASE_COLOR + ',' + (15 + Math.floor((100-15)*prob)) + '%, 55%, 1)';
@@ -1620,12 +1616,6 @@ var zoomVis = function (opts) {
 
                 var ftrRange = config.maxVal - config.minVal;
                 var middleVal = config.minVal + ftrRange/2;
-
-                // console.log('=======================================');
-                // console.log('value of feature: ' + ftrVal);
-                // console.log('min: ' + config.minVal + ', max: ' + config.maxVal + ', range: ' + ftrRange);
-                // console.log('middle val: ' + middleVal);
-                // console.log('=======================================');
 
                 color = getFtrColorRgb(ftrVal, config.minVal, config.maxVal, middleVal);
                 // color = getFtrColor(ftrVal, config.minVal, config.maxVal, middleVal);
