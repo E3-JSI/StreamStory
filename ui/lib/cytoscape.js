@@ -18610,7 +18610,6 @@ this.cytoscape = cytoscape;
           }
 
           context.fillText( lines[l], textX, textY );
-
           textY += lineHeight;
         }
 

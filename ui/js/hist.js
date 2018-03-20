@@ -36,7 +36,7 @@ function drawHistogram(opts) {
     if (opts.rotateX == null) opts.rotateX = 0;
     if (opts.topPadding == null) opts.topPadding = 10;
     if (opts.bottomPadding == null) opts.bottomPadding = 20;
-    if (opts.leftPadding == null) opts.leftPadding = 30;
+    if (opts.leftPadding == null) opts.leftPadding = 35;
     if (opts.rightPadding == null) opts.rightPadding = 0;
     if (opts.labelXOffsetPerc == null) opts.labelXOffsetPerc = 0;
     if (opts.labelYOffsetPerc == null) opts.labelYOffsetPerc = 0;
