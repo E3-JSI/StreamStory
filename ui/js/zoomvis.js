@@ -843,7 +843,7 @@ var zoomVis = function (opts) {
                     hsl2rgb(color.hue, color.saturation, color.light);
                     throw new Error('Got NaN color for node: ' + nodeId + ', color: ' + JSON.stringify(color) + '!');
                 }
-                // console.log('colorH:\n' + JSON.stringify(colorH));
+                console.log('colorH:\n' + JSON.stringify(colorH));
                 return that.getDefaultBorderColor(rgb);
             },
             toColorStr: function (color) {
