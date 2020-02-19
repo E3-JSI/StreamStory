@@ -7,7 +7,7 @@
         "initializeZeros": true
     },
     "server": {
-        "port": 8888,
+        "port": 9987,
         "pingInterval": 10000
     },
     "log": {
@@ -31,7 +31,7 @@
         "host": "localhost",
         "user": "StreamStory",
         "password": "StreamStory",
-        "database": "StreamStoryPaper"
+        "database": "StreamStoryRecover"
     },
     "integration": {
         "type": "http",
@@ -50,5 +50,5 @@
     "saveFriction": false,
     "restartOnReplay": false,
     "interpolation": "current",
-    "dataPath": "/mnt/raidM2T/project-data/StreamStory-paper-2017-12/"
+    "dataPath": "/mnt/raidM2T/project-data/StreamStory-recover/"
 }

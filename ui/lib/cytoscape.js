@@ -16612,15 +16612,44 @@ this.cytoscape = cytoscape;
     //var style = _p.style;
     var rstyle = _p.rstyle;
 
+      var calcOffset = function (startX, startY, endX, endY) {
+          var offset = -15;
+
+          // get the vector from start to end
+          var vect = { x: endX - startX, y: endY - startY };
+          // normalize the vector
+          var norm = Math.sqrt(vect.x*vect.x + vect.y*vect.y);
+          vect.x /= norm;
+          vect.y /= norm;
+          // rotate the vector by 90 degrees
+          var rotated = {
+              x: -vect.y,
+              y: vect.x
+          };
+
+          return {
+              x: Math.round(offset*rotated.x),
+              y: Math.round(offset*rotated.y)
+          }
+      }
+
     if (rs.edgeType == 'self') {
       edgeCenterX = rs.selfEdgeMidX;
       edgeCenterY = rs.selfEdgeMidY;
     } else if (rs.edgeType == 'straight') {
       edgeCenterX = (rs.startX + rs.endX) / 2;
       edgeCenterY = (rs.startY + rs.endY) / 2;
+
+        var offset = calcOffset(rs.startX, rs.startY, rs.endX, rs.endY);
+        edgeCenterX += offset.x;
+        edgeCenterY += offset.y;
     } else if (rs.edgeType == 'bezier') {
       edgeCenterX = $$.math.qbezierAt( rs.startX, rs.cp2x, rs.endX, 0.5 );
       edgeCenterY = $$.math.qbezierAt( rs.startY, rs.cp2y, rs.endY, 0.5 );
+
+        var offset = calcOffset(rs.startX, rs.startY, rs.endX, rs.endY);
+        edgeCenterX += offset.x;
+        edgeCenterY += offset.y;
     } else if (rs.edgeType == 'haystack') {
       // var src = _p.source;
       // var tgt = _p.target;
@@ -16663,6 +16692,12 @@ this.cytoscape = cytoscape;
     var text = ele._private.style['content'].strValue;
     var textTransform = style['text-transform'].value;
     var rscratch = ele._private.rscratch;
+
+      if (ele.group() == 'edges') {
+          var textNum = parseFloat(text);
+          textNum = Math.round(textNum*100) / 100;
+          text = textNum + '';
+      }
 
     if (textTransform == 'none') {
     } else if (textTransform == 'uppercase') {
@@ -18575,7 +18610,6 @@ this.cytoscape = cytoscape;
           }
 
           context.fillText( lines[l], textX, textY );
-
           textY += lineHeight;
         }
 

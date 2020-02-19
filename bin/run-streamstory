@@ -1,0 +1,9 @@
+#!/bin/bash
+
+conf_fname="config/config.json"
+if [ "$@" != "" ]; then
+    conf_fname="$@"
+fi
+
+cd ..
+node main.js $conf_fname
