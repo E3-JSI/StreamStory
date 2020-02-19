@@ -1,20 +1,115 @@
+# StreamStory
 
+## Installation
 
-# ProaSense
+### Prerequisites
 
+Make sure you have Node.js 8 installed with NPM.
 
+### Initialize the Database
 
-## Usage
+StreamStory uses a MySQL database. First open MySQL and create the database with the following commands:
+```
+   CREATE DATABASE StreamStory;
+   ALTER DATABASE StreamStory CHARACTER SET utf8 COLLATE utf8_general_ci;
+   CREATE USER 'StreamStory'@'localhost' IDENTIFIED BY 'StreamStory';
+   GRANT ALL PRIVILEGES ON StreamStory.* TO 'StreamStory'@'localhost';
+```
 
+Then initialize the tables with:
+```
+   cat init-tables.sql | mysql -u StreamStory -pStreamStory StreamStory
+```
 
+### Setup QMiner
 
-## Developing
+```
+   cd ..
+   git clone git@github.com:lstopar/qminer.git
+   cd qminer
+   git checkout paper
+   npm install
+```
 
+Then compile QMiner with:
+```
+   cd qminer
+   node-gyp clean
+   node-gyp configure -- -DLIN_ALG_BLAS=BLAS -DLIN_ALG_LAPACKE=LAPACKE -DLIN_ALG_LIB=-llapacke
+   node-gyp build --jobs 20
+```
 
+### Setup StreamStory
 
-### Tools
+Install the npm dependencies with:
+```
+   npm install
+```
 
-Created with [Nodeclipse](https://github.com/Nodeclipse/nodeclipse-1)
- ([Eclipse Marketplace](http://marketplace.eclipse.org/content/nodeclipse), [site](http://www.nodeclipse.org))   
+### Configure StreamStory
 
-Nodeclipse is free open-source project that grows with your contributions.
+Place your configuration file in directory `config`. Here is an example configuration file:
+```
+{
+    "qminer": {
+        "path": "../qminer/",
+        "mode": "createClean",
+        "createPipeline": true,
+        "initializeZeros": true
+    },
+    "server": {
+        "port": 8465,
+        "pingInterval": 10000
+    },
+    "log": {
+        "logger": {
+            "level": "debug",
+            "outputMode": "short",
+            "stream": {
+                "type": "stdout",
+                "file": "log.log"
+            }
+        },
+        "print": {
+            "rawData": 10000,
+            "streamStory": 100,
+            "stores": 100000,
+            "broker": 1000,
+            "coeff": 1000
+        }
+    },
+    "database": {
+        "host": "localhost",
+        "user": "StreamStory",
+        "password": "StreamStory",
+        "database": "StreamStory"
+    },
+    "integration": {
+        "type": "http",
+        "brokerUrl": "koi15.fzi.de",
+        "zookeperPort": 2181,
+        "producerPort": 9092,
+        "xauthentication": {
+            "host": "192.168.84.46",
+            "timeout": 10000
+        }
+    },
+    "useCase": "mhwirth",
+    "seed": 0,
+    "saveStates": false,
+    "saveActivities": false,
+    "saveFriction": false,
+    "restartOnReplay": false,
+    "interpolation": "current",
+    "dataPath": "/mnt/raidM2T/project-data/StreamStory-example/"
+}
+```
+
+### Run StreamStory
+
+To run StreamStory enter the `bin` directory and execute command `run-streamstory` with the appropriate
+configuration file as the parameter. For instance:
+```
+   cd bin
+   ./run-streamstory config/config-example.json
+```
