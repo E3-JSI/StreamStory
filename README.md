@@ -4,7 +4,12 @@
 
 ### Prerequisites
 
-Make sure you have Node.js 8 installed with NPM.
+Before setting up StreamStory make sure the following dependencies are installed on your system:
+
+- MySQL database
+- Node.js 8 with NPM
+- `node-gyp` which can be installed with `npm install -g node-gyp`
+- `g++` 4.8 or 5
 
 ### Initialize the Database
 
