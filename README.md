@@ -32,7 +32,6 @@ Then initialize the tables with:
    cd ..
    git clone git@github.com:lstopar/qminer.git
    cd qminer
-   git checkout paper
    npm install
 ```
 
