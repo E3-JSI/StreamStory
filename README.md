@@ -10,6 +10,7 @@ Before setting up StreamStory make sure the following dependencies are installed
 - Node.js 8 with NPM
 - `node-gyp` which can be installed with `npm install -g node-gyp`
 - `g++` 4.8 or 5
+- openBLAS, lapack, lapacke which can be installed with `apt-get install libopenblas-dev liblapack-dev liblapacke-dev`
 
 ### Initialize the Database
 
