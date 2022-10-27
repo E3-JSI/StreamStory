@@ -1,5 +1,7 @@
 # StreamStory
 
+Project continues with [StreamStory2](https://github.com/E3-JSI/StreamStory2).
+
 ## Installation
 
 ### Prerequisites
